@@ -38,6 +38,11 @@
                     "light": "resources/light/refresh.svg",
                     "dark": "resources/dark/refresh.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.openInPortal",
+                "title": "Open In Portal",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -54,6 +59,18 @@
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@2"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
+                    "group": "1_functionAppGeneralCommands@2"
+                },
+                {
+                    "command": "azureFunctions.openInPortal",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "group": "1_subscriptionGeneralCommands@2"
                 }
             ]
         }
@@ -73,6 +90,7 @@
     "dependencies": {
         "archiver": "^2.0.3",
         "azure-arm-resource": "^2.0.0-preview",
+        "azure-arm-website": "^1.0.0-preview",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.1.0",

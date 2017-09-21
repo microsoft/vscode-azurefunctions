@@ -12,6 +12,7 @@ import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './explorer';
 import { INode } from './nodes'
 import { Reporter } from './telemetry';
+import { AzureFunctionsCommands } from './commands';
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(new Reporter(context));
@@ -25,6 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
 
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
+        initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => AzureFunctionsCommands.openInPortal(node));
     } else {
         vscode.window.showErrorMessage("The Azure Account Extension is required for the Azure Functions extension.");
     }

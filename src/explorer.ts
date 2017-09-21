@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TreeDataProvider, Event, EventEmitter, TreeItem } from 'vscode';
-import { LoadingNode, NoSubscriptionsNode, SignInToAzureNode, SubscriptionNode, INode } from './nodes';
+import { GenericNode, SubscriptionNode, INode } from './nodes';
 import { AzureAccount } from './azure-account.api';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
@@ -23,11 +23,11 @@ export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
             return node.getChildren ? await node.getChildren() : [];
         } else { // Root of the explorer
             if (this.azureAccount.status === "Initializing" || this.azureAccount.status === "LoggingIn") {
-                return [new LoadingNode()];
+                return [new GenericNode('azureFunctionsLoading', 'Loading...')];
             } else if (this.azureAccount.status === "LoggedOut") {
-                return [new SignInToAzureNode()];
+                return [new GenericNode("azureFunctionsSignInToAzure", "Sign in to Azure...", 'azure-account.login')];
             } else if (this.azureAccount.filters.length === 0) {
-                return [new NoSubscriptionsNode()];
+                return [new GenericNode("azureFunctionsNoSubscriptions", "No subscriptions found. Edit filters...", 'azure-account.selectSubscriptions')];
             } else {
                 return this.azureAccount.filters.map(filter => new SubscriptionNode(filter))
             }
