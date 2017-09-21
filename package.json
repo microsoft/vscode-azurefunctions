@@ -35,8 +35,26 @@
                 "title": "Refresh",
                 "category": "Azure Functions",
                 "icon": {
-                    "light": "resources/light/refresh.svg",
-                    "dark": "resources/dark/refresh.svg"
+                    "light": "resources/light/Refresh.svg",
+                    "dark": "resources/dark/Refresh.svg"
+                }
+            },
+            {
+                "command": "azureFunctions.initFunctionApp",
+                "title": "Initialize Function App",
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/InitFunctionApp.svg",
+                    "dark": "resources/dark/InitFunctionApp.svg"
+                }
+            },
+            {
+                "command": "azureFunctions.createFunction",
+                "title": "Create Function",
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/AddFunction.svg",
+                    "dark": "resources/dark/AddFunction.svg"
                 }
             },
             {
@@ -56,9 +74,19 @@
         "menus": {
             "view/title": [
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureFunctions.initFunctionApp",
+                    "when": "view == azureFunctionsExplorer",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureFunctions.createFunction",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer",
+                    "group": "navigation@3"
                 }
             ],
             "view/item/context": [

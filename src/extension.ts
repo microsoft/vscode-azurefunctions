@@ -7,12 +7,13 @@
 
 import * as vscode from 'vscode';
 import * as util from "./util";
+import * as commands from './commands';
 
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './explorer';
 import { INode } from './nodes'
 import { Reporter } from './telemetry';
-import { AzureFunctionsCommands } from './commands';
+import { FunctionsCli } from './functions-cli'
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(new Reporter(context));
@@ -25,8 +26,14 @@ export function activate(context: vscode.ExtensionContext) {
         const explorer = new AzureFunctionsExplorer(azureAccount);
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
 
+        const terminal: vscode.Terminal = vscode.window.createTerminal('Azure Functions');
+        context.subscriptions.push(terminal);
+        const functionsCli = new FunctionsCli(terminal);
+
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
-        initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => AzureFunctionsCommands.openInPortal(node));
+        initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => commands.openInPortal(node));
+        initCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(functionsCli));
+        initCommand(context, 'azureFunctions.initFunctionApp', (node?: INode) => commands.initFunctionApp(functionsCli));
     } else {
         vscode.window.showErrorMessage("The Azure Account Extension is required for the Azure Functions extension.");
     }
@@ -48,9 +55,14 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
         try {
             await callback(...args);
         } catch (error) {
-            result = 'Failed';
-            errorData = util.errorToString(error);
-            throw error;
+            if (error instanceof util.UserCancelledError) {
+                result = 'Canceled';
+                // Swallow the error so that it's not displayed to the user
+            } else {
+                result = 'Failed';
+                errorData = util.errorToString(error);
+                throw error;
+            }
         } finally {
             const end = Date.now();
             const properties: { [key: string]: string; } = { result: result };
