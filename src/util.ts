@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { reporter } from './telemetry';
 import * as vscode from 'vscode';
+
+import { reporter } from './telemetry';
+import WebSiteManagementClient = require('azure-arm-website');
 
 export function sendTelemetry(eventName: string, properties?: { [key: string]: string; }, measures?: { [key: string]: number; }) {
     if (reporter) {
@@ -59,6 +61,24 @@ export async function showInputBox(placeHolder: string, prompt: string, validate
     }
 
     return result;
+}
+
+export enum FunctionAppState {
+    Stopped = "stopped",
+    Running = "running"
+};
+
+export async function waitForFunctionAppState(webSiteManagementClient: WebSiteManagementClient, resourceGroup: string, name: string, state: FunctionAppState, intervalMs = 5000, timeoutMs = 60000) {
+    let count = 0;
+    while (count < timeoutMs) {
+        count += intervalMs;
+        const currentSite = await webSiteManagementClient.webApps.get(resourceGroup, name);
+        if (currentSite.state && currentSite.state.toLowerCase() === state) {
+            return;
+        }
+        await new Promise(r => setTimeout(r, intervalMs));
+    }
+    throw new Error(`Timeout waiting for Function App "${name}" state "${state}".`);
 }
 
 export class QuickPickItemWithData<T> implements vscode.QuickPickItem {

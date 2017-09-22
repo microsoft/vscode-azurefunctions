@@ -25,6 +25,12 @@
     "preview": true,
     "activationEvents": [
         "onCommand:azureFunctions.refresh",
+        "onCommand:azureFunctions.initFunctionApp",
+        "onCommand:azureFunctions.createFunction",
+        "onCommand:azureFunctions.openInPortal",
+        "onCommand:azureFunctions.startFunctionApp",
+        "onCommand:azureFunctions.stopFunctionApp",
+        "onCommand:azureFunctions.restartFunctionApp",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -61,6 +67,21 @@
                 "command": "azureFunctions.openInPortal",
                 "title": "Open In Portal",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startFunctionApp",
+                "title": "Start",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.stopFunctionApp",
+                "title": "Stop",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.restartFunctionApp",
+                "title": "Restart",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -93,12 +114,27 @@
                 {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
-                    "group": "1_functionAppGeneralCommands@2"
+                    "group": "1_subscriptionGeneralCommands@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "1_subscriptionGeneralCommands@2"
+                    "group": "1_functionAppGeneralCommands@1"
+                },
+                {
+                    "command": "azureFunctions.startFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "group": "2_functionAppControlCommands@1"
+                },
+                {
+                    "command": "azureFunctions.stopFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "group": "2_functionAppControlCommands@2"
+                },
+                {
+                    "command": "azureFunctions.restartFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "group": "2_functionAppControlCommands@3"
                 }
             ]
         }

@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as util from './util';
 import * as vscode from 'vscode';
 
-import { INode } from './nodes';
+import { INode, FunctionAppNode } from './nodes';
 import { FunctionsCli } from './functions-cli';
 import { QuickPickItemWithData } from './util';
 
@@ -78,6 +78,30 @@ export async function initFunctionApp(functionsCli: FunctionsCli) {
         }
 
         functionsCli.initFunctionApp(rootPath);
+    }
+}
+
+export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+    if (node) {
+        outputChannel.appendLine(`Starting Function App "${node.label}"...`);
+        await node.start();
+        outputChannel.appendLine(`Function App "${node.label}" has been started.`);
+    }
+}
+
+export async function stopFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+    if (node) {
+        outputChannel.appendLine(`Stopping Function App "${node.label}"...`);
+        await node.stop();
+        outputChannel.appendLine(`Function App "${node.label}" has been stopped.`);
+    }
+}
+
+export async function restartFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+    if (node) {
+        outputChannel.appendLine(`Restarting Function App "${node.label}"...`);
+        await node.restart();
+        outputChannel.appendLine(`Function App "${node.label}" has been restarted.`);
     }
 }
 

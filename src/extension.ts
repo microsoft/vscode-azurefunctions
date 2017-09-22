@@ -11,7 +11,7 @@ import * as commands from './commands';
 
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './explorer';
-import { INode } from './nodes'
+import { INode, FunctionAppNode } from './nodes'
 import { Reporter } from './telemetry';
 import { FunctionsCli } from './functions-cli'
 
@@ -30,10 +30,16 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(terminal);
         const functionsCli = new FunctionsCli(terminal);
 
+        const outputChannel = vscode.window.createOutputChannel("Azure Functions");
+        context.subscriptions.push(outputChannel);
+        
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
         initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => commands.openInPortal(node));
-        initCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(functionsCli));
-        initCommand(context, 'azureFunctions.initFunctionApp', (node?: INode) => commands.initFunctionApp(functionsCli));
+        initAsyncCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(functionsCli));
+        initAsyncCommand(context, 'azureFunctions.initFunctionApp', (node?: INode) => commands.initFunctionApp(functionsCli));
+        initAsyncCommand(context, 'azureFunctions.startFunctionApp', (node?: FunctionAppNode) => commands.startFunctionApp(outputChannel, node));
+        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', (node?: FunctionAppNode) => commands.stopFunctionApp(outputChannel, node));
+        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', (node?: FunctionAppNode) => commands.restartFunctionApp(outputChannel, node));
     } else {
         vscode.window.showErrorMessage("The Azure Account Extension is required for the Azure Functions extension.");
     }
