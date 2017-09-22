@@ -45,11 +45,11 @@ export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thena
     return result;
 }
 
-export async function showInputBox(placeHolder: string, prompt: string): Promise<string> {
+export async function showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null): Promise<string> {
     const options: vscode.InputBoxOptions = {
         placeHolder: placeHolder,
         prompt: prompt,
-        // TODO: validateInput
+        validateInput: validateInput,
         ignoreFocusOut: true
     }
     const result = await vscode.window.showInputBox(options);
@@ -69,3 +69,7 @@ export class QuickPickItemWithData<T> implements vscode.QuickPickItem {
 }
 
 export class UserCancelledError extends Error { }
+
+export class NoWorkspaceError extends Error {
+    message = "You must have a workspace open to perform this operation."
+}

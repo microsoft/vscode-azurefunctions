@@ -4,23 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import * as util from './util';
 
 export class FunctionsCli {
     constructor(private readonly _terminal: vscode.Terminal) {
     }
 
-    createFunction(templateName: string, name: string) {
-        this.executeCommand(`func new --language JavaScript --template ${templateName} --name ${name}`);
+    createFunction(rootPath: string, templateName: string, name: string) {
+        this.executeCommand(rootPath, `func new --language JavaScript --template ${templateName} --name ${name}`);
     }
 
-    async initFunctionApp(name: string) {
-        this.executeCommand(`func init`);
+    async initFunctionApp(rootPath: string) {
+        this.executeCommand(rootPath, `func init`);
     }
 
-    private executeCommand(command: string) {
-        // TODO: Verify terminal is in current working folder
-        this._terminal.show();
+    private executeCommand(rootPath: string, command: string) {
+        this._terminal.sendText(`cd "${rootPath}"`);
         this._terminal.sendText(command);
     }
 }
