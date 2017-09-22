@@ -59,3 +59,7 @@ typings/
 
 # package-lock file since it just causes merge conflicts
 package-lock.json
+
+# Output
+out
+*.vsix
