@@ -32,11 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
 
         const outputChannel = vscode.window.createOutputChannel("Azure Functions");
         context.subscriptions.push(outputChannel);
-        
+
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
         initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => commands.openInPortal(node));
-        initAsyncCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(functionsCli));
-        initAsyncCommand(context, 'azureFunctions.initFunctionApp', (node?: INode) => commands.initFunctionApp(functionsCli));
+        initAsyncCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(outputChannel, functionsCli));
+        initAsyncCommand(context, 'azureFunctions.initFunctionApp', (node?: INode) => commands.initFunctionApp(outputChannel, functionsCli));
         initAsyncCommand(context, 'azureFunctions.startFunctionApp', (node?: FunctionAppNode) => commands.startFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.stopFunctionApp', (node?: FunctionAppNode) => commands.stopFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.restartFunctionApp', (node?: FunctionAppNode) => commands.restartFunctionApp(outputChannel, node));

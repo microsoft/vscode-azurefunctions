@@ -27,7 +27,7 @@ export function openInPortal(node?: INode) {
     }
 }
 
-export async function createFunction(functionsCli: FunctionsCli) {
+export async function createFunction(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
     const rootPath = vscode.workspace.rootPath;
     if (!rootPath) {
         throw new util.NoWorkspaceError();
@@ -36,7 +36,8 @@ export async function createFunction(functionsCli: FunctionsCli) {
         if (missingFiles.length !== 0) {
             const result = await vscode.window.showWarningMessage(`The current folder is not initialized as a function app. Add missing files: '${missingFiles.join("', '")}'?`, _yes, _no);
             if (result === _yes) {
-                functionsCli.initFunctionApp(rootPath);
+                const output = await functionsCli.initFunctionApp(rootPath);
+                outputChannel.append(output);
             } else {
                 throw new util.UserCancelledError();
             }
@@ -53,11 +54,12 @@ export async function createFunction(functionsCli: FunctionsCli) {
 
         const name = await util.showInputBox("Function Name", "Provide a function name", (s) => validateTemplateName(rootPath, s));
 
-        functionsCli.createFunction(rootPath, template.label, name);
+        const output = await functionsCli.createFunction(rootPath, template.label, name);
+        outputChannel.append(output);
     }
 }
 
-export async function initFunctionApp(functionsCli: FunctionsCli) {
+export async function initFunctionApp(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
     const rootPath = vscode.workspace.rootPath;
     let functionAppPath: string | undefined;
 
@@ -85,12 +87,13 @@ export async function initFunctionApp(functionsCli: FunctionsCli) {
             throw new util.UserCancelledError();
         } else {
             functionAppPath = resultUri[0].fsPath;
-            // TODO: Open new folder in workspace
+            // TODO: Open new folder in workspace and verify behavior of multiple workspaces open at a time
         }
     }
 
     // TODO: Handle folders that are already initialized
-    functionsCli.initFunctionApp(functionAppPath);
+    const output = await functionsCli.initFunctionApp(functionAppPath);
+    outputChannel.append(output);
 }
 
 export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
