@@ -24,11 +24,22 @@ export class FunctionsCli {
                 cwd: workingDirectory
             };
             const childProc = cp.spawn('func', args, options);
+            let stderr: string = '';
             childProc.stdout.on('data', (data) => outputChannel.append(data.toString()));
-            childProc.stderr.on('data', (data) => reject(new Error(data.toString())));
+            childProc.stderr.on('data', (data) => stderr = stderr.concat(data.toString()));
             childProc.on('error', error => reject(error));
             childProc.on('close', code => {
-                code === 0 ? resolve() : reject(new Error(`Command failed with exit code '${code}'.`))
+                const errorMessage = stderr.trim();
+                if (errorMessage) {
+                    // TODO: 'func' commands always seem to return exit code 0. For now,
+                    // we will use stderr to detect if an error occurs (even though sterr
+                    // doesn't necessarily mean there's an error)
+                    reject(errorMessage);
+                } else if (code !== 0) {
+                    reject(new Error(`Command failed with exit code '${code}'.`));
+                } else {
+                    resolve();
+                }
             });
         });
     }
