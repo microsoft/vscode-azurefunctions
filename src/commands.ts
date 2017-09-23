@@ -59,26 +59,38 @@ export async function createFunction(functionsCli: FunctionsCli) {
 
 export async function initFunctionApp(functionsCli: FunctionsCli) {
     const rootPath = vscode.workspace.rootPath;
-    if (!rootPath) {
-        throw new util.NoWorkspaceError();
-    } else {
-        let result: string | undefined;
-        const missingFiles = getMissingFunctionAppFiles(rootPath);
-        if (missingFiles.length === 0) {
-            await vscode.window.showWarningMessage("The current folder is already initialized as a function app.");
-            return;
-        } else if (missingFiles.length !== _expectedFunctionAppFiles.length) {
-            result = await vscode.window.showWarningMessage(`The current folder is partially intialized. Add missing files: '${missingFiles.join("', '")}'?`, _yes, _no);
-        } else {
-            result = await vscode.window.showInformationMessage(`Initialize a function app in the current folder?`, _yes, _no);
-        }
+    let functionAppPath: string | undefined;
 
-        if (result !== _yes) {
+    if (rootPath) {
+        const newFolder = "New Folder";
+        const result = await vscode.window.showInformationMessage(`Initialize a function app in the current folder?`, _yes, newFolder);
+        if (result === _yes) {
+            functionAppPath = rootPath;
+        } else if (!result) {
             throw new util.UserCancelledError();
         }
-
-        functionsCli.initFunctionApp(rootPath);
     }
+
+    if (!functionAppPath) {
+        const defaultUri = rootPath ? vscode.Uri.file(rootPath) : undefined;
+        const options: vscode.OpenDialogOptions = {
+            defaultUri: defaultUri,
+            openFolders: true,
+            openMany: false,
+            filters: {},
+            openLabel: "Select"
+        };
+        const resultUri = await vscode.window.showOpenDialog(options);
+        if (!resultUri || resultUri.length === 0) {
+            throw new util.UserCancelledError();
+        } else {
+            functionAppPath = resultUri[0].fsPath;
+            // TODO: Open new folder in workspace
+        }
+    }
+
+    // TODO: Handle folders that are already initialized
+    functionsCli.initFunctionApp(functionAppPath);
 }
 
 export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
