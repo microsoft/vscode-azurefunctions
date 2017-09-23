@@ -54,6 +54,8 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
         const name = await util.showInputBox("Function Name", "Provide a function name", (s) => validateTemplateName(rootPath, s));
 
         await functionsCli.createFunction(outputChannel, rootPath, template.label, name);
+        const newFileUri = vscode.Uri.file(path.join(rootPath, name, "index.js"));
+        vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
     }
 }
 
@@ -91,6 +93,8 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
 
     // TODO: Handle folders that are already initialized
     await functionsCli.initFunctionApp(outputChannel, functionAppPath);
+    const newFileUri = vscode.Uri.file(path.join(functionAppPath, "local.settings.json"));
+    vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 }
 
 export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
