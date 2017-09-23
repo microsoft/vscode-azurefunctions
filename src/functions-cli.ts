@@ -25,8 +25,13 @@ export class FunctionsCli {
             };
             // TODO: Verify special characters are escaped properly
             cp.exec(command, options, (error, stdout, stderr) => {
-                // TODO: Verify errors are caught correctly and decide what to do with stderr
-                error ? reject(error) : resolve(stdout);
+                if (stderr) {
+                    reject(new Error(stderr));
+                } else if (error) {
+                    reject(error);
+                } else {
+                    resolve(stdout);
+                }
             });
         });
     }
