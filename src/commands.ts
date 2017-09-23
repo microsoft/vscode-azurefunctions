@@ -36,8 +36,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
         if (missingFiles.length !== 0) {
             const result = await vscode.window.showWarningMessage(`The current folder is not initialized as a function app. Add missing files: '${missingFiles.join("', '")}'?`, _yes, _no);
             if (result === _yes) {
-                const output = await functionsCli.initFunctionApp(rootPath);
-                outputChannel.append(output);
+                await functionsCli.initFunctionApp(outputChannel, rootPath);
             } else {
                 throw new util.UserCancelledError();
             }
@@ -54,8 +53,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
 
         const name = await util.showInputBox("Function Name", "Provide a function name", (s) => validateTemplateName(rootPath, s));
 
-        const output = await functionsCli.createFunction(rootPath, template.label, name);
-        outputChannel.append(output);
+        await functionsCli.createFunction(outputChannel, rootPath, template.label, name);
     }
 }
 
@@ -92,8 +90,7 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
     }
 
     // TODO: Handle folders that are already initialized
-    const output = await functionsCli.initFunctionApp(functionAppPath);
-    outputChannel.append(output);
+    await functionsCli.initFunctionApp(outputChannel, functionAppPath);
 }
 
 export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
