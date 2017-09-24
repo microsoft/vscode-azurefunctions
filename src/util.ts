@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import { reporter } from './telemetry';
@@ -86,6 +87,14 @@ export class QuickPickItemWithData<T> implements vscode.QuickPickItem {
     constructor(readonly label: string, description?: string, readonly data?: T) {
         this.description = description ? description : '';
     }
+}
+
+export function writeToFile(path: string, data: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(path, data, (error) => {
+            error ? reject(error) : resolve();
+        });
+    });
 }
 
 export class UserCancelledError extends Error { }

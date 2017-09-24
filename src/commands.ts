@@ -91,10 +91,50 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
         }
     }
 
+    const tasksJsonPath = path.join(functionAppPath, ".vscode", "tasks.json");
+    const tasksJsonExists = await fs.existsSync(tasksJsonPath);
+    const launchJsonPath = path.join(functionAppPath, ".vscode", "launch.json");
+    const launchJsonExists = await fs.existsSync(launchJsonPath);
+
     // TODO: Handle folders that are already initialized
     await functionsCli.initFunctionApp(outputChannel, functionAppPath);
     const newFileUri = vscode.Uri.file(path.join(functionAppPath, "local.settings.json"));
     vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+
+    if (!tasksJsonExists && !launchJsonExists) {
+        const taskName = "Launch Function App";
+        const tasksJson = {
+            version: "2.0.0",
+            tasks: [
+                {
+                    taskName: taskName,
+                    type: "shell",
+                    command: "func host start",
+                    group: "none",
+                    presentation: {
+                        reveal: "always",
+                        panel: "dedicated"
+                    }
+                }
+            ]
+        };
+        await util.writeToFile(tasksJsonPath, JSON.stringify(tasksJson, null, "    "));
+
+        // TODO: Fix bug on first F5 (it tries to attach before 'func host start' is ready)
+        const launchJson = {
+            version: "0.2.0",
+            configurations: [
+                {
+                    name: "Attach to Azure Functions",
+                    type: "node",
+                    request: "attach",
+                    port: 5858,
+                    preLaunchTask: taskName
+                }
+            ]
+        };
+        await util.writeToFile(launchJsonPath, JSON.stringify(launchJson, null, "    "));
+    }
 }
 
 export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
