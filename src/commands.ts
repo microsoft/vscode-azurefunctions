@@ -115,7 +115,8 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
                     presentation: {
                         reveal: "always",
                         panel: "dedicated"
-                    }
+                    },
+                    isBackground: true
                 }
             ]
         };
