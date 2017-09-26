@@ -28,6 +28,7 @@ export function openInPortal(node?: INode) {
 }
 
 export async function createFunction(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
+    // TODO: Handle multiple root workspaces
     const rootPath = vscode.workspace.rootPath;
     if (!rootPath) {
         throw new util.NoWorkspaceError();
@@ -61,6 +62,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
 }
 
 export async function initFunctionApp(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
+    // TODO: Handle multiple root workspaces
     const rootPath = vscode.workspace.rootPath;
     let functionAppPath: string | undefined;
 
@@ -88,7 +90,6 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
             throw new util.UserCancelledError();
         } else {
             functionAppPath = resultUri[0].fsPath;
-            // TODO: Open new folder in workspace and verify behavior of multiple workspaces open at a time
         }
     }
 
@@ -99,8 +100,6 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
 
     // TODO: Handle folders that are already initialized
     await functionsCli.initFunctionApp(outputChannel, functionAppPath);
-    const newFileUri = vscode.Uri.file(path.join(functionAppPath, "local.settings.json"));
-    vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 
     if (!tasksJsonExists && !launchJsonExists) {
         const taskId = "launchFunctionApp";
@@ -137,6 +136,11 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
             ]
         };
         await util.writeToFile(launchJsonPath, JSON.stringify(launchJson, null, "    "));
+    }
+
+    if (rootPath !== functionAppPath) {
+        // If we created a new folder, open it now. NOTE: This will restart the extension host
+        await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(functionAppPath), false);
     }
 }
 
