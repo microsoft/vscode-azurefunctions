@@ -103,12 +103,13 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
     vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 
     if (!tasksJsonExists && !launchJsonExists) {
-        const taskName = "Launch Function App";
+        const taskId = "launchFunctionApp";
         const tasksJson = {
             version: "2.0.0",
             tasks: [
                 {
-                    taskName: taskName,
+                    taskName: "Launch Function App",
+                    identifier: taskId,
                     type: "shell",
                     command: "func host start",
                     group: "none",
@@ -131,7 +132,7 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
                     type: "node",
                     request: "attach",
                     port: 5858,
-                    preLaunchTask: taskName
+                    preLaunchTask: taskId
                 }
             ]
         };
