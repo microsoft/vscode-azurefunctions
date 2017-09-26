@@ -42,9 +42,10 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
             }
         }
 
+        // TODO: Run 'func templates list' to dynamically retrieve this list
+        // Ideally the 'func' cli makes their output more pipe-able first
         const templates = [
             new QuickPickItemWithData("BlobTrigger"),
-            new QuickPickItemWithData("EventGridTrigger"),
             new QuickPickItemWithData("HttpTrigger"),
             new QuickPickItemWithData("QueueTrigger"),
             new QuickPickItemWithData("TimerTrigger")
