@@ -138,7 +138,21 @@
                     "group": "2_functionAppControlCommands@3"
                 }
             ]
-        }
+        },
+        "jsonValidation": [
+            {
+                "fileMatch": "/function.json",
+                "url": "http://json.schemastore.org/function"
+            },
+            {
+                "fileMatch": "/host.json",
+                "url": "http://json.schemastore.org/host"
+            },
+            {
+                "fileMatch": "/proxies.json",
+                "url": "http://json.schemastore.org/proxies"
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
