@@ -35,9 +35,9 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
     } else {
         const missingFiles = getMissingFunctionAppFiles(rootPath);
         if (missingFiles.length !== 0) {
-            const result = await vscode.window.showWarningMessage(`The current folder is not initialized as a function app. Add missing files: '${missingFiles.join("', '")}'?`, _yes, _no);
+            const result = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join("', '")}'. Add the missing files?`, _yes, _no);
             if (result === _yes) {
-                await functionsCli.initFunctionApp(outputChannel, rootPath);
+                await functionsCli.createFunctionApp(outputChannel, rootPath);
             } else {
                 throw new util.UserCancelledError();
             }
@@ -61,14 +61,14 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
     }
 }
 
-export async function initFunctionApp(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
+export async function createFunctionApp(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
     // TODO: Handle multiple root workspaces
     const rootPath = vscode.workspace.rootPath;
     let functionAppPath: string | undefined;
 
     if (rootPath) {
         const newFolder = "New Folder";
-        const result = await vscode.window.showInformationMessage(`Initialize a function app in the current folder?`, _yes, newFolder);
+        const result = await vscode.window.showInformationMessage(`Create a function app in the current folder?`, _yes, newFolder);
         if (result === _yes) {
             functionAppPath = rootPath;
         } else if (!result) {
@@ -99,7 +99,7 @@ export async function initFunctionApp(outputChannel: vscode.OutputChannel, funct
     const launchJsonExists = await fs.existsSync(launchJsonPath);
 
     // TODO: Handle folders that are already initialized
-    await functionsCli.initFunctionApp(outputChannel, functionAppPath);
+    await functionsCli.createFunctionApp(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
         const taskId = "launchFunctionApp";

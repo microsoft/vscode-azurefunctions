@@ -26,7 +26,7 @@
     "preview": true,
     "activationEvents": [
         "onCommand:azureFunctions.refresh",
-        "onCommand:azureFunctions.initFunctionApp",
+        "onCommand:azureFunctions.createFunctionApp",
         "onCommand:azureFunctions.createFunction",
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.startFunctionApp",
@@ -47,12 +47,12 @@
                 }
             },
             {
-                "command": "azureFunctions.initFunctionApp",
-                "title": "Initialize Function App",
+                "command": "azureFunctions.createFunctionApp",
+                "title": "Create Function App",
                 "category": "Azure Functions",
                 "icon": {
-                    "light": "resources/light/InitFunctionApp.svg",
-                    "dark": "resources/dark/InitFunctionApp.svg"
+                    "light": "resources/light/CreateFunctionApp.svg",
+                    "dark": "resources/dark/CreateFunctionApp.svg"
                 }
             },
             {
@@ -96,7 +96,7 @@
         "menus": {
             "view/title": [
                 {
-                    "command": "azureFunctions.initFunctionApp",
+                    "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@1"
                 },

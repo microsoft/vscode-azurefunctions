@@ -14,7 +14,7 @@ export class FunctionsCli {
         return this.executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
     }
 
-    async initFunctionApp(outputChannel: vscode.OutputChannel, workingDirectory: string) {
+    async createFunctionApp(outputChannel: vscode.OutputChannel, workingDirectory: string) {
         return this.executeCommand(outputChannel, workingDirectory, 'init');
     }
 
