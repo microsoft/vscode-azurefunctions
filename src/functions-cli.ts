@@ -11,11 +11,11 @@ export class FunctionsCli {
     }
 
     async createFunction(outputChannel: vscode.OutputChannel, workingDirectory: string, templateName: string, name: string) {
-        return this.executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
+        await this.executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
     }
 
     async createFunctionApp(outputChannel: vscode.OutputChannel, workingDirectory: string) {
-        return this.executeCommand(outputChannel, workingDirectory, 'init');
+        await this.executeCommand(outputChannel, workingDirectory, 'init');
     }
 
     private executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
