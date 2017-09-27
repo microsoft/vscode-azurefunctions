@@ -1,6 +1,26 @@
 # Azure Functions for Visual Studio Code
 
+## Prerequisites
+* [Node v8.0+](https://nodejs.org/)
+  * Older versions of node will be supported soon. See issue #1
+* [.NET Core 2.0](https://www.microsoft.com/net/download/core)
+* [Azure Core Function Tools 2.0](https://www.npmjs.com/package/azure-functions-core-tools)
+  ```
+  npm install --global azure-functions-core-tools@core
+  ```
+
 ## Features
+
+* Create New Function App
+* Create New Function
+* Debug Function Apps
+* View Azure Functions
+* Start, Stop, and Restart Azure Functions
+* JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
+
+### Create and F5 a new Function App
+
+![Create and F5](resources/CreateAndF5.gif)
 
 ## Contributing
 There are a couple of ways you can contribute to this repo:
@@ -22,5 +42,5 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 ## Telemetry
 This extension collects telemetry data to help us build a better experience with Cosmos DB and VS Code. The extension respects the `telemetry.enableTelemetry` setting which you can learn more about in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
 
-## License 
+## License
 [MIT](LICENSE.md)
