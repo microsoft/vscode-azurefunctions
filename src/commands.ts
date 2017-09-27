@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { INode, FunctionAppNode } from './nodes';
 import { FunctionsCli } from './functions-cli';
 import { QuickPickItemWithData } from './util';
+import { TemplateFiles } from './template-files';
 
 const _expectedFunctionAppFiles = [
     "host.json",
@@ -88,40 +89,8 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel, fun
     await functionsCli.createFunctionApp(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
-        const taskId = "launchFunctionApp";
-        const tasksJson = {
-            version: "2.0.0",
-            tasks: [
-                {
-                    taskName: "Launch Function App",
-                    identifier: taskId,
-                    type: "shell",
-                    command: "func host start",
-                    group: "none",
-                    presentation: {
-                        reveal: "always",
-                        panel: "dedicated"
-                    },
-                    isBackground: true
-                }
-            ]
-        };
-        await util.writeToFile(tasksJsonPath, JSON.stringify(tasksJson, null, "    "));
-
-        // TODO: Fix bug on first F5 (it tries to attach before 'func host start' is ready)
-        const launchJson = {
-            version: "0.2.0",
-            configurations: [
-                {
-                    name: "Attach to Azure Functions",
-                    type: "node",
-                    request: "attach",
-                    port: 5858,
-                    preLaunchTask: taskId
-                }
-            ]
-        };
-        await util.writeToFile(launchJsonPath, JSON.stringify(launchJson, null, "    "));
+        await util.writeToFile(tasksJsonPath, TemplateFiles.tasksJson);
+        await util.writeToFile(launchJsonPath, TemplateFiles.launchJson);
     }
 
     if (createNewFolder) {
