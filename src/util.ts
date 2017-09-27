@@ -34,34 +34,52 @@ export function errorToString(error: any): string | undefined {
     }
 }
 
-export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thenable<QuickPickItemWithData<T>[]>, placeHolder: string, token?: vscode.CancellationToken): Promise<QuickPickItemWithData<T>> {
+export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thenable<QuickPickItemWithData<T>[]>, placeHolder: string, ignoreFocusOut = false): Promise<QuickPickItemWithData<T>> {
     const options: vscode.QuickPickOptions = {
         placeHolder: placeHolder,
-        ignoreFocusOut: true
+        ignoreFocusOut: ignoreFocusOut
     }
-    const result = await vscode.window.showQuickPick(items, options, token);
+    const result = await vscode.window.showQuickPick(items, options);
 
     if (!result) {
         throw new UserCancelledError();
+    } else {
+        return result;
     }
-
-    return result;
 }
 
-export async function showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null): Promise<string> {
+export async function showInputBox(placeHolder: string, prompt: string, ignoreFocusOut = false, validateInput?: (s: string) => string | undefined | null): Promise<string> {
     const options: vscode.InputBoxOptions = {
         placeHolder: placeHolder,
         prompt: prompt,
         validateInput: validateInput,
-        ignoreFocusOut: true
+        ignoreFocusOut: ignoreFocusOut
     }
     const result = await vscode.window.showInputBox(options);
 
     if (!result) {
         throw new UserCancelledError();
+    } else {
+        return result;
     }
+}
 
-    return result;
+export async function showFolderDialog(): Promise<string> {
+    const defaultUri = vscode.workspace.rootPath ? vscode.Uri.file(vscode.workspace.rootPath) : undefined;
+    const options: vscode.OpenDialogOptions = {
+        defaultUri: defaultUri,
+        openFolders: true,
+        openMany: false,
+        filters: {},
+        openLabel: "Select"
+    };
+    const result = await vscode.window.showOpenDialog(options);
+
+    if (!result || result.length === 0) {
+        throw new UserCancelledError();
+    } else {
+        return result[0].fsPath;
+    }
 }
 
 export enum FunctionAppState {
