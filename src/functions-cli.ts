@@ -20,8 +20,9 @@ export class FunctionsCli {
 
     private executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
         return new Promise((resolve, reject) => {
-            const options: cp.ExecOptions = {
-                cwd: workingDirectory
+            const options: cp.SpawnOptions = {
+                cwd: workingDirectory,
+                shell: true
             };
             const childProc = cp.spawn('func', args, options);
             let stderr: string = '';
@@ -31,8 +32,8 @@ export class FunctionsCli {
             childProc.on('close', code => {
                 const errorMessage = stderr.trim();
                 if (errorMessage) {
-                    // TODO: 'func' commands always seem to return exit code 0. For now,
-                    // we will use stderr to detect if an error occurs (even though sterr
+                    // 'func' commands always seem to return exit code 0. For now,
+                    // we will use stderr to detect if an error occurs (even though stderr
                     // doesn't necessarily mean there's an error)
                     reject(errorMessage);
                 } else if (code !== 0) {
