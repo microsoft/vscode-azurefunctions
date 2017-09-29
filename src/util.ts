@@ -68,9 +68,9 @@ export async function showFolderDialog(): Promise<string> {
     const defaultUri = vscode.workspace.rootPath ? vscode.Uri.file(vscode.workspace.rootPath) : undefined;
     const options: vscode.OpenDialogOptions = {
         defaultUri: defaultUri,
-        openFolders: true,
-        openMany: false,
-        filters: {},
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
         openLabel: "Select"
     };
     const result = await vscode.window.showOpenDialog(options);
