@@ -8,10 +8,15 @@ import { AzureAccount } from './azure-account.api';
 import { GenericNode, INode, SubscriptionNode } from './nodes';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
-    private _onDidChangeTreeData: EventEmitter<INode> = new EventEmitter<INode>();
-    public readonly onDidChangeTreeData: Event<INode> = this._onDidChangeTreeData.event;
+    private onDidChangeTreeDataEmitter: EventEmitter<INode> = new EventEmitter<INode>();
+    private azureAccount: AzureAccount;
 
-    constructor(private azureAccount: AzureAccount) {
+    constructor(azureAccount: AzureAccount) {
+        this.azureAccount = azureAccount;
+    }
+
+    public get onDidChangeTreeData(): Event<INode> {
+        return this.onDidChangeTreeDataEmitter.event;
     }
 
     public getTreeItem(node: INode): TreeItem {
@@ -35,6 +40,6 @@ export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
     }
 
     public refresh(node?: INode): void {
-        this._onDidChangeTreeData.fire(node);
+        this.onDidChangeTreeDataEmitter.fire(node);
     }
 }

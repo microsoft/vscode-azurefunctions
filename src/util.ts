@@ -101,14 +101,16 @@ export async function waitForFunctionAppState(webSiteManagementClient: WebSiteMa
 
 export class QuickPickItem implements vscode.QuickPickItem {
     public readonly description: string;
-    constructor(readonly label: string, description?: string) {
+    public readonly label: string;
+    constructor(label: string, description?: string) {
+        this.label = label;
         this.description = description ? description : '';
     }
 }
 
 export class QuickPickItemWithData<T> extends QuickPickItem {
     public readonly data: T;
-    constructor(data: T, readonly label: string, description?: string) {
+    constructor(data: T, label: string, description?: string) {
         super(label, description);
         this.data = data;
     }

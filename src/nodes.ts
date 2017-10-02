@@ -18,7 +18,12 @@ export interface INode extends vscode.TreeItem {
 export class GenericNode implements INode {
     public readonly contextValue: string;
     public readonly command: vscode.Command;
-    constructor(readonly id: string, readonly label: string, commandId?: string) {
+    public readonly id: string;
+    public readonly label: string;
+
+    constructor(id: string, label: string, commandId?: string) {
+        this.id = id;
+        this.label = label;
         this.contextValue = id;
         if (commandId) {
             this.command = {
@@ -34,13 +39,15 @@ export class SubscriptionNode implements INode {
     public readonly label: string;
     public readonly id: string;
     public readonly tenantId: string;
-
     public readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
-    constructor(private readonly _subscriptionFilter: AzureResourceFilter) {
-        this.label = _subscriptionFilter.subscription.displayName!;
-        this.id = _subscriptionFilter.subscription.subscriptionId!;
-        this.tenantId = _subscriptionFilter.session.tenantId;
+    private readonly subscriptionFilter: AzureResourceFilter;
+
+    constructor(subscriptionFilter: AzureResourceFilter) {
+        this.subscriptionFilter = subscriptionFilter;
+        this.label = subscriptionFilter.subscription.displayName!;
+        this.id = subscriptionFilter.subscription.subscriptionId!;
+        this.tenantId = subscriptionFilter.session.tenantId;
     }
 
     get iconPath(): { light: string, dark: string } {
@@ -58,7 +65,7 @@ export class SubscriptionNode implements INode {
     }
 
     public getWebSiteClient() {
-        return new WebSiteManagementClient(this._subscriptionFilter.session.credentials, this.id);
+        return new WebSiteManagementClient(this.subscriptionFilter.session.credentials, this.id);
     }
 }
 
@@ -68,10 +75,15 @@ export class FunctionAppNode implements INode {
     public readonly id: string;
     public readonly tenantId: string;
 
-    constructor(private readonly _functionApp: WebSiteModels.Site, private readonly _subscriptionNode: SubscriptionNode) {
-        this.label = `${_functionApp.name} (${this._functionApp.resourceGroup})`;
-        this.id = _functionApp.id!;
-        this.tenantId = _subscriptionNode.tenantId;
+    private readonly functionApp: WebSiteModels.Site;
+    private readonly subscriptionNode: SubscriptionNode;
+
+    constructor(functionApp: WebSiteModels.Site, subscriptionNode: SubscriptionNode) {
+        this.functionApp = functionApp;
+        this.subscriptionNode = subscriptionNode;
+        this.label = `${functionApp.name} (${this.functionApp.resourceGroup})`;
+        this.id = functionApp.id!;
+        this.tenantId = subscriptionNode.tenantId;
     }
 
     get iconPath(): { light: string, dark: string } {
@@ -82,15 +94,15 @@ export class FunctionAppNode implements INode {
     }
 
     public async start() {
-        const client = this._subscriptionNode.getWebSiteClient();
-        await client.webApps.start(this._functionApp.resourceGroup!, this._functionApp.name!);
-        await util.waitForFunctionAppState(client, this._functionApp.resourceGroup!, this._functionApp.name!, util.FunctionAppState.Running);
+        const client = this.subscriptionNode.getWebSiteClient();
+        await client.webApps.start(this.functionApp.resourceGroup!, this.functionApp.name!);
+        await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Running);
     }
 
     public async stop() {
-        const client = this._subscriptionNode.getWebSiteClient();
-        await client.webApps.stop(this._functionApp.resourceGroup!, this._functionApp.name!);
-        await util.waitForFunctionAppState(client, this._functionApp.resourceGroup!, this._functionApp.name!, util.FunctionAppState.Stopped);
+        const client = this.subscriptionNode.getWebSiteClient();
+        await client.webApps.stop(this.functionApp.resourceGroup!, this.functionApp.name!);
+        await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Stopped);
     }
 
     public async restart() {

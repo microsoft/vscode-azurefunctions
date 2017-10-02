@@ -12,13 +12,11 @@ import { FunctionAppNode, INode } from './nodes';
 import * as TemplateFiles from './template-files';
 import * as util from './util';
 
-const _expectedFunctionAppFiles = [
+const expectedFunctionAppFiles = [
     'host.json',
     'local.settings.json',
     path.join('.vscode', 'launch.json')
 ];
-const _yes = 'Yes';
-const _no = 'No';
 
 export function openInPortal(node?: INode) {
     if (node && node.tenantId) {
@@ -41,8 +39,9 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
 
     const missingFiles = getMissingFunctionAppFiles(functionAppPath);
     if (missingFiles.length !== 0) {
-        const result = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join('\', \'')}'. Add the missing files?`, _yes, _no);
-        if (result === _yes) {
+        const yes = 'Yes';
+        const result = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join('\', \'')}'. Add the missing files?`, yes, 'No');
+        if (result === yes) {
             await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
         } else {
             throw new util.UserCancelledError();
@@ -119,7 +118,7 @@ export async function restartFunctionApp(outputChannel: vscode.OutputChannel, no
 }
 
 function getMissingFunctionAppFiles(rootPath: string) {
-    return _expectedFunctionAppFiles.filter(file => !fs.existsSync(path.join(rootPath, file)));
+    return expectedFunctionAppFiles.filter(file => !fs.existsSync(path.join(rootPath, file)));
 }
 
 function validateTemplateName(rootPath: string, name: string): string | undefined {
