@@ -54,7 +54,7 @@ const launchJson = {
             "type": "node",
             "request": "attach",
             "port": 5858,
-            "protocol": "inspector", // TODO: Verify behavior on older versions of node
+            "protocol": "inspector",
             "preLaunchTask": taskId
         }
     ]

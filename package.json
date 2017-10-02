@@ -156,12 +156,15 @@
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
         "compile": "tsc -watch -p ./",
+        "lint": "tslint src/*.ts -e src/*.d.ts -t verbose",
         "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
         "@types/archiver": "^2.0.0",
         "@types/node": "^8.0.28",
+        "tslint": "^5.7.0",
+        "tslint-microsoft-contrib": "5.0.1",
         "typescript": "^2.0.3",
         "vscode": "^1.0.0"
     },

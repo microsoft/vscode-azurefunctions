@@ -50,8 +50,6 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
         }
     }
 
-    // TODO: Run 'func templates list' to dynamically retrieve this list
-    // Ideally the 'func' cli makes their output more pipe-able first
     const templates = [
         new util.QuickPickItem("BlobTrigger"),
         new util.QuickPickItem("HttpTrigger"),
@@ -84,7 +82,6 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel) {
     const launchJsonPath = path.join(functionAppPath, ".vscode", "launch.json");
     const launchJsonExists = await fs.existsSync(launchJsonPath);
 
-    // TODO: Handle folders that are already initialized
     await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
