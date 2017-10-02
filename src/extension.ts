@@ -13,7 +13,6 @@ import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './explorer';
 import { INode, FunctionAppNode } from './nodes'
 import { Reporter } from './telemetry';
-import { FunctionsCli } from './functions-cli'
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(new Reporter(context));
@@ -26,17 +25,13 @@ export function activate(context: vscode.ExtensionContext) {
         const explorer = new AzureFunctionsExplorer(azureAccount);
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
 
-        const terminal: vscode.Terminal = vscode.window.createTerminal('Azure Functions');
-        context.subscriptions.push(terminal);
-        const functionsCli = new FunctionsCli(terminal);
-
         const outputChannel = vscode.window.createOutputChannel("Azure Functions");
         context.subscriptions.push(outputChannel);
 
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
         initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => commands.openInPortal(node));
-        initAsyncCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(outputChannel, functionsCli));
-        initAsyncCommand(context, 'azureFunctions.createFunctionApp', (node?: INode) => commands.createFunctionApp(outputChannel, functionsCli));
+        initAsyncCommand(context, 'azureFunctions.createFunction', (node?: INode) => commands.createFunction(outputChannel));
+        initAsyncCommand(context, 'azureFunctions.createFunctionApp', (node?: INode) => commands.createFunctionApp(outputChannel));
         initAsyncCommand(context, 'azureFunctions.startFunctionApp', (node?: FunctionAppNode) => commands.startFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.stopFunctionApp', (node?: FunctionAppNode) => commands.stopFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.restartFunctionApp', (node?: FunctionAppNode) => commands.restartFunctionApp(outputChannel, node));

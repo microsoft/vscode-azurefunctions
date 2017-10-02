@@ -10,9 +10,9 @@ import * as util from './util';
 import * as vscode from 'vscode';
 
 import { INode, FunctionAppNode } from './nodes';
-import { FunctionsCli } from './functions-cli';
+import * as FunctionsCli from './functions-cli';
 import { QuickPickItemWithData } from './util';
-import { TemplateFiles } from './template-files';
+import * as TemplateFiles from './template-files';
 
 const _expectedFunctionAppFiles = [
     "host.json",
@@ -28,7 +28,7 @@ export function openInPortal(node?: INode) {
     }
 }
 
-export async function createFunction(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
+export async function createFunction(outputChannel: vscode.OutputChannel) {
     let functionAppPath: string;
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
@@ -45,7 +45,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
     if (missingFiles.length !== 0) {
         const result = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join("', '")}'. Add the missing files?`, _yes, _no);
         if (result === _yes) {
-            await functionsCli.createFunctionApp(outputChannel, functionAppPath);
+            await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
         } else {
             throw new util.UserCancelledError();
         }
@@ -63,12 +63,12 @@ export async function createFunction(outputChannel: vscode.OutputChannel, functi
 
     const name = await util.showInputBox("Function Name", "Provide a function name", false, (s) => validateTemplateName(functionAppPath, s));
 
-    await functionsCli.createFunction(outputChannel, functionAppPath, template.label, name);
+    await FunctionsCli.createFunction(outputChannel, functionAppPath, template.label, name);
     const newFileUri = vscode.Uri.file(path.join(functionAppPath, name, "index.js"));
     vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 }
 
-export async function createFunctionApp(outputChannel: vscode.OutputChannel, functionsCli: FunctionsCli) {
+export async function createFunctionApp(outputChannel: vscode.OutputChannel) {
     const newFolderId = "newFolder";
     let folderPicks = [new QuickPickItemWithData("$(plus) New Folder", undefined, newFolderId)];
     const folders = vscode.workspace.workspaceFolders;
@@ -86,11 +86,11 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel, fun
     const launchJsonExists = await fs.existsSync(launchJsonPath);
 
     // TODO: Handle folders that are already initialized
-    await functionsCli.createFunctionApp(outputChannel, functionAppPath);
+    await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
-        await util.writeToFile(tasksJsonPath, TemplateFiles.tasksJson);
-        await util.writeToFile(launchJsonPath, TemplateFiles.launchJson);
+        await util.writeToFile(tasksJsonPath, TemplateFiles.getTasksJson());
+        await util.writeToFile(launchJsonPath, TemplateFiles.getLaunchJson());
     }
 
     if (createNewFolder) {
