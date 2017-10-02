@@ -24,7 +24,7 @@ function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: s
         let stderr: string = '';
         childProc.stdout.on('data', (data) => outputChannel.append(data.toString()));
         childProc.stderr.on('data', (data) => stderr = stderr.concat(data.toString()));
-        childProc.on('error', error => reject(error));
+        childProc.on('error', reject);
         childProc.on('close', code => {
             const errorMessage = stderr.trim();
             if (errorMessage) {

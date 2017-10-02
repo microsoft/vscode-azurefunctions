@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import WebSiteManagementClient = require('azure-arm-website');
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-
 import { reporter } from './telemetry';
-import WebSiteManagementClient = require('azure-arm-website');
 
 export function sendTelemetry(eventName: string, properties?: { [key: string]: string; }, measures?: { [key: string]: number; }) {
     if (reporter) {
@@ -15,22 +14,20 @@ export function sendTelemetry(eventName: string, properties?: { [key: string]: s
     }
 }
 
-export function errorToString(error: any): string | undefined {
+export function errorToString(error: {}): string | undefined {
     if (error) {
         if (error instanceof Error) {
             return JSON.stringify({
-                'Error': error.constructor.name,
-                'Message': error.message
+                Error: error.constructor.name,
+                Message: error.message
             });
         }
 
         if (typeof (error) === 'object') {
             return JSON.stringify({
-                'object': error.constructor.name
+                object: error.constructor.name
             });
         }
-
-        return error.toString();
     }
 }
 
@@ -40,7 +37,7 @@ export async function showQuickPick(items: vscode.QuickPickItem[] | Thenable<vsc
     const options: vscode.QuickPickOptions = {
         placeHolder: placeHolder,
         ignoreFocusOut: ignoreFocusOut
-    }
+    };
     const result = await vscode.window.showQuickPick(items, options);
 
     if (!result) {
@@ -56,7 +53,7 @@ export async function showInputBox(placeHolder: string, prompt: string, ignoreFo
         prompt: prompt,
         validateInput: validateInput,
         ignoreFocusOut: ignoreFocusOut
-    }
+    };
     const result = await vscode.window.showInputBox(options);
 
     if (!result) {
@@ -73,7 +70,7 @@ export async function showFolderDialog(): Promise<string> {
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
-        openLabel: "Select"
+        openLabel: 'Select'
     };
     const result = await vscode.window.showOpenDialog(options);
 
@@ -85,9 +82,9 @@ export async function showFolderDialog(): Promise<string> {
 }
 
 export enum FunctionAppState {
-    Stopped = "stopped",
-    Running = "running"
-};
+    Stopped = 'stopped',
+    Running = 'running'
+}
 
 export async function waitForFunctionAppState(webSiteManagementClient: WebSiteManagementClient, resourceGroup: string, name: string, state: FunctionAppState, intervalMs = 5000, timeoutMs = 60000) {
     let count = 0;
@@ -128,5 +125,5 @@ export function writeToFile(path: string, data: string): Promise<void> {
 export class UserCancelledError extends Error { }
 
 export class NoWorkspaceError extends Error {
-    message = "You must have a workspace open to perform this operation."
+    public message = 'You must have a workspace open to perform this operation.';
 }

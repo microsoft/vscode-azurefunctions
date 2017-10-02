@@ -11,34 +11,34 @@ export function getLaunchJson() {
     return stringifyJSON(launchJson);
 }
 
-const taskId = "launchFunctionApp";
+const taskId = 'launchFunctionApp';
 const tasksJson = {
-    "version": "2.0.0",
-    "tasks": [
+    version: '2.0.0',
+    tasks: [
         {
-            "taskName": "Launch Function App",
-            "identifier": taskId,
-            "type": "shell",
-            "command": "func host start",
-            "isBackground": true,
-            "presentation": {
-                "reveal": "silent"
+            taskName: 'Launch Function App',
+            identifier: taskId,
+            type: 'shell',
+            command: 'func host start',
+            isBackground: true,
+            presentation: {
+                reveal: 'silent'
             },
-            "problemMatcher": [
+            problemMatcher: [
                 {
-                    "owner": "azureFunctions",
-                    "pattern": [
+                    owner: 'azureFunctions',
+                    pattern: [
                         {
-                            "regexp": "\\b\\B",
-                            "file": 1,
-                            "location": 2,
-                            "message": 3
+                            regexp: '\\b\\B',
+                            file: 1,
+                            location: 2,
+                            message: 3
                         }
                     ],
-                    "background": {
-                        "activeOnStart": true,
-                        "beginsPattern": "^.*Stopping host.*",
-                        "endsPattern": "^.*Job host started.*"
+                    background: {
+                        activeOnStart: true,
+                        beginsPattern: '^.*Stopping host.*',
+                        endsPattern: '^.*Job host started.*'
                     }
                 }
             ]
@@ -47,19 +47,19 @@ const tasksJson = {
 };
 
 const launchJson = {
-    "version": "0.2.0",
-    "configurations": [
+    version: '0.2.0',
+    configurations: [
         {
-            "name": "Attach to Azure Functions",
-            "type": "node",
-            "request": "attach",
-            "port": 5858,
-            "protocol": "inspector",
-            "preLaunchTask": taskId
+            name: 'Attach to Azure Functions',
+            type: 'node',
+            request: 'attach',
+            port: 5858,
+            protocol: 'inspector',
+            preLaunchTask: taskId
         }
     ]
 };
 
-function stringifyJSON(data: any): string {
-    return JSON.stringify(data, null, "    ");
+function stringifyJSON(data: {}): string {
+    return JSON.stringify(data, null, '    ');
 }

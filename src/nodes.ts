@@ -2,13 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import WebSiteManagementClient = require('azure-arm-website');
 import * as path from 'path';
-import * as util from './util';
 import * as vscode from 'vscode';
 import * as WebSiteModels from '../node_modules/azure-arm-website/lib/models';
-
 import { AzureResourceFilter } from './azure-account.api';
-import WebSiteManagementClient = require('azure-arm-website');
+import * as util from './util';
 
 export interface INode extends vscode.TreeItem {
     id: string;
@@ -17,8 +16,8 @@ export interface INode extends vscode.TreeItem {
 }
 
 export class GenericNode implements INode {
-    readonly contextValue: string;
-    readonly command: vscode.Command;
+    public readonly contextValue: string;
+    public readonly command: vscode.Command;
     constructor(readonly id: string, readonly label: string, commandId?: string) {
         this.contextValue = id;
         if (commandId) {
@@ -31,12 +30,12 @@ export class GenericNode implements INode {
 }
 
 export class SubscriptionNode implements INode {
-    readonly contextValue: string = 'azureFunctionsSubscription';
-    readonly label: string;
-    readonly id: string;
-    readonly tenantId: string;
+    public readonly contextValue: string = 'azureFunctionsSubscription';
+    public readonly label: string;
+    public readonly id: string;
+    public readonly tenantId: string;
 
-    readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+    public readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
     constructor(private readonly _subscriptionFilter: AzureResourceFilter) {
         this.label = _subscriptionFilter.subscription.displayName!;
@@ -44,30 +43,30 @@ export class SubscriptionNode implements INode {
         this.tenantId = _subscriptionFilter.session.tenantId;
     }
 
-    get iconPath(): any {
+    get iconPath(): { light: string, dark: string } {
         return {
             light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'AzureSubscription.svg'),
             dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'AzureSubscription.svg')
         };
     }
 
-    async getChildren(): Promise<INode[]> {
+    public async getChildren(): Promise<INode[]> {
         const webApps = await this.getWebSiteClient().webApps.list();
-        return webApps.filter(s => s.kind === "functionapp")
+        return webApps.filter(s => s.kind === 'functionapp')
             .sort((s1, s2) => s1.id!.localeCompare(s2.id!))
             .map(s => new FunctionAppNode(s, this));
     }
 
-    getWebSiteClient() {
+    public getWebSiteClient() {
         return new WebSiteManagementClient(this._subscriptionFilter.session.credentials, this.id);
     }
 }
 
 export class FunctionAppNode implements INode {
-    readonly contextValue: string = 'azureFunctionsFunctionApp';
-    readonly label: string;
-    readonly id: string;
-    readonly tenantId: string;
+    public readonly contextValue: string = 'azureFunctionsFunctionApp';
+    public readonly label: string;
+    public readonly id: string;
+    public readonly tenantId: string;
 
     constructor(private readonly _functionApp: WebSiteModels.Site, private readonly _subscriptionNode: SubscriptionNode) {
         this.label = `${_functionApp.name} (${this._functionApp.resourceGroup})`;
@@ -75,26 +74,26 @@ export class FunctionAppNode implements INode {
         this.tenantId = _subscriptionNode.tenantId;
     }
 
-    get iconPath(): any {
+    get iconPath(): { light: string, dark: string } {
         return {
             light: path.join(__filename, '..', '..', '..', 'resources', 'light', 'AzureFunctionsApp.svg'),
             dark: path.join(__filename, '..', '..', '..', 'resources', 'dark', 'AzureFunctionsApp.svg')
         };
     }
 
-    async start() {
+    public async start() {
         const client = this._subscriptionNode.getWebSiteClient();
         await client.webApps.start(this._functionApp.resourceGroup!, this._functionApp.name!);
         await util.waitForFunctionAppState(client, this._functionApp.resourceGroup!, this._functionApp.name!, util.FunctionAppState.Running);
     }
 
-    async stop() {
+    public async stop() {
         const client = this._subscriptionNode.getWebSiteClient();
         await client.webApps.stop(this._functionApp.resourceGroup!, this._functionApp.name!);
         await util.waitForFunctionAppState(client, this._functionApp.resourceGroup!, this._functionApp.name!, util.FunctionAppState.Stopped);
     }
 
-    async restart() {
+    public async restart() {
         await this.stop();
         await this.start();
     }
