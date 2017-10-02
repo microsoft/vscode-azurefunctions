@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import * as errors from '../errors';
 import * as FunctionsCli from '../functions-cli';
 import * as util from '../util';
+import { localize } from '../util';
 
 const expectedFunctionAppFiles: string[] = [
     'host.json',
@@ -22,9 +23,9 @@ function getMissingFunctionAppFiles(rootPath: string): string[] {
 
 function validateTemplateName(rootPath: string, name: string): string | undefined {
     if (!name) {
-        return 'The template name cannot be empty.';
+        return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
     } else if (fs.existsSync(path.join(rootPath, name))) {
-        return `A folder with the name "${name}" already exists.`;
+        return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
     } else {
         return undefined;
     }
@@ -39,14 +40,16 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         functionAppPath = folders[0].uri.fsPath;
     } else {
         const folderPicks: util.Pick[] = folders.map((f: vscode.WorkspaceFolder) => new util.Pick(f.uri.fsPath));
-        const folder: util.Pick = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
+        const folder: util.Pick = await util.showQuickPick(folderPicks, localize('azFunc.newFuncSelectFolder', 'Select a workspace folder for your new function'));
         functionAppPath = folder.label;
     }
 
     const missingFiles: string[] = getMissingFunctionAppFiles(functionAppPath);
     if (missingFiles.length !== 0) {
-        const yes: string = 'Yes';
-        const result: string | undefined = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join('\', \'')}'. Add the missing files?`, yes, 'No');
+        const yes: string = localize('azFunc.yes', 'Yes');
+        const no: string = localize('azFunc.no', 'No');
+        const message: string = localize('azFunc.missingFuncAppFiles', 'The current folder is missing the following function app files: \'{0}\'. Add the missing files?', missingFiles.join(','));
+        const result: string | undefined = await vscode.window.showWarningMessage(message, yes, no);
         if (result === yes) {
             await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
         } else {
@@ -60,9 +63,11 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         new util.Pick('QueueTrigger'),
         new util.Pick('TimerTrigger')
     ];
-    const template: util.Pick = await util.showQuickPick(templates, 'Select a function template');
+    const template: util.Pick = await util.showQuickPick(templates, localize('azFunc.selectFuncTemplate', 'Select a function template'));
 
-    const name: string = await util.showInputBox('Function Name', 'Provide a function name', false, (s: string) => validateTemplateName(functionAppPath, s));
+    const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function Name');
+    const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
+    const name: string = await util.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s));
 
     await FunctionsCli.createFunction(outputChannel, functionAppPath, template.label, name);
     const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionAppPath, name, 'index.js'));

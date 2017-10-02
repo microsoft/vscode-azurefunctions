@@ -1,7 +1,7 @@
 {
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
-    "description": "An Azure Functions extension for Visual Studio Code.",
+    "description": "%extension.description%",
     "version": "0.1.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
@@ -38,7 +38,7 @@
         "commands": [
             {
                 "command": "azureFunctions.refresh",
-                "title": "Refresh",
+                "title": "%azFunc.refresh%",
                 "category": "Azure Functions",
                 "icon": {
                     "light": "resources/light/Refresh.svg",
@@ -47,7 +47,7 @@
             },
             {
                 "command": "azureFunctions.createFunctionApp",
-                "title": "Create Function App",
+                "title": "%azFunc.createFunctionApp%",
                 "category": "Azure Functions",
                 "icon": {
                     "light": "resources/light/CreateFunctionApp.svg",
@@ -56,7 +56,7 @@
             },
             {
                 "command": "azureFunctions.createFunction",
-                "title": "Create Function",
+                "title": "%azFunc.createFunction%",
                 "category": "Azure Functions",
                 "icon": {
                     "light": "resources/light/AddFunction.svg",
@@ -65,22 +65,22 @@
             },
             {
                 "command": "azureFunctions.openInPortal",
-                "title": "Open In Portal",
+                "title": "%azFunc.openInPortal%",
                 "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.startFunctionApp",
-                "title": "Start",
+                "title": "%azFunc.startFunctionApp%",
                 "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.stopFunctionApp",
-                "title": "Stop",
+                "title": "%azFunc.stopFunctionApp%",
                 "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.restartFunctionApp",
-                "title": "Restart",
+                "title": "%azFunc.restartFunctionApp%",
                 "category": "Azure Functions"
             }
         ],
@@ -175,7 +175,8 @@
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.1.0",
-        "vscode-extension-telemetry": "^0.0.6"
+        "vscode-extension-telemetry": "^0.0.6",
+        "vscode-nls": "^2.0.2"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"

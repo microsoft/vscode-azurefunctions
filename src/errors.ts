@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from './util';
+
 export class UserCancelledError extends Error { }
 
 export class NoWorkspaceError extends Error {
-    public message: string = 'You must have a workspace open to perform this operation.';
+    public message: string = localize('azFunc.noWorkspaceError', 'You must have a workspace open to perform this operation.');
 }
 
 export class ArgumentError extends Error {
     constructor(obj: object) {
-        super(`Invalid ${obj.constructor.name}.`);
+        super(localize('azFunc.argumentError', 'Invalid {0}.', obj.constructor.name));
     }
 }

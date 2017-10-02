@@ -3,12 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from './util';
+
 const taskId: string = 'launchFunctionApp';
 const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
-            taskName: 'Launch Function App',
+            taskName: localize('azFunc.launchFuncApp', 'Launch Function App'),
             identifier: taskId,
             type: 'shell',
             command: 'func host start',
@@ -42,7 +44,7 @@ const launchJson: {} = {
     version: '0.2.0',
     configurations: [
         {
-            name: 'Attach to Azure Functions',
+            name: localize('azFunc.attachToFunc', 'Attach to Azure Functions'),
             type: 'node',
             request: 'attach',
             port: 5858,

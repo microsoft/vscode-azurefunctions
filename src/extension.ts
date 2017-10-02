@@ -18,6 +18,7 @@ import { stopFunctionApp } from './commands/stopFunctionApp';
 import * as errors from './errors';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
 import { NodeBase } from './nodes/NodeBase';
+import { localize } from './util';
 import * as util from './util';
 
 let reporter: TelemetryReporter | undefined;
@@ -25,7 +26,7 @@ let reporter: TelemetryReporter | undefined;
 export function activate(context: vscode.ExtensionContext): void {
     const azureAccountExtension: vscode.Extension<AzureAccount> | undefined = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
     if (!azureAccountExtension) {
-        vscode.window.showErrorMessage('The Azure Account Extension is required for the Azure Functions extension.');
+        vscode.window.showErrorMessage(localize('azFunc.noAccountExtensionError', 'The Azure Account Extension is required for the Azure Functions extension.'));
     } else {
         try {
             const packageInfo: IPackageInfo = (<(id: string) => IPackageInfo>require)(context.asAbsolutePath('./package.json'));

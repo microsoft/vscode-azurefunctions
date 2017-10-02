@@ -8,8 +8,11 @@ import WebSiteManagementClient = require('azure-arm-website');
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { QuickPickItem } from 'vscode';
+import * as nls from 'vscode-nls';
 import { Site } from '../node_modules/azure-arm-website/lib/models';
 import * as errors from './errors';
+
+export const localize: nls.LocalizeFunc = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export function errorToString(error: {}): string | undefined {
     if (error instanceof Error) {
@@ -65,7 +68,7 @@ export async function showFolderDialog(): Promise<string> {
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
-        openLabel: 'Select'
+        openLabel: localize('azFunc.select', 'Select')
     };
     const result: vscode.Uri[] | undefined = await vscode.window.showOpenDialog(options);
 
@@ -91,7 +94,7 @@ export async function waitForFunctionAppState(webSiteManagementClient: WebSiteMa
         }
         await new Promise((r: () => void): NodeJS.Timer => setTimeout(r, intervalMs));
     }
-    throw new Error(`Timeout waiting for Function App "${name}" state "${state}".`);
+    throw new Error(localize('azFunc.stateTimeoutError', 'Timeout waiting for Function App \'{0}\' state \'{1}\'.', name, state));
 }
 
 export class Pick implements QuickPickItem {

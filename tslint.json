@@ -243,7 +243,7 @@
             "check-whitespace"
         ],
         "quotemark": [
-            true,
+            false, // changed
             "single"
         ],
         "react-tsx-curly-spacing": true,
@@ -280,7 +280,17 @@
         "no-mergeable-namespace": false,
         "no-namespace": false,
         "no-reference": true,
-        "no-unexternalized-strings": false,
+        "no-unexternalized-strings": [ // changed
+            true,
+            {
+                "signatures": [
+                    "localize",
+                    "nls.localize"
+                ],
+                "keyIndex": 0,
+                "messageIndex": 1
+            }
+        ],
         "object-literal-shorthand": false,
         "prefer-type-cast": true,
         "space-before-function-paren": false,

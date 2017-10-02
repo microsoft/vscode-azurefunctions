@@ -5,6 +5,7 @@
 
 import * as cp from 'child_process';
 import * as vscode from 'vscode';
+import { localize } from './util';
 
 export async function createFunction(outputChannel: vscode.OutputChannel, workingDirectory: string, templateName: string, name: string): Promise<void> {
     await executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
@@ -33,7 +34,7 @@ async function executeCommand(outputChannel: vscode.OutputChannel, workingDirect
                 // doesn't necessarily mean there's an error)
                 reject(errorMessage);
             } else if (code !== 0) {
-                reject(new Error(`Command failed with exit code '${code}'.`));
+                reject(new Error(localize('azFunc.funcCliCommandError', 'Command failed with exit code \'{0}\'.', code)));
             } else {
                 resolve();
             }

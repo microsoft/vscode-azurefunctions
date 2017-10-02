@@ -8,6 +8,7 @@ import { AzureAccount, AzureResourceFilter } from './azure-account.api';
 import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
 import * as util from './util';
+import { localize } from './util';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
     private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
@@ -33,11 +34,11 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
             this.rootNodes = [];
 
             if (this.azureAccount.status === 'Initializing' || this.azureAccount.status === 'LoggingIn') {
-                return [new NodeBase('azureFunctionsLoading', 'Loading...')];
+                return [new NodeBase('azureFunctionsLoading', localize('azFunc.loadingNode', 'Loading...'))];
             } else if (this.azureAccount.status === 'LoggedOut') {
-                return [new NodeBase('azureFunctionsSignInToAzure', 'Sign in to Azure...', undefined, 'azure-account.login')];
+                return [new NodeBase('azureFunctionsSignInToAzure', localize('azFunc.signInNode', 'Sign in to Azure...'), undefined, 'azure-account.login')];
             } else if (this.azureAccount.filters.length === 0) {
-                return [new NodeBase('azureFunctionsNoSubscriptions', 'No subscriptions found. Edit filters...', undefined, 'azure-account.selectSubscriptions')];
+                return [new NodeBase('azureFunctionsNoSubscriptions', localize('azFunc.noSubscriptionsNode', 'No subscriptions found. Edit filters...'), undefined, 'azure-account.selectSubscriptions')];
             } else {
                 this.rootNodes = this.azureAccount.filters.map((filter: AzureResourceFilter) => SubscriptionNode.CREATE(filter));
 
@@ -55,7 +56,7 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
         let quickPicksTask: Promise<util.PickWithData<NodeBase>[]> = Promise.resolve(this.rootNodes.map((c: NodeBase) => new util.PickWithData<NodeBase>(c, c.label)));
 
         while (childType) {
-            const pick: util.PickWithData<NodeBase> = await util.showQuickPick<NodeBase>(quickPicksTask, `Select a ${childType}`);
+            const pick: util.PickWithData<NodeBase> = await util.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
             const node: NodeBase = pick.data;
             if (node.contextValue === expectedContextValue) {
                 return node;
@@ -67,6 +68,6 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
             });
         }
 
-        throw new Error('No matching resources found.');
+        throw new Error(localize('azFunc.noResourcesError', 'No matching resources found.'));
     }
 }
