@@ -10,10 +10,10 @@ import * as vscode from 'vscode';
 import { Site } from '../../node_modules/azure-arm-website/lib/models';
 import * as errors from '../errors';
 import * as util from '../util';
-import { INode } from './INode';
+import { NodeBase } from './NodeBase';
 import { SubscriptionNode } from './SubscriptionNode';
 
-export class FunctionAppNode implements INode {
+export class FunctionAppNode implements NodeBase {
     public readonly contextValue: string = 'azureFunctionsFunctionApp';
     public readonly label: string;
     public readonly id: string;

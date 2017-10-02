@@ -6,26 +6,26 @@
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
 import { GenericNode } from './nodes/GenericNode';
-import { INode } from './nodes/INode';
+import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
 
-export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
-    private onDidChangeTreeDataEmitter: EventEmitter<INode> = new EventEmitter<INode>();
+export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
+    private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
     private azureAccount: AzureAccount;
 
     constructor(azureAccount: AzureAccount) {
         this.azureAccount = azureAccount;
     }
 
-    public get onDidChangeTreeData(): Event<INode> {
+    public get onDidChangeTreeData(): Event<NodeBase> {
         return this.onDidChangeTreeDataEmitter.event;
     }
 
-    public getTreeItem(node: INode): TreeItem {
+    public getTreeItem(node: NodeBase): TreeItem {
         return node;
     }
 
-    public async getChildren(node?: INode): Promise<INode[]> {
+    public async getChildren(node?: NodeBase): Promise<NodeBase[]> {
         if (node) {
             return node.getChildren ? await node.getChildren() : [];
         } else { // Root of the explorer
@@ -41,7 +41,7 @@ export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
         }
     }
 
-    public refresh(node?: INode): void {
+    public refresh(node?: NodeBase): void {
         this.onDidChangeTreeDataEmitter.fire(node);
     }
 }

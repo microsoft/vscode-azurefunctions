@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { INode } from './INode';
+import { NodeBase } from './NodeBase';
 
-export class GenericNode implements INode {
+export class GenericNode implements NodeBase {
     public readonly contextValue: string;
     public readonly command: vscode.Command;
     public readonly id: string;

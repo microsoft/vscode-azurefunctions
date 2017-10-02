@@ -12,12 +12,12 @@ import * as util from '../util';
 
 export async function createFunctionApp(outputChannel: vscode.OutputChannel): Promise<void> {
     const newFolderId: string = 'newFolder';
-    let folderPicks: util.QuickPickItemWithData<string>[] = [new util.QuickPickItemWithData(newFolderId, '$(plus) New Folder')];
+    let folderPicks: util.PickWithData<string>[] = [new util.PickWithData(newFolderId, '$(plus) New Folder')];
     const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (folders) {
-        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new util.QuickPickItemWithData('', f.uri.fsPath)));
+        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new util.PickWithData('', f.uri.fsPath)));
     }
-    const folder: util.QuickPickItemWithData<string> = await util.showQuickPick<string>(folderPicks, 'Select a workspace folder for your new function app');
+    const folder: util.PickWithData<string> = await util.showQuickPick<string>(folderPicks, 'Select a workspace folder for your new function app');
     const createNewFolder: boolean = folder.data === newFolderId;
 
     const functionAppPath: string = createNewFolder ? await util.showFolderDialog() : folder.label;

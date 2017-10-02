@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as opn from 'opn';
-import { INode } from '../nodes/INode';
+import { NodeBase } from '../nodes/NodeBase';
 
-export function openInPortal(node?: INode): void {
+export function openInPortal(node?: NodeBase): void {
     if (node && node.tenantId) {
         (<(s: string) => void>opn)(`https://portal.azure.com/${node.tenantId}/#resource${node.id}`);
     }

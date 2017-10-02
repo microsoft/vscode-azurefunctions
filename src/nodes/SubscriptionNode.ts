@@ -11,9 +11,9 @@ import { Site, WebAppCollection } from '../../node_modules/azure-arm-website/lib
 import { AzureResourceFilter } from '../azure-account.api';
 import * as errors from '../errors';
 import { FunctionAppNode } from './FunctionAppNode';
-import { INode } from './INode';
+import { NodeBase } from './NodeBase';
 
-export class SubscriptionNode implements INode {
+export class SubscriptionNode implements NodeBase {
     public readonly contextValue: string = 'azureFunctionsSubscription';
     public readonly label: string;
     public readonly id: string;
@@ -40,7 +40,7 @@ export class SubscriptionNode implements INode {
         };
     }
 
-    public async getChildren(): Promise<INode[]> {
+    public async getChildren(): Promise<NodeBase[]> {
         const webApps: WebAppCollection = await this.getWebSiteClient().webApps.list();
 
         return webApps.filter((s: Site) => s.kind === 'functionapp')

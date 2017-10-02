@@ -5,8 +5,8 @@
 
 import * as vscode from 'vscode';
 
-export interface INode extends vscode.TreeItem {
+export interface NodeBase extends vscode.TreeItem {
     id: string;
     tenantId?: string;
-    getChildren?(): Promise<INode[]>;
+    getChildren?(): Promise<NodeBase[]>;
 }

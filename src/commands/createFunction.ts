@@ -36,8 +36,8 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
-        const folderPicks: util.GenericQuickPickItem[] = folders.map((f: vscode.WorkspaceFolder) => new util.GenericQuickPickItem(f.uri.fsPath));
-        const folder: util.GenericQuickPickItem = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
+        const folderPicks: util.Pick[] = folders.map((f: vscode.WorkspaceFolder) => new util.Pick(f.uri.fsPath));
+        const folder: util.Pick = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
         functionAppPath = folder.label;
     }
 
@@ -52,13 +52,13 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         }
     }
 
-    const templates: util.GenericQuickPickItem[] = [
-        new util.GenericQuickPickItem('BlobTrigger'),
-        new util.GenericQuickPickItem('HttpTrigger'),
-        new util.GenericQuickPickItem('QueueTrigger'),
-        new util.GenericQuickPickItem('TimerTrigger')
+    const templates: util.Pick[] = [
+        new util.Pick('BlobTrigger'),
+        new util.Pick('HttpTrigger'),
+        new util.Pick('QueueTrigger'),
+        new util.Pick('TimerTrigger')
     ];
-    const template: util.GenericQuickPickItem = await util.showQuickPick(templates, 'Select a function template');
+    const template: util.Pick = await util.showQuickPick(templates, 'Select a function template');
 
     const name: string = await util.showInputBox('Function Name', 'Provide a function name', false, (s: string) => validateTemplateName(functionAppPath, s));
 
