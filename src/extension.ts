@@ -79,11 +79,12 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
         } catch (error) {
             if (error instanceof errors.UserCancelledError) {
                 result = 'Canceled';
-                // Swallow the error so that it's not displayed to the user
             } else {
                 result = 'Failed';
                 errorData = util.errorToString(<{}>error);
-                throw error;
+                if (error instanceof Error) {
+                    vscode.window.showErrorMessage(error.message);
+                }
             }
         } finally {
             const end: number = Date.now();
