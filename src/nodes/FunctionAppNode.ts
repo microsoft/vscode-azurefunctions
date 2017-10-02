@@ -38,8 +38,8 @@ export class FunctionAppNode implements INode {
 
     get iconPath(): { light: string, dark: string } {
         return {
-            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', 'AzureFunctionsApp.svg'),
-            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', 'AzureFunctionsApp.svg')
+            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
+            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
         };
     }
 
