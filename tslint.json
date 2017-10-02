@@ -26,7 +26,10 @@
         "react-anchor-blank-noopener": true,
         "react-iframe-missing-sandbox": true,
         "react-no-dangerous-html": true,
-        "await-promise": true,
+        "await-promise": [
+            true,
+            "Thenable" // changed
+        ],
         "forin": true,
         "jquery-deferred-must-complete": true,
         "label-position": true,
@@ -85,7 +88,12 @@
         "react-this-binding-issue": true,
         "react-unused-props-and-state": true,
         "restrict-plus-operands": true,
-        "strict-boolean-expressions": true,
+        "strict-boolean-expressions": [
+            true,
+            "allow-string", // changed
+            "allow-undefined-union", // changed
+            "allow-mix" // changed
+        ],
         "switch-default": true,
         "triple-equals": [
             true,
@@ -106,12 +114,12 @@
         "class-name": true,
         "comment-format": true,
         "completed-docs": [
-            true,
+            false, // changed
             "classes"
         ],
         "export-name": true,
         "function-name": true,
-        "import-name": true,
+        "import-name": false, // changed
         "interface-name": true,
         "jsdoc-format": true,
         "max-classes-per-file": [
@@ -162,7 +170,10 @@
         "no-var-keyword": true,
         "no-var-requires": true,
         "no-var-self": true,
-        "no-void-expression": true,
+        "no-void-expression": [
+            true,
+            "ignore-arrow-function-shorthand" // changed
+        ],
         "object-literal-sort-keys": false,
         "one-variable-per-declaration": true,
         "only-arrow-functions": false,
