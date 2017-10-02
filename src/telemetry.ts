@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import vscode = require('vscode');
-import TelemetryReporter from 'vscode-extension-telemetry';
+import * as vscode from 'vscode';
+import vscodeExtensionTelemetry from 'vscode-extension-telemetry';
 
-export let reporter: TelemetryReporter;
+export let reporter: vscodeExtensionTelemetry;
 
 export class Reporter extends vscode.Disposable {
     constructor(context: vscode.ExtensionContext) {
@@ -14,7 +14,7 @@ export class Reporter extends vscode.Disposable {
 
         const packageInfo: IPackageInfo | undefined = getPackageInfo(context);
         if (packageInfo) {
-            reporter = packageInfo && new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
+            reporter = packageInfo && new vscodeExtensionTelemetry(packageInfo.name, packageInfo.version, packageInfo.aiKey);
         }
     }
 }
@@ -26,6 +26,7 @@ interface IPackageInfo {
 }
 
 function getPackageInfo(context: vscode.ExtensionContext): IPackageInfo | undefined {
+    // tslint:disable-next-line:non-literal-require no-require-imports
     const extensionPackage: IPackageInfo = require(context.asAbsolutePath('./package.json'));
     if (extensionPackage) {
         return {
