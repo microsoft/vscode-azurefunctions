@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { AzureAccount } from './azure-account.api';
 import * as commands from './commands';
+import * as errors from './errors';
 import { AzureFunctionsExplorer } from './explorer';
 import { FunctionAppNode, INode } from './nodes';
 import { Reporter } from './telemetry';
@@ -16,8 +17,12 @@ import * as util from './util';
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(new Reporter(context));
 
-    const azureAccount: AzureAccount = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account')!.exports;
-    if (azureAccount) {
+    const azureAccountExtension: vscode.Extension<AzureAccount> | undefined = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
+    if (!azureAccountExtension || !azureAccountExtension.exports) {
+        vscode.window.showErrorMessage('The Azure Account Extension is required for the Azure Functions extension.');
+    } else {
+        const azureAccount: AzureAccount = azureAccountExtension.exports;
+
         context.subscriptions.push(azureAccount.onFiltersChanged(() => explorer.refresh()));
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
@@ -34,8 +39,6 @@ export function activate(context: vscode.ExtensionContext): void {
         initAsyncCommand(context, 'azureFunctions.startFunctionApp', (node?: FunctionAppNode) => commands.startFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.stopFunctionApp', (node?: FunctionAppNode) => commands.stopFunctionApp(outputChannel, node));
         initAsyncCommand(context, 'azureFunctions.restartFunctionApp', (node?: FunctionAppNode) => commands.restartFunctionApp(outputChannel, node));
-    } else {
-        vscode.window.showErrorMessage('The Azure Account Extension is required for the Azure Functions extension.');
     }
 }
 
@@ -56,7 +59,7 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
         try {
             args.length === 0 ? await callback() : await callback(<INode>args[0]);
         } catch (error) {
-            if (error instanceof util.UserCancelledError) {
+            if (error instanceof errors.UserCancelledError) {
                 result = 'Canceled';
                 // Swallow the error so that it's not displayed to the user
             } else {

@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Site, WebAppCollection } from '../node_modules/azure-arm-website/lib/models';
 import { AzureResourceFilter } from './azure-account.api';
+import * as errors from './errors';
 import * as util from './util';
 
 export interface INode extends vscode.TreeItem {
@@ -44,9 +45,13 @@ export class SubscriptionNode implements INode {
     private readonly subscriptionFilter: AzureResourceFilter;
 
     constructor(subscriptionFilter: AzureResourceFilter) {
+        if (!subscriptionFilter.subscription.displayName || !subscriptionFilter.subscription.subscriptionId) {
+            throw new errors.ArgumentError(subscriptionFilter);
+        }
+
         this.subscriptionFilter = subscriptionFilter;
-        this.label = subscriptionFilter.subscription.displayName!;
-        this.id = subscriptionFilter.subscription.subscriptionId!;
+        this.label = subscriptionFilter.subscription.displayName;
+        this.id = subscriptionFilter.subscription.subscriptionId;
         this.tenantId = subscriptionFilter.session.tenantId;
     }
 
@@ -61,8 +66,8 @@ export class SubscriptionNode implements INode {
         const webApps: WebAppCollection = await this.getWebSiteClient().webApps.list();
 
         return webApps.filter((s: Site) => s.kind === 'functionapp')
-            .sort((s1: Site, s2: Site) => s1.id!.localeCompare(s2.id!))
-            .map((s: Site) => new FunctionAppNode(s, this));
+            .map((s: Site) => new FunctionAppNode(s, this))
+            .sort((f1: FunctionAppNode, f2: FunctionAppNode) => f1.id.localeCompare(f2.id));
     }
 
     public getWebSiteClient(): WebSiteManagementClient {
@@ -76,14 +81,20 @@ export class FunctionAppNode implements INode {
     public readonly id: string;
     public readonly tenantId: string;
 
-    private readonly functionApp: Site;
+    private readonly resourceGroup: string;
+    private readonly name: string;
     private readonly subscriptionNode: SubscriptionNode;
 
     constructor(functionApp: Site, subscriptionNode: SubscriptionNode) {
-        this.functionApp = functionApp;
+        if (!functionApp.id || !functionApp.resourceGroup || !functionApp.name) {
+            throw new errors.ArgumentError(functionApp);
+        }
+
+        this.id = functionApp.id;
+        this.resourceGroup = functionApp.resourceGroup;
+        this.name = functionApp.name;
         this.subscriptionNode = subscriptionNode;
-        this.label = `${functionApp.name} (${this.functionApp.resourceGroup})`;
-        this.id = functionApp.id!;
+        this.label = `${functionApp.name} (${this.resourceGroup})`;
         this.tenantId = subscriptionNode.tenantId;
     }
 
@@ -96,14 +107,14 @@ export class FunctionAppNode implements INode {
 
     public async start(): Promise<void> {
         const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
-        await client.webApps.start(this.functionApp.resourceGroup!, this.functionApp.name!);
-        await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Running);
+        await client.webApps.start(this.resourceGroup, this.name);
+        await util.waitForFunctionAppState(client, this.resourceGroup, this.name, util.FunctionAppState.Running);
     }
 
     public async stop(): Promise<void> {
         const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
-        await client.webApps.stop(this.functionApp.resourceGroup!, this.functionApp.name!);
-        await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Stopped);
+        await client.webApps.stop(this.resourceGroup, this.name);
+        await util.waitForFunctionAppState(client, this.resourceGroup, this.name, util.FunctionAppState.Stopped);
     }
 
     public async restart(): Promise<void> {

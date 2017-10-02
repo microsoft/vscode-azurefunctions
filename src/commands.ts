@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as errors from './errors';
 import * as FunctionsCli from './functions-cli';
 import { FunctionAppNode, INode } from './nodes';
 import * as TemplateFiles from './template-files';
@@ -28,7 +29,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
     let functionAppPath: string;
     const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-        throw new util.NoWorkspaceError();
+        throw new errors.NoWorkspaceError();
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
@@ -44,7 +45,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         if (result === yes) {
             await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
         } else {
-            throw new util.UserCancelledError();
+            throw new errors.UserCancelledError();
         }
     }
 
