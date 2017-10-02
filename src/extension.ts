@@ -7,9 +7,9 @@
 
 import * as vscode from 'vscode';
 import { AzureAccount } from './azure-account.api';
+import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
 import * as commands from './commands';
 import * as errors from './errors';
-import { AzureFunctionsExplorer } from './explorer';
 import { FunctionAppNode, INode } from './nodes';
 import { Reporter } from './telemetry';
 import * as util from './util';
