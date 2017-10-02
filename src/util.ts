@@ -34,7 +34,9 @@ export function errorToString(error: any): string | undefined {
     }
 }
 
-export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thenable<QuickPickItemWithData<T>[]>, placeHolder: string, ignoreFocusOut = false): Promise<QuickPickItemWithData<T>> {
+export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thenable<QuickPickItemWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<QuickPickItemWithData<T>>;
+export async function showQuickPick(items: QuickPickItem[] | Thenable<QuickPickItem[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<QuickPickItem>;
+export async function showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, ignoreFocusOut = false): Promise<vscode.QuickPickItem> {
     const options: vscode.QuickPickOptions = {
         placeHolder: placeHolder,
         ignoreFocusOut: ignoreFocusOut
@@ -100,10 +102,18 @@ export async function waitForFunctionAppState(webSiteManagementClient: WebSiteMa
     throw new Error(`Timeout waiting for Function App "${name}" state "${state}".`);
 }
 
-export class QuickPickItemWithData<T> implements vscode.QuickPickItem {
-    readonly description: string;
-    constructor(readonly label: string, description?: string, readonly data?: T) {
+export class QuickPickItem implements vscode.QuickPickItem {
+    public readonly description: string;
+    constructor(readonly label: string, description?: string) {
         this.description = description ? description : '';
+    }
+}
+
+export class QuickPickItemWithData<T> extends QuickPickItem {
+    public readonly data: T;
+    constructor(data: T, readonly label: string, description?: string) {
+        super(label, description);
+        this.data = data;
     }
 }
 

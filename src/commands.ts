@@ -11,7 +11,6 @@ import * as vscode from 'vscode';
 
 import { INode, FunctionAppNode } from './nodes';
 import * as FunctionsCli from './functions-cli';
-import { QuickPickItemWithData } from './util';
 import * as TemplateFiles from './template-files';
 
 const _expectedFunctionAppFiles = [
@@ -36,7 +35,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
-        const folderPicks = folders.map(f => new QuickPickItemWithData(f.uri.fsPath));
+        const folderPicks = folders.map(f => new util.QuickPickItem(f.uri.fsPath));
         const folder = await util.showQuickPick(folderPicks, "Select a workspace folder for your new function");
         functionAppPath = folder.label;
     }
@@ -54,10 +53,10 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
     // TODO: Run 'func templates list' to dynamically retrieve this list
     // Ideally the 'func' cli makes their output more pipe-able first
     const templates = [
-        new QuickPickItemWithData("BlobTrigger"),
-        new QuickPickItemWithData("HttpTrigger"),
-        new QuickPickItemWithData("QueueTrigger"),
-        new QuickPickItemWithData("TimerTrigger")
+        new util.QuickPickItem("BlobTrigger"),
+        new util.QuickPickItem("HttpTrigger"),
+        new util.QuickPickItem("QueueTrigger"),
+        new util.QuickPickItem("TimerTrigger")
     ];
     const template = await util.showQuickPick(templates, "Select a function template");
 
@@ -70,12 +69,12 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
 
 export async function createFunctionApp(outputChannel: vscode.OutputChannel) {
     const newFolderId = "newFolder";
-    let folderPicks = [new QuickPickItemWithData("$(plus) New Folder", undefined, newFolderId)];
+    let folderPicks = [new util.QuickPickItemWithData(newFolderId, "$(plus) New Folder")];
     const folders = vscode.workspace.workspaceFolders;
     if (folders) {
-        folderPicks = folderPicks.concat(folders.map(f => new QuickPickItemWithData(f.uri.fsPath)));
+        folderPicks = folderPicks.concat(folders.map(f => new util.QuickPickItemWithData('', f.uri.fsPath)));
     }
-    const folder = await util.showQuickPick(folderPicks, "Select a workspace folder for your new function app");
+    const folder = await util.showQuickPick<string>(folderPicks, "Select a workspace folder for your new function app");
     const createNewFolder = folder.data === newFolderId;
 
     const functionAppPath = createNewFolder ? await util.showFolderDialog() : folder.label;
