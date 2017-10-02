@@ -9,9 +9,15 @@ import * as vscode from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
-import * as commands from './commands';
+import { createFunction } from './commands/createFunction';
+import { createFunctionApp } from './commands/createFunctionApp';
+import { openInPortal } from './commands/openInPortal';
+import { restartFunctionApp } from './commands/restartFunctionApp';
+import { startFunctionApp } from './commands/startFunctionApp';
+import { stopFunctionApp } from './commands/stopFunctionApp';
 import * as errors from './errors';
-import { FunctionAppNode, INode } from './nodes';
+import { FunctionAppNode } from './nodes/FunctionAppNode';
+import { INode } from './nodes/INode';
 import * as util from './util';
 
 let reporter: TelemetryReporter | undefined;
@@ -40,12 +46,12 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
-        initCommand(context, 'azureFunctions.openInPortal', (node?: INode) => commands.openInPortal(node));
-        initAsyncCommand(context, 'azureFunctions.createFunction', async () => await commands.createFunction(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.createFunctionApp', async () => await commands.createFunctionApp(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await commands.startFunctionApp(outputChannel, node));
-        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await commands.stopFunctionApp(outputChannel, node));
-        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await commands.restartFunctionApp(outputChannel, node));
+        initCommand(context, 'azureFunctions.openInPortal', openInPortal);
+        initAsyncCommand(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
+        initAsyncCommand(context, 'azureFunctions.createFunctionApp', async () => await createFunctionApp(outputChannel));
+        initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(outputChannel, node));
+        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(outputChannel, node));
+        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(outputChannel, node));
     }
 }
 

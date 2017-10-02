@@ -5,7 +5,9 @@
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
-import { GenericNode, INode, SubscriptionNode } from './nodes';
+import { GenericNode } from './nodes/GenericNode';
+import { INode } from './nodes/INode';
+import { SubscriptionNode } from './nodes/SubscriptionNode';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
     private onDidChangeTreeDataEmitter: EventEmitter<INode> = new EventEmitter<INode>();
