@@ -7,35 +7,27 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { QuickPickItem } from 'vscode';
 import { Site } from '../node_modules/azure-arm-website/lib/models';
 import * as errors from './errors';
-import { reporter } from './telemetry';
-
-export function sendTelemetry(eventName: string, properties?: { [key: string]: string; }, measures?: { [key: string]: number; }): void {
-    if (reporter) {
-        reporter.sendTelemetryEvent(eventName, properties, measures);
-    }
-}
 
 export function errorToString(error: {}): string | undefined {
-    if (error) {
-        if (error instanceof Error) {
-            return JSON.stringify({
-                Error: error.constructor.name,
-                Message: error.message
-            });
-        }
+    if (error instanceof Error) {
+        return JSON.stringify({
+            Error: error.constructor.name,
+            Message: error.message
+        });
+    }
 
-        if (typeof (error) === 'object') {
-            return JSON.stringify({
-                object: error.constructor.name
-            });
-        }
+    if (typeof (error) === 'object') {
+        return JSON.stringify({
+            object: error.constructor.name
+        });
     }
 }
 
 export async function showQuickPick<T>(items: QuickPickItemWithData<T>[] | Thenable<QuickPickItemWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<QuickPickItemWithData<T>>;
-export async function showQuickPick(items: QuickPickItem[] | Thenable<QuickPickItem[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<QuickPickItem>;
+export async function showQuickPick(items: GenericQuickPickItem[] | Thenable<GenericQuickPickItem[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<GenericQuickPickItem>;
 export async function showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, ignoreFocusOut: boolean = false): Promise<vscode.QuickPickItem> {
     const options: vscode.QuickPickOptions = {
         placeHolder: placeHolder,
@@ -102,7 +94,7 @@ export async function waitForFunctionAppState(webSiteManagementClient: WebSiteMa
     throw new Error(`Timeout waiting for Function App "${name}" state "${state}".`);
 }
 
-export class QuickPickItem implements vscode.QuickPickItem {
+export class GenericQuickPickItem implements QuickPickItem {
     public readonly description: string;
     public readonly label: string;
     constructor(label: string, description?: string) {
@@ -111,7 +103,7 @@ export class QuickPickItem implements vscode.QuickPickItem {
     }
 }
 
-export class QuickPickItemWithData<T> extends QuickPickItem {
+export class QuickPickItemWithData<T> extends GenericQuickPickItem {
     public readonly data: T;
     constructor(data: T, label: string, description?: string) {
         super(label, description);
@@ -119,10 +111,14 @@ export class QuickPickItemWithData<T> extends QuickPickItem {
     }
 }
 
-export function writeToFile(path: string, data: string): Promise<void> {
-    return new Promise((resolve: () => void, reject: (e: {}) => void): void => {
-        fs.writeFile(path, data, (error: Error) => {
-            error ? reject(error) : resolve();
+export async function writeToFile(path: string, data: string): Promise<void> {
+    await new Promise((resolve: () => void, reject: (e: {}) => void): void => {
+        fs.writeFile(path, data, (error?: Error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
         });
     });
 }

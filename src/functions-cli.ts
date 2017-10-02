@@ -14,8 +14,8 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel, wor
     await executeCommand(outputChannel, workingDirectory, 'init');
 }
 
-function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
-    return new Promise((resolve: () => void, reject: (e: {}) => void): void => {
+async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
+    await new Promise((resolve: () => void, reject: (e: {}) => void): void => {
         const options: cp.SpawnOptions = {
             cwd: workingDirectory,
             shell: true

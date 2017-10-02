@@ -21,7 +21,7 @@ const expectedFunctionAppFiles: string[] = [
 
 export function openInPortal(node?: INode): void {
     if (node && node.tenantId) {
-        opn(`https://portal.azure.com/${node.tenantId}/#resource${node.id}`);
+        (<(s: string) => void>opn)(`https://portal.azure.com/${node.tenantId}/#resource${node.id}`);
     }
 }
 
@@ -33,8 +33,8 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
-        const folderPicks: util.QuickPickItem[] = folders.map((f: vscode.WorkspaceFolder) => new util.QuickPickItem(f.uri.fsPath));
-        const folder: util.QuickPickItem = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
+        const folderPicks: util.GenericQuickPickItem[] = folders.map((f: vscode.WorkspaceFolder) => new util.GenericQuickPickItem(f.uri.fsPath));
+        const folder: util.GenericQuickPickItem = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
         functionAppPath = folder.label;
     }
 
@@ -49,13 +49,13 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         }
     }
 
-    const templates: util.QuickPickItem[] = [
-        new util.QuickPickItem('BlobTrigger'),
-        new util.QuickPickItem('HttpTrigger'),
-        new util.QuickPickItem('QueueTrigger'),
-        new util.QuickPickItem('TimerTrigger')
+    const templates: util.GenericQuickPickItem[] = [
+        new util.GenericQuickPickItem('BlobTrigger'),
+        new util.GenericQuickPickItem('HttpTrigger'),
+        new util.GenericQuickPickItem('QueueTrigger'),
+        new util.GenericQuickPickItem('TimerTrigger')
     ];
-    const template: util.QuickPickItem = await util.showQuickPick(templates, 'Select a function template');
+    const template: util.GenericQuickPickItem = await util.showQuickPick(templates, 'Select a function template');
 
     const name: string = await util.showInputBox('Function Name', 'Provide a function name', false, (s: string) => validateTemplateName(functionAppPath, s));
 
@@ -77,9 +77,9 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel): Pr
     const functionAppPath: string = createNewFolder ? await util.showFolderDialog() : folder.label;
 
     const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
-    const tasksJsonExists: boolean = await fs.existsSync(tasksJsonPath);
+    const tasksJsonExists: boolean = fs.existsSync(tasksJsonPath);
     const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
-    const launchJsonExists: boolean = await fs.existsSync(launchJsonPath);
+    const launchJsonExists: boolean = fs.existsSync(launchJsonPath);
 
     await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
 
