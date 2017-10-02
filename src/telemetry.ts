@@ -12,7 +12,7 @@ export class Reporter extends vscode.Disposable {
     constructor(context: vscode.ExtensionContext) {
         super(() => reporter.dispose());
 
-        const packageInfo = getPackageInfo(context);
+        const packageInfo: IPackageInfo | undefined = getPackageInfo(context);
         if (packageInfo) {
             reporter = packageInfo && new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
         }
@@ -26,7 +26,7 @@ interface IPackageInfo {
 }
 
 function getPackageInfo(context: vscode.ExtensionContext): IPackageInfo | undefined {
-    const extensionPackage = require(context.asAbsolutePath('./package.json'));
+    const extensionPackage: IPackageInfo = require(context.asAbsolutePath('./package.json'));
     if (extensionPackage) {
         return {
             name: extensionPackage.name,

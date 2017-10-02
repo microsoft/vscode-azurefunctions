@@ -13,18 +13,18 @@ import { FunctionAppNode, INode } from './nodes';
 import { Reporter } from './telemetry';
 import * as util from './util';
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(new Reporter(context));
 
-    const azureAccount = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account')!.exports;
+    const azureAccount: AzureAccount = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account')!.exports;
     if (azureAccount) {
         context.subscriptions.push(azureAccount.onFiltersChanged(() => explorer.refresh()));
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
-        const explorer = new AzureFunctionsExplorer(azureAccount);
+        const explorer: AzureFunctionsExplorer = new AzureFunctionsExplorer(azureAccount);
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
 
-        const outputChannel = vscode.window.createOutputChannel('Azure Functions');
+        const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
         context.subscriptions.push(outputChannel);
 
         initCommand(context, 'azureFunctions.refresh', (node?: INode) => explorer.refresh(node));
@@ -39,17 +39,18 @@ export function activate(context: vscode.ExtensionContext) {
     }
 }
 
-export function deactivate() {
+// tslint:disable-next-line:no-empty
+export function deactivate(): void {
 }
 
-function initCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: INode) => void) {
+function initCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: INode) => void): void {
     initAsyncCommand(context, commandId, (node?: INode) => Promise.resolve(callback(node)));
 }
 
-function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: INode) => Promise<void>) {
+function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: INode) => Promise<void>): void {
     context.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
-        const start = Date.now();
-        let result = 'Succeeded';
+        const start: number = Date.now();
+        let result: string = 'Succeeded';
         let errorData: string | undefined;
 
         try {
@@ -64,7 +65,7 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
                 throw error;
             }
         } finally {
-            const end = Date.now();
+            const end: number = Date.now();
             const properties: { [key: string]: string; } = { result: result };
             if (errorData) {
                 properties.error = errorData;

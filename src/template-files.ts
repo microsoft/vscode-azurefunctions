@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export function getTasksJson() {
+export function getTasksJson(): string {
     return stringifyJSON(tasksJson);
 }
 
-export function getLaunchJson() {
+export function getLaunchJson(): string {
     return stringifyJSON(launchJson);
 }
 
-const taskId = 'launchFunctionApp';
-const tasksJson = {
+const taskId: string = 'launchFunctionApp';
+const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
@@ -46,7 +46,7 @@ const tasksJson = {
     ]
 };
 
-const launchJson = {
+const launchJson: {} = {
     version: '0.2.0',
     configurations: [
         {

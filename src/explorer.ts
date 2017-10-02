@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
-import { AzureAccount } from './azure-account.api';
+import { AzureAccount, AzureResourceFilter } from './azure-account.api';
 import { GenericNode, INode, SubscriptionNode } from './nodes';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
@@ -34,7 +34,7 @@ export class AzureFunctionsExplorer implements TreeDataProvider<INode> {
             } else if (this.azureAccount.filters.length === 0) {
                 return [new GenericNode('azureFunctionsNoSubscriptions', 'No subscriptions found. Edit filters...', 'azure-account.selectSubscriptions')];
             } else {
-                return this.azureAccount.filters.map(filter => new SubscriptionNode(filter));
+                return this.azureAccount.filters.map((filter: AzureResourceFilter) => new SubscriptionNode(filter));
             }
         }
     }

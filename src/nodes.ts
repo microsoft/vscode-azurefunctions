@@ -5,7 +5,7 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as WebSiteModels from '../node_modules/azure-arm-website/lib/models';
+import { Site, WebAppCollection } from '../node_modules/azure-arm-website/lib/models';
 import { AzureResourceFilter } from './azure-account.api';
 import * as util from './util';
 
@@ -39,7 +39,7 @@ export class SubscriptionNode implements INode {
     public readonly label: string;
     public readonly id: string;
     public readonly tenantId: string;
-    public readonly collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
     private readonly subscriptionFilter: AzureResourceFilter;
 
@@ -58,13 +58,14 @@ export class SubscriptionNode implements INode {
     }
 
     public async getChildren(): Promise<INode[]> {
-        const webApps = await this.getWebSiteClient().webApps.list();
-        return webApps.filter(s => s.kind === 'functionapp')
-            .sort((s1, s2) => s1.id!.localeCompare(s2.id!))
-            .map(s => new FunctionAppNode(s, this));
+        const webApps: WebAppCollection = await this.getWebSiteClient().webApps.list();
+
+        return webApps.filter((s: Site) => s.kind === 'functionapp')
+            .sort((s1: Site, s2: Site) => s1.id!.localeCompare(s2.id!))
+            .map((s: Site) => new FunctionAppNode(s, this));
     }
 
-    public getWebSiteClient() {
+    public getWebSiteClient(): WebSiteManagementClient {
         return new WebSiteManagementClient(this.subscriptionFilter.session.credentials, this.id);
     }
 }
@@ -75,10 +76,10 @@ export class FunctionAppNode implements INode {
     public readonly id: string;
     public readonly tenantId: string;
 
-    private readonly functionApp: WebSiteModels.Site;
+    private readonly functionApp: Site;
     private readonly subscriptionNode: SubscriptionNode;
 
-    constructor(functionApp: WebSiteModels.Site, subscriptionNode: SubscriptionNode) {
+    constructor(functionApp: Site, subscriptionNode: SubscriptionNode) {
         this.functionApp = functionApp;
         this.subscriptionNode = subscriptionNode;
         this.label = `${functionApp.name} (${this.functionApp.resourceGroup})`;
@@ -93,19 +94,19 @@ export class FunctionAppNode implements INode {
         };
     }
 
-    public async start() {
-        const client = this.subscriptionNode.getWebSiteClient();
+    public async start(): Promise<void> {
+        const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
         await client.webApps.start(this.functionApp.resourceGroup!, this.functionApp.name!);
         await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Running);
     }
 
-    public async stop() {
-        const client = this.subscriptionNode.getWebSiteClient();
+    public async stop(): Promise<void> {
+        const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
         await client.webApps.stop(this.functionApp.resourceGroup!, this.functionApp.name!);
         await util.waitForFunctionAppState(client, this.functionApp.resourceGroup!, this.functionApp.name!, util.FunctionAppState.Stopped);
     }
 
-    public async restart() {
+    public async restart(): Promise<void> {
         await this.stop();
         await this.start();
     }

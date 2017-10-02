@@ -12,35 +12,35 @@ import { FunctionAppNode, INode } from './nodes';
 import * as TemplateFiles from './template-files';
 import * as util from './util';
 
-const expectedFunctionAppFiles = [
+const expectedFunctionAppFiles: string[] = [
     'host.json',
     'local.settings.json',
     path.join('.vscode', 'launch.json')
 ];
 
-export function openInPortal(node?: INode) {
+export function openInPortal(node?: INode): void {
     if (node && node.tenantId) {
         opn(`https://portal.azure.com/${node.tenantId}/#resource${node.id}`);
     }
 }
 
-export async function createFunction(outputChannel: vscode.OutputChannel) {
+export async function createFunction(outputChannel: vscode.OutputChannel): Promise<void> {
     let functionAppPath: string;
-    const folders = vscode.workspace.workspaceFolders;
+    const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
         throw new util.NoWorkspaceError();
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
-        const folderPicks = folders.map(f => new util.QuickPickItem(f.uri.fsPath));
-        const folder = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
+        const folderPicks: util.QuickPickItem[] = folders.map((f: vscode.WorkspaceFolder) => new util.QuickPickItem(f.uri.fsPath));
+        const folder: util.QuickPickItem = await util.showQuickPick(folderPicks, 'Select a workspace folder for your new function');
         functionAppPath = folder.label;
     }
 
-    const missingFiles = getMissingFunctionAppFiles(functionAppPath);
+    const missingFiles: string[] = getMissingFunctionAppFiles(functionAppPath);
     if (missingFiles.length !== 0) {
-        const yes = 'Yes';
-        const result = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join('\', \'')}'. Add the missing files?`, yes, 'No');
+        const yes: string = 'Yes';
+        const result: string | undefined = await vscode.window.showWarningMessage(`The current folder is missing the following function app files: '${missingFiles.join('\', \'')}'. Add the missing files?`, yes, 'No');
         if (result === yes) {
             await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
         } else {
@@ -48,37 +48,37 @@ export async function createFunction(outputChannel: vscode.OutputChannel) {
         }
     }
 
-    const templates = [
+    const templates: util.QuickPickItem[] = [
         new util.QuickPickItem('BlobTrigger'),
         new util.QuickPickItem('HttpTrigger'),
         new util.QuickPickItem('QueueTrigger'),
         new util.QuickPickItem('TimerTrigger')
     ];
-    const template = await util.showQuickPick(templates, 'Select a function template');
+    const template: util.QuickPickItem = await util.showQuickPick(templates, 'Select a function template');
 
-    const name = await util.showInputBox('Function Name', 'Provide a function name', false, (s) => validateTemplateName(functionAppPath, s));
+    const name: string = await util.showInputBox('Function Name', 'Provide a function name', false, (s: string) => validateTemplateName(functionAppPath, s));
 
     await FunctionsCli.createFunction(outputChannel, functionAppPath, template.label, name);
-    const newFileUri = vscode.Uri.file(path.join(functionAppPath, name, 'index.js'));
+    const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionAppPath, name, 'index.js'));
     vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 }
 
-export async function createFunctionApp(outputChannel: vscode.OutputChannel) {
-    const newFolderId = 'newFolder';
-    let folderPicks = [new util.QuickPickItemWithData(newFolderId, '$(plus) New Folder')];
-    const folders = vscode.workspace.workspaceFolders;
+export async function createFunctionApp(outputChannel: vscode.OutputChannel): Promise<void> {
+    const newFolderId: string = 'newFolder';
+    let folderPicks: util.QuickPickItemWithData<string>[] = [new util.QuickPickItemWithData(newFolderId, '$(plus) New Folder')];
+    const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (folders) {
-        folderPicks = folderPicks.concat(folders.map(f => new util.QuickPickItemWithData('', f.uri.fsPath)));
+        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new util.QuickPickItemWithData('', f.uri.fsPath)));
     }
-    const folder = await util.showQuickPick<string>(folderPicks, 'Select a workspace folder for your new function app');
-    const createNewFolder = folder.data === newFolderId;
+    const folder: util.QuickPickItemWithData<string> = await util.showQuickPick<string>(folderPicks, 'Select a workspace folder for your new function app');
+    const createNewFolder: boolean = folder.data === newFolderId;
 
-    const functionAppPath = createNewFolder ? await util.showFolderDialog() : folder.label;
+    const functionAppPath: string = createNewFolder ? await util.showFolderDialog() : folder.label;
 
-    const tasksJsonPath = path.join(functionAppPath, '.vscode', 'tasks.json');
-    const tasksJsonExists = await fs.existsSync(tasksJsonPath);
-    const launchJsonPath = path.join(functionAppPath, '.vscode', 'launch.json');
-    const launchJsonExists = await fs.existsSync(launchJsonPath);
+    const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
+    const tasksJsonExists: boolean = await fs.existsSync(tasksJsonPath);
+    const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
+    const launchJsonExists: boolean = await fs.existsSync(launchJsonPath);
 
     await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
 
@@ -93,7 +93,7 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel) {
     }
 }
 
-export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
     if (node) {
         outputChannel.appendLine(`Starting Function App "${node.label}"...`);
         await node.start();
@@ -101,7 +101,7 @@ export async function startFunctionApp(outputChannel: vscode.OutputChannel, node
     }
 }
 
-export async function stopFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+export async function stopFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
     if (node) {
         outputChannel.appendLine(`Stopping Function App "${node.label}"...`);
         await node.stop();
@@ -109,7 +109,7 @@ export async function stopFunctionApp(outputChannel: vscode.OutputChannel, node?
     }
 }
 
-export async function restartFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode) {
+export async function restartFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
     if (node) {
         outputChannel.appendLine(`Restarting Function App "${node.label}"...`);
         await node.restart();
@@ -117,8 +117,8 @@ export async function restartFunctionApp(outputChannel: vscode.OutputChannel, no
     }
 }
 
-function getMissingFunctionAppFiles(rootPath: string) {
-    return expectedFunctionAppFiles.filter(file => !fs.existsSync(path.join(rootPath, file)));
+function getMissingFunctionAppFiles(rootPath: string): string[] {
+    return expectedFunctionAppFiles.filter((file: string) => !fs.existsSync(path.join(rootPath, file)));
 }
 
 function validateTemplateName(rootPath: string, name: string): string | undefined {
