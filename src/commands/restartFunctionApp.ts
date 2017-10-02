@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
+import { startFunctionApp } from './startFunctionApp';
+import { stopFunctionApp } from './stopFunctionApp';
 
-export async function restartFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
-    if (node) {
-        outputChannel.appendLine(`Restarting Function App "${node.label}"...`);
-        await node.restart();
-        outputChannel.appendLine(`Function App "${node.label}" has been restarted.`);
-    }
+export async function restartFunctionApp(explorer: AzureFunctionsExplorer, node?: FunctionAppNode): Promise<void> {
+    await startFunctionApp(explorer, node);
+    await stopFunctionApp(explorer, node);
 }

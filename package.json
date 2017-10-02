@@ -156,7 +156,7 @@
     "scripts": {
         "vscode:prepublish": "tsc -p ./",
         "compile": "tsc -watch -p ./",
-        "lint": "tslint --project tsconfig.json src/*.ts -e src/*.d.ts --type-check -t verbose",
+        "lint": "tslint --project tsconfig.json -e src/*.d.ts --type-check -t verbose",
         "postinstall": "node ./node_modules/vscode/bin/install",
         "test": "node ./node_modules/vscode/bin/test"
     },

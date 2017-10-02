@@ -49,9 +49,9 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand(context, 'azureFunctions.openInPortal', openInPortal);
         initAsyncCommand(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
         initAsyncCommand(context, 'azureFunctions.createFunctionApp', async () => await createFunctionApp(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(outputChannel, node));
-        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(outputChannel, node));
-        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(outputChannel, node));
+        initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
+        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
+        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
     }
 }
 

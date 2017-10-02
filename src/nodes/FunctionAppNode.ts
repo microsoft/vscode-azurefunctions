@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:import-name no-require-imports
+// tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -13,50 +13,23 @@ import * as util from '../util';
 import { NodeBase } from './NodeBase';
 import { SubscriptionNode } from './SubscriptionNode';
 
-export class FunctionAppNode implements NodeBase {
-    public readonly contextValue: string = 'azureFunctionsFunctionApp';
-    public readonly label: string;
-    public readonly id: string;
-    public readonly tenantId: string;
+export class FunctionAppNode extends NodeBase {
+    public static readonly contextValue: string = 'azureFunctionsFunctionApp';
+    public readonly name: string;
+    public readonly resourceGroup: string;
+    public readonly parent: SubscriptionNode;
 
-    private readonly resourceGroup: string;
-    private readonly name: string;
-    private readonly subscriptionNode: SubscriptionNode;
+    private constructor(id: string, name: string, state: string, resourceGroup: string) {
+        super(id, state === util.FunctionAppState.Running ? name : `${name} (${state})`, FunctionAppNode.contextValue);
+        this.resourceGroup = resourceGroup;
+        this.name = name;
+    }
 
-    constructor(functionApp: Site, subscriptionNode: SubscriptionNode) {
-        if (!functionApp.id || !functionApp.resourceGroup || !functionApp.name) {
+    public static CREATE(functionApp: Site): FunctionAppNode {
+        if (!functionApp.id || !functionApp.name || !functionApp.state || !functionApp.resourceGroup) {
             throw new errors.ArgumentError(functionApp);
         }
 
-        this.id = functionApp.id;
-        this.resourceGroup = functionApp.resourceGroup;
-        this.name = functionApp.name;
-        this.subscriptionNode = subscriptionNode;
-        this.label = `${functionApp.name} (${this.resourceGroup})`;
-        this.tenantId = subscriptionNode.tenantId;
-    }
-
-    get iconPath(): { light: string, dark: string } {
-        return {
-            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
-            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
-        };
-    }
-
-    public async start(): Promise<void> {
-        const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
-        await client.webApps.start(this.resourceGroup, this.name);
-        await util.waitForFunctionAppState(client, this.resourceGroup, this.name, util.FunctionAppState.Running);
-    }
-
-    public async stop(): Promise<void> {
-        const client: WebSiteManagementClient = this.subscriptionNode.getWebSiteClient();
-        await client.webApps.stop(this.resourceGroup, this.name);
-        await util.waitForFunctionAppState(client, this.resourceGroup, this.name, util.FunctionAppState.Stopped);
-    }
-
-    public async restart(): Promise<void> {
-        await this.stop();
-        await this.start();
+        return new FunctionAppNode(functionApp.id, functionApp.name, functionApp.state, functionApp.resourceGroup);
     }
 }

@@ -3,13 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+// tslint:disable-next-line:no-require-imports
+import WebSiteManagementClient = require('azure-arm-website');
+import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
+import * as util from '../util';
 
-export async function startFunctionApp(outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
-    if (node) {
-        outputChannel.appendLine(`Starting Function App "${node.label}"...`);
-        await node.start();
-        outputChannel.appendLine(`Function App "${node.label}" has been started.`);
+export async function startFunctionApp(explorer: AzureFunctionsExplorer, node?: FunctionAppNode): Promise<void> {
+    if (!node) {
+        node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));
     }
+
+    const client: WebSiteManagementClient = node.getWebSiteClient();
+    await client.webApps.start(node.resourceGroup, node.name);
+    await util.waitForFunctionAppState(client, node.resourceGroup, node.name, util.FunctionAppState.Running);
+    explorer.refresh(node.parent);
 }

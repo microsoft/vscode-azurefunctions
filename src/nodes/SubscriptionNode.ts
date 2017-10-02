@@ -13,39 +13,34 @@ import * as errors from '../errors';
 import { FunctionAppNode } from './FunctionAppNode';
 import { NodeBase } from './NodeBase';
 
-export class SubscriptionNode implements NodeBase {
-    public readonly contextValue: string = 'azureFunctionsSubscription';
-    public readonly label: string;
-    public readonly id: string;
-    public readonly tenantId: string;
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+export class SubscriptionNode extends NodeBase {
+    public static readonly contextValue: string = 'azureFunctionsSubscription';
+    public readonly childType: string = 'Function App';
 
     private readonly subscriptionFilter: AzureResourceFilter;
 
-    constructor(subscriptionFilter: AzureResourceFilter) {
+    private constructor(id: string, name: string, subscriptionFilter: AzureResourceFilter) {
+        super(id, name, SubscriptionNode.contextValue);
+        this.subscriptionFilter = subscriptionFilter;
+    }
+
+    public static CREATE(subscriptionFilter: AzureResourceFilter): SubscriptionNode {
         if (!subscriptionFilter.subscription.displayName || !subscriptionFilter.subscription.subscriptionId) {
             throw new errors.ArgumentError(subscriptionFilter);
         }
 
-        this.subscriptionFilter = subscriptionFilter;
-        this.label = subscriptionFilter.subscription.displayName;
-        this.id = subscriptionFilter.subscription.subscriptionId;
-        this.tenantId = subscriptionFilter.session.tenantId;
+        return new SubscriptionNode(subscriptionFilter.subscription.subscriptionId, subscriptionFilter.subscription.displayName, subscriptionFilter);
     }
 
-    get iconPath(): { light: string, dark: string } {
-        return {
-            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
-            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
-        };
-    }
-
-    public async getChildren(): Promise<NodeBase[]> {
+    public async refreshChildren(): Promise<NodeBase[]> {
         const webApps: WebAppCollection = await this.getWebSiteClient().webApps.list();
 
         return webApps.filter((s: Site) => s.kind === 'functionapp')
-            .map((s: Site) => new FunctionAppNode(s, this))
-            .sort((f1: FunctionAppNode, f2: FunctionAppNode) => f1.id.localeCompare(f2.id));
+            .map((s: Site) => FunctionAppNode.CREATE(s));
+    }
+
+    get tenantId(): string {
+        return this.subscriptionFilter.session.tenantId;
     }
 
     public getWebSiteClient(): WebSiteManagementClient {

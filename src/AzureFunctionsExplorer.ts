@@ -5,13 +5,14 @@
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
-import { GenericNode } from './nodes/GenericNode';
 import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
+import * as util from './util';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
     private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
     private azureAccount: AzureAccount;
+    private rootNodes: NodeBase[] = [];
 
     constructor(azureAccount: AzureAccount) {
         this.azureAccount = azureAccount;
@@ -27,21 +28,45 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
 
     public async getChildren(node?: NodeBase): Promise<NodeBase[]> {
         if (node) {
-            return node.getChildren ? await node.getChildren() : [];
+            return await node.getChildren();
         } else { // Root of the explorer
+            this.rootNodes = [];
+
             if (this.azureAccount.status === 'Initializing' || this.azureAccount.status === 'LoggingIn') {
-                return [new GenericNode('azureFunctionsLoading', 'Loading...')];
+                return [new NodeBase('azureFunctionsLoading', 'Loading...')];
             } else if (this.azureAccount.status === 'LoggedOut') {
-                return [new GenericNode('azureFunctionsSignInToAzure', 'Sign in to Azure...', 'azure-account.login')];
+                return [new NodeBase('azureFunctionsSignInToAzure', 'Sign in to Azure...', undefined, 'azure-account.login')];
             } else if (this.azureAccount.filters.length === 0) {
-                return [new GenericNode('azureFunctionsNoSubscriptions', 'No subscriptions found. Edit filters...', 'azure-account.selectSubscriptions')];
+                return [new NodeBase('azureFunctionsNoSubscriptions', 'No subscriptions found. Edit filters...', undefined, 'azure-account.selectSubscriptions')];
             } else {
-                return this.azureAccount.filters.map((filter: AzureResourceFilter) => new SubscriptionNode(filter));
+                this.rootNodes = this.azureAccount.filters.map((filter: AzureResourceFilter) => SubscriptionNode.CREATE(filter));
+
+                return this.rootNodes;
             }
         }
     }
 
     public refresh(node?: NodeBase): void {
         this.onDidChangeTreeDataEmitter.fire(node);
+    }
+
+    public async showNodePicker(expectedContextValue: string): Promise<NodeBase> {
+        let childType: string | undefined = 'Subscription';
+        let quickPicksTask: Promise<util.PickWithData<NodeBase>[]> = Promise.resolve(this.rootNodes.map((c: NodeBase) => new util.PickWithData<NodeBase>(c, c.label)));
+
+        while (childType) {
+            const pick: util.PickWithData<NodeBase> = await util.showQuickPick<NodeBase>(quickPicksTask, `Select a ${childType}`);
+            const node: NodeBase = pick.data;
+            if (node.contextValue === expectedContextValue) {
+                return node;
+            }
+
+            childType = node.childType;
+            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): util.PickWithData<NodeBase>[] => {
+                return nodes.map((c: NodeBase) => new util.PickWithData<NodeBase>(c, c.label));
+            });
+        }
+
+        throw new Error('No matching resources found.');
     }
 }
