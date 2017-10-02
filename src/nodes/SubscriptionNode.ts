@@ -5,8 +5,6 @@
 
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
-import * as path from 'path';
-import * as vscode from 'vscode';
 import { Site, WebAppCollection } from '../../node_modules/azure-arm-website/lib/models';
 import { AzureResourceFilter } from '../azure-account.api';
 import * as errors from '../errors';

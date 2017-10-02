@@ -39,12 +39,10 @@ export class NodeBase implements TreeItem {
     }
 
     get iconPath(): { light: string, dark: string } | undefined {
-        if (this.contextValue !== NodeBase.contextValue) {
-            return {
-                light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
-                dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
-            };
-        }
+        return this.contextValue === NodeBase.contextValue ? undefined : {
+            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
+            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
+        };
     }
 
     public async getChildren(forceRefresh: boolean = true): Promise<NodeBase[]> {

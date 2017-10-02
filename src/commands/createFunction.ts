@@ -25,6 +25,8 @@ function validateTemplateName(rootPath: string, name: string): string | undefine
         return 'The template name cannot be empty.';
     } else if (fs.existsSync(path.join(rootPath, name))) {
         return `A folder with the name "${name}" already exists.`;
+    } else {
+        return undefined;
     }
 }
 

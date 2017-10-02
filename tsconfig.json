@@ -8,7 +8,11 @@
         ],
         "sourceMap": true,
         "rootDir": ".",
-        "strictNullChecks": true
+        "noUnusedLocals": true,
+        "noImplicitThis": true,
+        "noImplicitReturns": true,
+        "strictNullChecks": true,
+        "noUnusedParameters": true
     },
     "exclude": [
         "node_modules",

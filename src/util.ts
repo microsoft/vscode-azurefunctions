@@ -17,12 +17,12 @@ export function errorToString(error: {}): string | undefined {
             Error: error.constructor.name,
             Message: error.message
         });
-    }
-
-    if (typeof (error) === 'object') {
+    } else if (typeof (error) === 'object') {
         return JSON.stringify({
             object: error.constructor.name
         });
+    } else {
+        return undefined;
     }
 }
 

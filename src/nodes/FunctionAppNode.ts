@@ -3,10 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
-import * as path from 'path';
-import * as vscode from 'vscode';
 import { Site } from '../../node_modules/azure-arm-website/lib/models';
 import * as errors from '../errors';
 import * as util from '../util';
