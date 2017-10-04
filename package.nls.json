@@ -6,5 +6,6 @@
     "azFunc.openInPortal": "Open In Portal",
     "azFunc.startFunctionApp": "Start",
     "azFunc.stopFunctionApp": "Stop",
-    "azFunc.restartFunctionApp": "Restart"
+    "azFunc.restartFunctionApp": "Restart",
+    "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer"
 }

@@ -88,7 +88,8 @@
             "explorer": [
                 {
                     "id": "azureFunctionsExplorer",
-                    "name": "Functions"
+                    "name": "Functions",
+                    "when": "config.azureFunctions.showExplorer == true"
                 }
             ]
         },
@@ -150,6 +151,18 @@
             {
                 "fileMatch": "/proxies.json",
                 "url": "http://json.schemastore.org/proxies"
+            }
+        ],
+        "configuration": [
+            {
+                "title": "Azure Functions",
+                "properties": {
+                    "azureFunctions.showExplorer": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "%azFunc.showExplorerDescription%"
+                    }
+                }
             }
         ]
     },
