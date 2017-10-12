@@ -38,5 +38,7 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel): Pr
     if (createNewFolder) {
         // If we created a new folder, open it now. NOTE: This will restart the extension host
         await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
+    } else {
+        vscode.window.showWarningMessage("The selected workspace folder already contains a tasks.json and/or launch.json file under the .vscode folder.")
     }
 }
