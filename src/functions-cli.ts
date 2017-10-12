@@ -16,7 +16,7 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel, wor
 }
 
 async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
-    await new Promise((resolve: () => void, reject: (e: {}) => void): void => {
+    await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
         const options: cp.SpawnOptions = {
             cwd: workingDirectory,
             shell: true
@@ -32,7 +32,8 @@ async function executeCommand(outputChannel: vscode.OutputChannel, workingDirect
                 // 'func' commands always seem to return exit code 0. For now,
                 // we will use stderr to detect if an error occurs (even though stderr
                 // doesn't necessarily mean there's an error)
-                reject(errorMessage);
+                // https://github.com/Azure/azure-functions-cli/issues/272
+                reject(new Error(errorMessage));
             } else if (code !== 0) {
                 reject(new Error(localize('azFunc.funcCliCommandError', 'Command failed with exit code \'{0}\'.', code)));
             } else {

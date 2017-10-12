@@ -5,29 +5,14 @@
 
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
+import { Site } from 'azure-arm-website/lib/models';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { QuickPickItem } from 'vscode';
 import * as nls from 'vscode-nls';
-import { Site } from '../node_modules/azure-arm-website/lib/models';
 import * as errors from './errors';
 
 export const localize: nls.LocalizeFunc = nls.config(process.env.VSCODE_NLS_CONFIG)();
-
-export function errorToString(error: {}): string | undefined {
-    if (error instanceof Error) {
-        return JSON.stringify({
-            Error: error.constructor.name,
-            Message: error.message
-        });
-    } else if (typeof (error) === 'object') {
-        return JSON.stringify({
-            object: error.constructor.name
-        });
-    } else {
-        return undefined;
-    }
-}
 
 export async function showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
 export async function showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
@@ -115,7 +100,7 @@ export class PickWithData<T> extends Pick {
 }
 
 export async function writeToFile(path: string, data: string): Promise<void> {
-    await new Promise((resolve: () => void, reject: (e: {}) => void): void => {
+    await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
         fs.writeFile(path, data, (error?: Error) => {
             if (error) {
                 reject(error);
