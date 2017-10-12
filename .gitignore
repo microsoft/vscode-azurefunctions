@@ -63,3 +63,4 @@ package-lock.json
 # Output
 out
 *.vsix
+.vscode-test

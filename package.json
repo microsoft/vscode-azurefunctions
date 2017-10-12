@@ -175,7 +175,9 @@
     },
     "devDependencies": {
         "@types/archiver": "^2.0.0",
+        "@types/mocha": "^2.2.32",
         "@types/node": "^8.0.28",
+        "mocha": "^2.3.3",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.0.1",
         "typescript": "^2.0.3",

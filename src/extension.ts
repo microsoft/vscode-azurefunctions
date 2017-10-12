@@ -15,11 +15,11 @@ import { openInPortal } from './commands/openInPortal';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
+import { ErrorData } from './ErrorData';
 import * as errors from './errors';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
 import { NodeBase } from './nodes/NodeBase';
 import { localize } from './util';
-import * as util from './util';
 
 let reporter: TelemetryReporter | undefined;
 
@@ -68,7 +68,7 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
     context.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
         const start: number = Date.now();
         let result: string = 'Succeeded';
-        let errorData: string | undefined;
+        let errorData: ErrorData | undefined;
 
         try {
             if (args.length === 0) {
@@ -81,16 +81,15 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
                 result = 'Canceled';
             } else {
                 result = 'Failed';
-                errorData = util.errorToString(<{}>error);
-                if (error instanceof Error) {
-                    vscode.window.showErrorMessage(error.message);
-                }
+                errorData = new ErrorData(error);
+                vscode.window.showErrorMessage(errorData.message);
             }
         } finally {
             const end: number = Date.now();
             const properties: { [key: string]: string; } = { result: result };
             if (errorData) {
-                properties.error = errorData;
+                properties.error = errorData.errorType;
+                properties.errorMessage = errorData.message;
             }
 
             if (reporter) {

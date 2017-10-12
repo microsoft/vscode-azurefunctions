@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Site } from '../../node_modules/azure-arm-website/lib/models';
+import { Site } from 'azure-arm-website/lib/models';
 import * as errors from '../errors';
 import * as util from '../util';
 import { NodeBase } from './NodeBase';
