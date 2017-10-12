@@ -224,7 +224,7 @@
             true,
             "spaces"
         ],
-        "linebreak-style": true,
+        "linebreak-style": false, // changed
         "newline-before-return": true,
         "no-consecutive-blank-lines": true,
         "no-empty-line-after-opening-brace": false,
