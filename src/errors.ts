@@ -5,8 +5,6 @@
 
 import { localize } from './localize';
 
-export class UserCancelledError extends Error { }
-
 export class NoWorkspaceError extends Error {
     public message: string = localize('azFunc.noWorkspaceError', 'You must have a workspace open to perform this operation.');
 }
