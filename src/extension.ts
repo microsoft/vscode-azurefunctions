@@ -18,9 +18,9 @@ import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ErrorData } from './ErrorData';
 import * as errors from './errors';
+import { localize } from './localize';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
 import { NodeBase } from './nodes/NodeBase';
-import { localize } from './util';
 
 let reporter: TelemetryReporter | undefined;
 

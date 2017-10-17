@@ -5,7 +5,7 @@
 
 import * as cp from 'child_process';
 import * as vscode from 'vscode';
-import { localize } from './util';
+import { localize } from './localize';
 
 export async function createFunction(outputChannel: vscode.OutputChannel, workingDirectory: string, templateName: string, name: string): Promise<void> {
     await executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);

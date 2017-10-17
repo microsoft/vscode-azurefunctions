@@ -8,8 +8,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as errors from '../errors';
 import * as FunctionsCli from '../functions-cli';
-import * as util from '../util';
-import { localize } from '../util';
+import { localize } from '../localize';
+import * as uiUtil from '../utils/ui';
 
 const expectedFunctionAppFiles: string[] = [
     'host.json',
@@ -39,8 +39,8 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
     } else if (folders.length === 1) {
         functionAppPath = folders[0].uri.fsPath;
     } else {
-        const folderPicks: util.Pick[] = folders.map((f: vscode.WorkspaceFolder) => new util.Pick(f.uri.fsPath));
-        const folder: util.Pick = await util.showQuickPick(folderPicks, localize('azFunc.newFuncSelectFolder', 'Select a workspace folder for your new function'));
+        const folderPicks: uiUtil.Pick[] = folders.map((f: vscode.WorkspaceFolder) => new uiUtil.Pick(f.uri.fsPath));
+        const folder: uiUtil.Pick = await uiUtil.showQuickPick(folderPicks, localize('azFunc.newFuncSelectFolder', 'Select a workspace folder for your new function'));
         functionAppPath = folder.label;
     }
 
@@ -57,17 +57,17 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         }
     }
 
-    const templates: util.Pick[] = [
-        new util.Pick('BlobTrigger'),
-        new util.Pick('HttpTrigger'),
-        new util.Pick('QueueTrigger'),
-        new util.Pick('TimerTrigger')
+    const templates: uiUtil.Pick[] = [
+        new uiUtil.Pick('BlobTrigger'),
+        new uiUtil.Pick('HttpTrigger'),
+        new uiUtil.Pick('QueueTrigger'),
+        new uiUtil.Pick('TimerTrigger')
     ];
-    const template: util.Pick = await util.showQuickPick(templates, localize('azFunc.selectFuncTemplate', 'Select a function template'));
+    const template: uiUtil.Pick = await uiUtil.showQuickPick(templates, localize('azFunc.selectFuncTemplate', 'Select a function template'));
 
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function Name');
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-    const name: string = await util.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s));
+    const name: string = await uiUtil.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s));
 
     await FunctionsCli.createFunction(outputChannel, functionAppPath, template.label, name);
     const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionAppPath, name, 'index.js'));
