@@ -5,10 +5,10 @@
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
+import { localize } from './localize';
 import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
-import * as util from './util';
-import { localize } from './util';
+import * as uiUtil from './utils/ui';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
     private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
@@ -53,18 +53,18 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
 
     public async showNodePicker(expectedContextValue: string): Promise<NodeBase> {
         let childType: string | undefined = 'Subscription';
-        let quickPicksTask: Promise<util.PickWithData<NodeBase>[]> = Promise.resolve(this.rootNodes.map((c: NodeBase) => new util.PickWithData<NodeBase>(c, c.label)));
+        let quickPicksTask: Promise<uiUtil.PickWithData<NodeBase>[]> = Promise.resolve(this.rootNodes.map((c: NodeBase) => new uiUtil.PickWithData<NodeBase>(c, c.label)));
 
         while (childType) {
-            const pick: util.PickWithData<NodeBase> = await util.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
+            const pick: uiUtil.PickWithData<NodeBase> = await uiUtil.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
             const node: NodeBase = pick.data;
             if (node.contextValue === expectedContextValue) {
                 return node;
             }
 
             childType = node.childType;
-            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): util.PickWithData<NodeBase>[] => {
-                return nodes.map((c: NodeBase) => new util.PickWithData<NodeBase>(c, c.label));
+            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): uiUtil.PickWithData<NodeBase>[] => {
+                return nodes.map((c: NodeBase) => new uiUtil.PickWithData<NodeBase>(c, c.label));
             });
         }
 

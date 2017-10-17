@@ -3,13 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { QuickPickItem } from 'vscode';
-import * as nls from 'vscode-nls';
-import * as errors from './errors';
-
-export const localize: nls.LocalizeFunc = nls.config(process.env.VSCODE_NLS_CONFIG)();
+import * as errors from '../errors';
+import { localize } from '../localize';
 
 export async function showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
 export async function showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
@@ -76,16 +73,4 @@ export class PickWithData<T> extends Pick {
         super(label, description);
         this.data = data;
     }
-}
-
-export async function writeToFile(path: string, data: string): Promise<void> {
-    await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-        fs.writeFile(path, data, (error?: Error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve();
-            }
-        });
-    });
 }

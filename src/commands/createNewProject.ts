@@ -7,21 +7,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as FunctionsCli from '../functions-cli';
+import { localize } from '../localize';
 import * as TemplateFiles from '../template-files';
-import * as util from '../util';
-import { localize } from '../util';
+import * as fsUtil from '../utils/fs';
+import * as uiUtil from '../utils/ui';
 
 export async function createNewProject(outputChannel: vscode.OutputChannel): Promise<void> {
     const newFolderId: string = 'newFolder';
-    let folderPicks: util.PickWithData<string>[] = [new util.PickWithData(newFolderId, localize('azFunc.newFolder', '$(plus) New Folder'))];
+    let folderPicks: uiUtil.PickWithData<string>[] = [new uiUtil.PickWithData(newFolderId, localize('azFunc.newFolder', '$(plus) New Folder'))];
     const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (folders) {
-        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new util.PickWithData('', f.uri.fsPath)));
+        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new uiUtil.PickWithData('', f.uri.fsPath)));
     }
-    const folder: util.PickWithData<string> = await util.showQuickPick<string>(folderPicks, localize('azFunc.newFuncAppSelectFolder', 'Select a workspace folder for your new function app'));
+    const folder: uiUtil.PickWithData<string> = await uiUtil.showQuickPick<string>(folderPicks, localize('azFunc.newFuncAppSelectFolder', 'Select a workspace folder for your new function app'));
     const createNewFolder: boolean = folder.data === newFolderId;
 
-    const functionAppPath: string = createNewFolder ? await util.showFolderDialog() : folder.label;
+    const functionAppPath: string = createNewFolder ? await uiUtil.showFolderDialog() : folder.label;
 
     const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
     const tasksJsonExists: boolean = fs.existsSync(tasksJsonPath);
@@ -31,8 +32,8 @@ export async function createNewProject(outputChannel: vscode.OutputChannel): Pro
     await FunctionsCli.createNewProject(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
-        await util.writeToFile(tasksJsonPath, TemplateFiles.getTasksJson());
-        await util.writeToFile(launchJsonPath, TemplateFiles.getLaunchJson());
+        await fsUtil.writeToFile(tasksJsonPath, TemplateFiles.getTasksJson());
+        await fsUtil.writeToFile(launchJsonPath, TemplateFiles.getLaunchJson());
     }
 
     if (createNewFolder) {
