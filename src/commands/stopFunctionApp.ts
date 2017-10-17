@@ -7,7 +7,6 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
-import * as util from '../util';
 
 export async function stopFunctionApp(explorer: AzureFunctionsExplorer, node?: FunctionAppNode): Promise<void> {
     if (!node) {
@@ -15,7 +14,6 @@ export async function stopFunctionApp(explorer: AzureFunctionsExplorer, node?: F
     }
 
     const client: WebSiteManagementClient = node.getWebSiteClient();
-    await client.webApps.stop(node.resourceGroup, node.name);
-    await util.waitForFunctionAppState(client, node.resourceGroup, node.name, util.FunctionAppState.Stopped);
+    await node.siteWrapper.stop(client);
     explorer.refresh(node.parent);
 }

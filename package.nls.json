@@ -7,5 +7,6 @@
     "azFunc.startFunctionApp": "Start",
     "azFunc.stopFunctionApp": "Stop",
     "azFunc.restartFunctionApp": "Restart",
-    "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer"
+    "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
+    "azFunc.deployZip": "Deploy as Zip Package"
 }
