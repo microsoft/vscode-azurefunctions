@@ -185,7 +185,6 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
-        "@types/archiver": "^2.0.0",
         "@types/mocha": "^2.2.32",
         "@types/node": "^8.0.28",
         "mocha": "^2.3.3",
@@ -195,7 +194,6 @@
         "vscode": "^1.0.0"
     },
     "dependencies": {
-        "archiver": "^2.0.3",
         "azure-arm-resource": "^2.0.0-preview",
         "azure-arm-website": "^1.0.0-preview",
         "ms-rest": "^2.2.2",
