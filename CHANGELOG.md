@@ -9,7 +9,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 * Create new project
 * Create new function from template
-* Debug local function apps
+* Debug function apps locally
 * View Azure Functions
 * Deploy to Azure Functions
 * Start, stop, and restart Azure Functions

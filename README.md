@@ -13,7 +13,7 @@
 
 * Create new project
 * Create new function from template
-* Debug local function apps
+* Debug function apps locally
 * View Azure Functions
 * Deploy to Azure Functions
 * Start, stop, and restart Azure Functions
@@ -23,7 +23,7 @@
 
 ![CreateProject](resources/CreateProject.gif)
 
-### Debug local function app
+### Debug function app locally
 
 ![Debug](resources/Debug.gif)
 
