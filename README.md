@@ -11,16 +11,25 @@
 
 ## Features
 
-* Create New Function App
-* Create New Function
-* Debug Function Apps
+* Create new project
+* Create new function from template
+* Debug local function apps
 * View Azure Functions
-* Start, Stop, and Restart Azure Functions
+* Deploy to Azure Functions
+* Start, stop, and restart Azure Functions
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 
-### Create and F5 a new Function App
+### Create New Project
 
-![Create and F5](resources/CreateAndF5.gif)
+![CreateProject](resources/CreateProject.gif)
+
+### Debug local function app
+
+![Debug](resources/Debug.gif)
+
+### Deploy to Azure as Zip
+
+![ZipDeploy](resources/ZipDeploy.gif)
 
 ## Contributing
 There are a couple of ways you can contribute to this repo:
@@ -40,7 +49,7 @@ Before we can accept your pull request you will need to sign a **Contribution Li
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 ## Telemetry
-This extension collects telemetry data to help us build a better experience with Azure Functions and VS Code. The extension respects the `telemetry.enableTelemetry` setting which you can learn more about in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
+VS Code collects usage data and sends it to Microsoft to help improve our products and services. Read our [privacy statement](https://go.microsoft.com/fwlink/?LinkID=528096&clcid=0x409) to learn more. If you don’t wish to send usage data to Microsoft, you can set the `telemetry.enableTelemetry` setting to `false`. Learn more in our [FAQ](https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting).
 
 ## License
 [MIT](LICENSE.md)

@@ -10,7 +10,7 @@ import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
 import { createFunction } from './commands/createFunction';
-import { createFunctionApp } from './commands/createFunctionApp';
+import { createNewProject } from './commands/createNewProject';
 import { deployZip } from './commands/deployZip';
 import { openInPortal } from './commands/openInPortal';
 import { restartFunctionApp } from './commands/restartFunctionApp';
@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
         initCommand(context, 'azureFunctions.openInPortal', openInPortal);
         initAsyncCommand(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.createFunctionApp', async () => await createFunctionApp(outputChannel));
+        initAsyncCommand(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
         initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
         initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));

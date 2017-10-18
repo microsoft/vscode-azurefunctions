@@ -11,7 +11,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel, workin
     await executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
 }
 
-export async function createFunctionApp(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
+export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
     await executeCommand(outputChannel, workingDirectory, 'init');
 }
 

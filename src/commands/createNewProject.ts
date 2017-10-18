@@ -11,7 +11,7 @@ import * as TemplateFiles from '../template-files';
 import * as util from '../util';
 import { localize } from '../util';
 
-export async function createFunctionApp(outputChannel: vscode.OutputChannel): Promise<void> {
+export async function createNewProject(outputChannel: vscode.OutputChannel): Promise<void> {
     const newFolderId: string = 'newFolder';
     let folderPicks: util.PickWithData<string>[] = [new util.PickWithData(newFolderId, localize('azFunc.newFolder', '$(plus) New Folder'))];
     const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
@@ -28,7 +28,7 @@ export async function createFunctionApp(outputChannel: vscode.OutputChannel): Pr
     const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
     const launchJsonExists: boolean = fs.existsSync(launchJsonPath);
 
-    await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
+    await FunctionsCli.createNewProject(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
         await util.writeToFile(tasksJsonPath, TemplateFiles.getTasksJson());
