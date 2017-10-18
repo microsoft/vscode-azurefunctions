@@ -9,23 +9,16 @@ import * as vscode from 'vscode';
 import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
 import { localize } from '../localize';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
-import * as uiUtil from '../utils/ui';
+import * as workspaceUtil from '../utils/workspace';
 
-export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, node?: FunctionAppNode): Promise<void> {
+export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, uri?: vscode.Uri, node?: FunctionAppNode): Promise<void> {
+    const folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
+
     if (!node) {
         node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));
     }
 
     const client: WebSiteManagementClient = node.getWebSiteClient();
-
-    const newFolderId: string = 'newFolder';
-    let folderPicks: uiUtil.PickWithData<string>[] = [new uiUtil.PickWithData(newFolderId, localize('azFunc.selectOtherFolder', '$(plus) Select other folder'))];
-    const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
-    if (folders) {
-        folderPicks = folderPicks.concat(folders.map((f: vscode.WorkspaceFolder) => new uiUtil.PickWithData<string>('', f.uri.fsPath)));
-    }
-    const folder: uiUtil.PickWithData<string> = await uiUtil.showQuickPick<string>(folderPicks, localize('azFunc.deployZipSelectFolder', 'Select a workspace folder to deploy to your Function App'));
-    const folderPath: string = folder.data === newFolderId ? await uiUtil.showFolderDialog() : folder.label;
 
     await node.siteWrapper.deployZip(folderPath, client, outputChannel);
 }

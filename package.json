@@ -88,6 +88,16 @@
                 "command": "azureFunctions.deployZip",
                 "title": "%azFunc.deployZip%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.deployZipFromExplorer",
+                "title": "%azFunc.deployZipFromExplorer%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.deployZipFromFolder",
+                "title": "%azFunc.deployZipFromFolder%",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -144,9 +154,26 @@
                     "group": "2_functionAppControlCommands@3"
                 },
                 {
-                    "command": "azureFunctions.deployZip",
+                    "command": "azureFunctions.deployZipFromExplorer",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
                     "group": "3_functionAppDeployCommands@1"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "azureFunctions.deployZipFromFolder",
+                    "when": "explorerResourceIsFolder == true",
+                    "group": "zzz_@1"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "azureFunctions.deployZipFromExplorer",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.deployZipFromFolder",
+                    "when": "never"
                 }
             ]
         },
