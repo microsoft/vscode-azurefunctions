@@ -51,7 +51,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         const message: string = localize('azFunc.missingFuncAppFiles', 'The current folder is missing the following function app files: \'{0}\'. Add the missing files?', missingFiles.join(','));
         const result: string | undefined = await vscode.window.showWarningMessage(message, yes, no);
         if (result === yes) {
-            await FunctionsCli.createFunctionApp(outputChannel, functionAppPath);
+            await FunctionsCli.createNewProject(outputChannel, functionAppPath);
         } else {
             throw new errors.UserCancelledError();
         }

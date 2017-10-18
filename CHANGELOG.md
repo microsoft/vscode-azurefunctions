@@ -5,9 +5,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-* Create New Function App
-* Create New Function
-* Debug Function Apps
+## 0.1.0
+
+* Create new project
+* Create new function from template
+* Debug function apps locally
 * View Azure Functions
-* Start, Stop, and Restart Azure Functions
+* Deploy to Azure Functions
+* Start, stop, and restart Azure Functions
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`

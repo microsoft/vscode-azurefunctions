@@ -1,7 +1,7 @@
 {
     "extension.description": "An Azure Functions extension for Visual Studio Code.",
     "azFunc.refresh": "Refresh",
-    "azFunc.createFunctionApp": "Create Function App",
+    "azFunc.createNewProject": "Create New Project",
     "azFunc.createFunction": "Create Function",
     "azFunc.openInPortal": "Open In Portal",
     "azFunc.startFunctionApp": "Start",
