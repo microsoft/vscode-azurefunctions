@@ -47,14 +47,16 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(azureAccount.onFiltersChanged(() => explorer.refresh()));
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
-        initCommand(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
-        initCommand(context, 'azureFunctions.openInPortal', openInPortal);
-        initAsyncCommand(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
-        initAsyncCommand(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
-        initAsyncCommand(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
-        initAsyncCommand(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
-        initAsyncCommand(context, 'azureFunctions.deployZip', async (node?: FunctionAppNode) => await deployZip(explorer, outputChannel, node));
+        initCommand<NodeBase>(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
+        initCommand<undefined>(context, 'azureFunctions.openInPortal', openInPortal);
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.deployZip', async () => await deployZip(explorer, outputChannel));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.deployZipFromExplorer', async (node?: FunctionAppNode) => await deployZip(explorer, outputChannel, undefined, node));
+        initAsyncCommand<vscode.Uri>(context, 'azureFunctions.deployZipFromFolder', async (uri?: vscode.Uri) => await deployZip(explorer, outputChannel, uri, undefined));
     }
 }
 
@@ -62,12 +64,12 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
 }
 
-function initCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: NodeBase) => void): void {
-    initAsyncCommand(context, commandId, async (node?: NodeBase) => callback(node));
+function initCommand<T>(extensionContext: vscode.ExtensionContext, commandId: string, callback: (context?: T) => void): void {
+    initAsyncCommand(extensionContext, commandId, async (context?: T) => callback(context));
 }
 
-function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, callback: (node?: NodeBase) => Promise<void>): void {
-    context.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
+function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, commandId: string, callback: (context?: T) => Promise<void>): void {
+    extensionContext.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
         const start: number = Date.now();
         let result: string = 'Succeeded';
         let errorData: ErrorData | undefined;
@@ -76,7 +78,7 @@ function initAsyncCommand(context: vscode.ExtensionContext, commandId: string, c
             if (args.length === 0) {
                 await callback();
             } else {
-                await callback(<NodeBase>args[0]);
+                await callback(<T>args[0]);
             }
         } catch (error) {
             if (error instanceof errors.UserCancelledError) {

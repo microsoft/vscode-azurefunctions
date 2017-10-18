@@ -10,6 +10,7 @@ import * as errors from '../errors';
 import * as FunctionsCli from '../functions-cli';
 import { localize } from '../localize';
 import * as uiUtil from '../utils/ui';
+import * as workspaceUtil from '../utils/workspace';
 
 const expectedFunctionAppFiles: string[] = [
     'host.json',
@@ -32,17 +33,7 @@ function validateTemplateName(rootPath: string, name: string): string | undefine
 }
 
 export async function createFunction(outputChannel: vscode.OutputChannel): Promise<void> {
-    let functionAppPath: string;
-    const folders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        throw new errors.NoWorkspaceError();
-    } else if (folders.length === 1) {
-        functionAppPath = folders[0].uri.fsPath;
-    } else {
-        const folderPicks: uiUtil.Pick[] = folders.map((f: vscode.WorkspaceFolder) => new uiUtil.Pick(f.uri.fsPath));
-        const folder: uiUtil.Pick = await uiUtil.showQuickPick(folderPicks, localize('azFunc.newFuncSelectFolder', 'Select a workspace folder for your new function'));
-        functionAppPath = folder.label;
-    }
+    const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app'));
 
     const missingFiles: string[] = getMissingFunctionAppFiles(functionAppPath);
     if (missingFiles.length !== 0) {
