@@ -16,7 +16,7 @@ const tasksJson: {} = {
             command: 'func host start',
             isBackground: true,
             presentation: {
-                reveal: 'silent'
+                reveal: 'always'
             },
             problemMatcher: [
                 {
