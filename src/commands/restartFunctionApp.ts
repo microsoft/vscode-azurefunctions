@@ -9,6 +9,6 @@ import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 
 export async function restartFunctionApp(explorer: AzureFunctionsExplorer, node?: FunctionAppNode): Promise<void> {
-    await startFunctionApp(explorer, node);
     await stopFunctionApp(explorer, node);
+    await startFunctionApp(explorer, node);
 }
