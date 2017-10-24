@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { AzureAccountWrapper } from "vscode-azureappservice";
 import { AppServicePlanStep, AppKind, QuickPickItemWithData, ResourceGroupStep, SubscriptionStep, WebsiteCreatorBase, WebsiteCreatorStepBase, WebsiteOS, WebsiteNameStep, WebsiteStep } from "vscode-azureappservice";
 import { SubscriptionModels, ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
-import StorageManagementClient = require('../node_modules/azure-arm-storage');
+import StorageManagementClient = require('azure-arm-storage');
 import StorageAccount from '../node_modules/azure-arm-storage/lib/models/storageAccount';
 import Sku from '../node_modules/azure-arm-storage/lib/models/sku';
 import { UserCancelledError } from 'vscode-azureappservice';
@@ -81,7 +81,7 @@ export class StorageAccountStep extends WebsiteCreatorStepBase {
                 quickPickItems.push({
                     persistenceId: sa.id,
                     label: sa.name,
-                    description: "", // asdf `(${locations.find(l => l.name.toLowerCase() === sa.location.toLowerCase()).displayName})`,
+                    description: '', // TODO
                     detail: '',
                     data: sa
                 });

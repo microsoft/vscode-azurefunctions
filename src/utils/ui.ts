@@ -78,38 +78,3 @@ export class PickWithData<T> extends Pick {
         this.data = data;
     }
 }
-
-// asdf
-// export async function writeToFile(path: string, data: string): Promise<void> {
-//     await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-//         fs.writeFile(path, data, (error?: Error) => {
-//             if (error) {
-//                 reject(error);
-//             } else {
-//                 resolve();
-//             }
-//         });
-//     });
-// }
-
-// asdf
-// export function errToString(error: any): string {
-//     if (error === null || error === undefined) {
-//         return '';
-//     }
-
-//     if (error instanceof Error) {
-//         return JSON.stringify({
-//             'Error': error.constructor.name,
-//             'Message': error.message
-//         });
-//     }
-
-//     if (typeof (error) === 'object') {
-//         return JSON.stringify({
-//             'object': error.constructor.name
-//         });
-//     }
-
-//     return error.toString();
-// }
