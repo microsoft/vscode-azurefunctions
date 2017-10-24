@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
         initCommand<NodeBase>(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
-        initCommand<undefined>(context, 'azureFunctions.openInPortal', openInPortal);
+        initCommand<NodeBase>(context, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
