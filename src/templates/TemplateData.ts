@@ -13,6 +13,10 @@ import { ConfigSetting } from './ConfigSetting';
 import { Resources } from './Resources';
 import { Template, TemplateCategory, TemplateLanguage } from './Template';
 
+/**
+ * Main container for all template data retrieved from the Azure Functions Portal. See README.md for more info and example of the schema.
+ * We cache the template data retrieved from the portal so that the user can create functions offline.
+ */
 export class TemplateData {
     private readonly _templateInitError: Error = new Error(localize('azFunc.TemplateInitError', 'Failed to retrieve templates from the Azure Functions Portal.'));
     private readonly _templatesKey: string = 'FunctionTemplates';
