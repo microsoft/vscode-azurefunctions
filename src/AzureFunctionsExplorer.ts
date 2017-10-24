@@ -5,22 +5,25 @@
 
 import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
+import { IUserInterface, PickWithData } from './IUserInterface';
 import { localize } from './localize';
 import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
-import * as uiUtil from './utils/ui';
+import { VSCodeUI } from './VSCodeUI';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
-    private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
-    private azureAccount: AzureAccount;
-    private rootNodes: NodeBase[] = [];
+    private _onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
+    private _azureAccount: AzureAccount;
+    private _rootNodes: NodeBase[] = [];
+    private _ui: IUserInterface;
 
-    constructor(azureAccount: AzureAccount) {
-        this.azureAccount = azureAccount;
+    constructor(azureAccount: AzureAccount, ui: IUserInterface = new VSCodeUI()) {
+        this._azureAccount = azureAccount;
+        this._ui = ui;
     }
 
     public get onDidChangeTreeData(): Event<NodeBase> {
-        return this.onDidChangeTreeDataEmitter.event;
+        return this._onDidChangeTreeDataEmitter.event;
     }
 
     public getTreeItem(node: NodeBase): TreeItem {
@@ -31,40 +34,40 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
         if (node) {
             return await node.getChildren();
         } else { // Root of the explorer
-            this.rootNodes = [];
+            this._rootNodes = [];
 
-            if (this.azureAccount.status === 'Initializing' || this.azureAccount.status === 'LoggingIn') {
+            if (this._azureAccount.status === 'Initializing' || this._azureAccount.status === 'LoggingIn') {
                 return [new NodeBase('azureFunctionsLoading', localize('azFunc.loadingNode', 'Loading...'))];
-            } else if (this.azureAccount.status === 'LoggedOut') {
+            } else if (this._azureAccount.status === 'LoggedOut') {
                 return [new NodeBase('azureFunctionsSignInToAzure', localize('azFunc.signInNode', 'Sign in to Azure...'), undefined, 'azure-account.login')];
-            } else if (this.azureAccount.filters.length === 0) {
+            } else if (this._azureAccount.filters.length === 0) {
                 return [new NodeBase('azureFunctionsNoSubscriptions', localize('azFunc.noSubscriptionsNode', 'No subscriptions found. Edit filters...'), undefined, 'azure-account.selectSubscriptions')];
             } else {
-                this.rootNodes = this.azureAccount.filters.map((filter: AzureResourceFilter) => SubscriptionNode.CREATE(filter));
+                this._rootNodes = this._azureAccount.filters.map((filter: AzureResourceFilter) => SubscriptionNode.CREATE(filter));
 
-                return this.rootNodes;
+                return this._rootNodes;
             }
         }
     }
 
     public refresh(node?: NodeBase): void {
-        this.onDidChangeTreeDataEmitter.fire(node);
+        this._onDidChangeTreeDataEmitter.fire(node);
     }
 
     public async showNodePicker(expectedContextValue: string): Promise<NodeBase> {
         let childType: string | undefined = 'Subscription';
-        let quickPicksTask: Promise<uiUtil.PickWithData<NodeBase>[]> = Promise.resolve(this.rootNodes.map((c: NodeBase) => new uiUtil.PickWithData<NodeBase>(c, c.label)));
+        let quickPicksTask: Promise<PickWithData<NodeBase>[]> = Promise.resolve(this._rootNodes.map((c: NodeBase) => new PickWithData<NodeBase>(c, c.label)));
 
         while (childType) {
-            const pick: uiUtil.PickWithData<NodeBase> = await uiUtil.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
+            const pick: PickWithData<NodeBase> = await this._ui.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
             const node: NodeBase = pick.data;
             if (node.contextValue === expectedContextValue) {
                 return node;
             }
 
             childType = node.childType;
-            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): uiUtil.PickWithData<NodeBase>[] => {
-                return nodes.map((c: NodeBase) => new uiUtil.PickWithData<NodeBase>(c, c.label));
+            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): PickWithData<NodeBase>[] => {
+                return nodes.map((c: NodeBase) => new PickWithData<NodeBase>(c, c.label));
             });
         }
 

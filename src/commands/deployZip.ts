@@ -7,12 +7,14 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import * as vscode from 'vscode';
 import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
+import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
 import * as workspaceUtil from '../utils/workspace';
+import { VSCodeUI } from '../VSCodeUI';
 
-export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, uri?: vscode.Uri, node?: FunctionAppNode): Promise<void> {
-    const folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
+export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, uri?: vscode.Uri, node?: FunctionAppNode, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    const folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
 
     if (!node) {
         node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));

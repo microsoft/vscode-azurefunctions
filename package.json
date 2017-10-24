@@ -214,6 +214,8 @@
     "devDependencies": {
         "@types/mocha": "^2.2.32",
         "@types/node": "^8.0.28",
+        "@types/request-promise": "^4.1.38",
+        "@types/rimraf": "^2.0.2",
         "mocha": "^2.3.3",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.0.1",
@@ -221,11 +223,14 @@
         "vscode": "^1.0.0"
     },
     "dependencies": {
+        "azure-arm-cosmosdb": "^1.0.0-preview",
         "azure-arm-resource": "^2.0.0-preview",
         "azure-arm-website": "^1.0.0-preview",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.1.0",
+        "request-promise": "^4.2.2",
+        "rimraf": "^2.6.2",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
         "vscode-azureappservice": "^0.1.1"

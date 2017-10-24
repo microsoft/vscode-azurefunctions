@@ -5,20 +5,20 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { IUserInterface, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
-import * as uiUtil from './ui';
 
-export async function selectWorkspaceFolder(placeholder: string): Promise<string> {
+export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string): Promise<string> {
     const browse: string = ':browse';
-    let folder: uiUtil.PickWithData<string> | undefined;
+    let folder: PickWithData<string> | undefined;
     if (vscode.workspace.workspaceFolders) {
-        let folderPicks: uiUtil.PickWithData<string>[] = [new uiUtil.PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...'))];
-        folderPicks = folderPicks.concat(vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => new uiUtil.PickWithData('', f.uri.fsPath)));
+        let folderPicks: PickWithData<string>[] = [new PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...'))];
+        folderPicks = folderPicks.concat(vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => new PickWithData('', f.uri.fsPath)));
 
-        folder = await uiUtil.showQuickPick<string>(folderPicks, placeholder);
+        folder = await ui.showQuickPick<string>(folderPicks, placeholder);
     }
 
-    return folder && folder.data !== browse ? folder.label : await uiUtil.showFolderDialog();
+    return folder && folder.data !== browse ? folder.label : await ui.showFolderDialog();
 }
 
 export function isFolderOpenInWorkspace(fsPath: string): boolean {

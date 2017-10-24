@@ -7,10 +7,7 @@ import * as cp from 'child_process';
 import * as vscode from 'vscode';
 import { localize } from './localize';
 
-export async function createFunction(outputChannel: vscode.OutputChannel, workingDirectory: string, templateName: string, name: string): Promise<void> {
-    await executeCommand(outputChannel, workingDirectory, 'new', '--language', 'JavaScript', '--template', templateName, '--name', name);
-}
-
+// tslint:disable-next-line:export-name
 export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
     await executeCommand(outputChannel, workingDirectory, 'init');
 }
