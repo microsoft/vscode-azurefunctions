@@ -40,8 +40,8 @@ export class NodeBase implements TreeItem {
 
     get iconPath(): { light: string, dark: string } | undefined {
         return this.contextValue === NodeBase.contextValue ? undefined : {
-            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${this.contextValue}.svg`),
-            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${this.contextValue}.svg`)
+            light: path.join(__filename, '..', '..', '..', '..', 'resources', `${this.contextValue}.svg`),
+            dark: path.join(__filename, '..', '..', '..', '..', 'resources', `${this.contextValue}.svg`)
         };
     }
 
