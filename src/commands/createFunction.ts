@@ -11,6 +11,7 @@ import * as FunctionsCli from '../functions-cli';
 import { localize } from '../localize';
 import * as uiUtil from '../utils/ui';
 import * as workspaceUtil from '../utils/workspace';
+import { UserCancelledError } from 'vscode-azureappservice';
 
 const expectedFunctionAppFiles: string[] = [
     'host.json',
@@ -44,7 +45,7 @@ export async function createFunction(outputChannel: vscode.OutputChannel): Promi
         if (result === yes) {
             await FunctionsCli.createNewProject(outputChannel, functionAppPath);
         } else {
-            throw new errors.UserCancelledError();
+            throw new UserCancelledError();
         }
     }
 

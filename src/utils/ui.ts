@@ -5,8 +5,12 @@
 
 import * as vscode from 'vscode';
 import { QuickPickItem } from 'vscode';
+import * as nls from 'vscode-nls';
 import * as errors from '../errors';
-import { localize } from '../localize';
+import * as crypto from "crypto";
+import { UserCancelledError } from 'vscode-azureappservice';
+
+export const localize: nls.LocalizeFunc = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export async function showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
 export async function showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
@@ -18,7 +22,7 @@ export async function showQuickPick(items: vscode.QuickPickItem[] | Thenable<vsc
     const result: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(items, options);
 
     if (!result) {
-        throw new errors.UserCancelledError();
+        throw new UserCancelledError();
     } else {
         return result;
     }
@@ -34,7 +38,7 @@ export async function showInputBox(placeHolder: string, prompt: string, ignoreFo
     const result: string | undefined = await vscode.window.showInputBox(options);
 
     if (!result) {
-        throw new errors.UserCancelledError();
+        throw new UserCancelledError();
     } else {
         return result;
     }
@@ -52,7 +56,7 @@ export async function showFolderDialog(): Promise<string> {
     const result: vscode.Uri[] | undefined = await vscode.window.showOpenDialog(options);
 
     if (!result || result.length === 0) {
-        throw new errors.UserCancelledError();
+        throw new UserCancelledError();
     } else {
         return result[0].fsPath;
     }

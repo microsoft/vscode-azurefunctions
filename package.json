@@ -27,6 +27,7 @@
         "onCommand:azureFunctions.refresh",
         "onCommand:azureFunctions.createNewProject",
         "onCommand:azureFunctions.createFunction",
+        "onCommand:azureFunctions.createRemoteFunctionApp",
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
@@ -62,6 +63,15 @@
                 "icon": {
                     "light": "resources/light/AddFunction.svg",
                     "dark": "resources/dark/AddFunction.svg"
+                }
+            },
+            {
+                "command": "azureFunctions.createRemoteFunctionApp",
+                "title": "%azFunc.createRemoteFunctionApp%",
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/CreateRemoteFunctionApp.svg",
+                    "dark": "resources/dark/CreateRemoteFunctionApp.svg"
                 }
             },
             {
@@ -118,6 +128,11 @@
                 },
                 {
                     "command": "azureFunctions.createFunction",
+                    "when": "view == azureFunctionsExplorer",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "azureFunctions.createRemoteFunctionApp",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@2"
                 },
@@ -222,13 +237,14 @@
     },
     "dependencies": {
         "azure-arm-resource": "^2.0.0-preview",
+        "azure-arm-storage": "^3.1.0",
         "azure-arm-website": "^1.0.0-preview",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.1.0",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
-        "vscode-azureappservice": "^0.1.1"
+        "vscode-azureappservice": "^0.1.2"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"

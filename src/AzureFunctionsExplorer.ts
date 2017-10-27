@@ -8,7 +8,7 @@ import { AzureAccount, AzureResourceFilter } from './azure-account.api';
 import { localize } from './localize';
 import { NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
-import * as uiUtil from './utils/ui';
+import * as uiUtil from "./utils/ui";
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
     private onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();

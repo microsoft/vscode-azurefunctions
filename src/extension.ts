@@ -9,9 +9,11 @@ import * as vscode from 'vscode';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
+import { AzureAccountWrapper } from "vscode-azureappservice";
 import { createFunction } from './commands/createFunction';
 import { createNewProject } from './commands/createNewProject';
 import { deployZip } from './commands/deployZip';
+import { createRemoteFunctionApp } from './commands/createRemoteFunctionApp';
 import { openInPortal } from './commands/openInPortal';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
@@ -20,7 +22,9 @@ import { ErrorData } from './ErrorData';
 import * as errors from './errors';
 import { localize } from './localize';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
+import { SubscriptionNode } from "./nodes/SubscriptionNode";
 import { NodeBase } from './nodes/NodeBase';
+import { UserCancelledError } from 'vscode-azureappservice';
 
 let reporter: TelemetryReporter | undefined;
 
@@ -51,6 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand<NodeBase>(context, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
+        initAsyncCommand<SubscriptionNode>(context, 'azureFunctions.createRemoteFunctionApp', async (node?: SubscriptionNode) => await createRemoteFunctionApp(context, outputChannel, new AzureAccountWrapper(context), explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
@@ -81,7 +86,7 @@ function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, commandI
                 await callback(<T>args[0]);
             }
         } catch (error) {
-            if (error instanceof errors.UserCancelledError) {
+            if (error instanceof UserCancelledError) {
                 result = 'Canceled';
             } else {
                 result = 'Failed';

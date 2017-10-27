@@ -3,6 +3,7 @@
     "azFunc.refresh": "Refresh",
     "azFunc.createNewProject": "Create New Project",
     "azFunc.createFunction": "Create Function",
+    "azFunc.createRemoteFunctionApp": "Create Function App in Azure",
     "azFunc.openInPortal": "Open In Portal",
     "azFunc.startFunctionApp": "Start",
     "azFunc.stopFunctionApp": "Stop",
