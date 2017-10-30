@@ -199,6 +199,16 @@
                         "type": "boolean",
                         "default": true,
                         "description": "%azFunc.showExplorerDescription%"
+                    },
+                    "azureFunctions.templateFilter": {
+                        "type": "string",
+                        "default": "Verified",
+                        "enum": [
+                            "Verified",
+                            "Core",
+                            "All"
+                        ],
+                        "description": "%azFunc.templateFilterDescription%"
                     }
                 }
             }

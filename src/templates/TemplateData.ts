@@ -26,6 +26,17 @@ export class TemplateData {
     private _templates: Template[] | undefined;
     private _config: Config | undefined;
 
+    private readonly _verifiedTemplates: string[] = [
+        'BlobTrigger',
+        'Generic Webhook',
+        'Github Webhook',
+        'HttpTrigger',
+        'HttpTriggerWithParameters',
+        'ManualTrigger',
+        'QueueTrigger',
+        'TimerTrigger'
+    ];
+
     constructor(globalState?: vscode.Memento) {
         if (globalState) {
             const cachedResources: object | undefined = globalState.get<object>(this._resourcesKey);
@@ -50,9 +61,17 @@ export class TemplateData {
             }
         }
 
-        return this._templates.filter((t: Template) => {
-            return t.language === TemplateLanguage.JavaScript && t.isCategory(TemplateCategory.Core);
-        });
+        const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
+        // tslint:disable-next-line:no-backbone-get-set-outside-model
+        switch (vscode.workspace.getConfiguration().get('azureFunctions.templateFilter')) {
+            case 'All':
+                return jsTemplates;
+            case 'Core':
+                return jsTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
+            case 'Verified':
+            default:
+                return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.name));
+        }
     }
 
     public async getSetting(bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
