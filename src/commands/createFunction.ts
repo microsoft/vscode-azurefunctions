@@ -18,6 +18,7 @@ import * as FunctionsCli from '../functions-cli';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
 import { ConfigSetting, ResourceType, ValueType } from '../templates/ConfigSetting';
+import { EnumValue } from '../templates/EnumValue';
 import { Template } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
 import * as azUtil from '../utils/azure';
@@ -89,6 +90,8 @@ async function promptForSetting(ui: IUserInterface, azureAccount: AzureAccount, 
         switch (setting.valueType) {
             case ValueType.boolean:
                 return await promptForBooleanSetting(ui, setting);
+            case ValueType.enum:
+                return await promptForEnumSetting(ui, setting);
             default:
         }
     }
@@ -130,6 +133,12 @@ async function promptForDocumentDB(ui: IUserInterface, functionAppPath: string, 
     } else {
         throw new Error(localize('azFunc.InvalidCosmosDBAccount', 'Invalid Cosmos DB Account'));
     }
+}
+
+async function promptForEnumSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
+    const picks: PickWithData<string>[] = setting.enums.map((ev: EnumValue) => new PickWithData<string>(ev.value, ev.displayName));
+
+    return (await ui.showQuickPick(picks, setting.label, false)).data;
 }
 
 async function promptForBooleanSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
