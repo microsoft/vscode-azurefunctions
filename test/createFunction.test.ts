@@ -17,6 +17,11 @@ const templateData: TemplateData = new TemplateData();
 const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.randomName()}`);
 const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
+const templateFilterSetting: string = 'azureFunctions.templateFilter';
+const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+// tslint:disable-next-line:no-backbone-get-set-outside-model
+const oldTemplateFilter: string | undefined = config.get(templateFilterSetting);
+
 suiteSetup(async () => {
     await fsUtil.makeFolder(testFolder);
     await fsUtil.makeFolder(path.join(testFolder, '.vscode'));
@@ -26,11 +31,14 @@ suiteSetup(async () => {
         fsUtil.writeToFile(path.join(testFolder, 'local.settings.json'), ''),
         fsUtil.writeToFile(path.join(testFolder, '.vscode', 'launch.json'), '')
     ]);
+
+    await config.update(templateFilterSetting, 'Core', vscode.ConfigurationTarget.Global);
 });
 
 suiteTeardown(async () => {
     outputChannel.dispose();
     await fsUtil.deleteFolderAndContents(testFolder);
+    await config.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
 });
 
 suite('Create Function Tests', () => {
