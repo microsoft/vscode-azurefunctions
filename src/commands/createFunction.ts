@@ -65,20 +65,24 @@ async function promptForFunctionName(ui: IUserInterface, functionAppPath: string
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
 
-    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName ? defaultFunctionName : template.defaultFunctionName);
+    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName || template.defaultFunctionName);
 }
 
 async function promptForSetting(ui: IUserInterface, azureAccount: AzureAccount, functionAppPath: string, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
         const subscription: AzureResourceFilter | undefined = await promptForSubscription(ui, azureAccount);
-        if (subscription && subscription.subscription.subscriptionId) {
-            const credentials: ServiceClientCredentials = subscription.session.credentials;
-            const subscriptionId: string = subscription.subscription.subscriptionId;
 
-            switch (setting.resourceType) {
-                case ResourceType.DocumentDB:
-                    return await promptForDocumentDB(ui, functionAppPath, credentials, subscriptionId, setting);
-                default:
+        if (subscription) {
+            const subscriptionId: string | undefined = subscription.subscription.subscriptionId;
+
+            if (subscriptionId) {
+                const credentials: ServiceClientCredentials = subscription.session.credentials;
+
+                switch (setting.resourceType) {
+                    case ResourceType.DocumentDB:
+                        return await promptForDocumentDB(ui, functionAppPath, credentials, subscriptionId, setting);
+                    default:
+                }
             }
         }
     } else {
@@ -101,8 +105,10 @@ async function promptForSubscription(ui: IUserInterface, azureAccount: AzureAcco
     } else {
         const subscriptionPicks: PickWithData<AzureResourceFilter>[] = [];
         azureAccount.filters.forEach((f: AzureResourceFilter) => {
-            if (f.subscription.displayName) {
-                subscriptionPicks.push(new PickWithData<AzureResourceFilter>(f, f.subscription.displayName));
+            const subscriptionId: string | undefined = f.subscription.subscriptionId;
+            if (subscriptionId) {
+                const label: string = f.subscription.displayName || subscriptionId;
+                subscriptionPicks.push(new PickWithData<AzureResourceFilter>(f, label, subscriptionId));
             }
         });
         const placeHolder: string = localize('azFunc.selectSubscription', 'Select a Subscription');
@@ -133,7 +139,7 @@ async function promptForBooleanSetting(ui: IUserInterface, setting: ConfigSettin
 }
 
 async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting, defaultValue?: string): Promise<string> {
-    const prompt: string = localize('azFunc.stringSettingPrompt', 'Provide a {0}', setting.label);
+    const prompt: string = localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label);
     defaultValue = defaultValue ? defaultValue : setting.defaultValue;
 
     return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
@@ -149,7 +155,7 @@ async function showResourceQuickPick<T extends IBaseResourceWithName>(ui: IUserI
             .map((br: T) => br.name ? new PickWithData(br, br.name) : undefined)
             .filter((p: PickWithData<T> | undefined) => p));
     });
-    const prompt: string = localize('azFunc.resourcePrompt', 'Select a {0}', setting.label);
+    const prompt: string = localize('azFunc.resourcePrompt', 'Select a \'{0}\'', setting.label);
 
     return (await ui.showQuickPick<T>(picksTask, prompt)).data;
 }
