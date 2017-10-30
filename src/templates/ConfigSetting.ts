@@ -5,12 +5,14 @@
 
 import { ConfigValidator } from './ConfigValidator';
 import { ConfigVariables } from './ConfigVariables';
+import { EnumValue } from './EnumValue';
 
 export enum ValueType {
     string = 'string',
     boolean = 'boolean',
     enum = 'enum',
-    checkBoxList = 'checkBoxList'
+    checkBoxList = 'checkBoxList',
+    int = 'int'
 }
 
 export enum ResourceType {
@@ -25,6 +27,8 @@ interface IBindingSetting {
     required: boolean;
     resource?: ResourceType;
     validators?: object[];
+    // tslint:disable-next-line:no-reserved-keywords
+    enum?: object[];
 }
 
 export class ConfigSetting {
@@ -53,6 +57,10 @@ export class ConfigSetting {
 
     public get name(): string {
         return this._variables.getValue(this._setting.name);
+    }
+
+    public get enums(): EnumValue[] {
+        return this._setting.enum ? this._setting.enum.map((ev: object) => new EnumValue(this._variables, ev)) : [];
     }
 
     public validateSetting(value: string | undefined): string | undefined {

@@ -110,7 +110,7 @@ suite('Create Function Tests', () => {
         await testCreateFunction(
             serviceBusQueueTrigger,
             'serviceBusConnection',
-            'accessRights',
+            undefined, // Use default access rights
             undefined // Use default queue name
         );
     });
@@ -120,7 +120,7 @@ suite('Create Function Tests', () => {
         await testCreateFunction(
             serviceBusTopicTrigger,
             'serviceBusConnection',
-            'accessRights',
+            undefined, // Use default access rights
             undefined, // Use default topic name
             undefined // Use default subscription name
         );
