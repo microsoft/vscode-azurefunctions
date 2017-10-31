@@ -6,7 +6,7 @@
 import { localize } from './localize';
 
 const taskId: string = 'launchFunctionApp';
-const tasksJson: {} = {
+export const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
@@ -40,7 +40,7 @@ const tasksJson: {} = {
     ]
 };
 
-const launchJson: {} = {
+export const launchJson: {} = {
     version: '0.2.0',
     configurations: [
         {
@@ -53,15 +53,3 @@ const launchJson: {} = {
         }
     ]
 };
-
-function stringifyJSON(data: {}): string {
-    return JSON.stringify(data, null, '    ');
-}
-
-export function getTasksJson(): string {
-    return stringifyJSON(tasksJson);
-}
-
-export function getLaunchJson(): string {
-    return stringifyJSON(launchJson);
-}

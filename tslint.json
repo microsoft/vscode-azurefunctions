@@ -196,7 +196,12 @@
         ],
         "underscore-consistent-invocation": true,
         "unified-signatures": true,
-        "variable-name": true,
+        "variable-name": [ // changed
+            true,
+            "ban-keywords",
+            "check-format",
+            "allow-leading-underscore"
+        ],
         "react-a11y-anchors": true,
         "react-a11y-aria-unsupported-elements": true,
         "react-a11y-event-has-role": true,

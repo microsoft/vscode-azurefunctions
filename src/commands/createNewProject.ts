@@ -7,13 +7,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as FunctionsCli from '../functions-cli';
+import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import * as TemplateFiles from '../template-files';
 import * as fsUtil from '../utils/fs';
 import * as workspaceUtil from '../utils/workspace';
+import { VSCodeUI } from '../VSCodeUI';
 
-export async function createNewProject(outputChannel: vscode.OutputChannel): Promise<void> {
-    const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+export async function createNewProject(outputChannel: vscode.OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
 
     const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
     const tasksJsonExists: boolean = fs.existsSync(tasksJsonPath);
@@ -23,8 +25,8 @@ export async function createNewProject(outputChannel: vscode.OutputChannel): Pro
     await FunctionsCli.createNewProject(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
-        await fsUtil.writeToFile(tasksJsonPath, TemplateFiles.getTasksJson());
-        await fsUtil.writeToFile(launchJsonPath, TemplateFiles.getLaunchJson());
+        await fsUtil.writeJsonToFile(tasksJsonPath, TemplateFiles.tasksJson);
+        await fsUtil.writeJsonToFile(launchJsonPath, TemplateFiles.launchJson);
     }
 
     if (!workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {

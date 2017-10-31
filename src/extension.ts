@@ -21,6 +21,7 @@ import * as errors from './errors';
 import { localize } from './localize';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
 import { NodeBase } from './nodes/NodeBase';
+import { TemplateData } from './templates/TemplateData';
 
 let reporter: TelemetryReporter | undefined;
 
@@ -47,9 +48,11 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(azureAccount.onFiltersChanged(() => explorer.refresh()));
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
 
+        const templateData: TemplateData = new TemplateData(context.globalState);
+
         initCommand<NodeBase>(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
         initCommand<NodeBase>(context, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel));
+        initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
