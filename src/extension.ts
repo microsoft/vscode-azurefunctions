@@ -50,16 +50,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const templateData: TemplateData = new TemplateData(context.globalState);
 
-        initCommand<NodeBase>(context, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
-        initCommand<NodeBase>(context, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.deployZip', async () => await deployZip(explorer, outputChannel));
-        initAsyncCommand<NodeBase>(context, 'azureFunctions.deployZipFromExplorer', async (node?: FunctionAppNode) => await deployZip(explorer, outputChannel, undefined, node));
-        initAsyncCommand<vscode.Uri>(context, 'azureFunctions.deployZipFromFolder', async (uri?: vscode.Uri) => await deployZip(explorer, outputChannel, uri, undefined));
+        initCommand<NodeBase>(context, outputChannel, 'azureFunctions.refresh', (node?: NodeBase) => explorer.refresh(node));
+        initCommand<NodeBase>(context, outputChannel, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.deployZip', async () => await deployZip(explorer, outputChannel));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.deployZipFromExplorer', async (node?: FunctionAppNode) => await deployZip(explorer, outputChannel, undefined, node));
+        initAsyncCommand<vscode.Uri>(context, outputChannel, 'azureFunctions.deployZipFromFolder', async (uri?: vscode.Uri) => await deployZip(explorer, outputChannel, uri, undefined));
     }
 }
 
@@ -67,11 +67,11 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
 }
 
-function initCommand<T>(extensionContext: vscode.ExtensionContext, commandId: string, callback: (context?: T) => void): void {
-    initAsyncCommand(extensionContext, commandId, async (context?: T) => callback(context));
+function initCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (context?: T) => void): void {
+    initAsyncCommand(extensionContext, outputChannel, commandId, async (context?: T) => callback(context));
 }
 
-function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, commandId: string, callback: (context?: T) => Promise<void>): void {
+function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (context?: T) => Promise<void>): void {
     extensionContext.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
         const start: number = Date.now();
         let result: string = 'Succeeded';
@@ -89,7 +89,14 @@ function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, commandI
             } else {
                 result = 'Failed';
                 errorData = new ErrorData(error);
-                vscode.window.showErrorMessage(errorData.message);
+                // Always append the error to the output channel, but only 'show' the output channel for multiline errors
+                outputChannel.appendLine(localize('azFunc.Error', 'Error: {0}', errorData.message));
+                if (errorData.message.includes('\n')) {
+                    outputChannel.show();
+                    vscode.window.showErrorMessage(localize('azFunc.multilineError', 'An error has occured in the Azure Functions extension. Check output window for more details.'));
+                } else {
+                    vscode.window.showErrorMessage(errorData.message);
+                }
             }
         } finally {
             const end: number = Date.now();
