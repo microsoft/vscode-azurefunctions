@@ -19,6 +19,12 @@ suite('Error Data Tests', () => {
         assert.equal(ed.message, 'test');
     });
 
+    test('Azure Error', () => {
+        const ed: ErrorData = new ErrorData(new Error('{ "Code": "Conflict", "Message": "test" }'));
+        assert.equal(ed.errorType, 'Conflict');
+        assert.equal(ed.message, 'test');
+    });
+
     test('String', () => {
         const ed: ErrorData = new ErrorData('test');
         assert.equal(ed.errorType, 'string');
