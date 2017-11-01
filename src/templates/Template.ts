@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as fsUtil from '../utils/fs';
 import { Resources } from './Resources';
@@ -80,12 +81,12 @@ export class Template {
     }
 
     public async writeTemplateFiles(functionPath: string): Promise<void> {
-        await fsUtil.makeFolder(functionPath);
+        await fse.ensureDir(functionPath);
         const tasks: Promise<void>[] = Object.keys(this._template.files).map(async (fileName: string) => {
-            await fsUtil.writeToFile(path.join(functionPath, fileName), this._template.files[fileName]);
+            await fse.writeFile(path.join(functionPath, fileName), this._template.files[fileName]);
         });
 
-        tasks.push(fsUtil.writeJsonToFile(path.join(functionPath, 'function.json'), this._template.function));
+        tasks.push(fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), this._template.function));
 
         await Promise.all(tasks);
     }

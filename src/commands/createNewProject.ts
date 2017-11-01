@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
+import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as FunctionsCli from '../functions-cli';
@@ -18,15 +18,15 @@ export async function createNewProject(outputChannel: vscode.OutputChannel, ui: 
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
 
     const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
-    const tasksJsonExists: boolean = fs.existsSync(tasksJsonPath);
+    const tasksJsonExists: boolean = await fse.pathExists(tasksJsonPath);
     const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
-    const launchJsonExists: boolean = fs.existsSync(launchJsonPath);
+    const launchJsonExists: boolean = await fse.pathExists(launchJsonPath);
 
     await FunctionsCli.createNewProject(outputChannel, functionAppPath);
 
     if (!tasksJsonExists && !launchJsonExists) {
-        await fsUtil.writeJsonToFile(tasksJsonPath, TemplateFiles.tasksJson);
-        await fsUtil.writeJsonToFile(launchJsonPath, TemplateFiles.launchJson);
+        await fsUtil.writeFormattedJson(tasksJsonPath, TemplateFiles.tasksJson);
+        await fsUtil.writeFormattedJson(launchJsonPath, TemplateFiles.launchJson);
     }
 
     if (!workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {

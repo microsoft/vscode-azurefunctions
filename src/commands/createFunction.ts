@@ -6,7 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import CosmosDBManagementClient = require('azure-arm-cosmosdb');
 import { DatabaseAccount, DatabaseAccountListKeysResult } from 'azure-arm-cosmosdb/lib/models';
-import * as fs from 'fs';
+import * as fse from 'fs-extra';
 import { ServiceClientCredentials } from 'ms-rest';
 import { BaseResource } from 'ms-rest-azure';
 import * as path from 'path';
@@ -33,13 +33,13 @@ const expectedFunctionAppFiles: string[] = [
 ];
 
 function getMissingFunctionAppFiles(rootPath: string): string[] {
-    return expectedFunctionAppFiles.filter((file: string) => !fs.existsSync(path.join(rootPath, file)));
+    return expectedFunctionAppFiles.filter((file: string) => !fse.existsSync(path.join(rootPath, file)));
 }
 
 function validateTemplateName(rootPath: string, name: string | undefined): string | undefined {
     if (!name) {
         return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
-    } else if (fs.existsSync(path.join(rootPath, name))) {
+    } else if (fse.existsSync(path.join(rootPath, name))) {
         return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
     } else {
         return undefined;
@@ -175,7 +175,7 @@ interface ILocalSettings {
 
 async function setLocalFunctionAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, 'local.settings.json');
-    const localSettings: ILocalSettings = <ILocalSettings>JSON.parse(await fsUtil.readFromFile(localSettingsPath));
+    const localSettings: ILocalSettings = <ILocalSettings>JSON.parse((await fse.readFile(localSettingsPath)).toString());
     if (localSettings.Values[key]) {
         const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
         const yes: string = localize('azFunc.yes', 'Yes');
@@ -185,7 +185,7 @@ async function setLocalFunctionAppSetting(functionAppPath: string, key: string, 
     }
 
     localSettings.Values[key] = value;
-    await fsUtil.writeJsonToFile(localSettingsPath, localSettings);
+    await fsUtil.writeFormattedJson(localSettingsPath, localSettings);
 }
 
 export async function createFunction(

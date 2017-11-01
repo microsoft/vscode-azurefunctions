@@ -3,75 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
+import * as crypto from "crypto";
+import * as fse from 'fs-extra';
 import * as path from 'path';
-// tslint:disable-next-line:no-require-imports
-import rimraf = require('rimraf');
 
-export async function writeJsonToFile(fsPath: string, data: object): Promise<void> {
-    await writeToFile(fsPath, JSON.stringify(data, undefined, 2));
-}
-
-export async function writeToFile(fsPath: string, data: string): Promise<void> {
-    await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-        fs.writeFile(fsPath, data, (error?: Error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve();
-            }
-        });
-    });
-}
-
-export async function readFromFile(fsPath: string): Promise<string> {
-    return await new Promise((resolve: (data: string) => void, reject: (e: Error) => void): void => {
-        fs.readFile(fsPath, (error: Error | undefined, data: Buffer) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(data.toString());
-            }
-        });
-    });
-}
-
-export async function makeFolder(fsPath: string): Promise<void> {
-    if (!(await fsPathExists(fsPath))) {
-        await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
-            fs.mkdir(fsPath, (err?: Error) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
-    }
-}
-
-export async function deleteFolderAndContents(fsPath: string): Promise<void> {
-    await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
-        rimraf(fsPath, (err?: Error) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
-}
-
-export async function fsPathExists(fsPath: string): Promise<boolean> {
-    return await new Promise((resolve: (r: boolean) => void, reject: (e: Error) => void): void => {
-        fs.exists(fsPath, (result: boolean, error?: Error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(result);
-            }
-        });
-    });
+export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
+    await fse.writeJson(fsPath, data, { spaces: 2 });
 }
 
 export async function getUniqueFsPath(folderPath: string, defaultValue: string): Promise<string | undefined> {
@@ -80,7 +17,7 @@ export async function getUniqueFsPath(folderPath: string, defaultValue: string):
 
     while (count < maxCount) {
         const fileName: string = defaultValue + (count === 0 ? '' : count.toString());
-        if (!(await fsPathExists(path.join(folderPath, fileName)))) {
+        if (!(await fse.pathExists(path.join(folderPath, fileName)))) {
             return fileName;
         }
         count += 1;
@@ -89,7 +26,7 @@ export async function getUniqueFsPath(folderPath: string, defaultValue: string):
     return undefined;
 }
 
-export function randomName(): string {
-    // tslint:disable-next-line:insecure-random
-    return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
+export function getRandomHexString(length: number = 10): string {
+    const buffer: Buffer = crypto.randomBytes(Math.ceil(length / 2));
+    return buffer.toString('hex').slice(0, length);
 }

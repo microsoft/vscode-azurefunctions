@@ -230,7 +230,7 @@
             "spaces"
         ],
         "linebreak-style": false, // changed
-        "newline-before-return": true,
+        "newline-before-return": false, // changed
         "no-consecutive-blank-lines": true,
         "no-empty-line-after-opening-brace": false,
         "no-single-line-block-comment": true,
