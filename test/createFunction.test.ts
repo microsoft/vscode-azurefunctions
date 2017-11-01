@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -14,7 +15,7 @@ import { TestAzureAccount } from './TestAzureAccount';
 import { TestUI } from './TestUI';
 
 const templateData: TemplateData = new TemplateData();
-const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.randomName()}`);
+const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
 const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
 const templateFilterSetting: string = 'azureFunctions.templateFilter';
@@ -23,13 +24,12 @@ const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration(
 const oldTemplateFilter: string | undefined = config.get(templateFilterSetting);
 
 suiteSetup(async () => {
-    await fsUtil.makeFolder(testFolder);
-    await fsUtil.makeFolder(path.join(testFolder, '.vscode'));
+    await fse.ensureDir(path.join(testFolder, '.vscode'));
     // Pretend to create the parent function app
     await Promise.all([
-        fsUtil.writeToFile(path.join(testFolder, 'host.json'), ''),
-        fsUtil.writeToFile(path.join(testFolder, 'local.settings.json'), ''),
-        fsUtil.writeToFile(path.join(testFolder, '.vscode', 'launch.json'), '')
+        fse.writeFile(path.join(testFolder, 'host.json'), ''),
+        fse.writeFile(path.join(testFolder, 'local.settings.json'), ''),
+        fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
     ]);
 
     await config.update(templateFilterSetting, 'Core', vscode.ConfigurationTarget.Global);
@@ -37,7 +37,7 @@ suiteSetup(async () => {
 
 suiteTeardown(async () => {
     outputChannel.dispose();
-    await fsUtil.deleteFolderAndContents(testFolder);
+    await fse.remove(testFolder);
     await config.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
 });
 
@@ -157,6 +157,6 @@ async function testCreateFunction(funcName: string, ...inputs: (string | undefin
     assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
     const functionPath: string = path.join(testFolder, funcName);
-    assert.equal(await fsUtil.fsPathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
-    assert.equal(await fsUtil.fsPathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    assert.equal(await fse.pathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
+    assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
 }
