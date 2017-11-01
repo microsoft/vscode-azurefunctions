@@ -22,6 +22,11 @@
     "categories": [
         "Azure"
     ],
+    "keywords": [
+        "Azure",
+        "Functions",
+        "multi-root ready"
+    ],
     "preview": true,
     "activationEvents": [
         "onCommand:azureFunctions.refresh",
