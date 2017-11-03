@@ -38,6 +38,7 @@ There are a couple of ways you can contribute to this repo:
 - **Documentation**: Found a typo or strangely worded sentences? Submit a PR!
 - **Code**: Contribute bug fixes, features or design changes:
   - Clone the repository locally and open in VS Code.
+  - Install [TSLint for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=eg2.tslint).
   - Open the terminal (press `CTRL+`\`) and run `npm install`.
   - To build, press `F1` and type in `Tasks: Run Build Task`.
   - Debug: press `F5` to start debugging the extension.
