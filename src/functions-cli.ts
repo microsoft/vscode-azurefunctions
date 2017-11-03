@@ -6,19 +6,21 @@
 import * as cp from 'child_process';
 import * as vscode from 'vscode';
 import { localize } from './localize';
+import { TemplateLanguage } from './templates/Template';
 
 // tslint:disable-next-line:export-name
-export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
-    await executeCommand(outputChannel, workingDirectory, 'init');
+export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory: string, languageName: string, ...args: string[]): Promise<void> {
+    await executeCommand(outputChannel, workingDirectory, languageName, ...args);
 }
 
-async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, ...args: string[]): Promise<void> {
+async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, languageName: String, ...args: string[]): Promise<void> {
     await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
         const options: cp.SpawnOptions = {
             cwd: workingDirectory,
             shell: true
         };
-        const childProc: cp.ChildProcess = cp.spawn('func', args, options);
+        const command: string = languageName === TemplateLanguage.Java ? 'mvn' : 'func';
+        const childProc: cp.ChildProcess = cp.spawn(command, args, options);
         let stderr: string = '';
         childProc.stdout.on('data', (data: string | Buffer) => outputChannel.append(data.toString()));
         childProc.stderr.on('data', (data: string | Buffer) => stderr = stderr.concat(data.toString()));

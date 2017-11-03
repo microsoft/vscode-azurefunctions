@@ -23,12 +23,9 @@ export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: str
 
 export function isFolderOpenInWorkspace(fsPath: string): boolean {
     if (vscode.workspace.workspaceFolders) {
-        if (!fsPath.endsWith(path.sep)) {
-            fsPath = fsPath + path.sep;
-        }
 
         const folder: vscode.WorkspaceFolder | undefined = vscode.workspace.workspaceFolders.find((f: vscode.WorkspaceFolder): boolean => {
-            return fsPath.startsWith(f.uri.fsPath);
+            return path.relative(fsPath, f.uri.fsPath) === '';
         });
 
         return folder !== undefined;
