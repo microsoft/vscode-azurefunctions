@@ -109,7 +109,7 @@
             "explorer": [
                 {
                     "id": "azureFunctionsExplorer",
-                    "name": "Functions",
+                    "name": "Azure Functions",
                     "when": "config.azureFunctions.showExplorer == true"
                 }
             ]
