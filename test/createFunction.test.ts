@@ -28,7 +28,7 @@ suiteSetup(async () => {
     // Pretend to create the parent function app
     await Promise.all([
         fse.writeFile(path.join(testFolder, 'host.json'), ''),
-        fse.writeFile(path.join(testFolder, 'local.settings.json'), ''),
+        fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
         fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
     ]);
 
@@ -41,12 +41,15 @@ suiteTeardown(async () => {
     await config.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
 });
 
+// tslint:disable-next-line:max-func-body-length
 suite('Create Function Tests', () => {
     const blobTrigger: string = 'BlobTrigger';
     test(blobTrigger, async () => {
         await testCreateFunction(
             blobTrigger,
-            'storageAccountConnection',
+            undefined, // New App Setting
+            'connectionStringKey1',
+            'connectionString',
             undefined // Use default path
         );
     });
@@ -55,7 +58,9 @@ suite('Create Function Tests', () => {
     test(cosmosDBTrigger, async () => {
         await testCreateFunction(
             cosmosDBTrigger,
-            'cosmosDBConnection',
+            undefined, // New App Setting
+            'connectionStringKey2',
+            'connectionString',
             'dbName',
             'collectionName',
             undefined, // Use default for 'create leases if doesn't exist'
@@ -67,7 +72,9 @@ suite('Create Function Tests', () => {
     test(eventHubTrigger, async () => {
         await testCreateFunction(
             eventHubTrigger,
-            'eventHubConnection',
+            undefined, // New App Setting
+            'connectionStringKey3',
+            'connectionString',
             undefined, // Use default event hub name
             undefined // Use default event hub consumer group
         );
@@ -108,7 +115,9 @@ suite('Create Function Tests', () => {
     test(queueTrigger, async () => {
         await testCreateFunction(
             queueTrigger,
-            'storageAccountConnection',
+            undefined, // New App Setting
+            'connectionStringKey4',
+            'connectionString',
             undefined // Use default queue name
         );
     });
@@ -117,7 +126,9 @@ suite('Create Function Tests', () => {
     test(serviceBusQueueTrigger, async () => {
         await testCreateFunction(
             serviceBusQueueTrigger,
-            'serviceBusConnection',
+            undefined, // New App Setting
+            'connectionStringKey5',
+            'connectionString',
             undefined, // Use default access rights
             undefined // Use default queue name
         );
@@ -127,7 +138,9 @@ suite('Create Function Tests', () => {
     test(serviceBusTopicTrigger, async () => {
         await testCreateFunction(
             serviceBusTopicTrigger,
-            'serviceBusConnection',
+            undefined, // New App Setting
+            'connectionStringKey6',
+            'connectionString',
             undefined, // Use default access rights
             undefined, // Use default topic name
             undefined // Use default subscription name

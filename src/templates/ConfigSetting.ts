@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from '../localize';
 import { ConfigValidator } from './ConfigValidator';
 import { ConfigVariables } from './ConfigVariables';
 import { EnumValue } from './EnumValue';
@@ -16,7 +17,22 @@ export enum ValueType {
 }
 
 export enum ResourceType {
-    DocumentDB = 'DocumentDB'
+    DocumentDB = 'DocumentDB',
+    Storage = 'Storage',
+    EventHub = 'EventHub'
+}
+
+export function getResourceTypeLabel(resourceType: ResourceType): string {
+    switch (resourceType) {
+        case ResourceType.DocumentDB:
+            return localize('azFunc.DocumentDB', 'Cosmos DB Account');
+        case ResourceType.Storage:
+            return localize('azFunc.Storage', 'Storage Account');
+        case ResourceType.EventHub:
+            return localize('azFunc.EventHub', 'Event Hub');
+        default:
+            return resourceType;
+    }
 }
 
 interface IBindingSetting {

@@ -233,7 +233,7 @@
         "newline-before-return": false, // changed
         "no-consecutive-blank-lines": true,
         "no-empty-line-after-opening-brace": false,
-        "no-single-line-block-comment": true,
+        "no-single-line-block-comment": false, // changed
         "no-trailing-whitespace": true,
         "no-unnecessary-semicolons": true,
         "object-literal-key-quotes": [
