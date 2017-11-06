@@ -16,3 +16,8 @@ export class ArgumentError extends Error {
         super(localize('azFunc.argumentError', 'Invalid {0}.', obj.constructor.name));
     }
 }
+
+// tslint:disable-next-line:max-classes-per-file
+export class NoSubscriptionError extends Error {
+    public message: string = localize('azFunc.noSubscriptionError', 'You must be signed in to Azure to perform this operation.');
+}

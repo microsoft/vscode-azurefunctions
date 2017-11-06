@@ -241,6 +241,7 @@
         "azure-arm-cosmosdb": "^1.0.0-preview",
         "azure-arm-resource": "^2.0.0-preview",
         "azure-arm-website": "^1.0.0-preview",
+        "azure-arm-storage": "^3.1.0",
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",

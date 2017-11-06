@@ -3,25 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import CosmosDBManagementClient = require('azure-arm-cosmosdb');
-import { DatabaseAccount, DatabaseAccountListKeysResult } from 'azure-arm-cosmosdb/lib/models';
 import * as fse from 'fs-extra';
-import { ServiceClientCredentials } from 'ms-rest';
-import { BaseResource } from 'ms-rest-azure';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureAccount, AzureResourceFilter } from '../azure-account.api';
+import { AzureAccount } from '../azure-account.api';
 import * as errors from '../errors';
 import { UserCancelledError } from '../errors';
 import * as FunctionsCli from '../functions-cli';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
+import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
-import { ConfigSetting, ResourceType, ValueType } from '../templates/ConfigSetting';
+import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
 import { EnumValue } from '../templates/EnumValue';
 import { Template } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
-import * as azUtil from '../utils/azure';
 import * as fsUtil from '../utils/fs';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
@@ -69,23 +64,9 @@ async function promptForFunctionName(ui: IUserInterface, functionAppPath: string
     return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName || template.defaultFunctionName);
 }
 
-async function promptForSetting(ui: IUserInterface, azureAccount: AzureAccount, functionAppPath: string, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
-        const subscription: AzureResourceFilter | undefined = await promptForSubscription(ui, azureAccount);
-
-        if (subscription) {
-            const subscriptionId: string | undefined = subscription.subscription.subscriptionId;
-
-            if (subscriptionId) {
-                const credentials: ServiceClientCredentials = subscription.session.credentials;
-
-                switch (setting.resourceType) {
-                    case ResourceType.DocumentDB:
-                        return await promptForDocumentDB(ui, functionAppPath, credentials, subscriptionId, setting);
-                    default:
-                }
-            }
-        }
+        return await localAppSettings.promptForAppSetting(setting.resourceType);
     } else {
         switch (setting.valueType) {
             case ValueType.boolean:
@@ -93,45 +74,9 @@ async function promptForSetting(ui: IUserInterface, azureAccount: AzureAccount, 
             case ValueType.enum:
                 return await promptForEnumSetting(ui, setting);
             default:
+                // Default to 'string' type for any setting that isn't supported
+                return await promptForStringSetting(ui, setting, defaultValue);
         }
-    }
-
-    // Default to 'string' type for any setting that isn't supported
-    return await promptForStringSetting(ui, setting, defaultValue);
-}
-
-async function promptForSubscription(ui: IUserInterface, azureAccount: AzureAccount): Promise<AzureResourceFilter | undefined> {
-    if (azureAccount.filters.length === 0) {
-        return undefined;
-    } else if (azureAccount.filters.length === 1) {
-        return azureAccount.filters[0];
-    } else {
-        const subscriptionPicks: PickWithData<AzureResourceFilter>[] = [];
-        azureAccount.filters.forEach((f: AzureResourceFilter) => {
-            const subscriptionId: string | undefined = f.subscription.subscriptionId;
-            if (subscriptionId) {
-                const label: string = f.subscription.displayName || subscriptionId;
-                subscriptionPicks.push(new PickWithData<AzureResourceFilter>(f, label, subscriptionId));
-            }
-        });
-        const placeHolder: string = localize('azFunc.selectSubscription', 'Select a Subscription');
-
-        return (await ui.showQuickPick<AzureResourceFilter>(subscriptionPicks, placeHolder)).data;
-    }
-}
-
-async function promptForDocumentDB(ui: IUserInterface, functionAppPath: string, credentials: ServiceClientCredentials, subscriptionId: string, setting: ConfigSetting): Promise<string> {
-    const client: CosmosDBManagementClient = new CosmosDBManagementClient(credentials, subscriptionId);
-    const dbAccount: DatabaseAccount = await showResourceQuickPick<DatabaseAccount>(ui, setting, client.databaseAccounts.list());
-    if (dbAccount.id && dbAccount.name) {
-        const resourceGroup: string = azUtil.getResourceGroupFromId(dbAccount.id);
-        const keys: DatabaseAccountListKeysResult = await client.databaseAccounts.listKeys(resourceGroup, dbAccount.name);
-        const appSettingName: string = `${dbAccount.name}_${ResourceType.DocumentDB.toUpperCase()}`;
-        await setLocalFunctionAppSetting(functionAppPath, appSettingName, `AccountEndpoint=${dbAccount.documentEndpoint};AccountKey=${keys.primaryMasterKey};`);
-
-        return appSettingName;
-    } else {
-        throw new Error(localize('azFunc.InvalidCosmosDBAccount', 'Invalid Cosmos DB Account'));
     }
 }
 
@@ -154,40 +99,6 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
     return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
 }
 
-interface IBaseResourceWithName extends BaseResource {
-    name?: string;
-}
-
-async function showResourceQuickPick<T extends IBaseResourceWithName>(ui: IUserInterface, setting: ConfigSetting, resourcesTask: Promise<T[]>): Promise<T> {
-    const picksTask: Promise<PickWithData<T>[]> = resourcesTask.then((resources: T[]) => {
-        return <PickWithData<T>[]>(resources
-            .map((br: T) => br.name ? new PickWithData(br, br.name) : undefined)
-            .filter((p: PickWithData<T> | undefined) => p));
-    });
-    const prompt: string = localize('azFunc.resourcePrompt', 'Select a \'{0}\'', setting.label);
-
-    return (await ui.showQuickPick<T>(picksTask, prompt)).data;
-}
-
-interface ILocalSettings {
-    Values: { [key: string]: string };
-}
-
-async function setLocalFunctionAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
-    const localSettingsPath: string = path.join(functionAppPath, 'local.settings.json');
-    const localSettings: ILocalSettings = <ILocalSettings>JSON.parse((await fse.readFile(localSettingsPath)).toString());
-    if (localSettings.Values[key]) {
-        const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-        const yes: string = localize('azFunc.yes', 'Yes');
-        if (await vscode.window.showWarningMessage(message, yes) !== yes) {
-            return;
-        }
-    }
-
-    localSettings.Values[key] = value;
-    await fsUtil.writeFormattedJson(localSettingsPath, localSettings);
-}
-
 export async function createFunction(
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
@@ -198,11 +109,18 @@ export async function createFunction(
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
     await validateIsFunctionApp(outputChannel, functionAppPath);
 
+    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
+
     const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates()).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
 
+    if (template.bindingType !== 'httpTrigger') {
+        await localAppSettings.validateAzureWebJobsStorage();
+    }
+
     const name: string = await promptForFunctionName(ui, functionAppPath, template);
+
     let showPrompts: boolean = true;
     for (const settingName of template.userPromptedSettings) {
         const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
@@ -211,7 +129,7 @@ export async function createFunction(
                 let settingValue: string | undefined;
                 const defaultValue: string | undefined = template.getSetting(settingName);
                 if (showPrompts) {
-                    settingValue = await promptForSetting(ui, azureAccount, functionAppPath, setting, defaultValue);
+                    settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);
                 } else {
                     settingValue = defaultValue;
                 }
