@@ -10,16 +10,16 @@ import { TemplateLanguage } from './templates/Template';
 
 // tslint:disable-next-line:export-name
 export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory: string, languageName: string, ...args: string[]): Promise<void> {
-    await executeCommand(outputChannel, workingDirectory, languageName, ...args);
+    const command: string = languageName === TemplateLanguage.Java ? 'mvn' : 'func';
+    await executeCommand(outputChannel, workingDirectory, command, ...args);
 }
 
-async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, languageName: String, ...args: string[]): Promise<void> {
+async function executeCommand(outputChannel: vscode.OutputChannel, workingDirectory: string, command: string, ...args: string[]): Promise<void> {
     await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
         const options: cp.SpawnOptions = {
             cwd: workingDirectory,
             shell: true
         };
-        const command: string = languageName === TemplateLanguage.Java ? 'mvn' : 'func';
         const childProc: cp.ChildProcess = cp.spawn(command, args, options);
         let stderr: string = '';
         childProc.stdout.on('data', (data: string | Buffer) => outputChannel.append(data.toString()));

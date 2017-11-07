@@ -16,43 +16,22 @@ import * as fsUtil from '../utils/fs';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function createNewProject(outputChannel: vscode.OutputChannel, workingDirectory?: string, ui: IUserInterface = new VSCodeUI()): Promise<void> {
-    let functionAppPath: string;
-    if (!workingDirectory || workingDirectory.length === 0) {
+export async function createNewProject(outputChannel: vscode.OutputChannel, functionAppPath?: string, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    if (!functionAppPath) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
-    } else {
-        functionAppPath = workingDirectory;
     }
 
     const languages: Pick[] = [
         new Pick(TemplateLanguage.JavaScript),
         new Pick(TemplateLanguage.Java)
     ];
-    const language: Pick = await ui.showQuickPick(languages, localize('azFunc.selectFuncTemplate', 'Select the language of your function project'));
+    const language: Pick = await ui.showQuickPick(languages, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'));
 
     let javaTargetPath: string = '';
     switch (language.label) {
         case TemplateLanguage.Java:
-            const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'groupId');
-            const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value of "groupId"');
-            const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false);
-
-            const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'artifactId');
-            const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value of "artifactId"');
-            const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false);
-
-            const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', '1.0-SNAPSHOT');
-            const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value of "version"');
-            const version: string = await ui.showInputBox(versionPlaceHolder, versionPrompt, false, undefined, '1.0-SNAPSHOT');
-
-            const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', groupId);
-            const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value of "package"');
-            const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, groupId);
-
-            const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', `${artifactId}-${Date.now()}`);
-            const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value of "appName"');
-            const appName: string = await ui.showInputBox(appNamePlaceHolder, appNamePrompt, false, undefined, `${artifactId}-${Date.now()}`);
-
+            // Get parameters for Maven command
+            const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
             // Use maven command currently, will change to function CLI when the function CLI init project command is ready.
             await FunctionsCli.createNewProject(
                 outputChannel,
@@ -82,13 +61,10 @@ export async function createNewProject(outputChannel: vscode.OutputChannel, work
     const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
     const launchJsonExists: boolean = await fse.pathExists(launchJsonPath);
 
-    if (!tasksJsonExists && !launchJsonExists) {
-        const vsCodePath: string = path.join(functionAppPath, '.vscode');
-        if (!await fse.pathExists(vsCodePath)) {
-            await fse.mkdir(vsCodePath);
-        }
+    if (!tasksJsonExists || !launchJsonExists) {
+        await fse.ensureDir(path.join(functionAppPath, '.vscode'));
         await Promise.all([
-            fse.writeFile(tasksJsonPath, TemplateFiles.getTasksJson(language.label, javaTargetPath)),
+            fsUtil.writeFormattedJson(tasksJsonPath, TemplateFiles.getTasksJson(language.label, javaTargetPath)),
             fsUtil.writeFormattedJson(launchJsonPath, TemplateFiles.getLaunchJson(language.label))
         ]);
     }
@@ -97,4 +73,42 @@ export async function createNewProject(outputChannel: vscode.OutputChannel, work
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
         await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
     }
+}
+
+async function promotForMavenParameters(ui: IUserInterface, functionAppPath: string): Promise<IMavenParameters> {
+    const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
+    const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
+    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, undefined, 'com.function');
+
+    const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
+    const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
+    const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, undefined, path.basename(functionAppPath));
+
+    const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
+    const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
+    const version: string = await ui.showInputBox(versionPlaceHolder, versionPrompt, false, undefined, '1.0-SNAPSHOT');
+
+    const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
+    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
+    const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, groupId);
+
+    const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
+    const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
+    const appName: string = await ui.showInputBox(appNamePlaceHolder, appNamePrompt, false, undefined, `${artifactId}-${Date.now()}`);
+
+    return {
+        groupId: groupId,
+        artifactId: artifactId,
+        version: version,
+        packageName: packageName,
+        appName: appName
+    };
+}
+
+interface IMavenParameters {
+    groupId: string;
+    artifactId: string;
+    version: string;
+    packageName: string;
+    appName: string;
 }

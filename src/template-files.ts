@@ -7,7 +7,8 @@ import { localize } from './localize';
 import { TemplateLanguage } from './templates/Template';
 
 const taskId: string = 'launchFunctionApp';
-const tasksJsonForJavascript: {} = {
+
+const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
@@ -55,48 +56,6 @@ const launchJsonForJavascript: {} = {
     ]
 };
 
-const taskJsonForJava: {} = {
-    version: '2.0.0',
-    tasks: [
-        {
-            taskName: 'Launch Function App',
-            identifier: 'launchFunctionApp',
-            linux: {
-                command: 'sh -c "mvn clean package && func host start --script-root %path%"'
-            },
-            osx: {
-                command: 'sh -c "mvn clean package && func host start --script-root %path%"'
-            },
-            windows: {
-                command: 'powershell mvn clean package; func host start --script-root %path%'
-            },
-            type: 'shell',
-            isBackground: true,
-            presentation: {
-                reveal: 'always'
-            },
-            problemMatcher: [
-                {
-                    owner: 'azureFunctions',
-                    pattern: [
-                        {
-                            regexp: '\\b\\B',
-                            file: 1,
-                            location: 2,
-                            message: 3
-                        }
-                    ],
-                    background: {
-                        activeOnStart: true,
-                        beginsPattern: '^.*Stopping host.*',
-                        endsPattern: '^.*Job host started.*'
-                    }
-                }
-            ]
-        }
-    ]
-};
-
 const launchJsonForJava: {} = {
     version: '0.2.0',
     configurations: [
@@ -111,21 +70,12 @@ const launchJsonForJava: {} = {
     ]
 };
 
-function stringifyJSON(data: {}): string {
-    return JSON.stringify(data, null, '    ');
-}
-
-export function getTasksJson(language: string, args: string): string {
-    switch (language) {
-        case TemplateLanguage.Java:
-            let taskJsonString: string = stringifyJSON(taskJsonForJava);
-            taskJsonString = taskJsonString.replace(/%path%/g, args);
-
-            return taskJsonString;
-        default:
-            return stringifyJSON(tasksJsonForJavascript);
-    }
-}
+const mavenCleanPackageTask: {} = {
+    taskName: 'Maven Clean Package',
+    type: 'shell',
+    command: 'mvn clean package',
+    isBackground: true
+};
 
 export function getLaunchJson(language: string): object {
     switch (language) {
@@ -133,5 +83,20 @@ export function getLaunchJson(language: string): object {
             return launchJsonForJava;
         default:
             return launchJsonForJavascript;
+    }
+}
+
+export function getTasksJson(language: string, args: string): object {
+    switch (language) {
+        case TemplateLanguage.Java:
+            /* tslint:disable:no-string-literal no-unsafe-any */
+            const taskJsonForJava: {} = JSON.parse(JSON.stringify(tasksJson)); // deep clone
+            taskJsonForJava['tasks'][0].command += ` --script-root ${args}`;
+            taskJsonForJava['tasks'][0].dependsOn = ['Maven Clean Package'];
+            taskJsonForJava['tasks'].push(mavenCleanPackageTask);
+
+            return taskJsonForJava;
+        default:
+            return tasksJson;
     }
 }
