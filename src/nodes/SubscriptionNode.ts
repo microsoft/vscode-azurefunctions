@@ -15,7 +15,7 @@ export class SubscriptionNode extends NodeBase {
     public static readonly contextValue: string = 'azureFunctionsSubscription';
     public readonly childType: string = 'Function App';
 
-    private readonly subscriptionFilter: AzureResourceFilter;
+    public readonly subscriptionFilter: AzureResourceFilter;
 
     private constructor(id: string, name: string, subscriptionFilter: AzureResourceFilter) {
         super(id, name, SubscriptionNode.contextValue);

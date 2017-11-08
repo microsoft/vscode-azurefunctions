@@ -13,7 +13,10 @@ import { FunctionAppNode } from '../nodes/FunctionAppNode';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, uri?: vscode.Uri, node?: FunctionAppNode, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, context?: FunctionAppNode | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
+    let node: FunctionAppNode | undefined = context && context instanceof FunctionAppNode ? context : undefined;
+
     const folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
 
     if (!node) {
