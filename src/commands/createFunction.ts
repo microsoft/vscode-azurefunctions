@@ -8,7 +8,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureAccount } from '../azure-account.api';
 import * as errors from '../errors';
-import { UserCancelledError } from '../errors';
 import * as FunctionsCli from '../functions-cli';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { LocalAppSettings } from '../LocalAppSettings';
@@ -121,29 +120,13 @@ export async function createFunction(
 
     const name: string = await promptForFunctionName(ui, functionAppPath, template);
 
-    let showPrompts: boolean = true;
     for (const settingName of template.userPromptedSettings) {
         const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
         if (setting) {
-            try {
-                let settingValue: string | undefined;
-                const defaultValue: string | undefined = template.getSetting(settingName);
-                if (showPrompts) {
-                    settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);
-                } else {
-                    settingValue = defaultValue;
-                }
+            const defaultValue: string | undefined = template.getSetting(settingName);
+            const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
 
-                template.setSetting(settingName, settingValue);
-            } catch (error) {
-                if (error instanceof UserCancelledError) {
-                    const message: string = localize('azFunc.IncompleteFunction', 'Function \'{0}\' was created, but you must finish specifying settings in \'function.json\'.', name);
-                    vscode.window.showWarningMessage(message);
-                    showPrompts = false;
-                } else {
-                    throw error;
-                }
-            }
+            template.setSetting(settingName, settingValue);
         }
     }
 
