@@ -32,7 +32,7 @@ export async function createNewProject(outputChannel: vscode.OutputChannel, func
         case TemplateLanguage.Java:
             // Get parameters for Maven command
             const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
-            // Use maven command currently, will change to function CLI when the function CLI init project command is ready.
+            // Use maven command to init Java function project.
             await FunctionsCli.createNewProject(
                 outputChannel,
                 functionAppPath,

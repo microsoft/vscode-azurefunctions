@@ -8,15 +8,16 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureAccount } from '../azure-account.api';
 import * as errors from '../errors';
-import * as FunctionsCli from '../functions-cli';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
 import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
 import { EnumValue } from '../templates/EnumValue';
 import { Template } from '../templates/Template';
+import { TemplateLanguage } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
 import * as fsUtil from '../utils/fs';
+import { runCommandInTerminal } from '../utils/terminal';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 import * as CreateNewProject from './createNewProject';
@@ -109,31 +110,41 @@ export async function createFunction(
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
     await validateIsFunctionApp(outputChannel, functionAppPath);
 
-    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
+    const languageType: string = workspaceUtil.getProjectType(functionAppPath);
+    switch (languageType) {
+        case TemplateLanguage.Java:
+            // For Java function, using Maven for now.
+            runCommandInTerminal(`mvn azure-functions:add -f ${path.join(functionAppPath, 'pom.xml')} -B`);
+            break;
+        default:
+            const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
 
-    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates()).map((t: Template) => new PickWithData<Template>(t, t.name));
-    const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
-    const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
+            const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates()).map((t: Template) => new PickWithData<Template>(t, t.name));
+            const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
+            const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
 
-    if (template.bindingType !== 'httpTrigger') {
-        await localAppSettings.validateAzureWebJobsStorage();
+            if (template.bindingType !== 'httpTrigger') {
+                await localAppSettings.validateAzureWebJobsStorage();
+            }
+
+            const name: string = await promptForFunctionName(ui, functionAppPath, template);
+
+            for (const settingName of template.userPromptedSettings) {
+                const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
+                if (setting) {
+                    const defaultValue: string | undefined = template.getSetting(settingName);
+                    const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
+
+                    template.setSetting(settingName, settingValue);
+                }
+            }
+
+            const functionPath: string = path.join(functionAppPath, name);
+            await template.writeTemplateFiles(functionPath);
+
+            const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionPath, 'index.js'));
+            vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+            break;
     }
 
-    const name: string = await promptForFunctionName(ui, functionAppPath, template);
-
-    for (const settingName of template.userPromptedSettings) {
-        const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
-        if (setting) {
-            const defaultValue: string | undefined = template.getSetting(settingName);
-            const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
-
-            template.setSetting(settingName, settingValue);
-        }
-    }
-
-    const functionPath: string = path.join(functionAppPath, name);
-    await template.writeTemplateFiles(functionPath);
-
-    const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionPath, 'index.js'));
-    vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 }
