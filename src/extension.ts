@@ -10,6 +10,7 @@ import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
 import { createFunction } from './commands/createFunction';
+import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject';
 import { deployZip } from './commands/deployZip';
 import { openInPortal } from './commands/openInPortal';
@@ -21,6 +22,7 @@ import * as errors from './errors';
 import { localize } from './localize';
 import { FunctionAppNode } from './nodes/FunctionAppNode';
 import { NodeBase } from './nodes/NodeBase';
+import { SubscriptionNode } from "./nodes/SubscriptionNode";
 import { TemplateData } from './templates/TemplateData';
 
 let reporter: TelemetryReporter | undefined;
@@ -54,12 +56,11 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand<NodeBase>(context, outputChannel, 'azureFunctions.openInPortal', async (node?: NodeBase) => await openInPortal(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
+        initAsyncCommand<SubscriptionNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: SubscriptionNode) => await createFunctionApp(context, outputChannel, explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
-        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.deployZip', async () => await deployZip(explorer, outputChannel));
-        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.deployZipFromExplorer', async (node?: FunctionAppNode) => await deployZip(explorer, outputChannel, undefined, node));
-        initAsyncCommand<vscode.Uri>(context, outputChannel, 'azureFunctions.deployZipFromFolder', async (uri?: vscode.Uri) => await deployZip(explorer, outputChannel, uri, undefined));
+        initAsyncCommand<FunctionAppNode | vscode.Uri>(context, outputChannel, 'azureFunctions.deployZip', async (arg?: FunctionAppNode | vscode.Uri) => await deployZip(explorer, outputChannel, arg));
     }
 }
 

@@ -32,6 +32,7 @@
         "onCommand:azureFunctions.refresh",
         "onCommand:azureFunctions.createNewProject",
         "onCommand:azureFunctions.createFunction",
+        "onCommand:azureFunctions.createFunctionApp",
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
@@ -70,6 +71,11 @@
                 }
             },
             {
+                "command": "azureFunctions.createFunctionApp",
+                "title": "%azFunc.createFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.openInPortal",
                 "title": "%azFunc.openInPortal%",
                 "category": "Azure Functions"
@@ -92,17 +98,11 @@
             {
                 "command": "azureFunctions.deployZip",
                 "title": "%azFunc.deployZip%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.deployZipFromExplorer",
-                "title": "%azFunc.deployZipFromExplorer%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.deployZipFromFolder",
-                "title": "%azFunc.deployZipFromFolder%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/Deploy.svg",
+                    "dark": "resources/dark/Deploy.svg"
+                }
             }
         ],
         "views": {
@@ -127,6 +127,11 @@
                     "group": "navigation@2"
                 },
                 {
+                    "command": "azureFunctions.deployZip",
+                    "when": "view == azureFunctionsExplorer",
+                    "group": "navigation@3"
+                },
+                {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@3"
@@ -136,49 +141,44 @@
                 {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
-                    "group": "1_subscriptionGeneralCommands@1"
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
+                    "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "1_functionAppGeneralCommands@1"
+                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "2_functionAppControlCommands@1"
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "2_functionAppControlCommands@2"
+                    "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "2_functionAppControlCommands@3"
+                    "group": "2@3"
                 },
                 {
-                    "command": "azureFunctions.deployZipFromExplorer",
+                    "command": "azureFunctions.deployZip",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "3_functionAppDeployCommands@1"
+                    "group": "3@1"
                 }
             ],
             "explorer/context": [
                 {
-                    "command": "azureFunctions.deployZipFromFolder",
+                    "command": "azureFunctions.deployZip",
                     "when": "explorerResourceIsFolder == true",
                     "group": "zzz_@1"
-                }
-            ],
-            "commandPalette": [
-                {
-                    "command": "azureFunctions.deployZipFromExplorer",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.deployZipFromFolder",
-                    "when": "never"
                 }
             ]
         },
@@ -249,7 +249,7 @@
         "request-promise": "^4.2.2",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
-        "vscode-azureappservice": "^0.2.0"
+        "vscode-azureappservice": "^0.3.2"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"
