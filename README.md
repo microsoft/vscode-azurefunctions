@@ -1,4 +1,4 @@
-# Azure Functions for Visual Studio Code
+# Azure Functions for Visual Studio Code (Preview)
 
 ## Prerequisites
 * [Node v8.0+](https://nodejs.org/)
@@ -13,10 +13,10 @@
 
 * Create new project
 * Create new function from template
-* Debug function apps locally
-* View Azure Functions
-* Deploy to Azure Functions
-* Start, stop, and restart Azure Functions
+* Debug function projects locally
+* View Azure Function Apps
+* Deploy to Azure Function Apps
+* Create, delete, start, stop, and restart Azure Function Apps
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 
 ### Create New Project
