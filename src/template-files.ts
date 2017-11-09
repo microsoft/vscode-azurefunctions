@@ -10,7 +10,7 @@ export const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
-            taskName: localize('azFunc.launchFuncApp', 'Launch Function App'),
+            label: localize('azFunc.launchFuncApp', 'Launch Function App'),
             identifier: taskId,
             type: 'shell',
             command: 'func host start',
