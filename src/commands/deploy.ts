@@ -10,10 +10,11 @@ import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { FunctionAppNode } from '../nodes/FunctionAppNode';
+import { getWebSiteClient } from '../nodes/SubscriptionNode';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, context?: FunctionAppNode | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, context?: FunctionAppNode | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
     let node: FunctionAppNode | undefined = context && context instanceof FunctionAppNode ? context : undefined;
 
@@ -23,7 +24,7 @@ export async function deployZip(explorer: AzureFunctionsExplorer, outputChannel:
         node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));
     }
 
-    const client: WebSiteManagementClient = node.getWebSiteClient();
+    const client: WebSiteManagementClient = getWebSiteClient(node);
 
     await node.siteWrapper.deployZip(folderPath, client, outputChannel);
 }

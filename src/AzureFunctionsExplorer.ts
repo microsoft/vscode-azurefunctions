@@ -3,21 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event, EventEmitter, TreeDataProvider, TreeItem } from 'vscode';
+import { Event, EventEmitter, Memento, OutputChannel, TreeDataProvider, TreeItem } from 'vscode';
 import { AzureAccount, AzureResourceFilter } from './azure-account.api';
 import { IUserInterface, PickWithData } from './IUserInterface';
 import { localize } from './localize';
-import { NodeBase } from './nodes/NodeBase';
+import { CreateChildFunction, NodeBase } from './nodes/NodeBase';
 import { SubscriptionNode } from './nodes/SubscriptionNode';
 import { VSCodeUI } from './VSCodeUI';
 
 export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
     private _onDidChangeTreeDataEmitter: EventEmitter<NodeBase> = new EventEmitter<NodeBase>();
     private _azureAccount: AzureAccount;
+    private _globalState: Memento;
+    private _outputChannel: OutputChannel;
     private _rootNodes: NodeBase[] = [];
     private _ui: IUserInterface;
 
-    constructor(azureAccount: AzureAccount, ui: IUserInterface = new VSCodeUI()) {
+    private _loginCommandId: string = 'azure-account.login';
+
+    constructor(globalState: Memento, outputChannel: OutputChannel, azureAccount: AzureAccount, ui: IUserInterface = new VSCodeUI()) {
+        this._globalState = globalState;
+        this._outputChannel = outputChannel;
         this._azureAccount = azureAccount;
         this._ui = ui;
     }
@@ -37,11 +43,11 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
             this._rootNodes = [];
 
             if (this._azureAccount.status === 'Initializing' || this._azureAccount.status === 'LoggingIn') {
-                return [new NodeBase('azureFunctionsLoading', localize('azFunc.loadingNode', 'Loading...'))];
+                return [new NodeBase(undefined, 'azureFunctionsLoading', localize('azFunc.loadingNode', 'Loading...', undefined, this._loginCommandId))];
             } else if (this._azureAccount.status === 'LoggedOut') {
-                return [new NodeBase('azureFunctionsSignInToAzure', localize('azFunc.signInNode', 'Sign in to Azure...'), undefined, 'azure-account.login')];
+                return [new NodeBase(undefined, 'azureFunctionsSignInToAzure', localize('azFunc.signInNode', 'Sign in to Azure...'), undefined, this._loginCommandId)];
             } else if (this._azureAccount.filters.length === 0) {
-                return [new NodeBase('azureFunctionsNoSubscriptions', localize('azFunc.noSubscriptionsNode', 'No subscriptions found. Edit filters...'), undefined, 'azure-account.selectSubscriptions')];
+                return [new NodeBase(undefined, 'azureFunctionsNoSubscriptions', localize('azFunc.noSubscriptionsNode', 'No subscriptions found. Edit filters...'), undefined, 'azure-account.selectSubscriptions')];
             } else {
                 this._rootNodes = this._azureAccount.filters.map((filter: AzureResourceFilter) => SubscriptionNode.CREATE(filter));
 
@@ -56,18 +62,28 @@ export class AzureFunctionsExplorer implements TreeDataProvider<NodeBase> {
 
     public async showNodePicker(expectedContextValue: string): Promise<NodeBase> {
         let childType: string | undefined = 'Subscription';
-        let quickPicksTask: Promise<PickWithData<NodeBase>[]> = Promise.resolve(this._rootNodes.map((c: NodeBase) => new PickWithData<NodeBase>(c, c.label)));
+        let quickPicksTask: Promise<PickWithData<NodeBase | CreateChildFunction>[]> = Promise.resolve(this._rootNodes.map((c: NodeBase) => new PickWithData<NodeBase>(c, c.label)));
 
         while (childType) {
-            const pick: PickWithData<NodeBase> = await this._ui.showQuickPick<NodeBase>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
-            const node: NodeBase = pick.data;
+            const pick: PickWithData<NodeBase | CreateChildFunction> = await this._ui.showQuickPick<NodeBase | CreateChildFunction>(quickPicksTask, localize('azFunc.selectNode', 'Select a {0}', childType));
+            let node: NodeBase;
+            if (pick.data instanceof NodeBase) {
+                node = pick.data;
+            } else {
+                node = await pick.data(this._globalState, this._outputChannel);
+            }
+
             if (node.contextValue === expectedContextValue) {
                 return node;
             }
 
             childType = node.childType;
-            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): PickWithData<NodeBase>[] => {
-                return nodes.map((c: NodeBase) => new PickWithData<NodeBase>(c, c.label));
+            quickPicksTask = node.getChildren(false).then((nodes: NodeBase[]): PickWithData<NodeBase | CreateChildFunction>[] => {
+                const picks: PickWithData<NodeBase | CreateChildFunction>[] = nodes.map((c: NodeBase) => new PickWithData<NodeBase | CreateChildFunction>(c, c.label));
+                if (node.createChild && node.childType) {
+                    picks.unshift(new PickWithData<CreateChildFunction>(node.createChild, localize('azFunc.NodePickerCreateNew', '$(plus) Create New {0}', node.childType)));
+                }
+                return picks;
             });
         }
 

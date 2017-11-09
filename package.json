@@ -37,7 +37,7 @@
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
         "onCommand:azureFunctions.restartFunctionApp",
-        "onCommand:azureFunctions.deployZip",
+        "onCommand:azureFunctions.deploy",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -96,7 +96,7 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.deployZip",
+                "command": "azureFunctions.deploy",
                 "title": "%azFunc.deployZip%",
                 "category": "Azure Functions",
                 "icon": {
@@ -127,7 +127,7 @@
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureFunctions.deployZip",
+                    "command": "azureFunctions.deploy",
                     "when": "view == azureFunctionsExplorer",
                     "group": "navigation@3"
                 },
@@ -167,16 +167,11 @@
                     "command": "azureFunctions.restartFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
                     "group": "2@3"
-                },
-                {
-                    "command": "azureFunctions.deployZip",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
-                    "group": "3@1"
                 }
             ],
             "explorer/context": [
                 {
-                    "command": "azureFunctions.deployZip",
+                    "command": "azureFunctions.deploy",
                     "when": "explorerResourceIsFolder == true",
                     "group": "zzz_@1"
                 }
