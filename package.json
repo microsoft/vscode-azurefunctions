@@ -139,14 +139,14 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.createFunctionApp",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
-                    "group": "1@2"
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",

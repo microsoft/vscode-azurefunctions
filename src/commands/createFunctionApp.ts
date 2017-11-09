@@ -23,7 +23,7 @@ export async function createFunctionApp(context: vscode.ExtensionContext, output
     const site: Site | undefined = await appServiceTools.createFunctionApp(outputChannel, context.globalState, credentials, subscription);
     if (site) {
         if (node) {
-            explorer.refresh(node.parent);
+            explorer.refresh(node);
         }
     } else {
         throw new UserCancelledError();
