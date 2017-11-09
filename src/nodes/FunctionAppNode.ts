@@ -15,17 +15,17 @@ export class FunctionAppNode extends NodeBase {
     public readonly parent: SubscriptionNode;
     public readonly siteWrapper: SiteWrapper;
 
-    private constructor(id: string, name: string, state: string, site: Site) {
-        super(id, state === 'Running' ? name : `${name} (${state})`, FunctionAppNode.contextValue);
+    private constructor(parent: NodeBase, id: string, name: string, state: string, site: Site) {
+        super(parent, id, state === 'Running' ? name : `${name} (${state})`, FunctionAppNode.contextValue);
         this.name = name;
         this.siteWrapper = new SiteWrapper(site);
     }
 
-    public static CREATE(functionApp: Site): FunctionAppNode {
+    public static CREATE(parent: NodeBase, functionApp: Site): FunctionAppNode {
         if (!functionApp.id || !functionApp.name || !functionApp.state) {
             throw new errors.ArgumentError(functionApp);
         }
 
-        return new FunctionAppNode(functionApp.id, functionApp.name, functionApp.state, functionApp);
+        return new FunctionAppNode(parent, functionApp.id, functionApp.name, functionApp.state, functionApp);
     }
 }

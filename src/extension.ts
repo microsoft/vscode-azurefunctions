@@ -12,7 +12,7 @@ import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
 import { createFunction } from './commands/createFunction';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject';
-import { deployZip } from './commands/deployZip';
+import { deploy } from './commands/deploy';
 import { openInPortal } from './commands/openInPortal';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
@@ -41,11 +41,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const azureAccount: AzureAccount = azureAccountExtension.exports;
 
-        const explorer: AzureFunctionsExplorer = new AzureFunctionsExplorer(azureAccount);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
-
         const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
         context.subscriptions.push(outputChannel);
+
+        const explorer: AzureFunctionsExplorer = new AzureFunctionsExplorer(context.globalState, outputChannel, azureAccount);
+        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', explorer));
 
         context.subscriptions.push(azureAccount.onFiltersChanged(() => explorer.refresh()));
         context.subscriptions.push(azureAccount.onStatusChanged(() => explorer.refresh()));
@@ -60,7 +60,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
-        initAsyncCommand<FunctionAppNode | vscode.Uri>(context, outputChannel, 'azureFunctions.deployZip', async (arg?: FunctionAppNode | vscode.Uri) => await deployZip(explorer, outputChannel, arg));
+        initAsyncCommand<FunctionAppNode | vscode.Uri>(context, outputChannel, 'azureFunctions.deploy', async (arg?: FunctionAppNode | vscode.Uri) => await deploy(explorer, outputChannel, arg));
     }
 }
 

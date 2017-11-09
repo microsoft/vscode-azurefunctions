@@ -113,7 +113,7 @@ export class TemplateData {
     private async requestFunctionPortal<T>(subPath: string, param?: string): Promise<T> {
         const options: request.OptionsWithUri = {
             method: 'GET',
-            uri: `https://functions.azure.com/api/${subPath}?runtime=~2$&${param}`,
+            uri: `https://functions.azure.com/api/${subPath}?runtime=latest$&${param}`,
             headers: {
                 'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
             }
