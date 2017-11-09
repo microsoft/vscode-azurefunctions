@@ -24,7 +24,7 @@ export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: str
 export function isFolderOpenInWorkspace(fsPath: string): boolean {
     if (vscode.workspace.workspaceFolders) {
         const folder: vscode.WorkspaceFolder | undefined = vscode.workspace.workspaceFolders.find((f: vscode.WorkspaceFolder): boolean => {
-            return fsUtils.isPathEqual(fsPath, f.uri.fsPath) || fsUtils.isSubPath(fsPath, f.uri.fsPath);
+            return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || fsUtils.isSubPath(f.uri.fsPath, fsPath);
         });
 
         return folder !== undefined;
