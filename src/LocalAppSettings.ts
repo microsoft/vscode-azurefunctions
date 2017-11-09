@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureAccount } from './azure-account.api';
+import { DialogResponses } from './DialogResponses';
 import { NoSubscriptionError, UserCancelledError } from './errors';
 import { IUserInterface, PickWithData } from "./IUserInterface";
 import { localize } from './localize';
@@ -127,8 +128,7 @@ export class LocalAppSettings {
 
         if (settings.Values[key]) {
             const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-            const yes: string = localize('azFunc.yes', 'Yes');
-            if (await vscode.window.showWarningMessage(message, yes) !== yes) {
+            if (await vscode.window.showWarningMessage(message, DialogResponses.yes) !== DialogResponses.yes) {
                 return;
             }
         }

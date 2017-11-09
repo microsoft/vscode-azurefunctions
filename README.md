@@ -1,6 +1,6 @@
 # Azure Functions for Visual Studio Code (Preview)
 
-## Prerequisites
+## Prerequisites for local debugging
 * [Node v8.0+](https://nodejs.org/)
   * Older versions of node will be supported soon. See issue [#1](https://github.com/Microsoft/vscode-azurefunctions/issues/1)
 * [.NET Core 2.0](https://www.microsoft.com/net/download/core)

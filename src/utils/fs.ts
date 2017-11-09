@@ -6,9 +6,26 @@
 import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { DialogResponses } from "../DialogResponses";
+import { UserCancelledError } from "../errors";
+import { localize } from "../localize";
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
     await fse.writeJson(fsPath, data, { spaces: 2 });
+}
+
+export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
+    if (await fse.pathExists(fsPath)) {
+        const result: string | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no);
+        if (result === undefined) {
+            throw new UserCancelledError();
+        } else {
+            return result === DialogResponses.yes;
+        }
+    } else {
+        return true;
+    }
 }
 
 export async function getUniqueFsPath(folderPath: string, defaultValue: string): Promise<string | undefined> {
@@ -29,4 +46,14 @@ export async function getUniqueFsPath(folderPath: string, defaultValue: string):
 export function getRandomHexString(length: number = 10): string {
     const buffer: Buffer = crypto.randomBytes(Math.ceil(length / 2));
     return buffer.toString('hex').slice(0, length);
+}
+
+export function isPathEqual(fsPath1: string, fsPath2: string): boolean {
+    const relativePath: string = path.relative(fsPath1, fsPath2);
+    return relativePath === '';
+}
+
+export function isSubPath(fsPath1: string, fsPath2: string): boolean {
+    const relativePath: string = path.relative(fsPath1, fsPath2);
+    return relativePath !== '' && !relativePath.startsWith('..');
 }

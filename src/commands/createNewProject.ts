@@ -6,27 +6,132 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as FunctionsCli from '../functions-cli';
+import { OutputChannel } from 'vscode';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
-import * as TemplateFiles from '../template-files';
+import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
+import { gitUtils } from '../utils/gitUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function createNewProject(outputChannel: vscode.OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+const taskId: string = 'launchFunctionApp';
+const tasksJson: {} = {
+    version: '2.0.0',
+    tasks: [
+        {
+            label: localize('azFunc.launchFuncApp', 'Launch Function App'),
+            identifier: taskId,
+            type: 'shell',
+            command: 'func host start',
+            isBackground: true,
+            presentation: {
+                reveal: 'always'
+            },
+            problemMatcher: [
+                {
+                    owner: 'azureFunctions',
+                    pattern: [
+                        {
+                            regexp: '\\b\\B',
+                            file: 1,
+                            location: 2,
+                            message: 3
+                        }
+                    ],
+                    background: {
+                        activeOnStart: true,
+                        beginsPattern: '^.*Stopping host.*',
+                        endsPattern: '^.*Job host started.*'
+                    }
+                }
+            ]
+        }
+    ]
+};
+
+const launchJson: {} = {
+    version: '0.2.0',
+    configurations: [
+        {
+            name: localize('azFunc.attachToFunc', 'Attach to Azure Functions'),
+            type: 'node',
+            request: 'attach',
+            port: 5858,
+            protocol: 'inspector',
+            preLaunchTask: taskId
+        }
+    ]
+};
+
+// tslint:disable-next-line:no-multiline-string
+const gitignore: string = `bin
+obj
+csx
+.vs
+edge
+Publish
+.vscode
+
+*.user
+*.suo
+*.cscfg
+*.Cache
+project.lock.json
+
+/packages
+/TestResults
+
+/tools/NuGet.exe
+/App_Data
+/secrets
+/data
+.secrets
+appsettings.json
+local.settings.json
+`;
+
+const hostJson: {} = {};
+
+const localSettingsJson: {} = {
+    IsEncrypted: false,
+    Values: {
+        AzureWebJobsStorage: ''
+    }
+};
+
+export async function createNewProject(outputChannel: OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+    const vscodePath: string = path.join(functionAppPath, '.vscode');
+    await fse.ensureDir(vscodePath);
 
-    const tasksJsonPath: string = path.join(functionAppPath, '.vscode', 'tasks.json');
-    const tasksJsonExists: boolean = await fse.pathExists(tasksJsonPath);
-    const launchJsonPath: string = path.join(functionAppPath, '.vscode', 'launch.json');
-    const launchJsonExists: boolean = await fse.pathExists(launchJsonPath);
+    if (await gitUtils.isGitInstalled(functionAppPath)) {
+        await gitUtils.gitInit(outputChannel, functionAppPath);
 
-    await FunctionsCli.createNewProject(outputChannel, functionAppPath);
+        const gitignorePath: string = path.join(functionAppPath, '.gitignore');
+        if (await confirmOverwriteFile(gitignorePath)) {
+            await fse.writeFile(gitignorePath, gitignore);
+        }
+    }
 
-    if (!tasksJsonExists && !launchJsonExists) {
-        await fsUtil.writeFormattedJson(tasksJsonPath, TemplateFiles.tasksJson);
-        await fsUtil.writeFormattedJson(launchJsonPath, TemplateFiles.launchJson);
+    const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
+    if (await confirmOverwriteFile(tasksJsonPath)) {
+        await fsUtil.writeFormattedJson(tasksJsonPath, tasksJson);
+    }
+
+    const launchJsonPath: string = path.join(vscodePath, 'launch.json');
+    if (await confirmOverwriteFile(launchJsonPath)) {
+        await fsUtil.writeFormattedJson(launchJsonPath, launchJson);
+    }
+
+    const hostJsonPath: string = path.join(functionAppPath, 'host.json');
+    if (await confirmOverwriteFile(hostJsonPath)) {
+        await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
+    }
+
+    const localSettingsJsonPath: string = path.join(functionAppPath, 'local.settings.json');
+    if (await confirmOverwriteFile(localSettingsJsonPath)) {
+        await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
     }
 
     if (!workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
