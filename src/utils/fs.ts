@@ -48,12 +48,14 @@ export function getRandomHexString(length: number = 10): string {
     return buffer.toString('hex').slice(0, length);
 }
 
-export function isPathEqual(fsPath1: string, fsPath2: string): boolean {
-    const relativePath: string = path.relative(fsPath1, fsPath2);
+export function isPathEqual(fsPath1: string, fsPath2: string, relativeFunc: pathRelativeFunc = path.relative): boolean {
+    const relativePath: string = relativeFunc(fsPath1, fsPath2);
     return relativePath === '';
 }
 
-export function isSubPath(fsPath1: string, fsPath2: string): boolean {
-    const relativePath: string = path.relative(fsPath1, fsPath2);
-    return relativePath !== '' && !relativePath.startsWith('..');
+export function isSubPath(expectedParent: string, expectedChild: string, relativeFunc: pathRelativeFunc = path.relative): boolean {
+    const relativePath: string = relativeFunc(expectedParent, expectedChild);
+    return relativePath !== '' && !relativePath.startsWith('..') && relativePath !== expectedChild;
 }
+
+type pathRelativeFunc = (fsPath1: string, fsPath2: string) => string;
