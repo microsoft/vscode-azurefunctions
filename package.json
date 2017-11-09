@@ -37,6 +37,7 @@
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
         "onCommand:azureFunctions.restartFunctionApp",
+        "onCommand:azureFunctions.deleteFunctionApp",
         "onCommand:azureFunctions.deploy",
         "onView:azureFunctionsExplorer"
     ],
@@ -93,6 +94,11 @@
             {
                 "command": "azureFunctions.restartFunctionApp",
                 "title": "%azFunc.restartFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.deleteFunctionApp",
+                "title": "%azFunc.deleteFunctionApp%",
                 "category": "Azure Functions"
             },
             {
@@ -167,6 +173,11 @@
                     "command": "azureFunctions.restartFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
                     "group": "2@3"
+                },
+                {
+                    "command": "azureFunctions.deleteFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "group": "2@4"
                 }
             ],
             "explorer/context": [
@@ -245,7 +256,7 @@
         "request-promise": "^4.2.2",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
-        "vscode-azureappservice": "^0.3.2"
+        "vscode-azureappservice": "^0.4.0"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"

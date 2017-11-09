@@ -12,6 +12,7 @@ import { AzureFunctionsExplorer } from './AzureFunctionsExplorer';
 import { createFunction } from './commands/createFunction';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject';
+import { deleteFunctionApp } from './commands/deleteFunctionApp';
 import { deploy } from './commands/deploy';
 import { openInPortal } from './commands/openInPortal';
 import { restartFunctionApp } from './commands/restartFunctionApp';
@@ -60,6 +61,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: FunctionAppNode) => await startFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: FunctionAppNode) => await stopFunctionApp(explorer, node));
         initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: FunctionAppNode) => await restartFunctionApp(explorer, node));
+        initAsyncCommand<NodeBase>(context, outputChannel, 'azureFunctions.deleteFunctionApp', async (node?: FunctionAppNode) => await deleteFunctionApp(explorer, outputChannel, node));
         initAsyncCommand<FunctionAppNode | vscode.Uri>(context, outputChannel, 'azureFunctions.deploy', async (arg?: FunctionAppNode | vscode.Uri) => await deploy(explorer, outputChannel, arg));
     }
 }
