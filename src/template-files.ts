@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from './localize';
+import { TemplateLanguage } from './templates/Template';
 
 const taskId: string = 'launchFunctionApp';
-export const tasksJson: {} = {
+
+const tasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
@@ -40,7 +42,7 @@ export const tasksJson: {} = {
     ]
 };
 
-export const launchJson: {} = {
+const launchJsonForJavascript: {} = {
     version: '0.2.0',
     configurations: [
         {
@@ -53,3 +55,48 @@ export const launchJson: {} = {
         }
     ]
 };
+
+const launchJsonForJava: {} = {
+    version: '0.2.0',
+    configurations: [
+        {
+            name: localize('azFunc.attachToFunc', 'Attach to Azure Functions'),
+            type: 'java',
+            request: 'attach',
+            hostName: 'localhost',
+            port: 5005,
+            preLaunchTask: taskId
+        }
+    ]
+};
+
+const mavenCleanPackageTask: {} = {
+    taskName: 'Maven Clean Package',
+    type: 'shell',
+    command: 'mvn clean package',
+    isBackground: true
+};
+
+export function getLaunchJson(language: string): object {
+    switch (language) {
+        case TemplateLanguage.Java:
+            return launchJsonForJava;
+        default:
+            return launchJsonForJavascript;
+    }
+}
+
+export function getTasksJson(language: string, args: string): object {
+    switch (language) {
+        case TemplateLanguage.Java:
+            /* tslint:disable:no-string-literal no-unsafe-any */
+            const taskJsonForJava: {} = JSON.parse(JSON.stringify(tasksJson)); // deep clone
+            taskJsonForJava['tasks'][0].command += ` --script-root ${args}`;
+            taskJsonForJava['tasks'][0].dependsOn = ['Maven Clean Package'];
+            taskJsonForJava['tasks'].push(mavenCleanPackageTask);
+
+            return taskJsonForJava;
+        default:
+            return tasksJson;
+    }
+}
