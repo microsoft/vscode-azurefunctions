@@ -100,8 +100,11 @@ const localSettingsJson: {} = {
     }
 };
 
-export async function createNewProject(outputChannel: OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
-    const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+export async function createNewProject(outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    if (functionAppPath === undefined) {
+        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+    }
+
     const vscodePath: string = path.join(functionAppPath, '.vscode');
     await fse.ensureDir(vscodePath);
 
@@ -134,7 +137,7 @@ export async function createNewProject(outputChannel: OutputChannel, ui: IUserIn
         await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
     }
 
-    if (!workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
+    if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
         await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
     }

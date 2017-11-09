@@ -42,7 +42,7 @@ async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functi
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow);
         if (result === DialogResponses.yes) {
-            await createNewProject(outputChannel, ui);
+            await createNewProject(outputChannel, functionAppPath, false, ui);
         } else if (result === undefined) {
             throw new errors.UserCancelledError();
         }
