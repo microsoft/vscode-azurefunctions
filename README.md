@@ -27,9 +27,9 @@
 
 ![Debug](resources/Debug.gif)
 
-### Deploy to Azure as Zip
+### Deploy to Azure
 
-![ZipDeploy](resources/ZipDeploy.gif)
+![Deploy](resources/Deploy.gif)
 
 ## Contributing
 There are a couple of ways you can contribute to this repo:
