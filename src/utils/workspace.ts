@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { IUserInterface, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
+import * as fsUtils from './fs';
 
 export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string): Promise<string> {
     const browse: string = ':browse';
@@ -23,12 +23,8 @@ export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: str
 
 export function isFolderOpenInWorkspace(fsPath: string): boolean {
     if (vscode.workspace.workspaceFolders) {
-        if (!fsPath.endsWith(path.sep)) {
-            fsPath = fsPath + path.sep;
-        }
-
         const folder: vscode.WorkspaceFolder | undefined = vscode.workspace.workspaceFolders.find((f: vscode.WorkspaceFolder): boolean => {
-            return fsPath.startsWith(f.uri.fsPath);
+            return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || fsUtils.isSubPath(f.uri.fsPath, fsPath);
         });
 
         return folder !== undefined;

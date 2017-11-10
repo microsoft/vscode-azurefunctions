@@ -7,8 +7,8 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureAccount } from '../azure-account.api';
+import { DialogResponses } from '../DialogResponses';
 import * as errors from '../errors';
-import * as FunctionsCli from '../functions-cli';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
@@ -19,16 +19,13 @@ import { TemplateData } from '../templates/TemplateData';
 import * as fsUtil from '../utils/fs';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
+import { createNewProject } from './createNewProject';
 
-const expectedFunctionAppFiles: string[] = [
+const requiredFunctionAppFiles: string[] = [
     'host.json',
     'local.settings.json',
-    path.join('.vscode', 'launch.json')
+    path.join('.vscode', 'launch.json') // NOTE: tasks.json is not required if the user prefers to run 'func host start' from the command line
 ];
-
-function getMissingFunctionAppFiles(rootPath: string): string[] {
-    return expectedFunctionAppFiles.filter((file: string) => !fse.existsSync(path.join(rootPath, file)));
-}
 
 function validateTemplateName(rootPath: string, name: string | undefined): string | undefined {
     if (!name) {
@@ -40,16 +37,13 @@ function validateTemplateName(rootPath: string, name: string | undefined): strin
     }
 }
 
-async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functionAppPath: string): Promise<void> {
-    const missingFiles: string[] = getMissingFunctionAppFiles(functionAppPath);
-    if (missingFiles.length !== 0) {
-        const yes: string = localize('azFunc.yes', 'Yes');
-        const no: string = localize('azFunc.no', 'No');
-        const message: string = localize('azFunc.missingFuncAppFiles', 'The current folder is missing the following function app files: \'{0}\'. Add the missing files?', missingFiles.join(','));
-        const result: string | undefined = await vscode.window.showWarningMessage(message, yes, no);
-        if (result === yes) {
-            await FunctionsCli.createNewProject(outputChannel, functionAppPath);
-        } else {
+async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
+    if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
+        const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
+        const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow);
+        if (result === DialogResponses.yes) {
+            await createNewProject(outputChannel, functionAppPath, false, ui);
+        } else if (result === undefined) {
             throw new errors.UserCancelledError();
         }
     }
@@ -106,7 +100,7 @@ export async function createFunction(
 
     const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
-    await validateIsFunctionApp(outputChannel, functionAppPath);
+    await validateIsFunctionApp(outputChannel, functionAppPath, ui);
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
 
