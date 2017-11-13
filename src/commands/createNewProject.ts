@@ -223,20 +223,20 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
             if (await confirmOverwriteFile(localSettingsJsonPath)) {
                 await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
             }
-
-            if (await gitUtils.isGitInstalled(functionAppPath)) {
-                await gitUtils.gitInit(outputChannel, functionAppPath);
-
-                const gitignorePath: string = path.join(functionAppPath, '.gitignore');
-                if (await confirmOverwriteFile(gitignorePath)) {
-                    await fse.writeFile(gitignorePath, gitignore);
-                }
-            }
             break;
     }
 
     const vscodePath: string = path.join(functionAppPath, '.vscode');
     await fse.ensureDir(vscodePath);
+
+    if (await gitUtils.isGitInstalled(functionAppPath)) {
+        await gitUtils.gitInit(outputChannel, functionAppPath);
+
+        const gitignorePath: string = path.join(functionAppPath, '.gitignore');
+        if (language !== TemplateLanguage.Java && await confirmOverwriteFile(gitignorePath)) {
+            await fse.writeFile(gitignorePath, gitignore);
+        }
+    }
 
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
