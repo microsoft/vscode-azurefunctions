@@ -63,13 +63,13 @@ const tasksJsonForJava: {} = {
             label: localize('azFunc.launchFuncApp', 'Launch Function App'),
             identifier: taskId,
             linux: {
-                command: 'sh -c "mvn clean package && func host start --script-root %path%"'
+                command: 'sh -c "mvn clean package -B && func host start --script-root %path%"'
             },
             osx: {
-                command: 'sh -c "mvn clean package && func host start --script-root %path%"'
+                command: 'sh -c "mvn clean package -B && func host start --script-root %path%"'
             },
             windows: {
-                command: 'powershell mvn clean package; func host start --script-root %path%'
+                command: 'powershell mvn clean package -B; func host start --script-root %path%'
             },
             type: 'shell',
             isBackground: true,
@@ -147,6 +147,36 @@ const localSettingsJson: {} = {
     }
 };
 
+async function promotForMavenParameters(ui: IUserInterface, functionAppPath: string): Promise<IMavenParameters> {
+    const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
+    const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
+    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, undefined, 'com.function');
+
+    const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
+    const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
+    const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, undefined, path.basename(functionAppPath));
+
+    const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
+    const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
+    const version: string = await ui.showInputBox(versionPlaceHolder, versionPrompt, false, undefined, '1.0-SNAPSHOT');
+
+    const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
+    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
+    const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, groupId);
+
+    const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
+    const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
+    const appName: string = await ui.showInputBox(appNamePlaceHolder, appNamePrompt, false, undefined, `${artifactId}-${Date.now()}`);
+
+    return {
+        groupId: groupId,
+        artifactId: artifactId,
+        version: version,
+        packageName: packageName,
+        appName: appName
+    };
+}
+
 export async function createNewProject(outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
@@ -183,7 +213,7 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
             javaTargetPath = `target/azure-functions/${appName}/`;
             break;
         default:
-            // the maven archetype contains these two files, so not check them when language is Java
+            // the maven archetype contains these files, so not check them when language is Java
             const hostJsonPath: string = path.join(functionAppPath, 'host.json');
             if (await confirmOverwriteFile(hostJsonPath)) {
                 await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
@@ -193,20 +223,20 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
             if (await confirmOverwriteFile(localSettingsJsonPath)) {
                 await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
             }
+
+            if (await gitUtils.isGitInstalled(functionAppPath)) {
+                await gitUtils.gitInit(outputChannel, functionAppPath);
+
+                const gitignorePath: string = path.join(functionAppPath, '.gitignore');
+                if (await confirmOverwriteFile(gitignorePath)) {
+                    await fse.writeFile(gitignorePath, gitignore);
+                }
+            }
             break;
     }
 
     const vscodePath: string = path.join(functionAppPath, '.vscode');
     await fse.ensureDir(vscodePath);
-
-    if (await gitUtils.isGitInstalled(functionAppPath)) {
-        await gitUtils.gitInit(outputChannel, functionAppPath);
-
-        const gitignorePath: string = path.join(functionAppPath, '.gitignore');
-        if (await confirmOverwriteFile(gitignorePath)) {
-            await fse.writeFile(gitignorePath, gitignore);
-        }
-    }
 
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
@@ -242,36 +272,6 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
         await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
     }
-}
-
-async function promotForMavenParameters(ui: IUserInterface, functionAppPath: string): Promise<IMavenParameters> {
-    const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
-    const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, undefined, 'com.function');
-
-    const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
-    const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
-    const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, undefined, path.basename(functionAppPath));
-
-    const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
-    const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
-    const version: string = await ui.showInputBox(versionPlaceHolder, versionPrompt, false, undefined, '1.0-SNAPSHOT');
-
-    const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
-    const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, groupId);
-
-    const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
-    const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
-    const appName: string = await ui.showInputBox(appNamePlaceHolder, appNamePrompt, false, undefined, `${artifactId}-${Date.now()}`);
-
-    return {
-        groupId: groupId,
-        artifactId: artifactId,
-        version: version,
-        packageName: packageName,
-        appName: appName
-    };
 }
 
 interface IMavenParameters {
