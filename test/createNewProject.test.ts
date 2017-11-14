@@ -38,7 +38,7 @@ suite('Create New Java Project Tests', () => {
             undefined,
             undefined
         );
-        await testJavaInitFileExist(path.join(testFolderPath, testFolderName));
+        await testJavaProjectFilesExist(path.join(testFolderPath, testFolderName));
     }).timeout(60 * 1000);
 });
 
@@ -56,7 +56,7 @@ suite('Create New JavaScript Project Tests', () => {
     const javaScriptProject: string = 'JavaScriptProject';
     test(javaScriptProject, async () => {
         await testCreateNewProject(TemplateLanguage.JavaScript);
-        await testInitFileExist(testFolderPath);
+        await testProjectFilesExist(testFolderPath);
     }).timeout(10 * 1000);
 });
 
@@ -73,15 +73,15 @@ async function testCreateNewProject(language: string, ...inputs: (string | undef
     assert.equal(inputs.length, 0, 'Not all inputs were used.');
 }
 
-async function testInitFileExist(projectPath: string): Promise<void> {
+async function testProjectFilesExist(projectPath: string): Promise<void> {
     assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, 'host.json')), true, 'host.json does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, 'local.settings.json')), true, 'function.json does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, '.git')), true, '.git folder does not exist');
 }
 
-async function testJavaInitFileExist(projectPath: string): Promise<void> {
-    await testInitFileExist(projectPath);
+async function testJavaProjectFilesExist(projectPath: string): Promise<void> {
+    await testProjectFilesExist(projectPath);
     assert.equal(await fse.pathExists(path.join(projectPath, 'src')), true, 'src folder does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, 'pom.xml')), true, 'pom.xml does not exist');
 }

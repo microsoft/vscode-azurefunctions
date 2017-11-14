@@ -19,6 +19,7 @@ import { TemplateLanguage } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
 import { runCommandInTerminal } from '../utils/executor';
 import * as fsUtil from '../utils/fs';
+import { getProjectType } from '../utils/project';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 import { createNewProject } from './createNewProject';
@@ -51,12 +52,12 @@ async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functi
     }
 }
 
-async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template): Promise<string> {
-    const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
+async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, templateDefaultName: string): Promise<string> {
+    const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(functionAppPath, templateDefaultName);
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
 
-    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName || template.defaultFunctionName);
+    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName || templateDefaultName);
 }
 
 async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
@@ -94,6 +95,32 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
     return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
 }
 
+async function promptForFunctionLanguage(ui: IUserInterface, functionAppPath: string): Promise<string> {
+    const languagePicks: Pick[] = [new Pick(TemplateLanguage.JavaScript)];
+    if (await getProjectType(functionAppPath) === TemplateLanguage.Java) {
+        languagePicks.push(new Pick(TemplateLanguage.Java));
+    }
+    if (languagePicks.length === 1) {
+        return languagePicks[0].label;
+    }
+    return (await ui.showQuickPick(languagePicks, 'Language', false)).label;
+}
+
+async function promptForJavaFunctionTemplate(ui: IUserInterface, localAppSettings: LocalAppSettings): Promise<string> {
+    const templatePicks: Pick[] = [
+        new Pick('HttpTrigger'),
+        new Pick('BlobTrigger'),
+        new Pick('QueueTrigger'),
+        new Pick('TimerTrigger')
+    ];
+    const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
+    const template: string = (await ui.showQuickPick(templatePicks, templatePlaceHolder)).label;
+    if (template !== 'HttpTrigger') {
+        await localAppSettings.validateAzureWebJobsStorage();
+    }
+    return template;
+}
+
 export async function createFunction(
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
@@ -104,15 +131,21 @@ export async function createFunction(
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
     await validateIsFunctionApp(outputChannel, functionAppPath, ui);
 
-    const languageType: string = workspaceUtil.getProjectType(functionAppPath);
+    const languageType: string = await promptForFunctionLanguage(ui, functionAppPath);
+
+    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
+
     switch (languageType) {
         case TemplateLanguage.Java:
+            const javaTemplate: string = await promptForJavaFunctionTemplate(ui, localAppSettings);
+            const javaFunctionName: string = await promptForFunctionName(ui, functionAppPath, `${javaTemplate}Java`);
+            const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
+            const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
+            const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, 'com.function');
             // For Java function, using Maven for now.
-            runCommandInTerminal(`mvn azure-functions:add -f ${path.join(functionAppPath, 'pom.xml')} -B`);
+            runCommandInTerminal(`mvn azure-functions:add "-Dfunctions.package=${packageName}" "-Dfunctions.name=${javaFunctionName}" "-Dfunctions.template=${javaTemplate}" -f ${path.join(functionAppPath, 'pom.xml')} -B`);
             break;
         default:
-            const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
-
             const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates()).map((t: Template) => new PickWithData<Template>(t, t.name));
             const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
             const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
@@ -121,7 +154,7 @@ export async function createFunction(
                 await localAppSettings.validateAzureWebJobsStorage();
             }
 
-            const name: string = await promptForFunctionName(ui, functionAppPath, template);
+            const name: string = await promptForFunctionName(ui, functionAppPath, template.defaultFunctionName);
 
             for (const settingName of template.userPromptedSettings) {
                 const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);

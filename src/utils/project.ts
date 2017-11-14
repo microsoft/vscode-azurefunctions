@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-
-const terminal: vscode.Terminal = vscode.window.createTerminal('Azure Functions');
+import * as fse from 'fs-extra';
+import * as path from 'path';
+import { TemplateLanguage } from '../templates/Template';
 
 // tslint:disable-next-line:export-name
-export function runCommandInTerminal(command: string, addNewLine: boolean = true): void {
-    terminal.show();
-    terminal.sendText(command, addNewLine);
+export async function getProjectType(projectPath: string): Promise<string> {
+    let language: string = TemplateLanguage.JavaScript;
+    if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
+        language = TemplateLanguage.Java;
+    }
+    return language;
 }

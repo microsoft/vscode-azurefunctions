@@ -11,7 +11,7 @@ import { IUserInterface } from '../IUserInterface';
 import { Pick } from '../IUserInterface';
 import { localize } from '../localize';
 import { TemplateLanguage } from '../templates/Template';
-import { executeCommand } from '../utils/executor';
+import { cpUtils } from '../utils/cpUtils';
 import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
 import { gitUtils } from '../utils/gitUtils';
@@ -194,7 +194,7 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
             // Get parameters for Maven command
             const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
             // Use maven command to init Java function project.
-            await executeCommand(
+            await cpUtils.executeCommand(
                 outputChannel,
                 functionAppPath,
                 'mvn',
