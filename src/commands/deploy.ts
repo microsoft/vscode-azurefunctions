@@ -10,31 +10,31 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
-import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
+import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../DialogResponses';
-import { NoPackagedJavaFunctionError, UserCancelledError } from '../errors';
+import { NoPackagedJavaFunctionError } from '../errors';
 import { IUserInterface, Pick } from '../IUserInterface';
 import { localize } from '../localize';
-import { FunctionAppNode } from '../nodes/FunctionAppNode';
-import { getWebSiteClient } from '../nodes/SubscriptionNode';
 import { TemplateLanguage } from '../templates/Template';
+import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { cpUtils } from '../utils/cpUtils';
+import { nodeUtils } from '../utils/nodeUtils';
 import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(explorer: AzureFunctionsExplorer, outputChannel: vscode.OutputChannel, context?: FunctionAppNode | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
-    let node: FunctionAppNode | undefined = context && context instanceof FunctionAppNode ? context : undefined;
+    let node: IAzureNode<FunctionAppTreeItem> | undefined = context && !(context instanceof vscode.Uri) ? context : undefined;
 
     let folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
 
     if (!node) {
-        node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));
+        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    const client: WebSiteManagementClient = getWebSiteClient(node);
-    const siteWrapper: SiteWrapper = node.siteWrapper;
+    const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
+    const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
     const languageType: string = await projectUtils.getProjectType(folderPath);
     if (languageType === TemplateLanguage.Java) {
         folderPath = await getJavaFolderPath(outputChannel, folderPath, ui);

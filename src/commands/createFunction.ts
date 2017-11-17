@@ -6,9 +6,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { UserCancelledError } from 'vscode-azureextensionui';
 import { AzureAccount } from '../azure-account.api';
 import { DialogResponses } from '../DialogResponses';
-import * as errors from '../errors';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
@@ -44,7 +44,7 @@ async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functi
         if (result === DialogResponses.yes) {
             await createNewProject(outputChannel, functionAppPath, false, ui);
         } else if (result === undefined) {
-            throw new errors.UserCancelledError();
+            throw new UserCancelledError();
         }
     }
 }

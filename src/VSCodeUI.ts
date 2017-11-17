@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import * as errors from './errors';
+import { UserCancelledError } from 'vscode-azureextensionui';
 import { IUserInterface, Pick, PickWithData } from './IUserInterface';
 import { localize } from './localize';
 
@@ -19,7 +19,7 @@ export class VSCodeUI implements IUserInterface {
         const result: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(items, options);
 
         if (!result) {
-            throw new errors.UserCancelledError();
+            throw new UserCancelledError();
         } else {
             return result;
         }
@@ -36,7 +36,7 @@ export class VSCodeUI implements IUserInterface {
         const result: string | undefined = await vscode.window.showInputBox(options);
 
         if (!result) {
-            throw new errors.UserCancelledError();
+            throw new UserCancelledError();
         } else {
             return result;
         }
@@ -54,7 +54,7 @@ export class VSCodeUI implements IUserInterface {
         const result: vscode.Uri[] | undefined = await vscode.window.showOpenDialog(options);
 
         if (!result || result.length === 0) {
-            throw new errors.UserCancelledError();
+            throw new UserCancelledError();
         } else {
             return result[0].fsPath;
         }
