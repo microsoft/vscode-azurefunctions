@@ -17,11 +17,12 @@ export class ArgumentError extends Error {
     }
 }
 
-/* tslint:disable:max-classes-per-file */
+// tslint:disable-next-line:max-classes-per-file
 export class NoSubscriptionError extends Error {
     public message: string = localize('azFunc.noSubscriptionError', 'You must be signed in to Azure to perform this operation.');
 }
 
+// tslint:disable-next-line:max-classes-per-file
 export class NoPackagedJavaFunctionError extends Error {
     public message: string = localize('azFunc.noPackagedJavaFunctionError', 'Cannot find packaged Java functions.');
 }

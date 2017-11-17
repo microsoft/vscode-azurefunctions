@@ -7,11 +7,12 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { TemplateLanguage } from '../templates/Template';
 
-// tslint:disable-next-line:export-name
-export async function getProjectType(projectPath: string): Promise<string> {
-    let language: string = TemplateLanguage.JavaScript;
-    if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
-        language = TemplateLanguage.Java;
+export namespace projectUtils {
+    export async function getProjectType(projectPath: string): Promise<string> {
+        let language: string = TemplateLanguage.JavaScript;
+        if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
+            language = TemplateLanguage.Java;
+        }
+        return language;
     }
-    return language;
 }
