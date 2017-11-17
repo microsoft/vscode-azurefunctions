@@ -3,19 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
-import { OutputChannel } from 'vscode';
-import { AzureFunctionsExplorer } from '../AzureFunctionsExplorer';
-import { FunctionAppNode } from '../nodes/FunctionAppNode';
-import { getWebSiteClient } from '../nodes/SubscriptionNode';
+import { AzureTreeDataProvider, IAzureParentNode } from 'vscode-azureextensionui';
+import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
-export async function deleteFunctionApp(explorer: AzureFunctionsExplorer, outputChannel: OutputChannel, node?: FunctionAppNode): Promise<void> {
+export async function deleteFunctionApp(tree: AzureTreeDataProvider, node?: IAzureParentNode): Promise<void> {
     if (!node) {
-        node = <FunctionAppNode>(await explorer.showNodePicker(FunctionAppNode.contextValue));
+        node = <IAzureParentNode>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    const client: WebSiteManagementClient = getWebSiteClient(node);
-    await node.siteWrapper.deleteSite(client, outputChannel);
-    explorer.refresh(node.parent);
+    await node.deleteNode();
 }

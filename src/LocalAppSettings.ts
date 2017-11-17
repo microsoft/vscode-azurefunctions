@@ -6,9 +6,10 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { UserCancelledError } from 'vscode-azureextensionui';
 import { AzureAccount } from './azure-account.api';
 import { DialogResponses } from './DialogResponses';
-import { NoSubscriptionError, UserCancelledError } from './errors';
+import { NoSubscriptionError } from './errors';
 import { IUserInterface, PickWithData } from "./IUserInterface";
 import { localize } from './localize';
 import { getResourceTypeLabel, ResourceType } from './templates/ConfigSetting';

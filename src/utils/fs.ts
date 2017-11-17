@@ -7,8 +7,8 @@ import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from "../DialogResponses";
-import { UserCancelledError } from "../errors";
 import { localize } from "../localize";
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {

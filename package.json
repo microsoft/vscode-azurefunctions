@@ -30,6 +30,7 @@
     "preview": true,
     "activationEvents": [
         "onCommand:azureFunctions.refresh",
+        "onCommand:azureFunctions.loadMore",
         "onCommand:azureFunctions.createNewProject",
         "onCommand:azureFunctions.createFunction",
         "onCommand:azureFunctions.createFunctionApp",
@@ -52,6 +53,11 @@
                     "light": "resources/light/Refresh.svg",
                     "dark": "resources/dark/Refresh.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.loadMore",
+                "title": "%azFunc.loadMore%",
+                "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.createNewProject",
@@ -146,12 +152,12 @@
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureSubscription",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsSubscription",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureSubscription",
                     "group": "2@1"
                 },
                 {
@@ -185,6 +191,16 @@
                     "command": "azureFunctions.deploy",
                     "when": "explorerResourceIsFolder == true",
                     "group": "zzz_@1"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.loadMore",
+                    "when": "never"
                 }
             ]
         },
@@ -252,10 +268,10 @@
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
-        "opn": "^5.1.0",
         "request-promise": "^4.2.2",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
+        "vscode-azureextensionui": "^0.1.0",
         "vscode-azureappservice": "^0.4.0"
     },
     "extensionDependencies": [
