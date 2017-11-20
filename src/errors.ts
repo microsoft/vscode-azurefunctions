@@ -24,3 +24,6 @@ export class NoSubscriptionError extends Error {
 export class NoPackagedJavaFunctionError extends Error {
     public message: string = localize('azFunc.noPackagedJavaFunctionError', 'Cannot find packaged Java functions.');
 }
+
+// tslint:disable-next-line:max-classes-per-file
+export class XmlParseError extends Error { }
