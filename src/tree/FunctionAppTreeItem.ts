@@ -40,9 +40,8 @@ export class FunctionAppTreeItem implements IAzureTreeItem {
         return path.join(__filename, '..', '..', '..', '..', 'resources', `${FunctionAppTreeItem.contextValue}.svg`);
     }
 
-    public async deleteTreeItem(node: IAzureNode): Promise<IAzureTreeItem> {
+    public async deleteTreeItem(node: IAzureNode): Promise<void> {
         const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
         await this.siteWrapper.deleteSite(client, this._outputChannel);
-        return this;
     }
 }
