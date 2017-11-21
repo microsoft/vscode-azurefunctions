@@ -9,6 +9,7 @@ import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { MessageItem } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../DialogResponses';
@@ -72,7 +73,7 @@ async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: We
     const appSettings: StringDictionary = await client.webApps.listApplicationSettings(siteWrapper.resourceGroup, siteWrapper.appName);
     if (appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION !== 'beta') {
         const message: string = localize('azFunc.notBetaRuntime', 'The FUNCTIONS_EXTENSION_VERSION is not beta. To enable Java function runtime, would you like to change the runtime vertion to beta?');
-        const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes);
+        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             outputChannel.appendLine(localize('azFunc.updateJavaFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to beta...'));
             appSettings.properties.FUNCTIONS_EXTENSION_VERSION = 'beta';

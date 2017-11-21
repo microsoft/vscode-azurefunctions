@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { MessageItem } from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { AzureAccount } from '../azure-account.api';
 import { DialogResponses } from '../DialogResponses';
@@ -40,7 +41,7 @@ function validateTemplateName(rootPath: string, name: string | undefined): strin
 async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow);
+        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(outputChannel, functionAppPath, false, ui);
         } else if (result === undefined) {

@@ -7,6 +7,7 @@ import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { MessageItem } from "vscode";
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from "../DialogResponses";
 import { localize } from "../localize";
@@ -17,7 +18,7 @@ export async function writeFormattedJson(fsPath: string, data: object): Promise<
 
 export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
-        const result: string | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no);
+        const result: MessageItem | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
         if (result === undefined) {
             throw new UserCancelledError();
         } else {

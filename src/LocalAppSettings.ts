@@ -129,7 +129,7 @@ export class LocalAppSettings {
 
         if (settings.Values[key]) {
             const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-            if (await vscode.window.showWarningMessage(message, DialogResponses.yes) !== DialogResponses.yes) {
+            if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
                 return;
             }
         }
