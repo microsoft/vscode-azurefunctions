@@ -15,9 +15,11 @@ import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
 import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
 import { EnumValue } from '../templates/EnumValue';
-import { Template } from '../templates/Template';
+import { Template, TemplateLanguage } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
+import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
+import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 import { createNewProject } from './createNewProject';
@@ -50,8 +52,9 @@ async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functi
     }
 }
 
-async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template): Promise<string> {
-    const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
+async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string): Promise<string> {
+    const defaultName: string = language === TemplateLanguage.Java ? `${template.name}Java` : template.defaultFunctionName;
+    const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(functionAppPath, defaultName);
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
 
@@ -93,6 +96,17 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
     return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
 }
 
+async function promptForPackageName(ui: IUserInterface): Promise<string> {
+    const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
+    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
+    return await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, 'com.function');
+}
+
+function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
+    const fileName: string = `${functionName[0].toUpperCase()}${functionName.slice(1)}.java`;
+    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), fileName);
+}
+
 export async function createFunction(
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
@@ -105,7 +119,9 @@ export async function createFunction(
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
 
-    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates()).map((t: Template) => new PickWithData<Template>(t, t.name));
+    const languageType: string = await projectUtils.getProjectType(functionAppPath);
+
+    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType)).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
 
@@ -113,21 +129,43 @@ export async function createFunction(
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
-    const name: string = await promptForFunctionName(ui, functionAppPath, template);
+    const name: string = await promptForFunctionName(ui, functionAppPath, template, languageType);
+    const javaFuntionProperties: string[] = [];
 
     for (const settingName of template.userPromptedSettings) {
         const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
         if (setting) {
             const defaultValue: string | undefined = template.getSetting(settingName);
             const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
-
-            template.setSetting(settingName, settingValue);
+            if (languageType === TemplateLanguage.Java) {
+                javaFuntionProperties.push(`"-D${settingName}=${settingValue}"`);
+            } else {
+                template.setSetting(settingName, settingValue);
+            }
         }
     }
 
-    const functionPath: string = path.join(functionAppPath, name);
-    await template.writeTemplateFiles(functionPath);
+    let newFilePath: string;
+    if (languageType === TemplateLanguage.Java) {
+        const packageName: string = await promptForPackageName(ui);
+        await cpUtils.executeCommand(
+            outputChannel,
+            functionAppPath,
+            'mvn',
+            'azure-functions:add',
+            '-B',
+            `"-Dfunctions.package=${packageName}"`,
+            `"-Dfunctions.name=${name}"`,
+            `"-Dfunctions.template=${template.name}"`,
+            ...javaFuntionProperties
+        );
+        newFilePath = getNewJavaFunctionFilePath(functionAppPath, packageName, name);
+    } else {
+        const functionPath: string = path.join(functionAppPath, name);
+        await template.writeTemplateFiles(functionPath);
+        newFilePath = path.join(functionPath, 'index.js');
+    }
 
-    const newFileUri: vscode.Uri = vscode.Uri.file(path.join(functionPath, 'index.js'));
+    const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
     vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
 }

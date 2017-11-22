@@ -37,6 +37,13 @@ export class TemplateData {
         'TimerTrigger'
     ];
 
+    private readonly _javaTemplates: string[] = [
+        'HttpTrigger',
+        'BlobTrigger',
+        'QueueTrigger',
+        'TimerTrigger'
+    ];
+
     constructor(globalState?: vscode.Memento) {
         if (globalState) {
             const cachedResources: object | undefined = globalState.get<object>(this._resourcesKey);
@@ -53,7 +60,7 @@ export class TemplateData {
         this._refreshTask = this.refreshTemplates(globalState);
     }
 
-    public async getTemplates(): Promise<Template[]> {
+    public async getTemplates(language: string): Promise<Template[]> {
         if (this._templates === undefined) {
             await this._refreshTask;
             if (this._templates === undefined) {
@@ -62,16 +69,22 @@ export class TemplateData {
         }
 
         const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
-        // tslint:disable-next-line:no-backbone-get-set-outside-model
-        switch (vscode.workspace.getConfiguration().get('azureFunctions.templateFilter')) {
-            case 'All':
-                return jsTemplates;
-            case 'Core':
-                return jsTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
-            case 'Verified':
-            default:
-                return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.name));
+        // refactor here when Java template is exposed by http API
+        if (language === TemplateLanguage.Java) {
+            return jsTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === t.name));
+        } else {
+            // tslint:disable-next-line:no-backbone-get-set-outside-model
+            switch (vscode.workspace.getConfiguration().get('azureFunctions.templateFilter')) {
+                case 'All':
+                    return jsTemplates;
+                case 'Core':
+                    return jsTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
+                case 'Verified':
+                default:
+                    return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.name));
+            }
         }
+
     }
 
     public async getSetting(bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
