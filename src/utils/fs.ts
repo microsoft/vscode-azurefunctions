@@ -15,6 +15,22 @@ export async function writeFormattedJson(fsPath: string, data: object): Promise<
     await fse.writeJson(fsPath, data, { spaces: 2 });
 }
 
+export async function copyFolder(fromPath: string, toPath: string): Promise<void> {
+    const files: string[] = await fse.readdir(fromPath);
+    for (const file of files) {
+        const originPath: string = path.join(fromPath, file);
+        const stat: fse.Stats = await fse.stat(originPath);
+        const targetPath: string = path.join(toPath, file);
+        if (stat.isFile()) {
+            if (await confirmOverwriteFile(targetPath)) {
+                await fse.copy(originPath, targetPath, { overwrite: true });
+            }
+        } else if (stat.isDirectory()) {
+            await copyFolder(originPath, targetPath);
+        }
+    }
+}
+
 export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
         const result: string | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no);

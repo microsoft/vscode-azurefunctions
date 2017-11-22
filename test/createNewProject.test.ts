@@ -13,8 +13,7 @@ import { TemplateLanguage } from '../src/templates/Template';
 import * as fsUtil from '../src/utils/fs';
 import { TestUI } from './TestUI';
 
-const testFolderName: string = `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`;
-const testFolderPath: string = path.join(os.tmpdir(), testFolderName);
+const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
 const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
 suite('Create New Java Project Tests', () => {
@@ -38,7 +37,7 @@ suite('Create New Java Project Tests', () => {
             undefined,
             undefined
         );
-        await testJavaProjectFilesExist(path.join(testFolderPath, testFolderName));
+        await testJavaProjectFilesExist(testFolderPath);
     }).timeout(60 * 1000);
 });
 
