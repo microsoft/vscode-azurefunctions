@@ -12,10 +12,8 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
-// tslint:disable-next-line:no-require-imports
-import parse = require('xml-parser');
+import * as xmlparse from 'xml-parser';
 import { DialogResponses } from '../DialogResponses';
-import { NoPackagedJavaFunctionError, XmlParseError } from '../errors';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { TemplateLanguage } from '../templates/Template';
@@ -51,15 +49,11 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
-    try {
-        const functionAppName: string = await getFunctionAppNameInPom(pomLocation);
-        const targetFolder: string = path.join(basePath, 'target', 'azure-functions', functionAppName);
-        if (await fse.pathExists(targetFolder)) {
-            return targetFolder;
-        } else {
-            throw new NoPackagedJavaFunctionError();
-        }
-    } catch (error) {
+    const functionAppName: string | undefined = await getFunctionAppNameInPom(pomLocation);
+    const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
+    if (functionAppName && await fse.pathExists(targetFolder)) {
+        return targetFolder;
+    } else {
         const message: string = localize('azFunc.cannotFindPackageFolder', 'Cannot find the packaged function folder, would you like to specify the folder location?');
         const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes);
         if (result === DialogResponses.yes) {
@@ -89,12 +83,12 @@ async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: We
     }
 }
 
-async function getFunctionAppNameInPom(pomLocation: string): Promise<string> {
-    const pom: parse.Document = parse(await fse.readFile(pomLocation, 'utf-8'));
-    const children: parse.Node[] = pom.root.children;
+async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
+    const pom: xmlparse.Document = xmlparse(await fse.readFile(pomLocation, 'utf-8'));
+    const children: xmlparse.Node[] = pom.root.children;
     for (const node of children) {
         if (node.name === 'properties') {
-            const properties: parse.Node[] = node.children;
+            const properties: xmlparse.Node[] = node.children;
             for (const property of properties) {
                 if (property.name === 'functionAppName' && property.content) {
                     return property.content;
@@ -102,5 +96,5 @@ async function getFunctionAppNameInPom(pomLocation: string): Promise<string> {
             }
         }
     }
-    throw new XmlParseError();
+    return undefined;
 }

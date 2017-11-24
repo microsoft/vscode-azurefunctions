@@ -20,10 +20,3 @@ export class ArgumentError extends Error {
 export class NoSubscriptionError extends Error {
     public message: string = localize('azFunc.noSubscriptionError', 'You must be signed in to Azure to perform this operation.');
 }
-
-export class NoPackagedJavaFunctionError extends Error {
-    public message: string = localize('azFunc.noPackagedJavaFunctionError', 'Cannot find packaged Java functions.');
-}
-
-// tslint:disable-next-line:max-classes-per-file
-export class XmlParseError extends Error { }
