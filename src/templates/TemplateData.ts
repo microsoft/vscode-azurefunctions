@@ -68,11 +68,12 @@ export class TemplateData {
             }
         }
 
-        const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
-        // refactor here when Java template is exposed by http API
         if (language === TemplateLanguage.Java) {
-            return jsTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === t.name));
+            // refactor here when Java template is exposed by http API
+            const javaTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
+            return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === t.name));
         } else {
+            const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
             // tslint:disable-next-line:no-backbone-get-set-outside-model
             switch (vscode.workspace.getConfiguration().get('azureFunctions.templateFilter')) {
                 case 'All':
