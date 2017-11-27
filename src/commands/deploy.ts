@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
-import * as xmlparse from 'xml-parser';
+import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
@@ -84,17 +84,16 @@ async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: We
 }
 
 async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
-    const pom: xmlparse.Document = xmlparse(await fse.readFile(pomLocation, 'utf-8'));
-    const children: xmlparse.Node[] = pom.root.children;
-    for (const node of children) {
-        if (node.name === 'properties') {
-            const properties: xmlparse.Node[] = node.children;
-            for (const property of properties) {
-                if (property.name === 'functionAppName' && property.content) {
-                    return property.content;
-                }
+    let functionAppName: string | undefined;
+    // tslint:disable-next-line:no-any
+    xml2js.parseString(await fse.readFile(pomLocation, 'utf-8'), { explicitArray: false }, (err: any, result: any): void => {
+        if (result && !err) {
+            // tslint:disable-next-line:no-string-literal no-unsafe-any
+            if (result['project'] && result['project']['properties'] && result['project']['properties']['functionAppName']) {
+                // tslint:disable-next-line:no-string-literal no-unsafe-any
+                functionAppName = result['project']['properties']['functionAppName'];
             }
         }
-    }
-    return undefined;
+    });
+    return functionAppName;
 }
