@@ -181,7 +181,7 @@ async function promotForMavenParameters(ui: IUserInterface, functionAppPath: str
 async function createJavaFunctionProject(outputChannel: OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<string> {
     // Get parameters for Maven command
     const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
-    const tempFolder: string = path.join(os.tmpdir(), Date.now().toString());
+    const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
     await fse.ensureDir(tempFolder);
     // Use maven command to init Java function project.
     await cpUtils.executeCommand(
