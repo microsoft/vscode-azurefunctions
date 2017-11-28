@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
@@ -177,6 +178,31 @@ async function promotForMavenParameters(ui: IUserInterface, functionAppPath: str
     };
 }
 
+async function createJavaFunctionProject(outputChannel: OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<string> {
+    // Get parameters for Maven command
+    const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
+    const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
+    await fse.ensureDir(tempFolder);
+    // Use maven command to init Java function project.
+    await cpUtils.executeCommand(
+        outputChannel,
+        tempFolder,
+        'mvn',
+        'archetype:generate',
+        '-DarchetypeGroupId="com.microsoft.azure"',
+        '-DarchetypeArtifactId="azure-functions-archetype"',
+        `-DgroupId="${groupId}"`,
+        `-DartifactId="${artifactId}"`,
+        `-Dversion="${version}"`,
+        `-Dpackage="${packageName}"`,
+        `-DappName="${appName}"`,
+        '-B' // in Batch Mode
+    );
+    await fsUtil.copyFolder(path.join(tempFolder, artifactId), functionAppPath);
+    await fse.remove(tempFolder);
+    return appName;
+}
+
 export async function createNewProject(outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
@@ -191,26 +217,8 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
     let javaTargetPath: string = '';
     switch (language) {
         case TemplateLanguage.Java:
-            // Get parameters for Maven command
-            const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
-            // Use maven command to init Java function project.
-            await cpUtils.executeCommand(
-                outputChannel,
-                functionAppPath,
-                'mvn',
-                'archetype:generate',
-                '-DarchetypeGroupId="com.microsoft.azure"',
-                '-DarchetypeArtifactId="azure-functions-archetype"',
-                `-DgroupId="${groupId}"`,
-                `-DartifactId="${artifactId}"`,
-                `-Dversion="${version}"`,
-                `-Dpackage="${packageName}"`,
-                `-DappName="${appName}"`,
-                '-B' // in Batch Mode
-            );
-
-            functionAppPath = path.join(functionAppPath, artifactId);
-            javaTargetPath = `target/azure-functions/${appName}/`;
+            const javaFunctionAppName: string = await createJavaFunctionProject(outputChannel, functionAppPath, ui);
+            javaTargetPath = `target/azure-functions/${javaFunctionAppName}/`;
             break;
         default:
             // the maven archetype contains these files, so not check them when language is Java
