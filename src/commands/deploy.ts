@@ -12,9 +12,9 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
-import { NoPackagedJavaFunctionError } from '../errors';
-import { IUserInterface, Pick } from '../IUserInterface';
+import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { TemplateLanguage } from '../templates/Template';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
@@ -48,25 +48,20 @@ export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
-    const targetFolder: string = path.join(basePath, 'target', 'azure-functions');
-    if (!await fse.pathExists(targetFolder)) {
-        throw new NoPackagedJavaFunctionError();
-    }
-    const packagedFolders: string[] = fse.readdirSync(targetFolder);
-    if (packagedFolders.length === 0) {
-        throw new NoPackagedJavaFunctionError();
-    } else if (packagedFolders.length === 1) {
-        return path.join(targetFolder, packagedFolders[0]);
+    const pomLocation: string = path.join(basePath, 'pom.xml');
+    const functionAppName: string | undefined = await getFunctionAppNameInPom(pomLocation);
+    const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
+    if (functionAppName && await fse.pathExists(targetFolder)) {
+        return targetFolder;
     } else {
-        return path.join(targetFolder, await promptForPackagedFolder(ui, packagedFolders));
+        const message: string = localize('azFunc.cannotFindPackageFolder', 'Cannot find the packaged function folder, would you like to specify the folder location?');
+        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+        if (result === DialogResponses.yes) {
+            return await ui.showFolderDialog();
+        } else {
+            throw new UserCancelledError();
+        }
     }
-}
-
-async function promptForPackagedFolder(ui: IUserInterface, folders: string[]): Promise<string> {
-    const picks: Pick[] = folders.map((f: string) => new Pick(f));
-
-    const placeHolder: string = localize('azFunc.PackagedFolderPlaceholder', 'Select packaged folder you want to deploy');
-    return (await ui.showQuickPick(picks, placeHolder, false)).label;
 }
 
 async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: WebSiteManagementClient, siteWrapper: SiteWrapper): Promise<void> {
@@ -82,8 +77,26 @@ async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: We
                 siteWrapper.appName,
                 appSettings
             );
-        } else if (result === undefined) {
+        } else {
             throw new UserCancelledError();
         }
     }
+}
+
+async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
+    const pomString: string = await fse.readFile(pomLocation, 'utf-8');
+    return await new Promise((resolve: (ret: string | undefined) => void): void => {
+        // tslint:disable-next-line:no-any
+        xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
+            if (result && !err) {
+                // tslint:disable-next-line:no-string-literal no-unsafe-any
+                if (result['project'] && result['project']['properties']) {
+                    // tslint:disable-next-line:no-string-literal no-unsafe-any
+                    resolve(result['project']['properties']['functionAppName']);
+                    return;
+                }
+            }
+            resolve(undefined);
+        });
+    });
 }

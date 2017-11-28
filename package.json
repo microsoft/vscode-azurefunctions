@@ -252,8 +252,9 @@
         "@types/fs-extra": "^4.0.3",
         "@types/mocha": "^2.2.32",
         "@types/node": "^8.0.28",
-        "@types/request-promise": "4.1.38",
         "@types/request": "2.0.7",
+        "@types/request-promise": "4.1.38",
+        "@types/xml2js": "^0.4.2",
         "mocha": "^2.3.3",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.0.1",
@@ -263,16 +264,17 @@
     "dependencies": {
         "azure-arm-cosmosdb": "^1.0.0-preview",
         "azure-arm-resource": "^2.0.0-preview",
-        "azure-arm-website": "^1.0.0-preview",
         "azure-arm-storage": "^3.1.0",
+        "azure-arm-website": "^1.0.0-preview",
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
+        "vscode-azureappservice": "^0.4.0",
+        "vscode-azureextensionui": "~0.2.0",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
-        "vscode-azureextensionui": "~0.2.0",
-        "vscode-azureappservice": "^0.4.0"
+        "xml2js": "^0.4.19"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"
