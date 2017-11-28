@@ -16,7 +16,7 @@ interface ITemplate {
     files: { [filename: string]: string };
 }
 
-interface ITemplateFunction {
+export interface ITemplateFunction {
     disabled: boolean;
     bindings: { [propertyName: string]: string }[];
 }

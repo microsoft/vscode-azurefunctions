@@ -9,8 +9,13 @@
     "azFunc.startFunctionApp": "Start",
     "azFunc.stopFunctionApp": "Stop",
     "azFunc.restartFunctionApp": "Restart",
-    "azFunc.deleteFunctionApp": "Delete",
+    "azFunc.deleteFunctionApp": "Delete Function App",
+    "azFunc.deleteFunction": "Delete Function",
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
-    "azFunc.deployZip": "Deploy to Function App"
+    "azFunc.deployZip": "Deploy to Function App",
+    "azFunc.appSettings.add": "Add new setting...",
+    "azFunc.appSettings.edit": "Edit setting...",
+    "azFunc.appSettings.rename": "Rename setting...",
+    "azFunc.appSettings.delete": "Delete setting"
 }

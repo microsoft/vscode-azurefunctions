@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureTreeDataProvider, IAzureParentNode } from 'vscode-azureextensionui';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
-export async function deleteFunctionApp(tree: AzureTreeDataProvider, node?: IAzureParentNode): Promise<void> {
+export async function createChildNode(tree: AzureTreeDataProvider, expectedContextValue: string, node?: IAzureParentNode): Promise<void> {
     if (!node) {
-        node = <IAzureParentNode>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <IAzureParentNode>await tree.showNodePicker(expectedContextValue);
     }
 
-    await node.deleteNode();
+    await node.createChild();
 }
