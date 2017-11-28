@@ -98,7 +98,7 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
 
 async function promptForPackageName(ui: IUserInterface): Promise<string> {
     const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
+    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
     return await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, 'com.function');
 }
 
@@ -129,6 +129,8 @@ export async function createFunction(
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
+    const packageName: string = languageType === TemplateLanguage.Java ? await promptForPackageName(ui) : '';
+
     const name: string = await promptForFunctionName(ui, functionAppPath, template, languageType);
     const javaFuntionProperties: string[] = [];
 
@@ -147,7 +149,7 @@ export async function createFunction(
 
     let newFilePath: string;
     if (languageType === TemplateLanguage.Java) {
-        const packageName: string = await promptForPackageName(ui);
+        outputChannel.show();
         await cpUtils.executeCommand(
             outputChannel,
             functionAppPath,
