@@ -55,7 +55,7 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
         return targetFolder;
     } else {
         const message: string = localize('azFunc.cannotFindPackageFolder', 'Cannot find the packaged function folder, would you like to specify the folder location?');
-        const result: string | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes);
+        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             return await ui.showFolderDialog();
         } else {
@@ -77,23 +77,26 @@ async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: We
                 siteWrapper.appName,
                 appSettings
             );
-        } else if (result === undefined) {
+        } else {
             throw new UserCancelledError();
         }
     }
 }
 
 async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
-    let functionAppName: string | undefined;
-    // tslint:disable-next-line:no-any
-    xml2js.parseString(await fse.readFile(pomLocation, 'utf-8'), { explicitArray: false }, (err: any, result: any): void => {
-        if (result && !err) {
-            // tslint:disable-next-line:no-string-literal no-unsafe-any
-            if (result['project'] && result['project']['properties'] && result['project']['properties']['functionAppName']) {
+    const pomString: string = await fse.readFile(pomLocation, 'utf-8');
+    return await new Promise((resolve: (ret: string | undefined) => void): void => {
+        // tslint:disable-next-line:no-any
+        xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
+            if (result && !err) {
                 // tslint:disable-next-line:no-string-literal no-unsafe-any
-                functionAppName = result['project']['properties']['functionAppName'];
+                if (result['project'] && result['project']['properties']) {
+                    // tslint:disable-next-line:no-string-literal no-unsafe-any
+                    resolve(result['project']['properties']['functionAppName']);
+                    return;
+                }
             }
-        }
+            resolve(undefined);
+        });
     });
-    return functionAppName;
 }
