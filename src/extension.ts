@@ -81,7 +81,7 @@ function initCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel
 }
 
 function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (context?: T) => Promise<void>): void {
-    initAsyncCommandWithCustomTelemetry(extensionContext, outputChannel, commandId, async (_telemetryProperties: { [key: string]: string; }, context?: T) => callback(context));
+    initAsyncCommandWithCustomTelemetry(extensionContext, outputChannel, commandId, async (_telemetryProperties: { [key: string]: string; }, context?: T) => await callback(context));
 }
 
 function initAsyncCommandWithCustomTelemetry<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (telemetryProperties: { [key: string]: string; }, context?: T) => Promise<void>): void {
