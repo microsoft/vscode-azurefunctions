@@ -56,8 +56,8 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand<IAzureNode>(context, outputChannel, 'azureFunctions.refresh', (node?: IAzureNode) => tree.refresh(node));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         initCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
-        initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
-        initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
+        initAsyncCommandWithCustomTelemetry(context, outputChannel, 'azureFunctions.createFunction', async (telemetryProperties: { [key: string]: string; }) => await createFunction(telemetryProperties, outputChannel, azureAccount, templateData));
+        initAsyncCommandWithCustomTelemetry(context, outputChannel, 'azureFunctions.createNewProject', async (telemetryProperties: { [key: string]: string; }) => await createNewProject(telemetryProperties, outputChannel));
         initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createChildNode(tree, AzureTreeDataProvider.subscriptionContextValue, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
@@ -81,22 +81,27 @@ function initCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel
 }
 
 function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (context?: T) => Promise<void>): void {
+    initAsyncCommandWithCustomTelemetry(extensionContext, outputChannel, commandId, async (_telemetryProperties: { [key: string]: string; }, context?: T) => callback(context));
+}
+
+function initAsyncCommandWithCustomTelemetry<T>(extensionContext: vscode.ExtensionContext, outputChannel: vscode.OutputChannel, commandId: string, callback: (telemetryProperties: { [key: string]: string; }, context?: T) => Promise<void>): void {
     extensionContext.subscriptions.push(vscode.commands.registerCommand(commandId, async (...args: {}[]) => {
         const start: number = Date.now();
-        let result: string = 'Succeeded';
         let errorData: ErrorData | undefined;
+        const properties: { [key: string]: string; } = {};
+        properties.result = 'Succeeded';
 
         try {
             if (args.length === 0) {
-                await callback();
+                await callback(properties);
             } else {
-                await callback(<T>args[0]);
+                await callback(properties, <T>args[0]);
             }
         } catch (error) {
             if (error instanceof UserCancelledError) {
-                result = 'Canceled';
+                properties.result = 'Canceled';
             } else {
-                result = 'Failed';
+                properties.result = 'Failed';
                 errorData = new ErrorData(error);
                 // Always append the error to the output channel, but only 'show' the output channel for multiline errors
                 outputChannel.appendLine(localize('azFunc.Error', 'Error: {0}', errorData.message));
@@ -109,7 +114,6 @@ function initAsyncCommand<T>(extensionContext: vscode.ExtensionContext, outputCh
             }
         } finally {
             const end: number = Date.now();
-            const properties: { [key: string]: string; } = { result: result };
             if (errorData) {
                 properties.error = errorData.errorType;
                 properties.errorMessage = errorData.message;

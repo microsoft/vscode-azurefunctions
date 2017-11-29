@@ -166,7 +166,7 @@ async function testCreateFunction(funcName: string, ...inputs: (string | undefin
     }
 
     const ui: TestUI = new TestUI(inputs);
-    await createFunction(outputChannel, new TestAzureAccount(), templateData, ui);
+    await createFunction({}, outputChannel, new TestAzureAccount(), templateData, ui);
     assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
     const functionPath: string = path.join(testFolder, funcName);

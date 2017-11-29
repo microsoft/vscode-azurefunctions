@@ -46,12 +46,12 @@ function validateTemplateName(rootPath: string, name: string | undefined, langua
     }
 }
 
-async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
+async function validateIsFunctionApp(telemetryProperties: { [key: string]: string; }, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(outputChannel, functionAppPath, false, ui);
+            await createNewProject(telemetryProperties, outputChannel, functionAppPath, false, ui);
         } else if (result === undefined) {
             throw new UserCancelledError();
         }
@@ -120,6 +120,7 @@ function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string
 }
 
 export async function createFunction(
+    telemetryProperties: { [key: string]: string; },
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
     templateData: TemplateData,
@@ -127,15 +128,17 @@ export async function createFunction(
 
     const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
     const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
-    await validateIsFunctionApp(outputChannel, functionAppPath, ui);
+    await validateIsFunctionApp(telemetryProperties, outputChannel, functionAppPath, ui);
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
 
     const languageType: string = await projectUtils.getProjectType(functionAppPath);
+    telemetryProperties.projectLanguage = languageType;
 
     const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType)).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
+    telemetryProperties.templateName = template.name;
 
     if (template.bindingType !== 'httpTrigger') {
         await localAppSettings.validateAzureWebJobsStorage();

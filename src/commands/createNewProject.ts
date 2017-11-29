@@ -8,8 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { IUserInterface } from '../IUserInterface';
-import { Pick } from '../IUserInterface';
+import { IUserInterface, Pick } from '../IUserInterface';
 import { localize } from '../localize';
 import { TemplateLanguage } from '../templates/Template';
 import { cpUtils } from '../utils/cpUtils';
@@ -204,7 +203,7 @@ async function createJavaFunctionProject(outputChannel: OutputChannel, functionA
     return appName;
 }
 
-export async function createNewProject(outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function createNewProject(telemetryProperties: { [key: string]: string; }, outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
@@ -214,6 +213,7 @@ export async function createNewProject(outputChannel: OutputChannel, functionApp
         new Pick(TemplateLanguage.Java)
     ];
     const language: string = (await ui.showQuickPick(languages, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+    telemetryProperties.projectLanguage = language;
 
     let javaTargetPath: string = '';
     switch (language) {
