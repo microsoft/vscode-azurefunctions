@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
-        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createChildNode(tree, 'azureSubscription', node));
+        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createChildNode(tree, AzureTreeDataProvider.subscriptionContextValue, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
