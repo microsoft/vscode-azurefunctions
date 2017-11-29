@@ -19,6 +19,7 @@ import { Template, TemplateLanguage } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
 import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
+import { getJavaClassName, validateFunctionName, validatePackageName } from '../utils/javaNameUtils';
 import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
@@ -30,12 +31,17 @@ const requiredFunctionAppFiles: string[] = [
     path.join('.vscode', 'launch.json') // NOTE: tasks.json is not required if the user prefers to run 'func host start' from the command line
 ];
 
-function validateTemplateName(rootPath: string, name: string | undefined): string | undefined {
+function validateTemplateName(rootPath: string, name: string | undefined, language: string): string | undefined {
     if (!name) {
         return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
-    } else if (fse.existsSync(path.join(rootPath, name))) {
-        return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
+    }
+
+    if (language === TemplateLanguage.Java) {
+        return validateFunctionName(name);
     } else {
+        if (fse.existsSync(path.join(rootPath, name))) {
+            return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
+        }
         return undefined;
     }
 }
@@ -52,13 +58,20 @@ async function validateIsFunctionApp(outputChannel: vscode.OutputChannel, functi
     }
 }
 
-async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string): Promise<string> {
-    const defaultName: string = language === TemplateLanguage.Java ? `${template.name}Java` : template.defaultFunctionName;
-    const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(functionAppPath, defaultName);
+async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string, packageName: string): Promise<string> {
+    let defaultName: string;
+    let defaultFunctionName: string | undefined;
+    if (language === TemplateLanguage.Java) {
+        defaultName = `${template.name}Java`;
+        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, defaultName);
+    } else {
+        defaultName = template.defaultFunctionName;
+        defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, defaultName);
+    }
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
 
-    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s), defaultFunctionName || template.defaultFunctionName);
+    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s, language), defaultFunctionName || template.defaultFunctionName);
 }
 
 async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
@@ -99,12 +112,11 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
 async function promptForPackageName(ui: IUserInterface): Promise<string> {
     const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
     const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
-    return await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, 'com.function');
+    return await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
 }
 
 function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
-    const fileName: string = `${functionName[0].toUpperCase()}${functionName.slice(1)}.java`;
-    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), fileName);
+    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${getJavaClassName(functionName)}.java`);
 }
 
 export async function createFunction(
@@ -131,7 +143,7 @@ export async function createFunction(
 
     const packageName: string = languageType === TemplateLanguage.Java ? await promptForPackageName(ui) : '';
 
-    const name: string = await promptForFunctionName(ui, functionAppPath, template, languageType);
+    const name: string = await promptForFunctionName(ui, functionAppPath, template, languageType, packageName);
     const javaFuntionProperties: string[] = [];
 
     for (const settingName of template.userPromptedSettings) {

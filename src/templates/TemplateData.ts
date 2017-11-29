@@ -69,7 +69,9 @@ export class TemplateData {
         }
 
         if (language === TemplateLanguage.Java) {
-            // refactor here when Java template is exposed by http API
+            // Currently we leverage JS templates to get the function metadata of Java Functions.
+            // Will refactor the code here when templates HTTP API is ready.
+            // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
             const javaTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === t.name));
         } else {
