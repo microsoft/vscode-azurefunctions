@@ -68,7 +68,7 @@ async function testCreateNewProject(language: string, ...inputs: (string | undef
     }
 
     const ui: TestUI = new TestUI(inputs);
-    await createNewProject(outputChannel, undefined, false, ui);
+    await createNewProject({}, outputChannel, undefined, false, ui);
     assert.equal(inputs.length, 0, 'Not all inputs were used.');
 }
 
