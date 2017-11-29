@@ -42,8 +42,8 @@ export class FunctionAppProvider implements IChildProvider {
             .map((site: Site) => new FunctionAppTreeItem(site, this._outputChannel));
     }
 
-    public async createChild(parent: IAzureNode, _showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
-        const site: Site | undefined = await appServiceTools.createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription);
+    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
+        const site: Site | undefined = await appServiceTools.createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
         if (site) {
             return new FunctionAppTreeItem(site, this._outputChannel);
         } else {
