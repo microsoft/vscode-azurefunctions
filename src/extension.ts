@@ -6,15 +6,18 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import { AppSettingsTreeItem, AppSettingTreeItem } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, UserCancelledError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
+import { createChildNode } from './commands/createChildNode';
 import { createFunction } from './commands/createFunction';
-import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject';
-import { deleteFunctionApp } from './commands/deleteFunctionApp';
+import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy';
+import { editAppSetting } from './commands/editAppSetting';
 import { openInPortal } from './commands/openInPortal';
+import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
@@ -23,6 +26,7 @@ import { localize } from './localize';
 import { TemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
+import { FunctionTreeItem } from './tree/FunctionTreeItem';
 
 let reporter: TelemetryReporter | undefined;
 
@@ -54,12 +58,17 @@ export function activate(context: vscode.ExtensionContext): void {
         initCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createFunction', async () => await createFunction(outputChannel, azureAccount, templateData));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.createNewProject', async () => await createNewProject(outputChannel));
-        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createFunctionApp(tree, node));
+        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createChildNode(tree, AzureTreeDataProvider.subscriptionContextValue, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
-        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteFunctionApp(tree, node));
+        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
         initAsyncCommand<IAzureNode<FunctionAppTreeItem> | vscode.Uri>(context, outputChannel, 'azureFunctions.deploy', async (arg?: IAzureNode<FunctionAppTreeItem> | vscode.Uri) => await deploy(tree, outputChannel, arg));
+        initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
+        initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.appSettings.add', async (node: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
+        initAsyncCommand<IAzureNode<AppSettingTreeItem>>(context, outputChannel, 'azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
+        initAsyncCommand<IAzureNode<AppSettingTreeItem>>(context, outputChannel, 'azureFunctions.appSettings.rename', async (node: IAzureNode<AppSettingTreeItem>) => await renameAppSetting(tree, node));
+        initAsyncCommand<IAzureNode<AppSettingTreeItem>>(context, outputChannel, 'azureFunctions.appSettings.delete', async (node: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
     }
 }
 

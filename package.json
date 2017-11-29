@@ -39,7 +39,12 @@
         "onCommand:azureFunctions.stopFunctionApp",
         "onCommand:azureFunctions.restartFunctionApp",
         "onCommand:azureFunctions.deleteFunctionApp",
+        "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
+        "onCommand:azureFunctions.appSettings.add",
+        "onCommand:azureFunctions.appSettings.edit",
+        "onCommand:azureFunctions.appSettings.rename",
+        "onCommand:azureFunctions.appSettings.delete",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -115,6 +120,31 @@
                     "light": "resources/light/Deploy.svg",
                     "dark": "resources/dark/Deploy.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.deleteFunction",
+                "title": "%azFunc.deleteFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.add",
+                "title": "%azFunc.appSettings.add%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.edit",
+                "title": "%azFunc.appSettings.edit%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.rename",
+                "title": "%azFunc.appSettings.rename%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.delete",
+                "title": "%azFunc.appSettings.delete%",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -162,28 +192,63 @@
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "2@3"
                 },
                 {
                     "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureFunctionsFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "2@4"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctions",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.deleteFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.appSettings.add",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.appSettings.edit",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.appSettings.rename",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureFunctions.appSettings.delete",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "group": "1@3"
                 }
             ],
             "explorer/context": [
@@ -270,10 +335,11 @@
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
-        "vscode-azureappservice": "^0.4.0",
-        "vscode-azureextensionui": "~0.2.0",
+        "vscode-azureappservice": "~0.6.0",
+        "vscode-azureextensionui": "~0.3.0",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
+        "vscode-azurekudu": "~0.1.3",
         "xml2js": "^0.4.19"
     },
     "extensionDependencies": [
