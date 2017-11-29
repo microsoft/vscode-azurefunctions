@@ -16,6 +16,7 @@ import { cpUtils } from '../utils/cpUtils';
 import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
 import { gitUtils } from '../utils/gitUtils';
+import { validatePackageName, validGroupIdName } from '../utils/javaNameUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
@@ -151,7 +152,7 @@ const localSettingsJson: {} = {
 async function promotForMavenParameters(ui: IUserInterface, functionAppPath: string): Promise<IMavenParameters> {
     const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
     const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, undefined, 'com.function');
+    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, validGroupIdName, 'com.function');
 
     const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
     const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
@@ -163,7 +164,7 @@ async function promotForMavenParameters(ui: IUserInterface, functionAppPath: str
 
     const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
     const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
-    const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, undefined, groupId);
+    const packageName: string = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, groupId);
 
     const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
     const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
