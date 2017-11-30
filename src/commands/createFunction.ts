@@ -19,7 +19,7 @@ import { Template, TemplateLanguage } from '../templates/Template';
 import { TemplateData } from '../templates/TemplateData';
 import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
-import { getJavaClassName, validateFunctionName, validatePackageName } from '../utils/javaNameUtils';
+import { getJavaClassName, validateJavaFunctionName, validatePackageName } from '../utils/javaNameUtils';
 import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
@@ -37,7 +37,7 @@ function validateTemplateName(rootPath: string, name: string | undefined, langua
     }
 
     if (language === TemplateLanguage.Java) {
-        return validateFunctionName(name);
+        return validateJavaFunctionName(name);
     } else {
         if (fse.existsSync(path.join(rootPath, name))) {
             return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
@@ -59,14 +59,11 @@ async function validateIsFunctionApp(telemetryProperties: { [key: string]: strin
 }
 
 async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string, packageName: string): Promise<string> {
-    let defaultName: string;
     let defaultFunctionName: string | undefined;
     if (language === TemplateLanguage.Java) {
-        defaultName = `${template.name}Java`;
-        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, defaultName);
+        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, `${template.name}Java`);
     } else {
-        defaultName = template.defaultFunctionName;
-        defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, defaultName);
+        defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
     }
     const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
     const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');

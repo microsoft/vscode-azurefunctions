@@ -11,7 +11,6 @@ import { MessageItem } from "vscode";
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from "../DialogResponses";
 import { localize } from "../localize";
-import { TemplateLanguage } from '../templates/Template';
 import { getJavaClassName } from './javaNameUtils';
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
@@ -47,13 +46,13 @@ export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     }
 }
 
-export async function getUniqueFsPath(folderPath: string, defaultValue: string, language?: string): Promise<string | undefined> {
+export async function getUniqueFsPath(folderPath: string, defaultValue: string, fileExtension?: string): Promise<string | undefined> {
     let count: number = 0;
     const maxCount: number = 1024;
 
     while (count < maxCount) {
         const fileName: string = defaultValue + (count === 0 ? '' : count.toString());
-        if (!(await fse.pathExists(path.join(folderPath, language === TemplateLanguage.Java ? `${fileName}.java` : fileName)))) {
+        if (!(await fse.pathExists(path.join(folderPath, fileExtension ? `${fileName}${fileExtension}` : fileName)))) {
             return fileName;
         }
         count += 1;
@@ -62,7 +61,7 @@ export async function getUniqueFsPath(folderPath: string, defaultValue: string, 
 }
 
 export async function getUniqueJavaFsPath(basePath: string, packageName: string, defaultValue: string): Promise<string | undefined> {
-    return getUniqueFsPath(path.join(basePath, 'src', 'main', 'java', ...packageName.split('.')), getJavaClassName(defaultValue), TemplateLanguage.Java);
+    return getUniqueFsPath(path.join(basePath, 'src', 'main', 'java', ...packageName.split('.')), getJavaClassName(defaultValue), '.java');
 }
 
 export function getRandomHexString(length: number = 10): string {
