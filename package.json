@@ -331,15 +331,16 @@
         "azure-arm-resource": "^2.0.0-preview",
         "azure-arm-storage": "^3.1.0",
         "azure-arm-website": "^1.0.0-preview",
+        "command-exist": "^1.0.0",
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
         "vscode-azureappservice": "~0.6.0",
         "vscode-azureextensionui": "~0.3.0",
+        "vscode-azurekudu": "~0.1.3",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",
-        "vscode-azurekudu": "~0.1.3",
         "xml2js": "^0.4.19"
     },
     "extensionDependencies": [

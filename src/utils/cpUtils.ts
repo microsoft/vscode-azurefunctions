@@ -4,12 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as cp from 'child_process';
+import * as commandExist from 'command-exist';
 import * as vscode from 'vscode';
 import { localize } from '../localize';
 
 export namespace cpUtils {
     export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string, command: string, ...args: string[]): Promise<void> {
-        await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
+        await new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
+            if (!(await commandExist(command))) {
+                reject(new Error(localize('azFunc.commandNotFOundError', 'Command "{0}" does not exist.', command)));
+                return;
+            }
             const options: cp.SpawnOptions = {
                 cwd: workingDirectory,
                 shell: true
