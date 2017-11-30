@@ -20,52 +20,58 @@ const keywords: string[] = [
 ];
 
 const identifierRegex: RegExp = /^[a-zA-Z_$][a-zA-Z\d_$]*$/;
+const mavenCheckRegex: RegExp = /^[a-zA-Z\d_\-\.]+$/;
 
 function isKeyword(name: string): boolean {
-    return !!name && keywords.indexOf(name) > -1;
+    return keywords.indexOf(name) > -1;
 }
 
 function isIdentifier(name: string): boolean {
-    return !!name && identifierRegex.test(name);
+    return identifierRegex.test(name);
 }
 
-function isValidPart(name: string): boolean {
-    return isIdentifier(name) && !isKeyword(name);
+function validateJavaName(name: string): string | undefined {
+    if (isKeyword(name)) {
+        return localize('azFunc.JavaNameIsKeywordError', '\'{0}\' is a reserved keyword.', name);
+    }
+    if (!isIdentifier(name)) {
+        return localize('azFunc.JavaNameNotIdentifierError', '\'{0}\' is invalid, only allow letters, digits, \'_\', and \'$\', not begin with digit.', name);
+    }
+    return undefined;
 }
 
-function isValidName(name: string): boolean {
-    if (!name) {
-        return false;
-    }
-    for (const s of name.split('.')) {
-        if (!isValidPart(s)) {
-            return false;
-        }
-    }
-    return true;
+function isValidMavenIdentifier(name: string): boolean {
+    return mavenCheckRegex.test(name);
+
 }
 
 export function getJavaClassName(name: string): string {
     return `${name[0].toUpperCase()}${name.slice(1)}`;
 }
 
-export function validateFunctionName(name: string): string | undefined {
-    if (!isValidPart(name)) {
-        return localize('azFunc.invalidJavaFunctionNameError', 'The Java function name \'{0}\' is invalid.', name);
+export function validateJavaFunctionName(name: string): string | undefined {
+    return validateJavaName(name);
+}
+
+export function validateMavenIdentifier(input: string): string | undefined {
+    if (!input) {
+        return localize('azFunc.inputEmptyError', 'The input cannot be empty.');
+    }
+    if (!isValidMavenIdentifier(input)) {
+        return localize('azFunc.invalidMavenIdentifierError', 'Only allow letters, digits, \'_\', \'-\' and \'.\'');
     }
     return undefined;
 }
 
 export function validatePackageName(packageName: string): string | undefined {
-    if (!isValidName(packageName)) {
-        return localize('azFunc.invalidPackageNameError', 'The package name \'{0}\' is invalid.', packageName);
+    if (!packageName) {
+        return localize('azFunc.emptyPackageNameError', 'The package name cannot be empty.');
     }
-    return undefined;
-}
-
-export function validGroupIdName(groupId: string): string | undefined {
-    if (!isValidName(groupId)) {
-        return localize('azFunc.invalidGroupIdError', 'The Group ID \'{0}\' is invalid.', groupId);
+    for (const s of packageName.split('.')) {
+        const checkResult: string | undefined = validateJavaName(s);
+        if (checkResult) {
+            return checkResult;
+        }
     }
     return undefined;
 }

@@ -15,7 +15,7 @@ import { cpUtils } from '../utils/cpUtils';
 import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
 import { gitUtils } from '../utils/gitUtils';
-import { validatePackageName, validGroupIdName } from '../utils/javaNameUtils';
+import { validateMavenIdentifier, validatePackageName } from '../utils/javaNameUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
@@ -151,11 +151,11 @@ const localSettingsJson: {} = {
 async function promotForMavenParameters(ui: IUserInterface, functionAppPath: string): Promise<IMavenParameters> {
     const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
     const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, validGroupIdName, 'com.function');
+    const groupId: string = await ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, validateMavenIdentifier, 'com.function');
 
     const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
     const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
-    const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, undefined, path.basename(functionAppPath));
+    const artifactId: string = await ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, validateMavenIdentifier, path.basename(functionAppPath));
 
     const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
     const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
