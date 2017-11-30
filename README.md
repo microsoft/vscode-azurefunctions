@@ -1,12 +1,17 @@
 # Azure Functions for Visual Studio Code (Preview)
 
-## Prerequisites for local debugging
-* [Node v8.0+](https://nodejs.org/)
-* [.NET Core 2.0](https://www.microsoft.com/net/download/core)
-* [Azure Core Function Tools 2.0](https://www.npmjs.com/package/azure-functions-core-tools)
+## Prerequisites
+* For local debugging:
+  * [Azure Core Function Tools 2.0](https://www.npmjs.com/package/azure-functions-core-tools)
   ```
   npm install --global azure-functions-core-tools@core
   ```
+* For JavaScript functions:
+  * [Node 8.0+](https://nodejs.org/)
+* For Java functions:
+  * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
+  * [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+  * [Maven 3.0+](https://maven.apache.org/)
 
 ## Features
 

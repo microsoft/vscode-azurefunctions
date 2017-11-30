@@ -1,6 +1,19 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.3.0 - 2017-12-01
+### Added
+- Java support
+  - Create new project
+  - Create new function
+  - Deploy project
+- Azure Functions Explorer
+  - View and delete functions
+  - View, add, edit, and delete Application Settings
+  - 'Load more' for large number of resources
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.3.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.2.0 - 2017-11-10
 ### Added
 - Improved 'Create new function'
