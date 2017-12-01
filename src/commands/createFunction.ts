@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { MessageItem } from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { AzureAccount } from '../azure-account.api';
 import { DialogResponses } from '../DialogResponses';
@@ -20,6 +19,7 @@ import { TemplateData } from '../templates/TemplateData';
 import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
 import { getJavaClassName, validateJavaFunctionName, validatePackageName } from '../utils/javaNameUtils';
+import { mavenUtils } from '../utils/mavenUtils';
 import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
@@ -49,7 +49,7 @@ function validateTemplateName(rootPath: string, name: string | undefined, langua
 async function validateIsFunctionApp(telemetryProperties: { [key: string]: string; }, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(telemetryProperties, outputChannel, functionAppPath, false, ui);
         } else if (result === undefined) {
@@ -161,6 +161,9 @@ export async function createFunction(
 
     let newFilePath: string;
     if (languageType === TemplateLanguage.Java) {
+        if (!(await mavenUtils.isMavenInstalled(functionAppPath))) {
+            throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
+        }
         outputChannel.show();
         await cpUtils.executeCommand(
             outputChannel,
