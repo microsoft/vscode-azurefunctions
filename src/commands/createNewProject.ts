@@ -64,13 +64,13 @@ const tasksJsonForJava: {} = {
             label: localize('azFunc.launchFuncApp', 'Launch Function App'),
             identifier: taskId,
             linux: {
-                command: 'sh -c "mvn clean package -B && func host start --script-root %path%"'
+                command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
             },
             osx: {
-                command: 'sh -c "mvn clean package -B && func host start --script-root %path%"'
+                command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
             },
             windows: {
-                command: 'powershell mvn clean package -B; func host start --script-root %path%'
+                command: 'powershell -command "mvn clean package -B; func host start --script-root \\\"%path%\\\""'
             },
             type: 'shell',
             isBackground: true,
@@ -184,6 +184,7 @@ async function createJavaFunctionProject(outputChannel: OutputChannel, functionA
     const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
     await fse.ensureDir(tempFolder);
     // Use maven command to init Java function project.
+    outputChannel.show();
     await cpUtils.executeCommand(
         outputChannel,
         tempFolder,

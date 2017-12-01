@@ -156,10 +156,11 @@ suite('Create Function Tests', () => {
     });
 });
 
-async function testCreateFunction(funcName: string, ...inputs: (string | undefined)[]): Promise<void> {
+async function testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
     // Setup common inputs
+    const funcName: string = templateName.replace(/ /g, '');
     inputs.unshift(funcName); // Specify the function name
-    inputs.unshift(funcName); // Select the function template
+    inputs.unshift(templateName); // Select the function template
     inputs.unshift(testFolder); // Select the test func app folder
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         inputs.unshift(undefined); // If the test environment has an open workspace, select the 'Browse...' option

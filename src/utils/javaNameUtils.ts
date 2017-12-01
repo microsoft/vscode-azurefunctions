@@ -21,6 +21,7 @@ const keywords: string[] = [
 
 const identifierRegex: RegExp = /^[a-zA-Z_$][a-zA-Z\d_$]*$/;
 const mavenCheckRegex: RegExp = /^[a-zA-Z\d_\-\.]+$/;
+const javaFunctionRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_]*$/;
 
 function isKeyword(name: string): boolean {
     return keywords.indexOf(name) > -1;
@@ -50,7 +51,13 @@ export function getJavaClassName(name: string): string {
 }
 
 export function validateJavaFunctionName(name: string): string | undefined {
-    return validateJavaName(name);
+    if (isKeyword(name)) {
+        return localize('azFunc.JavaNameIsKeywordError', '\'{0}\' is a reserved keyword.', name);
+    }
+    if (!javaFunctionRegex.test(name)) {
+        return localize('azFunc.functionNameInvalidError', 'Java Function name must start with a letter and can contain letters, digits and \'_\'');
+    }
+    return undefined;
 }
 
 export function validateMavenIdentifier(input: string): string | undefined {
