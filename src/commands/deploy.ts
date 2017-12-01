@@ -19,6 +19,7 @@ import { localize } from '../localize';
 import { TemplateLanguage } from '../templates/Template';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { cpUtils } from '../utils/cpUtils';
+import { mavenUtils } from '../utils/mavenUtils';
 import { nodeUtils } from '../utils/nodeUtils';
 import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
@@ -46,6 +47,9 @@ export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
+    if (!(await mavenUtils.isMavenInstalled(basePath))) {
+        throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
+    }
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');

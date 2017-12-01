@@ -16,6 +16,7 @@ import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
 import { gitUtils } from '../utils/gitUtils';
 import { validateMavenIdentifier, validatePackageName } from '../utils/javaNameUtils';
+import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
@@ -179,6 +180,9 @@ async function promotForMavenParameters(ui: IUserInterface, functionAppPath: str
 }
 
 async function createJavaFunctionProject(outputChannel: OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<string> {
+    if (!(await mavenUtils.isMavenInstalled(functionAppPath))) {
+        throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
+    }
     // Get parameters for Maven command
     const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
     const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
