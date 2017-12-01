@@ -2,6 +2,7 @@
 
 ## Prerequisites
 * For local debugging:
+  * [.NET Core 2.0](https://www.microsoft.com/net/download/core)
   * [Azure Core Function Tools 2.0](https://www.npmjs.com/package/azure-functions-core-tools)
   ```
   npm install --global azure-functions-core-tools@core
