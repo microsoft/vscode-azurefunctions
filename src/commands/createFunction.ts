@@ -25,6 +25,8 @@ import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 import { createNewProject } from './createNewProject';
 
+const functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
+
 const requiredFunctionAppFiles: string[] = [
     'host.json',
     'local.settings.json',
@@ -41,6 +43,9 @@ function validateTemplateName(rootPath: string, name: string | undefined, langua
     } else {
         if (fse.existsSync(path.join(rootPath, name))) {
             return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
+        }
+        if (!functionNameRegex.test(name)) {
+            return localize('azFunc.functionNameInvalidError', 'Function name must start with a letter and can contain letters, digits, \'_\' and \'-\'');
         }
         return undefined;
     }
