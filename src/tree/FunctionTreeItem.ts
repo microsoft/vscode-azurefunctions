@@ -50,7 +50,7 @@ export class FunctionTreeItem implements IAzureTreeItem {
     }
 
     public async deleteTreeItem(node: IAzureNode<FunctionTreeItem>): Promise<void> {
-        const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete "{0}"?', this._name);
+        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
         if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
             this._outputChannel.show(true);
             this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
