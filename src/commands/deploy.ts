@@ -25,7 +25,7 @@ import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(telemetryProperties: { [key: string]: string; }, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
     let node: IAzureNode<FunctionAppTreeItem> | undefined = context && !(context instanceof vscode.Uri) ? context : undefined;
 
@@ -38,6 +38,7 @@ export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
     const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
     const languageType: string = await projectUtils.getProjectType(folderPath);
+    telemetryProperties.projectLanguage = languageType;
     if (languageType === TemplateLanguage.Java) {
         folderPath = await getJavaFolderPath(outputChannel, folderPath, ui);
         await verifyBetaRuntime(outputChannel, client, siteWrapper);
