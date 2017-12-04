@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { OutputChannel } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
@@ -18,9 +19,11 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     public readonly childTypeLabel: string = localize('azFunc.Function', 'Function');
 
     private readonly _siteWrapper: SiteWrapper;
+    private readonly _outputChannel: OutputChannel;
 
-    public constructor(siteWrapper: SiteWrapper) {
+    public constructor(siteWrapper: SiteWrapper, outputChannel: OutputChannel) {
         this._siteWrapper = siteWrapper;
+        this._outputChannel = outputChannel;
     }
 
     public get id(): string {
@@ -38,6 +41,6 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     public async loadMoreChildren(node: IAzureNode<IAzureTreeItem>, _clearCache: boolean | undefined): Promise<IAzureTreeItem[]> {
         const client: KuduClient = await nodeUtils.getKuduClient(node, this._siteWrapper);
         const funcs: FunctionEnvelope[] = await client.functionModel.list();
-        return funcs.map((fe: FunctionEnvelope) => new FunctionTreeItem(this._siteWrapper, fe, this.id));
+        return funcs.map((fe: FunctionEnvelope) => new FunctionTreeItem(this._siteWrapper, fe, this.id, this._outputChannel));
     }
 }

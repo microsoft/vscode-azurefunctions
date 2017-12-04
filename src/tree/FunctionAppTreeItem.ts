@@ -31,7 +31,7 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
         }
         this._state = site.state;
         this._outputChannel = outputChannel;
-        this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper);
+        this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
     }
 
