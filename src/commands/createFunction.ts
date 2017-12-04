@@ -166,9 +166,7 @@ export async function createFunction(
 
     let newFilePath: string;
     if (languageType === TemplateLanguage.Java) {
-        if (!(await mavenUtils.isMavenInstalled(functionAppPath))) {
-            throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
-        }
+        await mavenUtils.validateMavenInstalled(functionAppPath);
         outputChannel.show();
         await cpUtils.executeCommand(
             outputChannel,

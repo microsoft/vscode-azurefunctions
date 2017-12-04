@@ -47,9 +47,7 @@ export async function deploy(tree: AzureTreeDataProvider, outputChannel: vscode.
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
-    if (!(await mavenUtils.isMavenInstalled(basePath))) {
-        throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
-    }
+    await mavenUtils.validateMavenInstalled(basePath);
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
