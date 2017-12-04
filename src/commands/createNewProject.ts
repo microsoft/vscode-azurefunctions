@@ -180,9 +180,7 @@ async function promotForMavenParameters(ui: IUserInterface, functionAppPath: str
 }
 
 async function createJavaFunctionProject(outputChannel: OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<string> {
-    if (!(await mavenUtils.isMavenInstalled(functionAppPath))) {
-        throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
-    }
+    await mavenUtils.validateMavenInstalled(functionAppPath);
     // Get parameters for Maven command
     const { groupId, artifactId, version, packageName, appName } = await promotForMavenParameters(ui, functionAppPath);
     const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
