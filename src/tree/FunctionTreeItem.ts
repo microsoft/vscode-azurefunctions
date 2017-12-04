@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { OutputChannel } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { IAzureNode, IAzureTreeItem, UserCancelledError } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
@@ -22,8 +23,9 @@ export class FunctionTreeItem implements IAzureTreeItem {
     private readonly _name: string;
     private readonly _disabled: boolean = false;
     private readonly _parentId: string;
+    private readonly _outputChannel: OutputChannel;
 
-    public constructor(siteWrapper: SiteWrapper, func: FunctionEnvelope, parentId: string) {
+    public constructor(siteWrapper: SiteWrapper, func: FunctionEnvelope, parentId: string, outputChannel: OutputChannel) {
         if (!func.name) {
             throw new ArgumentError(func);
         }
@@ -32,6 +34,7 @@ export class FunctionTreeItem implements IAzureTreeItem {
         this._name = func.name;
         this._disabled = (<ITemplateFunction>func.config).disabled;
         this._parentId = parentId;
+        this._outputChannel = outputChannel;
     }
 
     public get id(): string {
@@ -49,8 +52,11 @@ export class FunctionTreeItem implements IAzureTreeItem {
     public async deleteTreeItem(node: IAzureNode<FunctionTreeItem>): Promise<void> {
         const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete "{0}"?', this._name);
         if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
+            this._outputChannel.show(true);
+            this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
             const client: KuduClient = await nodeUtils.getKuduClient(node, this._siteWrapper);
             await client.functionModel.deleteMethod(this._name);
+            this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
         } else {
             throw new UserCancelledError();
         }
