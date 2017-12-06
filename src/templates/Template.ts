@@ -46,6 +46,10 @@ export class Template {
         this._resources = resources;
     }
 
+    public get id(): string {
+        return this._template.id;
+    }
+
     public get name(): string {
         return this._resources.getValue(this._template.metadata.name);
     }
