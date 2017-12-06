@@ -42,8 +42,8 @@ suiteTeardown(async () => {
 });
 
 // tslint:disable-next-line:max-func-body-length
-suite('Create Function Tests', () => {
-    const blobTrigger: string = 'BlobTrigger';
+suite('Create Core Function Tests', () => {
+    const blobTrigger: string = 'Blob trigger';
     test(blobTrigger, async () => {
         await testCreateFunction(
             blobTrigger,
@@ -54,7 +54,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const cosmosDBTrigger: string = 'CosmosDBTrigger';
+    const cosmosDBTrigger: string = 'Cosmos DB trigger';
     test(cosmosDBTrigger, async () => {
         await testCreateFunction(
             cosmosDBTrigger,
@@ -68,7 +68,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const eventHubTrigger: string = 'EventHubTrigger';
+    const eventHubTrigger: string = 'Event Hub trigger';
     test(eventHubTrigger, async () => {
         await testCreateFunction(
             eventHubTrigger,
@@ -80,17 +80,17 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const genericWebhook: string = 'Generic Webhook';
+    const genericWebhook: string = 'Generic webhook';
     test(genericWebhook, async () => {
         await testCreateFunction(genericWebhook);
     });
 
-    const gitHubWebhook: string = 'GitHub Webhook';
+    const gitHubWebhook: string = 'GitHub webhook';
     test(gitHubWebhook, async () => {
         await testCreateFunction(gitHubWebhook);
     });
 
-    const httpTrigger: string = 'HttpTrigger';
+    const httpTrigger: string = 'HTTP trigger';
     test(httpTrigger, async () => {
         await testCreateFunction(
             httpTrigger,
@@ -98,7 +98,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const httpTriggerWithParameters: string = 'HttpTriggerWithParameters';
+    const httpTriggerWithParameters: string = 'HTTP trigger with parameters';
     test(httpTriggerWithParameters, async () => {
         await testCreateFunction(
             httpTriggerWithParameters,
@@ -106,12 +106,12 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const manualTrigger: string = 'ManualTrigger';
+    const manualTrigger: string = 'Manual trigger';
     test(manualTrigger, async () => {
         await testCreateFunction(manualTrigger);
     });
 
-    const queueTrigger: string = 'QueueTrigger';
+    const queueTrigger: string = 'Queue trigger';
     test(queueTrigger, async () => {
         await testCreateFunction(
             queueTrigger,
@@ -122,7 +122,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const serviceBusQueueTrigger: string = 'ServiceBusQueueTrigger';
+    const serviceBusQueueTrigger: string = 'Service Bus Queue trigger';
     test(serviceBusQueueTrigger, async () => {
         await testCreateFunction(
             serviceBusQueueTrigger,
@@ -134,7 +134,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const serviceBusTopicTrigger: string = 'ServiceBusTopicTrigger';
+    const serviceBusTopicTrigger: string = 'Service Bus Topic trigger';
     test(serviceBusTopicTrigger, async () => {
         await testCreateFunction(
             serviceBusTopicTrigger,
@@ -147,7 +147,7 @@ suite('Create Function Tests', () => {
         );
     });
 
-    const timerTrigger: string = 'TimerTrigger';
+    const timerTrigger: string = 'Timer trigger';
     test(timerTrigger, async () => {
         await testCreateFunction(
             timerTrigger,

@@ -15,7 +15,7 @@ import { localize } from '../localize';
 import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
 import { EnumValue } from '../templates/EnumValue';
 import { Template, TemplateLanguage } from '../templates/Template';
-import { TemplateData } from '../templates/TemplateData';
+import { convertTemplateIdToJava, TemplateData } from '../templates/TemplateData';
 import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
 import { getJavaClassName, validateJavaFunctionName, validatePackageName } from '../utils/javaNameUtils';
@@ -66,7 +66,7 @@ async function validateIsFunctionApp(telemetryProperties: { [key: string]: strin
 async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string, packageName: string): Promise<string> {
     let defaultFunctionName: string | undefined;
     if (language === TemplateLanguage.Java) {
-        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, `${template.name}Java`);
+        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, `${convertTemplateIdToJava(template.id)}Java`);
     } else {
         defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
     }
@@ -176,7 +176,7 @@ export async function createFunction(
             '-B',
             `"-Dfunctions.package=${packageName}"`,
             `"-Dfunctions.name=${name}"`,
-            `"-Dfunctions.template=${template.name}"`,
+            `"-Dfunctions.template=${convertTemplateIdToJava(template.id)}"`,
             ...javaFuntionProperties
         );
         newFilePath = getNewJavaFunctionFilePath(functionAppPath, packageName, name);

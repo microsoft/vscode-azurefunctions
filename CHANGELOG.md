@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.3.1 - 2017-12-06
+### Fixed
+- JavaScript 'Verified' templates not displayed
+- Java templates not displayed
+
 ## 0.3.0 - 2017-12-01
 ### Added
 - Java support
