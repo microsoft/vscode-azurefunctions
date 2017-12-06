@@ -27,14 +27,14 @@ export class TemplateData {
     private _config: Config | undefined;
 
     private readonly _verifiedTemplates: string[] = [
-        'BlobTrigger',
-        'Generic Webhook',
-        'Github Webhook',
-        'HttpTrigger',
-        'HttpTriggerWithParameters',
-        'ManualTrigger',
-        'QueueTrigger',
-        'TimerTrigger'
+        'BlobTrigger-JavaScript',
+        'GenericWebHook-JavaScript',
+        'GitHubWebHook-JavaScript',
+        'HttpTrigger-JavaScript',
+        'HttpTriggerWithParameters-JavaScript',
+        'ManualTrigger-JavaScript',
+        'QueueTrigger-JavaScript',
+        'TimerTrigger-JavaScript'
     ];
 
     private readonly _javaTemplates: string[] = [
@@ -73,7 +73,7 @@ export class TemplateData {
             // Will refactor the code here when templates HTTP API is ready.
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
             const javaTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
-            return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === t.name));
+            return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === convertTemplateIdToJava(t.id)));
         } else {
             const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
             // tslint:disable-next-line:no-backbone-get-set-outside-model
@@ -84,7 +84,7 @@ export class TemplateData {
                     return jsTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
                 case 'Verified':
                 default:
-                    return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.name));
+                    return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.id));
             }
         }
 
@@ -137,4 +137,8 @@ export class TemplateData {
 
         return <T>(JSON.parse(await <Thenable<string>>request(options).promise()));
     }
+}
+
+export function convertTemplateIdToJava(id: string): string {
+    return id.replace('-JavaScript', '');
 }
