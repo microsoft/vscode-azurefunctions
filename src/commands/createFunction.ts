@@ -140,7 +140,7 @@ export async function createFunction(
     const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType)).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
-    telemetryProperties.templateName = template.name;
+    telemetryProperties.templateId = template.id;
 
     if (template.bindingType !== 'httpTrigger') {
         await localAppSettings.validateAzureWebJobsStorage();
