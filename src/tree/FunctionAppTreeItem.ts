@@ -40,7 +40,7 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
     }
 
     public get label(): string {
-        return this.state === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this.state})`;
+        return !this.state || this.state === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this.state})`;
     }
 
     public get iconPath(): string {
