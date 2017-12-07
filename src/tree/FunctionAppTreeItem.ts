@@ -18,10 +18,10 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly siteWrapper: SiteWrapper;
+    public state: string | undefined;
 
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
-    private readonly _state: string | undefined;
     private readonly _outputChannel: OutputChannel;
 
     public constructor(site: Site, outputChannel: OutputChannel) {
@@ -29,7 +29,7 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
         if (!site.state) {
             throw new ArgumentError(site);
         }
-        this._state = site.state;
+        this.state = site.state;
         this._outputChannel = outputChannel;
         this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
@@ -40,7 +40,7 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
     }
 
     public get label(): string {
-        return this._state === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this._state})`;
+        return !this.state || this.state === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this.state})`;
     }
 
     public get iconPath(): string {

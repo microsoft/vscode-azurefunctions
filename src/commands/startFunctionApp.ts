@@ -6,6 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { nodeUtils } from '../utils/nodeUtils';
 
@@ -15,6 +16,9 @@ export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzur
     }
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
+    node.treeItem.state = localize('starting', 'Starting...');
+    node.refresh();
     await node.treeItem.siteWrapper.start(client);
-    tree.refresh(node.parent);
+    node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
+    node.refresh();
 }
