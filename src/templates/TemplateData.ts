@@ -60,7 +60,7 @@ export class TemplateData {
         this._refreshTask = this.refreshTemplates(globalState);
     }
 
-    public async getTemplates(language: string): Promise<Template[]> {
+    public async getTemplates(language: string, templateFilter?: string): Promise<Template[]> {
         if (this._templates === undefined) {
             await this._refreshTask;
             if (this._templates === undefined) {
@@ -76,8 +76,7 @@ export class TemplateData {
             return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === convertTemplateIdToJava(t.id)));
         } else {
             const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
-            // tslint:disable-next-line:no-backbone-get-set-outside-model
-            switch (vscode.workspace.getConfiguration().get('azureFunctions.templateFilter')) {
+            switch (templateFilter) {
                 case 'All':
                     return jsTemplates;
                 case 'Core':
