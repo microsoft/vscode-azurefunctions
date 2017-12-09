@@ -137,7 +137,10 @@ export async function createFunction(
     const languageType: string = await projectUtils.getProjectType(functionAppPath);
     telemetryProperties.projectLanguage = languageType;
 
-    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType)).map((t: Template) => new PickWithData<Template>(t, t.name));
+    // tslint:disable-next-line:no-backbone-get-set-outside-model
+    const templateFilter: string | undefined = vscode.workspace.getConfiguration().get('azureFunctions.templateFilter');
+    telemetryProperties.templateFilter = templateFilter !== undefined ? templateFilter : '';
+    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType, templateFilter)).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
     telemetryProperties.templateId = template.id;
