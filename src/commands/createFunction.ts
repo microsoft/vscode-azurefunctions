@@ -57,7 +57,7 @@ async function validateIsFunctionApp(telemetryProperties: { [key: string]: strin
         const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(telemetryProperties, outputChannel, functionAppPath, false, ui);
-        } else if (result === undefined) {
+        } else if (result !== DialogResponses.skipForNow) {
             throw new UserCancelledError();
         }
     }

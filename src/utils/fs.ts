@@ -36,10 +36,12 @@ export async function copyFolder(fromPath: string, toPath: string): Promise<void
 export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
         const result: MessageItem | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
-        if (result === undefined) {
-            throw new UserCancelledError();
+        if (result === DialogResponses.yes) {
+            return true;
+        } else if (result === DialogResponses.no) {
+            return false;
         } else {
-            return result === DialogResponses.yes;
+            throw new UserCancelledError();
         }
     } else {
         return true;
