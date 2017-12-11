@@ -44,7 +44,7 @@ export async function deploy(telemetryProperties: { [key: string]: string; }, tr
         await verifyBetaRuntime(outputChannel, client, siteWrapper);
     }
 
-    await siteWrapper.deployZip(folderPath, client, outputChannel);
+    await siteWrapper.deploy(folderPath, client, outputChannel);
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
