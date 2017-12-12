@@ -323,6 +323,16 @@
                             "All"
                         ],
                         "description": "%azFunc.templateFilterDescription%"
+                    },
+                    "azureFunctions.zipGlobPattern": {
+                        "type": "string",
+                        "default": "**/*",
+                        "description": "Defines which files in the workspace to deploy. This applies to Zip deploy only, has no effect on other deployment methods."
+                    },
+                    "azureFunctions.zipIgnorePattern": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Defines which files in the workspace to ignore for Zip deploy. This applies to Zip deploy only, has no effect on other deployment methods."
                     }
                 }
             }

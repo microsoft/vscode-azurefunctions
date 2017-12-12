@@ -44,7 +44,7 @@ export async function deploy(telemetryProperties: { [key: string]: string; }, tr
         await verifyBetaRuntime(outputChannel, client, siteWrapper);
     }
 
-    await siteWrapper.deploy(folderPath, client, outputChannel);
+    await siteWrapper.deploy(folderPath, client, outputChannel, 'azureFunctions');
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
