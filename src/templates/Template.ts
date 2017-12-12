@@ -5,20 +5,16 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { FunctionConfig } from '../FunctionConfig';
 import * as fsUtil from '../utils/fs';
 import { Resources } from './Resources';
 
 interface ITemplate {
     id: string;
     // tslint:disable-next-line:no-reserved-keywords
-    function: ITemplateFunction;
+    function: {};
     metadata: ITemplateMetadata;
     files: { [filename: string]: string };
-}
-
-export interface ITemplateFunction {
-    disabled: boolean;
-    bindings: { [propertyName: string]: string }[];
 }
 
 interface ITemplateMetadata {
@@ -39,11 +35,14 @@ export enum TemplateCategory {
 }
 
 export class Template {
+    public readonly functionConfig: FunctionConfig;
+
     private _template: ITemplate;
     private _resources: Resources;
     constructor(template: object, resources: Resources) {
         this._template = <ITemplate>template;
         this._resources = resources;
+        this.functionConfig = new FunctionConfig(this._template.function);
     }
 
     public get id(): string {
@@ -66,23 +65,8 @@ export class Template {
         return this._template.metadata.category.find((c: TemplateCategory) => c === category) !== undefined;
     }
 
-    public get bindingType(): string {
-        // The first binding is the 'input' binding that matters for userInput
-        return this._template.function.bindings[0].type;
-    }
-
     public get userPromptedSettings(): string[] {
         return this._template.metadata.userPrompt ? this._template.metadata.userPrompt : [];
-    }
-
-    public getSetting(name: string): string | undefined {
-        // The first binding is the 'input' binding that matters for userInput
-        return this._template.function.bindings[0][name];
-    }
-
-    public setSetting(name: string, value?: string): void {
-        // The first binding is the 'input' binding that matters for userInput
-        this._template.function.bindings[0][name] = value ? value : '';
     }
 
     public async writeTemplateFiles(functionPath: string): Promise<void> {

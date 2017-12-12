@@ -145,7 +145,7 @@ export async function createFunction(
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
     telemetryProperties.templateId = template.id;
 
-    if (template.bindingType !== 'httpTrigger') {
+    if (!template.functionConfig.isHttpTrigger) {
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
@@ -155,14 +155,14 @@ export async function createFunction(
     const javaFuntionProperties: string[] = [];
 
     for (const settingName of template.userPromptedSettings) {
-        const setting: ConfigSetting | undefined = await templateData.getSetting(template.bindingType, settingName);
+        const setting: ConfigSetting | undefined = await templateData.getSetting(template.functionConfig.inBindingType, settingName);
         if (setting) {
-            const defaultValue: string | undefined = template.getSetting(settingName);
+            const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
             const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
             if (languageType === TemplateLanguage.Java) {
                 javaFuntionProperties.push(`"-D${settingName}=${settingValue}"`);
             } else {
-                template.setSetting(settingName, settingValue);
+                template.functionConfig.inBinding[settingName] = settingValue ? settingValue : '';
             }
         }
     }

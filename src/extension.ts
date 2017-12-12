@@ -11,6 +11,7 @@ import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, UserCancelledError
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
+import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { createChildNode } from './commands/createChildNode';
 import { createFunction } from './commands/createFunction';
 import { createNewProject } from './commands/createNewProject';
@@ -66,6 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
         initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
         initAsyncCommandWithCustomTelemetry<IAzureNode<FunctionAppTreeItem> | vscode.Uri>(context, outputChannel, 'azureFunctions.deploy', async (telemetryProperties: { [key: string]: string; }, arg?: IAzureNode<FunctionAppTreeItem> | vscode.Uri) => await deploy(telemetryProperties, tree, outputChannel, arg));
         initAsyncCommandWithCustomTelemetry<IAzureNode<FunctionAppTreeItem>>(context, outputChannel, 'azureFunctions.configureDeploymentSource', async (telemetryProperties: { [key: string]: string; }, node?: IAzureNode<FunctionAppTreeItem>) => await configureDeploymentSource(telemetryProperties, tree, outputChannel, node));
+        initAsyncCommand<IAzureNode<FunctionTreeItem>>(context, outputChannel, 'azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
         initAsyncCommand<IAzureNode>(context, outputChannel, 'azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
         initAsyncCommand<IAzureParentNode>(context, outputChannel, 'azureFunctions.appSettings.add', async (node: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
         initAsyncCommand<IAzureNode<AppSettingTreeItem>>(context, outputChannel, 'azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
