@@ -51,9 +51,7 @@ export class TemplateData {
             const cachedConfig: object | undefined = globalState.get<object>(this._configKey);
 
             if (cachedResources && cachedTemplates && cachedConfig) {
-                const resources: Resources = new Resources(cachedResources);
-                this._templates = cachedTemplates.map((t: object) => new Template(t, resources));
-                this._config = new Config(cachedConfig, resources);
+                this.parseTemplates(cachedResources, cachedTemplates, cachedConfig);
             }
         }
 
@@ -111,9 +109,7 @@ export class TemplateData {
             const rawTemplates: object[] = await this.requestFunctionPortal<object[]>('templates');
             const rawConfig: object = await this.requestFunctionPortal<object>('bindingconfig');
 
-            const resources: Resources = new Resources(rawResources);
-            this._templates = rawTemplates.map((t: object) => new Template(t, resources));
-            this._config = new Config(rawConfig, resources);
+            this.parseTemplates(rawResources, rawTemplates, rawConfig);
 
             if (globalState) {
                 globalState.update(this._templatesKey, rawTemplates);
@@ -135,6 +131,19 @@ export class TemplateData {
         };
 
         return <T>(JSON.parse(await <Thenable<string>>request(options).promise()));
+    }
+
+    private parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): void {
+        const resources: Resources = new Resources(rawResources);
+        this._templates = [];
+        for (const rawTemplate of rawTemplates) {
+            try {
+                this._templates.push(new Template(rawTemplate, resources));
+            } catch {
+                // Ignore errors so that a single poorly formed template does not affect other templates
+            }
+        }
+        this._config = new Config(rawConfig, resources);
     }
 }
 
