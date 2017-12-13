@@ -10,10 +10,10 @@ import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
 import { IUserInterface, Pick } from '../IUserInterface';
 import { localize } from '../localize';
-import { TemplateLanguage } from '../templates/Template';
+import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
-import { confirmOverwriteFile } from '../utils/fs';
 import * as fsUtil from '../utils/fs';
+import { confirmOverwriteFile } from '../utils/fs';
 import { gitUtils } from '../utils/gitUtils';
 import { validateMavenIdentifier, validatePackageName } from '../utils/javaNameUtils';
 import { mavenUtils } from '../utils/mavenUtils';
@@ -23,7 +23,7 @@ import { VSCodeUI } from '../VSCodeUI';
 const taskId: string = 'launchFunctionApp';
 
 const problemMatcher: {} = {
-    owner: 'azureFunctions',
+    owner: extensionPrefix,
     pattern: [
         {
             regexp: '\\b\\B',
@@ -39,7 +39,7 @@ const problemMatcher: {} = {
     }
 };
 
-const tasksJsonForJavaScript: {} = {
+const defaultTasksJson: {} = {
     version: '2.0.0',
     tasks: [
         {
@@ -89,7 +89,7 @@ const launchJsonForJavaScript: {} = {
     version: '0.2.0',
     configurations: [
         {
-            name: localize('azFunc.attachToFunc', 'Attach to Azure Functions'),
+            name: localize('azFunc.attachToJavaScriptFunc', 'Attach to JavaScript Functions'),
             type: 'node',
             request: 'attach',
             port: 5858,
@@ -103,11 +103,25 @@ const launchJsonForJava: {} = {
     version: '0.2.0',
     configurations: [
         {
-            name: localize('azFunc.attachToFunc', 'Attach to Azure Functions'),
+            name: localize('azFunc.attachToJavaFunc', 'Attach to Java Functions'),
             type: 'java',
             request: 'attach',
             hostName: 'localhost',
             port: 5005,
+            preLaunchTask: taskId
+        }
+    ]
+};
+
+const launchJsonForCSharp: {} = {
+    version: '0.2.0',
+    configurations: [
+        {
+            name: localize('azFunc.attachToCSharpFunc', 'Attach to C# Functions'),
+            type: 'mono',
+            request: 'attach',
+            address: 'localhost',
+            port: 55555,
             preLaunchTask: taskId
         }
     ]
@@ -206,21 +220,24 @@ async function createJavaFunctionProject(outputChannel: OutputChannel, functionA
     return appName;
 }
 
+// tslint:disable-next-line:max-func-body-length
 export async function createNewProject(telemetryProperties: { [key: string]: string; }, outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
 
-    const languages: Pick[] = [
-        new Pick(TemplateLanguage.JavaScript),
-        new Pick(TemplateLanguage.Java)
+    // Only display 'supported' languages that can be debugged in VS Code
+    const languagePicks: Pick[] = [
+        new Pick(ProjectLanguage.JavaScript),
+        new Pick(ProjectLanguage.CSharp),
+        new Pick(ProjectLanguage.Java)
     ];
-    const language: string = (await ui.showQuickPick(languages, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+    const language: string = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
     telemetryProperties.projectLanguage = language;
 
     let javaTargetPath: string = '';
     switch (language) {
-        case TemplateLanguage.Java:
+        case ProjectLanguage.Java:
             const javaFunctionAppName: string = await createJavaFunctionProject(outputChannel, functionAppPath, ui);
             javaTargetPath = `target/azure-functions/${javaFunctionAppName}/`;
             break;
@@ -245,7 +262,7 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
         await gitUtils.gitInit(outputChannel, functionAppPath);
 
         const gitignorePath: string = path.join(functionAppPath, '.gitignore');
-        if (language !== TemplateLanguage.Java && await confirmOverwriteFile(gitignorePath)) {
+        if (language !== ProjectLanguage.Java && await confirmOverwriteFile(gitignorePath)) {
             await fse.writeFile(gitignorePath, gitignore);
         }
     }
@@ -253,7 +270,7 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
         switch (language) {
-            case TemplateLanguage.Java:
+            case ProjectLanguage.Java:
                 let tasksJsonString: string = JSON.stringify(tasksJsonForJava);
                 tasksJsonString = tasksJsonString.replace(/%path%/g, javaTargetPath);
                 // tslint:disable-next-line:no-string-literal no-unsafe-any
@@ -263,7 +280,7 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
                 await fsUtil.writeFormattedJson(tasksJsonPath, tasksJson);
                 break;
             default:
-                await fsUtil.writeFormattedJson(tasksJsonPath, tasksJsonForJavaScript);
+                await fsUtil.writeFormattedJson(tasksJsonPath, defaultTasksJson);
                 break;
         }
     }
@@ -271,13 +288,35 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
     const launchJsonPath: string = path.join(vscodePath, 'launch.json');
     if (await confirmOverwriteFile(launchJsonPath)) {
         switch (language) {
-            case TemplateLanguage.Java:
+            case ProjectLanguage.Java:
                 await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForJava);
+                break;
+            case ProjectLanguage.CSharp:
+                await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForCSharp);
                 break;
             default:
                 await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForJavaScript);
                 break;
         }
+    }
+
+    const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
+    if (await confirmOverwriteFile(settingsJsonPath)) {
+        let runtime: ProjectRuntime;
+        switch (language) {
+            case ProjectLanguage.Java:
+            case ProjectLanguage.CSharp:
+                runtime = ProjectRuntime.beta;
+                break;
+            default:
+                runtime = ProjectRuntime.one;
+                break;
+        }
+        const settings: {} = {};
+        settings[`${extensionPrefix}.${projectRuntimeSetting}`] = runtime;
+        settings[`${extensionPrefix}.${projectLanguageSetting}`] = language;
+        settings[`${extensionPrefix}.${templateFilterSetting}`] = TemplateFilter.Verified;
+        await fsUtil.writeFormattedJson(settingsJsonPath, settings);
     }
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {

@@ -8,7 +8,9 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { WorkspaceConfiguration } from 'vscode';
 import { createFunction } from '../src/commands/createFunction';
+import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../src/ProjectSettings';
 import { TemplateData } from '../src/templates/TemplateData';
 import * as fsUtil from '../src/utils/fs';
 import { TestAzureAccount } from './TestAzureAccount';
@@ -18,10 +20,11 @@ const templateData: TemplateData = new TemplateData();
 const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
 const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
-const templateFilterSetting: string = 'azureFunctions.templateFilter';
-const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
 // tslint:disable-next-line:no-backbone-get-set-outside-model
-const oldTemplateFilter: string | undefined = config.get(templateFilterSetting);
+const oldTemplateFilter: string | undefined = projectConfiguration.get(templateFilterSetting);
+const oldProjectLanguage: string | undefined = projectConfiguration.get(projectLanguageSetting);
+const oldProjectRuntime: string | undefined = projectConfiguration.get(projectRuntimeSetting);
 
 suiteSetup(async () => {
     await fse.ensureDir(path.join(testFolder, '.vscode'));
@@ -31,14 +34,17 @@ suiteSetup(async () => {
         fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
         fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
     ]);
-
-    await config.update(templateFilterSetting, 'Core', vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(templateFilterSetting, TemplateFilter.Core, vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(projectLanguageSetting, ProjectLanguage.JavaScript, vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(projectRuntimeSetting, ProjectRuntime.one, vscode.ConfigurationTarget.Global);
 });
 
 suiteTeardown(async () => {
     outputChannel.dispose();
     await fse.remove(testFolder);
-    await config.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(projectLanguageSetting, oldProjectLanguage, vscode.ConfigurationTarget.Global);
+    await projectConfiguration.update(projectRuntimeSetting, oldProjectRuntime, vscode.ConfigurationTarget.Global);
 });
 
 // tslint:disable-next-line:max-func-body-length

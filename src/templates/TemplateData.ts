@@ -6,12 +6,18 @@
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
+import { MessageItem } from 'vscode';
+import { UserCancelledError } from 'vscode-azureextensionui';
+import { DialogResponses } from '../DialogResponses';
+import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
+import { ProjectLanguage, ProjectRuntime, selectProjectLanguage, selectProjectRuntime, selectTemplateFilter, TemplateFilter } from '../ProjectSettings';
+import { VSCodeUI } from '../VSCodeUI';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
 import { Resources } from './Resources';
-import { Template, TemplateCategory, TemplateLanguage } from './Template';
+import { Template, TemplateCategory } from './Template';
 
 /**
  * Main container for all template data retrieved from the Azure Functions Portal. See README.md for more info and example of the schema.
@@ -23,8 +29,8 @@ export class TemplateData {
     private readonly _configKey: string = 'FunctionTemplateConfig';
     private readonly _resourcesKey: string = 'FunctionTemplateResources';
     private readonly _refreshTask: Promise<void>;
-    private _templates: Template[] | undefined;
-    private _config: Config | undefined;
+    private readonly _templatesMap: { [runtime: string]: Template[] } = {};
+    private readonly _configMap: { [runtime: string]: Config } = {};
 
     private readonly _verifiedTemplates: string[] = [
         'BlobTrigger-JavaScript',
@@ -34,7 +40,11 @@ export class TemplateData {
         'HttpTriggerWithParameters-JavaScript',
         'ManualTrigger-JavaScript',
         'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript'
+        'TimerTrigger-JavaScript',
+        'BlobTrigger-CSharp',
+        'HttpTrigger-CSharp',
+        'QueueTrigger-CSharp',
+        'TimerTrigger-CSharp'
     ];
 
     private readonly _javaTemplates: string[] = [
@@ -46,56 +56,76 @@ export class TemplateData {
 
     constructor(globalState?: vscode.Memento) {
         if (globalState) {
-            const cachedResources: object | undefined = globalState.get<object>(this._resourcesKey);
-            const cachedTemplates: object[] | undefined = globalState.get<object[]>(this._templatesKey);
-            const cachedConfig: object | undefined = globalState.get<object>(this._configKey);
+            for (const key of Object.keys(ProjectRuntime)) {
+                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
+                const cachedResources: object | undefined = globalState.get<object>(this.getRuntimeKey(this._resourcesKey, runtime));
+                const cachedTemplates: object[] | undefined = globalState.get<object[]>(this.getRuntimeKey(this._templatesKey, runtime));
+                const cachedConfig: object | undefined = globalState.get<object>(this.getRuntimeKey(this._configKey, runtime));
 
-            if (cachedResources && cachedTemplates && cachedConfig) {
-                this.parseTemplates(cachedResources, cachedTemplates, cachedConfig);
+                if (cachedResources && cachedTemplates && cachedConfig) {
+                    this.parseTemplates(runtime, cachedResources, cachedTemplates, cachedConfig);
+                }
             }
         }
 
         this._refreshTask = this.refreshTemplates(globalState);
     }
 
-    public async getTemplates(language: string, templateFilter?: string): Promise<Template[]> {
-        if (this._templates === undefined) {
+    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string, ui: IUserInterface = new VSCodeUI()): Promise<Template[]> {
+        if (this._templatesMap[runtime] === undefined) {
             await this._refreshTask;
-            if (this._templates === undefined) {
+            if (this._templatesMap[runtime] === undefined) {
                 throw this._templateInitError;
             }
         }
 
-        if (language === TemplateLanguage.Java) {
+        if (language === ProjectLanguage.Java) {
             // Currently we leverage JS templates to get the function metadata of Java Functions.
             // Will refactor the code here when templates HTTP API is ready.
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
-            const javaTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
+            const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === convertTemplateIdToJava(t.id)));
         } else {
-            const jsTemplates: Template[] = this._templates.filter((t: Template) => t.language === TemplateLanguage.JavaScript);
+            let templates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
-                case 'All':
-                    return jsTemplates;
-                case 'Core':
-                    return jsTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
-                case 'Verified':
+                case TemplateFilter.All:
+                    break;
+                case TemplateFilter.Core:
+                    templates = templates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
+                    break;
+                case TemplateFilter.Verified:
                 default:
-                    return jsTemplates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.id));
+                    templates = templates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.id));
+            }
+
+            if (templates.length > 0) {
+                return templates;
+            } else {
+                const message: string = localize('NoTemplatesError', 'No templates found matching language "{0}", runtime "{1}", and filter "{2}". Update settings?', language, runtime, templateFilter);
+                const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+                if (result !== DialogResponses.yes) {
+                    throw new UserCancelledError();
+                } else {
+                    language = await selectProjectLanguage(ui);
+                    runtime = await selectProjectRuntime(ui);
+                    templateFilter = await selectTemplateFilter(ui);
+
+                    // Try to get templates again
+                    return await this.getTemplates(language, runtime, templateFilter, ui);
+                }
             }
         }
-
     }
 
-    public async getSetting(bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
-        if (this._config === undefined) {
+    public async getSetting(runtime: ProjectRuntime, bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
+        if (this._configMap[runtime] === undefined) {
             await this._refreshTask;
-            if (this._config === undefined) {
+            if (this._configMap[runtime] === undefined) {
                 throw this._templateInitError;
             }
         }
 
-        const binding: ConfigBinding | undefined = this._config.bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
+        const binding: ConfigBinding | undefined = this._configMap[runtime].bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
         if (binding) {
             return binding.settings.find((bs: ConfigSetting) => bs.name === settingName);
         } else {
@@ -105,26 +135,34 @@ export class TemplateData {
 
     private async refreshTemplates(globalState?: vscode.Memento): Promise<void> {
         try {
-            const rawResources: object = await this.requestFunctionPortal<object>('resources', 'name=en-us');
-            const rawTemplates: object[] = await this.requestFunctionPortal<object[]>('templates');
-            const rawConfig: object = await this.requestFunctionPortal<object>('bindingconfig');
+            for (const key of Object.keys(ProjectRuntime)) {
+                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
 
-            this.parseTemplates(rawResources, rawTemplates, rawConfig);
+                const rawResources: object = await this.requestFunctionPortal<object>('resources', runtime, 'name=en-us');
+                const rawTemplates: object[] = await this.requestFunctionPortal<object[]>('templates', runtime);
+                const rawConfig: object = await this.requestFunctionPortal<object>('bindingconfig', runtime);
 
-            if (globalState) {
-                globalState.update(this._templatesKey, rawTemplates);
-                globalState.update(this._configKey, rawConfig);
-                globalState.update(this._resourcesKey, rawResources);
+                this.parseTemplates(runtime, rawResources, rawTemplates, rawConfig);
+
+                if (globalState) {
+                    globalState.update(this.getRuntimeKey(this._templatesKey, runtime), rawTemplates);
+                    globalState.update(this.getRuntimeKey(this._configKey, runtime), rawConfig);
+                    globalState.update(this.getRuntimeKey(this._resourcesKey, runtime), rawResources);
+                }
             }
         } catch (error) {
             // ignore errors - use cached version of templates instead
         }
     }
 
-    private async requestFunctionPortal<T>(subPath: string, param?: string): Promise<T> {
+    private getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
+        return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
+    }
+
+    private async requestFunctionPortal<T>(subPath: string, runtime: string, param?: string): Promise<T> {
         const options: request.OptionsWithUri = {
             method: 'GET',
-            uri: `https://functions.azure.com/api/${subPath}?runtime=latest$&${param}`,
+            uri: `https://functions.azure.com/api/${subPath}?runtime=${runtime}&${param}`,
             headers: {
                 'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
             }
@@ -133,17 +171,17 @@ export class TemplateData {
         return <T>(JSON.parse(await <Thenable<string>>request(options).promise()));
     }
 
-    private parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): void {
+    private parseTemplates(runtime: ProjectRuntime, rawResources: object, rawTemplates: object[], rawConfig: object): void {
         const resources: Resources = new Resources(rawResources);
-        this._templates = [];
+        this._templatesMap[runtime] = [];
         for (const rawTemplate of rawTemplates) {
             try {
-                this._templates.push(new Template(rawTemplate, resources));
+                this._templatesMap[runtime].push(new Template(rawTemplate, resources));
             } catch {
                 // Ignore errors so that a single poorly formed template does not affect other templates
             }
         }
-        this._config = new Config(rawConfig, resources);
+        this._configMap[runtime] = new Config(rawConfig, resources);
     }
 }
 
