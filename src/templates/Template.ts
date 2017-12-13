@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { FunctionConfig } from '../FunctionConfig';
+import { ProjectLanguage } from '../ProjectSettings';
 import * as fsUtil from '../utils/fs';
 import { Resources } from './Resources';
 
@@ -20,14 +21,9 @@ interface ITemplate {
 interface ITemplateMetadata {
     defaultFunctionName: string;
     name: string;
-    language: TemplateLanguage;
+    language: ProjectLanguage;
     userPrompt?: string[];
     category: TemplateCategory[];
-}
-
-export enum TemplateLanguage {
-    JavaScript = 'JavaScript',
-    Java = 'Java'
 }
 
 export enum TemplateCategory {
@@ -57,7 +53,7 @@ export class Template {
         return this._template.metadata.defaultFunctionName;
     }
 
-    public get language(): TemplateLanguage {
+    public get language(): ProjectLanguage {
         return this._template.metadata.language;
     }
 

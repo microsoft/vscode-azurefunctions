@@ -4,30 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import { Template, TemplateLanguage } from '../src/templates/Template';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/ProjectSettings';
+import { Template } from '../src/templates/Template';
 import { TemplateData } from '../src/templates/TemplateData';
-
-const templateFilterSetting: string = 'azureFunctions.templateFilter';
-const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-// tslint:disable-next-line:no-backbone-get-set-outside-model
-const oldTemplateFilter: string | undefined = config.get(templateFilterSetting);
-
-suiteTeardown(async () => {
-    await config.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
-});
 
 suite('Template Data Tests', () => {
     const templateData: TemplateData = new TemplateData();
 
-    test('JavaScript Verified Templates Count', async () => {
-        await config.update(templateFilterSetting, 'Verified', vscode.ConfigurationTarget.Global);
-        const templates: Template[] = await templateData.getTemplates(TemplateLanguage.JavaScript);
+    test('Default JavaScript Templates Count', async () => {
+        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.one, TemplateFilter.Verified);
         assert.equal(templates.length, 8);
     });
 
-    test('Java Templates Count', async () => {
-        const templates: Template[] = await templateData.getTemplates(TemplateLanguage.Java);
+    test('Default C# Templates Count', async () => {
+        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
+        assert.equal(templates.length, 4);
+    });
+
+    test('Default Java Templates Count', async () => {
+        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.Java, ProjectRuntime.beta, TemplateFilter.Verified);
         assert.equal(templates.length, 4);
     });
 });

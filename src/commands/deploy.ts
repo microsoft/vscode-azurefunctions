@@ -14,14 +14,14 @@ import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
+import { ArgumentError } from '../errors';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
-import { TemplateLanguage } from '../templates/Template';
+import { convertStringToRuntime, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { nodeUtils } from '../utils/nodeUtils';
-import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
@@ -37,14 +37,19 @@ export async function deploy(telemetryProperties: { [key: string]: string; }, tr
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
     const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
-    const languageType: string = await projectUtils.getProjectType(folderPath);
-    telemetryProperties.projectLanguage = languageType;
-    if (languageType === TemplateLanguage.Java) {
+
+    const language: ProjectLanguage = await getProjectLanguage(folderPath, ui);
+    telemetryProperties.projectLanguage = language;
+    const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
+    telemetryProperties.projectRuntime = runtime;
+
+    if (language === ProjectLanguage.Java) {
         folderPath = await getJavaFolderPath(outputChannel, folderPath, ui);
-        await verifyBetaRuntime(outputChannel, client, siteWrapper);
     }
 
-    await siteWrapper.deploy(folderPath, client, outputChannel, 'azureFunctions');
+    await verifyRuntimeIsCompatible(runtime, outputChannel, client, siteWrapper);
+
+    await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
@@ -67,21 +72,28 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     }
 }
 
-async function verifyBetaRuntime(outputChannel: vscode.OutputChannel, client: WebSiteManagementClient, siteWrapper: SiteWrapper): Promise<void> {
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputChannel: vscode.OutputChannel, client: WebSiteManagementClient, siteWrapper: SiteWrapper): Promise<void> {
     const appSettings: StringDictionary = await client.webApps.listApplicationSettings(siteWrapper.resourceGroup, siteWrapper.appName);
-    if (appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION !== 'beta') {
-        const message: string = localize('azFunc.notBetaRuntime', 'The FUNCTIONS_EXTENSION_VERSION is not beta. To enable Java function runtime, would you like to change the runtime vertion to beta?');
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-        if (result === DialogResponses.yes) {
-            outputChannel.appendLine(localize('azFunc.updateJavaFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to beta...'));
-            appSettings.properties.FUNCTIONS_EXTENSION_VERSION = 'beta';
-            await client.webApps.updateApplicationSettings(
-                siteWrapper.resourceGroup,
-                siteWrapper.appName,
-                appSettings
-            );
-        } else {
-            throw new UserCancelledError();
+    if (!appSettings.properties) {
+        throw new ArgumentError(appSettings);
+    } else {
+        const rawAzureRuntime: string = appSettings.properties.FUNCTIONS_EXTENSION_VERSION;
+        const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
+        // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
+        if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
+            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}". Update remote runtime?', rawAzureRuntime, localRuntime);
+            const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+            if (result === DialogResponses.yes) {
+                outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
+                appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
+                await client.webApps.updateApplicationSettings(
+                    siteWrapper.resourceGroup,
+                    siteWrapper.appName,
+                    appSettings
+                );
+            } else {
+                throw new UserCancelledError();
+            }
         }
     }
 }

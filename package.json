@@ -333,6 +333,30 @@
                         "type": "string",
                         "default": "",
                         "description": "Defines which files in the workspace to ignore for Zip deploy. This applies to Zip deploy only, has no effect on other deployment methods."
+                    },
+                    "azureFunctions.projectRuntime": {
+                        "type": "string",
+                        "enum": [
+                            "~1",
+                            "beta"
+                        ],
+                        "description": "%azFunc.projectRuntimeDescription%"
+                    },
+                    "azureFunctions.projectLanguage": {
+                        "type": "string",
+                        "enum": [
+                            "Bash",
+                            "Batch",
+                            "C#",
+                            "F#",
+                            "Java",
+                            "JavaScript",
+                            "PHP",
+                            "PowerShell",
+                            "Python",
+                            "TypeScript"
+                        ],
+                        "description": "%azFunc.projectLanguageDescription%"
                     }
                 }
             }

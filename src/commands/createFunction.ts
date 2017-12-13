@@ -12,15 +12,15 @@ import { DialogResponses } from '../DialogResponses';
 import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
 import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
+import { getFileNameFromLanguage, getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../ProjectSettings';
 import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
 import { EnumValue } from '../templates/EnumValue';
-import { Template, TemplateLanguage } from '../templates/Template';
+import { Template } from '../templates/Template';
 import { convertTemplateIdToJava, TemplateData } from '../templates/TemplateData';
 import { cpUtils } from '../utils/cpUtils';
 import * as fsUtil from '../utils/fs';
 import { getJavaClassName, validateJavaFunctionName, validatePackageName } from '../utils/javaNameUtils';
 import { mavenUtils } from '../utils/mavenUtils';
-import { projectUtils } from '../utils/projectUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 import { createNewProject } from './createNewProject';
@@ -38,7 +38,7 @@ function validateTemplateName(rootPath: string, name: string | undefined, langua
         return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
     }
 
-    if (language === TemplateLanguage.Java) {
+    if (language === ProjectLanguage.Java) {
         return validateJavaFunctionName(name);
     } else {
         if (fse.existsSync(path.join(rootPath, name))) {
@@ -65,7 +65,7 @@ async function validateIsFunctionApp(telemetryProperties: { [key: string]: strin
 
 async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string, packageName: string): Promise<string> {
     let defaultFunctionName: string | undefined;
-    if (language === TemplateLanguage.Java) {
+    if (language === ProjectLanguage.Java) {
         defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, `${convertTemplateIdToJava(template.id)}Java`);
     } else {
         defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
@@ -134,13 +134,14 @@ export async function createFunction(
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
 
-    const languageType: string = await projectUtils.getProjectType(functionAppPath);
-    telemetryProperties.projectLanguage = languageType;
+    const language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
+    telemetryProperties.projectLanguage = language;
+    const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
+    telemetryProperties.projectRuntime = runtime;
+    const templateFilter: TemplateFilter = await getTemplateFilter();
+    telemetryProperties.templateFilter = templateFilter;
 
-    // tslint:disable-next-line:no-backbone-get-set-outside-model
-    const templateFilter: string | undefined = vscode.workspace.getConfiguration().get('azureFunctions.templateFilter');
-    telemetryProperties.templateFilter = templateFilter !== undefined ? templateFilter : '';
-    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(languageType, templateFilter)).map((t: Template) => new PickWithData<Template>(t, t.name));
+    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(language, runtime, templateFilter, ui)).map((t: Template) => new PickWithData<Template>(t, t.name));
     const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
     const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
     telemetryProperties.templateId = template.id;
@@ -149,17 +150,17 @@ export async function createFunction(
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
-    const packageName: string = languageType === TemplateLanguage.Java ? await promptForPackageName(ui) : '';
+    const packageName: string = language === ProjectLanguage.Java ? await promptForPackageName(ui) : '';
 
-    const name: string = await promptForFunctionName(ui, functionAppPath, template, languageType, packageName);
+    const name: string = await promptForFunctionName(ui, functionAppPath, template, language, packageName);
     const javaFuntionProperties: string[] = [];
 
     for (const settingName of template.userPromptedSettings) {
-        const setting: ConfigSetting | undefined = await templateData.getSetting(template.functionConfig.inBindingType, settingName);
+        const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
             const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
             const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
-            if (languageType === TemplateLanguage.Java) {
+            if (language === ProjectLanguage.Java) {
                 javaFuntionProperties.push(`"-D${settingName}=${settingValue}"`);
             } else {
                 template.functionConfig.inBinding[settingName] = settingValue ? settingValue : '';
@@ -167,8 +168,8 @@ export async function createFunction(
         }
     }
 
-    let newFilePath: string;
-    if (languageType === TemplateLanguage.Java) {
+    let newFilePath: string | undefined;
+    if (language === ProjectLanguage.Java) {
         await mavenUtils.validateMavenInstalled(functionAppPath);
         outputChannel.show();
         await cpUtils.executeCommand(
@@ -186,9 +187,14 @@ export async function createFunction(
     } else {
         const functionPath: string = path.join(functionAppPath, name);
         await template.writeTemplateFiles(functionPath);
-        newFilePath = path.join(functionPath, 'index.js');
+        const fileName: string | undefined = getFileNameFromLanguage(language);
+        if (fileName) {
+            newFilePath = path.join(functionPath, fileName);
+        }
     }
 
-    const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
-    vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+    if (newFilePath && (await fse.pathExists(newFilePath))) {
+        const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
+        vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+    }
 }

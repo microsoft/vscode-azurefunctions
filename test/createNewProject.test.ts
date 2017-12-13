@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createNewProject } from '../src/commands/createNewProject';
-import { TemplateLanguage } from '../src/templates/Template';
+import { ProjectLanguage } from '../src/ProjectSettings';
 import * as fsUtil from '../src/utils/fs';
 import { TestUI } from './TestUI';
 
@@ -30,7 +30,7 @@ suite('Create New Java Project Tests', () => {
     const javaProject: string = 'JavaProject';
     test(javaProject, async () => {
         await testCreateNewProject(
-            TemplateLanguage.Java,
+            ProjectLanguage.Java,
             undefined,
             undefined,
             undefined,
@@ -54,7 +54,25 @@ suite('Create New JavaScript Project Tests', () => {
 
     const javaScriptProject: string = 'JavaScriptProject';
     test(javaScriptProject, async () => {
-        await testCreateNewProject(TemplateLanguage.JavaScript);
+        await testCreateNewProject(ProjectLanguage.JavaScript);
+        await testProjectFilesExist(testFolderPath);
+    }).timeout(10 * 1000);
+});
+
+suite('Create New C# Project Tests', () => {
+
+    suiteSetup(async () => {
+        await fse.ensureDir(testFolderPath);
+    });
+
+    suiteTeardown(async () => {
+        outputChannel.dispose();
+        await fse.remove(testFolderPath);
+    });
+
+    const javaScriptProject: string = 'CSharpProject';
+    test(javaScriptProject, async () => {
+        await testCreateNewProject(ProjectLanguage.CSharp);
         await testProjectFilesExist(testFolderPath);
     }).timeout(10 * 1000);
 });
@@ -77,6 +95,10 @@ async function testProjectFilesExist(projectPath: string): Promise<void> {
     assert.equal(await fse.pathExists(path.join(projectPath, 'host.json')), true, 'host.json does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, 'local.settings.json')), true, 'function.json does not exist');
     assert.equal(await fse.pathExists(path.join(projectPath, '.git')), true, '.git folder does not exist');
+    const vscodePath: string = path.join(projectPath, '.vscode');
+    assert.equal(await fse.pathExists(path.join(vscodePath, 'settings.json')), true, 'settings.json does not exist');
+    assert.equal(await fse.pathExists(path.join(vscodePath, 'launch.json')), true, 'launch.json does not exist');
+    assert.equal(await fse.pathExists(path.join(vscodePath, 'tasks.json')), true, 'tasks.json does not exist');
 }
 
 async function testJavaProjectFilesExist(projectPath: string): Promise<void> {
