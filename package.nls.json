@@ -15,7 +15,7 @@
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
     "azFunc.projectRuntimeDescription": "The default runtime to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"~1\" is currently the latest version approved for production use.",
-    "azFunc.projectLanguageDescription": "The default language to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"C#\", \"F#\", and \"JavaScript\" are currently the only languages approved for production use with runtime \"~1\".",
+    "azFunc.projectLanguageDescription": "The default language to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"F#\", and \"JavaScript\" are currently the only languages approved for production use with runtime \"~1\".",
     "azFunc.deploy": "Deploy to Function App",
     "azFunc.configureDeploymentSource": "Configure Deployment Source",
     "azFunc.appSettings.add": "Add new setting...",

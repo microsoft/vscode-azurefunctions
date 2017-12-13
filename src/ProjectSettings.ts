@@ -22,7 +22,6 @@ const previewDescription: string = localize('previewDescription', '(Preview)');
 export enum ProjectLanguage {
     Bash = 'Bash',
     Batch = 'Batch',
-    CSharp = 'C#',
     FSharp = 'F#',
     Java = 'Java',
     JavaScript = 'JavaScript',
@@ -51,7 +50,6 @@ async function updateWorkspaceSetting(section: string, value: string): Promise<v
 export async function selectProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
     const picks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
-        new Pick(ProjectLanguage.CSharp),
         new Pick(ProjectLanguage.FSharp),
         new Pick(ProjectLanguage.Bash, previewDescription),
         new Pick(ProjectLanguage.Batch, previewDescription),
@@ -161,8 +159,6 @@ export function getFileNameFromLanguage(language: string): string | undefined {
             return 'run.sh';
         case ProjectLanguage.Batch:
             return 'run.bat';
-        case ProjectLanguage.CSharp:
-            return 'run.csx';
         case ProjectLanguage.FSharp:
             return 'run.fsx';
         case ProjectLanguage.JavaScript:

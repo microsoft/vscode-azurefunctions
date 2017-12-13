@@ -59,24 +59,6 @@ suite('Create New JavaScript Project Tests', () => {
     }).timeout(10 * 1000);
 });
 
-suite('Create New C# Project Tests', () => {
-
-    suiteSetup(async () => {
-        await fse.ensureDir(testFolderPath);
-    });
-
-    suiteTeardown(async () => {
-        outputChannel.dispose();
-        await fse.remove(testFolderPath);
-    });
-
-    const javaScriptProject: string = 'CSharpProject';
-    test(javaScriptProject, async () => {
-        await testCreateNewProject(ProjectLanguage.CSharp);
-        await testProjectFilesExist(testFolderPath);
-    }).timeout(10 * 1000);
-});
-
 async function testCreateNewProject(language: string, ...inputs: (string | undefined)[]): Promise<void> {
     // Setup common inputs
     inputs.unshift(language); // Specify the function name
