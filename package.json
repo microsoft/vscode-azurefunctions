@@ -347,7 +347,6 @@
                         "enum": [
                             "Bash",
                             "Batch",
-                            "C#",
                             "F#",
                             "Java",
                             "JavaScript",

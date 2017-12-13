@@ -113,20 +113,6 @@ const launchJsonForJava: {} = {
     ]
 };
 
-const launchJsonForCSharp: {} = {
-    version: '0.2.0',
-    configurations: [
-        {
-            name: localize('azFunc.attachToCSharpFunc', 'Attach to C# Functions'),
-            type: 'mono',
-            request: 'attach',
-            address: 'localhost',
-            port: 55555,
-            preLaunchTask: taskId
-        }
-    ]
-};
-
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
 obj
@@ -229,7 +215,6 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
     // Only display 'supported' languages that can be debugged in VS Code
     const languagePicks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
-        new Pick(ProjectLanguage.CSharp),
         new Pick(ProjectLanguage.Java)
     ];
     const language: string = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
@@ -291,9 +276,6 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
             case ProjectLanguage.Java:
                 await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForJava);
                 break;
-            case ProjectLanguage.CSharp:
-                await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForCSharp);
-                break;
             default:
                 await fsUtil.writeFormattedJson(launchJsonPath, launchJsonForJavaScript);
                 break;
@@ -305,7 +287,6 @@ export async function createNewProject(telemetryProperties: { [key: string]: str
         let runtime: ProjectRuntime;
         switch (language) {
             case ProjectLanguage.Java:
-            case ProjectLanguage.CSharp:
                 runtime = ProjectRuntime.beta;
                 break;
             default:

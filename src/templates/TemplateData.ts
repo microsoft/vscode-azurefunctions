@@ -40,11 +40,7 @@ export class TemplateData {
         'HttpTriggerWithParameters-JavaScript',
         'ManualTrigger-JavaScript',
         'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript',
-        'BlobTrigger-CSharp',
-        'HttpTrigger-CSharp',
-        'QueueTrigger-CSharp',
-        'TimerTrigger-CSharp'
+        'TimerTrigger-JavaScript'
     ];
 
     private readonly _javaTemplates: string[] = [
