@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.4.0 - 2017-12-15
+### Added
+- Copy HTTP Trigger Url
+- Change Deployment Source (Zip Deploy vs. Local Git Deploy)
+- Settings to control project language and runtime
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.4.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.3.1 - 2017-12-06
 ### Fixed
 - JavaScript 'Verified' templates not displayed
