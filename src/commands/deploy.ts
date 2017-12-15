@@ -11,28 +11,31 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
 import { ArgumentError } from '../errors';
+import { HttpAuthLevel } from '../FunctionConfig';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { convertStringToRuntime, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
+import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { nodeUtils } from '../utils/nodeUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(telemetryProperties: { [key: string]: string; }, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(telemetryProperties: { [key: string]: string; }, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureParentNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
-    let node: IAzureNode<FunctionAppTreeItem> | undefined = context && !(context instanceof vscode.Uri) ? context : undefined;
+    let node: IAzureParentNode<FunctionAppTreeItem> | undefined = context && !(context instanceof vscode.Uri) ? context : undefined;
 
     let folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
 
     if (!node) {
-        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
@@ -49,7 +52,29 @@ export async function deploy(telemetryProperties: { [key: string]: string; }, tr
 
     await verifyRuntimeIsCompatible(runtime, outputChannel, client, siteWrapper);
 
-    await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
+    node.treeItem.state = localize('deploying', 'Deploying...');
+    try {
+        node.refresh();
+        await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
+    } finally {
+        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
+        node.refresh();
+    }
+
+    const children: IAzureNode[] = await node.getCachedChildren();
+    const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
+    const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
+    const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
+    if (anonFunctions.length > 0) {
+        outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+        for (const func of anonFunctions) {
+            outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+        }
+    }
+
+    if (functions.find((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
+        outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+    }
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
