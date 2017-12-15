@@ -17,8 +17,11 @@ export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzur
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
     node.treeItem.state = localize('starting', 'Starting...');
-    node.refresh();
-    await node.treeItem.siteWrapper.start(client);
-    node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
-    node.refresh();
+    try {
+        node.refresh();
+        await node.treeItem.siteWrapper.start(client);
+    } finally {
+        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
+        node.refresh();
+    }
 }

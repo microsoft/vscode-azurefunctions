@@ -392,7 +392,7 @@
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
-        "vscode-azureappservice": "~0.8.0",
+        "vscode-azureappservice": "~0.8.1",
         "vscode-azureextensionui": "~0.3.1",
         "vscode-extension-telemetry": "^0.0.6",
         "vscode-nls": "^2.0.2",

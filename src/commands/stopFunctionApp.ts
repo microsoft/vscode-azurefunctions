@@ -17,8 +17,11 @@ export async function stopFunctionApp(tree: AzureTreeDataProvider, node?: IAzure
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
     node.treeItem.state = localize('stopping', 'Stopping...');
-    node.refresh();
-    await node.treeItem.siteWrapper.stop(client);
-    node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
-    node.refresh();
+    try {
+        node.refresh();
+        await node.treeItem.siteWrapper.stop(client);
+    } finally {
+        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
+        node.refresh();
+    }
 }
