@@ -55,8 +55,18 @@ export async function deploy(telemetryProperties: { [key: string]: string; }, tr
     node.treeItem.state = localize('deploying', 'Deploying...');
     try {
         node.refresh();
+        // Stop function app here to avoid *.jar file in use on server side.
+        // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+        if (language === ProjectLanguage.Java) {
+            outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
+            await siteWrapper.stop(client);
+        }
         await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
     } finally {
+        if (language === ProjectLanguage.Java) {
+            outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));
+            await siteWrapper.start(client);
+        }
         node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
         node.refresh();
     }
