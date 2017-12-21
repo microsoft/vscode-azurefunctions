@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createNewProject } from '../src/commands/createNewProject';
+import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { ProjectLanguage } from '../src/ProjectSettings';
 import * as fsUtil from '../src/utils/fs';
 import { TestUI } from './TestUI';

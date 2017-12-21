@@ -152,26 +152,3 @@ export function convertStringToRuntime(rawRuntime?: string): ProjectRuntime | un
             return undefined;
     }
 }
-
-export function getFileNameFromLanguage(language: string): string | undefined {
-    switch (language) {
-        case ProjectLanguage.Bash:
-            return 'run.sh';
-        case ProjectLanguage.Batch:
-            return 'run.bat';
-        case ProjectLanguage.FSharp:
-            return 'run.fsx';
-        case ProjectLanguage.JavaScript:
-            return 'index.js';
-        case ProjectLanguage.PHP:
-            return 'run.php';
-        case ProjectLanguage.PowerShell:
-            return 'run.ps1';
-        case ProjectLanguage.Python:
-            return 'run.py';
-        case ProjectLanguage.TypeScript:
-            return 'index.ts';
-        default:
-            return undefined;
-    }
-}
