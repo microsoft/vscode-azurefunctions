@@ -3,11 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
-import * as path from 'path';
 import { FunctionConfig } from '../FunctionConfig';
 import { ProjectLanguage } from '../ProjectSettings';
-import * as fsUtil from '../utils/fs';
 import { Resources } from './Resources';
 
 interface ITemplate {
@@ -65,14 +62,7 @@ export class Template {
         return this._template.metadata.userPrompt ? this._template.metadata.userPrompt : [];
     }
 
-    public async writeTemplateFiles(functionPath: string): Promise<void> {
-        await fse.ensureDir(functionPath);
-        const tasks: Promise<void>[] = Object.keys(this._template.files).map(async (fileName: string) => {
-            await fse.writeFile(path.join(functionPath, fileName), this._template.files[fileName]);
-        });
-
-        tasks.push(fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), this._template.function));
-
-        await Promise.all(tasks);
+    public get templateFiles(): { [filename: string]: string } {
+        return this._template.files;
     }
 }

@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { WorkspaceConfiguration } from 'vscode';
-import { createFunction } from '../src/commands/createFunction';
+import { createFunction } from '../src/commands/createFunction/createFunction';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../src/ProjectSettings';
 import { TemplateData } from '../src/templates/TemplateData';
 import * as fsUtil from '../src/utils/fs';

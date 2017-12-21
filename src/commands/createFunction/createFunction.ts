@@ -7,49 +7,28 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
-import { AzureAccount } from '../azure-account.api';
-import { DialogResponses } from '../DialogResponses';
-import { IUserInterface, Pick, PickWithData } from '../IUserInterface';
-import { LocalAppSettings } from '../LocalAppSettings';
-import { localize } from '../localize';
-import { getFileNameFromLanguage, getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../ProjectSettings';
-import { ConfigSetting, ValueType } from '../templates/ConfigSetting';
-import { EnumValue } from '../templates/EnumValue';
-import { Template } from '../templates/Template';
-import { convertTemplateIdToJava, TemplateData } from '../templates/TemplateData';
-import { cpUtils } from '../utils/cpUtils';
-import * as fsUtil from '../utils/fs';
-import { getJavaClassName, validateJavaFunctionName, validatePackageName } from '../utils/javaNameUtils';
-import { mavenUtils } from '../utils/mavenUtils';
-import * as workspaceUtil from '../utils/workspace';
-import { VSCodeUI } from '../VSCodeUI';
-import { createNewProject } from './createNewProject';
-
-const functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
+import { AzureAccount } from '../../azure-account.api';
+import { DialogResponses } from '../../DialogResponses';
+import { IUserInterface, Pick, PickWithData } from '../../IUserInterface';
+import { LocalAppSettings } from '../../LocalAppSettings';
+import { localize } from '../../localize';
+import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
+import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
+import { EnumValue } from '../../templates/EnumValue';
+import { Template } from '../../templates/Template';
+import { TemplateData } from '../../templates/TemplateData';
+import * as workspaceUtil from '../../utils/workspace';
+import { VSCodeUI } from '../../VSCodeUI';
+import { createNewProject } from '../createNewProject/createNewProject';
+import { IFunctionCreator } from './IFunctionCreator';
+import { JavaFunctionCreator } from './JavaFunctionCreator';
+import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
 const requiredFunctionAppFiles: string[] = [
     'host.json',
     'local.settings.json',
     path.join('.vscode', 'launch.json') // NOTE: tasks.json is not required if the user prefers to run 'func host start' from the command line
 ];
-
-function validateTemplateName(rootPath: string, name: string | undefined, language: string): string | undefined {
-    if (!name) {
-        return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
-    }
-
-    if (language === ProjectLanguage.Java) {
-        return validateJavaFunctionName(name);
-    } else {
-        if (fse.existsSync(path.join(rootPath, name))) {
-            return localize('azFunc.existingFolderError', 'A folder with the name \'{0}\' already exists.', name);
-        }
-        if (!functionNameRegex.test(name)) {
-            return localize('azFunc.functionNameInvalidError', 'Function name must start with a letter and can contain letters, digits, \'_\' and \'-\'');
-        }
-        return undefined;
-    }
-}
 
 async function validateIsFunctionApp(telemetryProperties: { [key: string]: string; }, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
@@ -61,19 +40,6 @@ async function validateIsFunctionApp(telemetryProperties: { [key: string]: strin
             throw new UserCancelledError();
         }
     }
-}
-
-async function promptForFunctionName(ui: IUserInterface, functionAppPath: string, template: Template, language: string, packageName: string): Promise<string> {
-    let defaultFunctionName: string | undefined;
-    if (language === ProjectLanguage.Java) {
-        defaultFunctionName = await fsUtil.getUniqueJavaFsPath(functionAppPath, packageName, `${convertTemplateIdToJava(template.id)}Java`);
-    } else {
-        defaultFunctionName = await fsUtil.getUniqueFsPath(functionAppPath, template.defaultFunctionName);
-    }
-    const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-    const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-
-    return await ui.showInputBox(placeHolder, prompt, false, (s: string) => validateTemplateName(functionAppPath, s, language), defaultFunctionName || template.defaultFunctionName);
 }
 
 async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
@@ -111,16 +77,6 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
     return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
 }
 
-async function promptForPackageName(ui: IUserInterface): Promise<string> {
-    const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-    const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
-    return await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
-}
-
-function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
-    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${getJavaClassName(functionName)}.java`);
-}
-
 export async function createFunction(
     telemetryProperties: { [key: string]: string; },
     outputChannel: vscode.OutputChannel,
@@ -150,49 +106,29 @@ export async function createFunction(
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
-    const packageName: string = language === ProjectLanguage.Java ? await promptForPackageName(ui) : '';
+    let functionCreator: IFunctionCreator;
+    switch (language) {
+        case ProjectLanguage.Java:
+            functionCreator = new JavaFunctionCreator(outputChannel);
+            break;
+        default:
+            functionCreator = new ScriptFunctionCreator(language);
+            break;
+    }
 
-    const name: string = await promptForFunctionName(ui, functionAppPath, template, language, packageName);
-    const javaFuntionProperties: string[] = [];
+    await functionCreator.promptForSettings(functionAppPath, template, ui);
 
+    const userSettings: { [propertyName: string]: string } = {};
     for (const settingName of template.userPromptedSettings) {
         const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
             const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
             const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
-            if (language === ProjectLanguage.Java) {
-                javaFuntionProperties.push(`"-D${settingName}=${settingValue}"`);
-            } else {
-                template.functionConfig.inBinding[settingName] = settingValue ? settingValue : '';
-            }
+            userSettings[settingName] = settingValue ? settingValue : '';
         }
     }
 
-    let newFilePath: string | undefined;
-    if (language === ProjectLanguage.Java) {
-        await mavenUtils.validateMavenInstalled(functionAppPath);
-        outputChannel.show();
-        await cpUtils.executeCommand(
-            outputChannel,
-            functionAppPath,
-            'mvn',
-            'azure-functions:add',
-            '-B',
-            `"-Dfunctions.package=${packageName}"`,
-            `"-Dfunctions.name=${name}"`,
-            `"-Dfunctions.template=${convertTemplateIdToJava(template.id)}"`,
-            ...javaFuntionProperties
-        );
-        newFilePath = getNewJavaFunctionFilePath(functionAppPath, packageName, name);
-    } else {
-        const functionPath: string = path.join(functionAppPath, name);
-        await template.writeTemplateFiles(functionPath);
-        const fileName: string | undefined = getFileNameFromLanguage(language);
-        if (fileName) {
-            newFilePath = path.join(functionPath, fileName);
-        }
-    }
-
+    const newFilePath: string | undefined = await functionCreator.createFunction(functionAppPath, template, userSettings);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
