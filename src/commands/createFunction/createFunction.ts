@@ -20,7 +20,7 @@ import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
 import { VSCodeUI } from '../../VSCodeUI';
 import { createNewProject } from '../createNewProject/createNewProject';
-import { IFunctionCreator } from './IFunctionCreator';
+import { AbstractFunctionCreator } from './AbstractFunctionCreator';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
@@ -106,17 +106,17 @@ export async function createFunction(
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
-    let functionCreator: IFunctionCreator;
+    let functionCreator: AbstractFunctionCreator;
     switch (language) {
         case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(outputChannel);
+            functionCreator = new JavaFunctionCreator(functionAppPath, template, outputChannel);
             break;
         default:
-            functionCreator = new ScriptFunctionCreator(language);
+            functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);
             break;
     }
 
-    await functionCreator.promptForSettings(functionAppPath, template, ui);
+    await functionCreator.promptForSettings(ui);
 
     const userSettings: { [propertyName: string]: string } = {};
     for (const settingName of template.userPromptedSettings) {
@@ -128,7 +128,7 @@ export async function createFunction(
         }
     }
 
-    const newFilePath: string | undefined = await functionCreator.createFunction(functionAppPath, template, userSettings);
+    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
