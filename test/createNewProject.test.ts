@@ -64,7 +64,7 @@ async function testCreateNewProject(language: string, ...inputs: (string | undef
     inputs.unshift(language); // Specify the function name
     inputs.unshift(testFolderPath); // Select the test func app folder
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        inputs.unshift(undefined); // If the test environment has an open workspace, select the 'Browse...' option
+        inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
     }
 
     const ui: TestUI = new TestUI(inputs);
