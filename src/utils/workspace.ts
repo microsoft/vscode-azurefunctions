@@ -12,9 +12,8 @@ export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: str
     const browse: string = ':browse';
     let folder: PickWithData<string> | undefined;
     if (vscode.workspace.workspaceFolders) {
-        let folderPicks: PickWithData<string>[] = [new PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...'))];
-        folderPicks = folderPicks.concat(vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => new PickWithData('', f.uri.fsPath)));
-
+        const folderPicks: PickWithData<string>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => new PickWithData('', f.uri.fsPath));
+        folderPicks.push(new PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...')));
         folder = await ui.showQuickPick<string>(folderPicks, placeholder);
     }
 

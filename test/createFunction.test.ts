@@ -169,7 +169,7 @@ async function testCreateFunction(templateName: string, ...inputs: (string | und
     inputs.unshift(templateName); // Select the function template
     inputs.unshift(testFolder); // Select the test func app folder
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        inputs.unshift(undefined); // If the test environment has an open workspace, select the 'Browse...' option
+        inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
     }
 
     const ui: TestUI = new TestUI(inputs);
