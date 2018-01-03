@@ -11,7 +11,7 @@ import { MessageItem } from "vscode";
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from "../DialogResponses";
 import { localize } from "../localize";
-import { getJavaClassName } from './javaNameUtils';
+import { parseJavaClassName } from './javaNameUtils';
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
     await fse.writeJson(fsPath, data, { spaces: 2 });
@@ -63,7 +63,7 @@ export async function getUniqueFsPath(folderPath: string, defaultValue: string, 
 }
 
 export async function getUniqueJavaFsPath(basePath: string, packageName: string, defaultValue: string): Promise<string | undefined> {
-    return getUniqueFsPath(path.join(basePath, 'src', 'main', 'java', ...packageName.split('.')), getJavaClassName(defaultValue), '.java');
+    return getUniqueFsPath(path.join(basePath, 'src', 'main', 'java', ...packageName.split('.')), parseJavaClassName(defaultValue), '.java');
 }
 
 export function getRandomHexString(length: number = 10): string {

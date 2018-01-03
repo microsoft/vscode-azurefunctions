@@ -6,11 +6,20 @@
 import { IUserInterface } from "../../IUserInterface";
 import { Template } from "../../templates/Template";
 
-export interface IFunctionCreator {
+export abstract class AbstractFunctionCreator {
+    protected readonly _functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
+    protected _functionAppPath: string;
+    protected _template: Template;
+
+    constructor(functionAppPath: string, template: Template) {
+        this._functionAppPath = functionAppPath;
+        this._template = template;
+    }
+
     /**
      * Prompt for any settings that are specific to this creator
      * This includes the function name (Since the name could have different restrictions for different languages)
      */
-    promptForSettings(functionAppPath: string, template: Template, ui: IUserInterface): Promise<void>;
-    createFunction(functionAppPath: string, template: Template, userSettings: { [propertyName: string]: string }): Promise<string | undefined>;
+    public abstract async promptForSettings(ui: IUserInterface): Promise<void>;
+    public abstract async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined>;
 }

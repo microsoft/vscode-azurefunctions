@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
 import { IUserInterface } from "../../IUserInterface";
@@ -11,62 +12,67 @@ import { Template } from "../../templates/Template";
 import { convertTemplateIdToJava } from "../../templates/TemplateData";
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
-import { getJavaClassName, validateJavaFunctionName, validatePackageName } from "../../utils/javaNameUtils";
+import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
 import { mavenUtils } from "../../utils/mavenUtils";
-import { IFunctionCreator } from './IFunctionCreator';
+import { AbstractFunctionCreator } from './AbstractFunctionCreator';
 
 function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
-    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${getJavaClassName(functionName)}.java`);
+    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${parseJavaClassName(functionName)}.java`);
 }
 
-export class JavaFunctionCreator implements IFunctionCreator {
+export class JavaFunctionCreator extends AbstractFunctionCreator {
     private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
 
-    constructor(outputChannel: OutputChannel) {
+    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
+        super(functionAppPath, template);
         this._outputChannel = outputChannel;
     }
 
-    public async promptForSettings(functionAppPath: string, template: Template, ui: IUserInterface): Promise<void> {
+    public async promptForSettings(ui: IUserInterface): Promise<void> {
         const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
         const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
         this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
 
-        const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(functionAppPath, this._packageName, `${convertTemplateIdToJava(template.id)}Java`);
+        const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${convertTemplateIdToJava(this._template.id)}Java`);
         const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
         const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-        this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || template.defaultFunctionName);
+        this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
     }
 
-    public async createFunction(functionAppPath: string, template: Template, userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
+    public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
         const javaFuntionProperties: string[] = [];
         for (const key of Object.keys(userSettings)) {
             javaFuntionProperties.push(`"-D${key}=${userSettings[key]}"`);
         }
 
-        await mavenUtils.validateMavenInstalled(functionAppPath);
+        await mavenUtils.validateMavenInstalled(this._functionAppPath);
         this._outputChannel.show();
         await cpUtils.executeCommand(
             this._outputChannel,
-            functionAppPath,
+            this._functionAppPath,
             'mvn',
             'azure-functions:add',
             '-B',
             `"-Dfunctions.package=${this._packageName}"`,
             `"-Dfunctions.name=${this._functionName}"`,
-            `"-Dfunctions.template=${convertTemplateIdToJava(template.id)}"`,
+            `"-Dfunctions.template=${convertTemplateIdToJava(this._template.id)}"`,
             ...javaFuntionProperties
         );
 
-        return getNewJavaFunctionFilePath(functionAppPath, this._packageName, this._functionName);
+        return getNewJavaFunctionFilePath(this._functionAppPath, this._packageName, this._functionName);
     }
 
     private validateTemplateName(name: string | undefined): string | undefined {
         if (!name) {
             return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
+        } else if (fse.existsSync(getNewJavaFunctionFilePath(this._functionAppPath, this._packageName, name))) {
+            return localize('azFunc.existingFolderError', 'The Java class \'{0}\' already exists.', getFullClassName(this._packageName, name));
+        } else if (!this._functionNameRegex.test(name)) {
+            return localize('azFunc.functionNameInvalidError', 'Function name must start with a letter and can contain letters, digits, \'_\' and \'-\'');
         } else {
-            return validateJavaFunctionName(name);
+            return undefined;
         }
     }
 }
