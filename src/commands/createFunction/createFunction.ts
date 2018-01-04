@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { UserCancelledError } from 'vscode-azureextensionui';
+import { TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { AzureAccount } from '../../azure-account.api';
 import { DialogResponses } from '../../DialogResponses';
 import { IUserInterface, Pick, PickWithData } from '../../IUserInterface';
@@ -30,7 +30,7 @@ const requiredFunctionAppFiles: string[] = [
     path.join('.vscode', 'launch.json') // NOTE: tasks.json is not required if the user prefers to run 'func host start' from the command line
 ];
 
-async function validateIsFunctionApp(telemetryProperties: { [key: string]: string; }, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
+async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
@@ -78,7 +78,7 @@ async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting
 }
 
 export async function createFunction(
-    telemetryProperties: { [key: string]: string; },
+    telemetryProperties: TelemetryProperties,
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
     templateData: TemplateData,

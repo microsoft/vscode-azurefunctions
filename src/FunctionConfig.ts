@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ErrorData } from "./ErrorData";
+import { parseError } from 'vscode-azureextensionui';
 import { localize } from "./localize";
 
 interface IFunctionJson {
@@ -45,28 +45,28 @@ export class FunctionConfig {
 
     // tslint:disable-next-line:no-any
     public constructor(data: any) {
-        let parseError: string | undefined;
+        let errMessage: string | undefined;
 
         try {
             if (data === null || data === undefined) {
-                parseError = localize('noDataError', 'No data was supplied.');
+                errMessage = localize('noDataError', 'No data was supplied.');
             } else {
                 // tslint:disable-next-line:no-unsafe-any
                 this.disabled = data.disabled === true;
 
                 // tslint:disable-next-line:no-unsafe-any
                 if (!data.bindings || !(data.bindings instanceof Array)) {
-                    parseError = localize('expectedBindings', 'Expected "bindings" element of type "Array".');
+                    errMessage = localize('expectedBindings', 'Expected "bindings" element of type "Array".');
                 } else {
                     this.functionJson = <IFunctionJson>data;
 
                     const inBinding: IFunctionBinding | undefined = this.functionJson.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
                     if (inBinding === undefined) {
-                        parseError = localize('noInBindingError', 'Expected a binding with direction "in".');
+                        errMessage = localize('noInBindingError', 'Expected a binding with direction "in".');
                     } else {
                         this.inBinding = inBinding;
                         if (!inBinding.type) {
-                            parseError = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
+                            errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
                         } else {
                             this.inBindingType = inBinding.type;
                             if (inBinding.type.toLowerCase() === 'httptrigger') {
@@ -74,7 +74,7 @@ export class FunctionConfig {
                                 if (inBinding.authLevel) {
                                     const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[inBinding.authLevel.toLowerCase()];
                                     if (authLevel === undefined) {
-                                        parseError = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', inBinding.authLevel);
+                                        errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', inBinding.authLevel);
                                     } else {
                                         this.authLevel = authLevel;
                                     }
@@ -85,11 +85,11 @@ export class FunctionConfig {
                 }
             }
         } catch (error) {
-            parseError = (new ErrorData(error)).message;
+            errMessage = (parseError(error)).message;
         }
 
-        if (parseError !== undefined) {
-            throw new Error(localize('functionJsonParseError', 'Failed to parse function.json: {0}', parseError));
+        if (errMessage !== undefined) {
+            throw new Error(localize('functionJsonParseError', 'Failed to parse function.json: {0}', errMessage));
         }
     }
 }
