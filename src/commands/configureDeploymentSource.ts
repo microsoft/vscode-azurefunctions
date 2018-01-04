@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, IAzureNode, TelemetryProperties } from 'vscode-azureextensionui';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export async function configureDeploymentSource(telemetryProperties: { [key: string]: string; }, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function configureDeploymentSource(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
     if (!node) {
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }

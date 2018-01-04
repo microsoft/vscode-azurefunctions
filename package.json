@@ -384,7 +384,7 @@
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.0.0-preview",
-        "azure-arm-resource": "^2.0.0-preview",
+        "azure-arm-resource": "^3.0.0-preview",
         "azure-arm-storage": "^3.1.0",
         "azure-arm-website": "^1.0.0-preview",
         "clipboardy": "^1.2.2",
@@ -392,9 +392,9 @@
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
-        "vscode-azureappservice": "~0.8.1",
-        "vscode-azureextensionui": "~0.3.1",
-        "vscode-extension-telemetry": "^0.0.6",
+        "vscode-azureappservice": "~0.8.2",
+        "vscode-azureextensionui": "~0.5.0",
+        "vscode-extension-telemetry": "^0.0.10",
         "vscode-nls": "^2.0.2",
         "vscode-azurekudu": "~0.1.4",
         "xml2js": "^0.4.19"

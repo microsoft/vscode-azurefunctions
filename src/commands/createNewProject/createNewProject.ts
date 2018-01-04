@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
+import { TelemetryProperties } from 'vscode-azureextensionui';
 import { IUserInterface, Pick } from '../../IUserInterface';
 import { localize } from '../../localize';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../ProjectSettings';
@@ -38,7 +39,7 @@ const funcProblemMatcher: {} = {
     }
 };
 
-export async function createNewProject(telemetryProperties: { [key: string]: string; }, outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
