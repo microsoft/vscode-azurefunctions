@@ -3,32 +3,38 @@
 ## Prerequisites
 * For local debugging:
   * [.NET Core 2.0](https://www.microsoft.com/net/download/core)
-  * [Azure Core Function Tools 2.0](https://www.npmjs.com/package/azure-functions-core-tools)
-  ```
-  npm install --global azure-functions-core-tools@core
-  ```
-* For JavaScript functions:
+  * Install the [Azure Core Function Tools 2.0](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local) with the following command
+
+```bash
+npm install -g azure-functions-core-tools@core
+```
+> Note: when installing on Ubuntu, you may need to use `sudo`. On MacOS and LInux, you may need to include the `unsafe-perm` flag, as follows:
+```bash
+sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
+ ```
+
+* For JavaScript based Functions:
   * [Node 8.0+](https://nodejs.org/)
-* For Java functions:
+
+* For Java based Functions:
   * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
   * [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
   * [Maven 3.0+](https://maven.apache.org/)
 
 ## Features
 
-* Create new project
-* Create new function from template
-* Debug function projects locally
-* View Azure Function Apps
+* Create new Function projects
+* Create new Functions from a template
+* Debug Function projects locally
 * Deploy to Azure Function Apps
-* Create, delete, start, stop, and restart Azure Function Apps
+* View, create, delete, start, stop, and restart Azure Function Apps
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 
 ### Create New Project
 
 ![CreateProject](resources/CreateProject.gif)
 
-### Debug function app locally
+### Debug Function App Locally
 
 ![Debug](resources/Debug.gif)
 
