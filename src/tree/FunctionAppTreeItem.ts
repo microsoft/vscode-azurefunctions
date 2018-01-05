@@ -18,8 +18,9 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly siteWrapper: SiteWrapper;
-    public state: string | undefined;
 
+    private _state?: string;
+    private _temporaryState?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _outputChannel: OutputChannel;
@@ -29,10 +30,14 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
         if (!site.state) {
             throw new ArgumentError(site);
         }
-        this.state = site.state;
+        this._state = site.state;
         this._outputChannel = outputChannel;
         this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
+    }
+
+    private get _effectiveState(): string | undefined {
+        return this._temporaryState || this._state;
     }
 
     public get id(): string {
@@ -40,7 +45,7 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
     }
 
     public get label(): string {
-        return !this.state || this.state === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this.state})`;
+        return !this._effectiveState || this._effectiveState === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this._effectiveState})`;
     }
 
     public get iconPath(): string {
@@ -51,11 +56,27 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
         return false;
     }
 
+    public async refreshLabel(node: IAzureNode): Promise<void> {
+        const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
+        this._state = await this.siteWrapper.getState(client);
+    }
+
+    public async runWithTemporaryState(tempState: string, node: IAzureNode, callback: () => Promise<void>): Promise<void> {
+        this._temporaryState = tempState;
+        try {
+            await node.refresh();
+            await callback();
+        } finally {
+            this._temporaryState = undefined;
+            await node.refresh();
+        }
+    }
+
     public async loadMoreChildren(_node: IAzureNode<IAzureTreeItem>, _clearCache: boolean | undefined): Promise<IAzureTreeItem[]> {
         return [this._functionsTreeItem, this._appSettingsTreeItem];
     }
 
-    public pickTreeItem(expectedContextValue: string): IAzureParentTreeItem | undefined {
+    public pickTreeItem(expectedContextValue: string): IAzureTreeItem | undefined {
         switch (expectedContextValue) {
             case FunctionTreeItem.contextValue:
                 return this._functionsTreeItem;

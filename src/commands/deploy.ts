@@ -52,28 +52,30 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
 
     await verifyRuntimeIsCompatible(runtime, outputChannel, client, siteWrapper);
 
-    node.treeItem.state = localize('deploying', 'Deploying...');
-    try {
-        node.refresh();
-        // Stop function app here to avoid *.jar file in use on server side.
-        // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-        if (language === ProjectLanguage.Java) {
-            outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
-            await siteWrapper.stop(client);
+    await node.treeItem.runWithTemporaryState(
+        localize('deploying', 'Deploying...'),
+        node,
+        async () => {
+            try {
+                // Stop function app here to avoid *.jar file in use on server side.
+                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                if (language === ProjectLanguage.Java) {
+                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
+                    await siteWrapper.stop(client);
+                }
+                await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
+            } finally {
+                if (language === ProjectLanguage.Java) {
+                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));
+                    await siteWrapper.start(client);
+                }
+            }
         }
-        await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
-    } finally {
-        if (language === ProjectLanguage.Java) {
-            outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));
-            await siteWrapper.start(client);
-        }
-        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
-        node.refresh();
-    }
+    );
 
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
-    node.treeDataProvider.refresh(functionsNode, true /* clearCache */);
+    await node.treeDataProvider.refresh(functionsNode);
     const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
     const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
