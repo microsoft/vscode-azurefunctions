@@ -55,7 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const templateData: TemplateData = new TemplateData(context.globalState);
 
         const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
-        actionHandler.registerCommand('azureFunctions.refresh', (node?: IAzureNode) => tree.refresh(node));
+        actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
         actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements) => await createFunction(properties, outputChannel, azureAccount, templateData));

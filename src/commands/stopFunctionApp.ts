@@ -15,13 +15,14 @@ export async function stopFunctionApp(tree: AzureTreeDataProvider, node?: IAzure
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-    node.treeItem.state = localize('stopping', 'Stopping...');
-    try {
-        node.refresh();
-        await node.treeItem.siteWrapper.stop(client);
-    } finally {
-        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
-        node.refresh();
-    }
+    await node.treeItem.runWithTemporaryState(
+        localize('stopping', 'Stopping...'),
+        node,
+        async () => {
+            // tslint:disable:no-non-null-assertion
+            const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node!);
+            await node!.treeItem.siteWrapper.stop(client);
+            // tslint:enable:no-non-null-assertion
+        }
+    );
 }

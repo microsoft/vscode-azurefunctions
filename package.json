@@ -234,6 +234,11 @@
                 },
                 {
                     "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "4@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctions",
                     "group": "1@1"
                 },
@@ -393,7 +398,7 @@
         "ms-rest-azure": "^2.3.1",
         "request-promise": "^4.2.2",
         "vscode-azureappservice": "~0.8.2",
-        "vscode-azureextensionui": "~0.5.0",
+        "vscode-azureextensionui": "~0.5.1",
         "vscode-extension-telemetry": "^0.0.10",
         "vscode-nls": "^2.0.2",
         "vscode-azurekudu": "~0.1.4",

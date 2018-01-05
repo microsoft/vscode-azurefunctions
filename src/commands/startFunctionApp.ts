@@ -15,13 +15,14 @@ export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzur
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-    node.treeItem.state = localize('starting', 'Starting...');
-    try {
-        node.refresh();
-        await node.treeItem.siteWrapper.start(client);
-    } finally {
-        node.treeItem.state = await node.treeItem.siteWrapper.getState(client);
-        node.refresh();
-    }
+    await node.treeItem.runWithTemporaryState(
+        localize('starting', 'Starting...'),
+        node,
+        async () => {
+            // tslint:disable:no-non-null-assertion
+            const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node!);
+            await node!.treeItem.siteWrapper.start(client);
+            // tslint:enable:no-non-null-assertion
+        }
+    );
 }
