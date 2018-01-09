@@ -16,39 +16,39 @@ import * as fsUtil from '../src/utils/fs';
 import { TestAzureAccount } from './TestAzureAccount';
 import { TestUI } from './TestUI';
 
-const templateData: TemplateData = new TemplateData();
-const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
-const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-
-const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
-// tslint:disable-next-line:no-backbone-get-set-outside-model
-const oldTemplateFilter: string | undefined = projectConfiguration.get(templateFilterSetting);
-const oldProjectLanguage: string | undefined = projectConfiguration.get(projectLanguageSetting);
-const oldProjectRuntime: string | undefined = projectConfiguration.get(projectRuntimeSetting);
-
-suiteSetup(async () => {
-    await fse.ensureDir(path.join(testFolder, '.vscode'));
-    // Pretend to create the parent function app
-    await Promise.all([
-        fse.writeFile(path.join(testFolder, 'host.json'), ''),
-        fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
-        fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
-    ]);
-    await projectConfiguration.update(templateFilterSetting, TemplateFilter.Core, vscode.ConfigurationTarget.Global);
-    await projectConfiguration.update(projectLanguageSetting, ProjectLanguage.JavaScript, vscode.ConfigurationTarget.Global);
-    await projectConfiguration.update(projectRuntimeSetting, ProjectRuntime.one, vscode.ConfigurationTarget.Global);
-});
-
-suiteTeardown(async () => {
-    outputChannel.dispose();
-    await fse.remove(testFolder);
-    await projectConfiguration.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
-    await projectConfiguration.update(projectLanguageSetting, oldProjectLanguage, vscode.ConfigurationTarget.Global);
-    await projectConfiguration.update(projectRuntimeSetting, oldProjectRuntime, vscode.ConfigurationTarget.Global);
-});
-
 // tslint:disable-next-line:max-func-body-length
-suite('Create Core Function Tests', () => {
+suite('Create JavaScript Core Function Tests', () => {
+    const templateData: TemplateData = new TemplateData();
+    const testFolder: string = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
+    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
+
+    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
+    // tslint:disable-next-line:no-backbone-get-set-outside-model
+    const oldTemplateFilter: string | undefined = projectConfiguration.get(templateFilterSetting);
+    const oldProjectLanguage: string | undefined = projectConfiguration.get(projectLanguageSetting);
+    const oldProjectRuntime: string | undefined = projectConfiguration.get(projectRuntimeSetting);
+
+    suiteSetup(async () => {
+        await fse.ensureDir(path.join(testFolder, '.vscode'));
+        // Pretend to create the parent function app
+        await Promise.all([
+            fse.writeFile(path.join(testFolder, 'host.json'), ''),
+            fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
+            fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
+        ]);
+        await projectConfiguration.update(templateFilterSetting, TemplateFilter.Core, vscode.ConfigurationTarget.Global);
+        await projectConfiguration.update(projectLanguageSetting, ProjectLanguage.JavaScript, vscode.ConfigurationTarget.Global);
+        await projectConfiguration.update(projectRuntimeSetting, ProjectRuntime.one, vscode.ConfigurationTarget.Global);
+    });
+
+    suiteTeardown(async () => {
+        outputChannel.dispose();
+        await fse.remove(testFolder);
+        await projectConfiguration.update(templateFilterSetting, oldTemplateFilter, vscode.ConfigurationTarget.Global);
+        await projectConfiguration.update(projectLanguageSetting, oldProjectLanguage, vscode.ConfigurationTarget.Global);
+        await projectConfiguration.update(projectRuntimeSetting, oldProjectRuntime, vscode.ConfigurationTarget.Global);
+    });
+
     const blobTrigger: string = 'Blob trigger';
     test(blobTrigger, async () => {
         await testCreateFunction(
@@ -58,7 +58,7 @@ suite('Create Core Function Tests', () => {
             'connectionString',
             undefined // Use default path
         );
-    });
+    }).timeout(6000);
 
     const cosmosDBTrigger: string = 'Cosmos DB trigger';
     test(cosmosDBTrigger, async () => {
@@ -160,23 +160,35 @@ suite('Create Core Function Tests', () => {
             undefined // Use default schedule
         );
     });
-});
 
-async function testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
-    // Setup common inputs
-    const funcName: string = templateName.replace(/ /g, '');
-    inputs.unshift(funcName); // Specify the function name
-    inputs.unshift(templateName); // Select the function template
-    inputs.unshift(testFolder); // Select the test func app folder
-    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
+    test('createFunction API', async () => {
+        const templateId: string = 'HttpTrigger-JavaScript';
+        const functionName: string = 'createFunctionApi';
+        const authLevel: string = 'Anonymous';
+        await vscode.commands.executeCommand('azureFunctions.createFunction', testFolder, templateId, functionName, authLevel);
+        await validateFunction(functionName);
+    }).timeout(5000);
+
+    async function testCreateFunction(templateName: string, ...inputs: (string | undefined) []): Promise<void> {
+        // Setup common inputs
+        const funcName: string = templateName.replace(/ /g, '');
+        inputs.unshift(funcName); // Specify the function name
+        inputs.unshift(templateName); // Select the function template
+        inputs.unshift(testFolder); // Select the test func app folder
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
+        }
+
+        const ui: TestUI = new TestUI(inputs);
+        await createFunction({}, outputChannel, new TestAzureAccount(), templateData, ui);
+        assert.equal(inputs.length, 0, 'Not all inputs were used.');
+
+        await validateFunction(funcName);
     }
 
-    const ui: TestUI = new TestUI(inputs);
-    await createFunction({}, outputChannel, new TestAzureAccount(), templateData, ui);
-    assert.equal(inputs.length, 0, 'Not all inputs were used.');
-
-    const functionPath: string = path.join(testFolder, funcName);
-    assert.equal(await fse.pathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
-    assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
-}
+    async function validateFunction(funcName: string): Promise<void> {
+        const functionPath: string = path.join(testFolder, funcName);
+        assert.equal(await fse.pathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
+        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    }
+});

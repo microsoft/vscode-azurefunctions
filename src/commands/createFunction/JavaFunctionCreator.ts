@@ -14,13 +14,13 @@ import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
 import { mavenUtils } from "../../utils/mavenUtils";
-import { AbstractFunctionCreator } from './AbstractFunctionCreator';
+import { FunctionCreatorBase } from './FunctionCreatorBase';
 
 function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
     return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${parseJavaClassName(functionName)}.java`);
 }
 
-export class JavaFunctionCreator extends AbstractFunctionCreator {
+export class JavaFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
@@ -30,15 +30,19 @@ export class JavaFunctionCreator extends AbstractFunctionCreator {
         this._outputChannel = outputChannel;
     }
 
-    public async promptForSettings(ui: IUserInterface): Promise<void> {
+    public async promptForSettings(ui: IUserInterface, functionName: string | undefined): Promise<void> {
         const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
         const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
         this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
 
-        const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${convertTemplateIdToJava(this._template.id)}Java`);
-        const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-        const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-        this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+        if (!functionName) {
+            const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${convertTemplateIdToJava(this._template.id)}Java`);
+            const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
+            const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
+            this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+        } else {
+            this._functionName = functionName;
+        }
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {

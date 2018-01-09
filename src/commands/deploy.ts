@@ -22,32 +22,51 @@ import { convertStringToRuntime, extensionPrefix, getProjectLanguage, getProject
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
+import * as azUtils from '../utils/azure';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { nodeUtils } from '../utils/nodeUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, context?: IAzureParentNode<FunctionAppTreeItem> | vscode.Uri, ui: IUserInterface = new VSCodeUI()): Promise<void> {
-    const uri: vscode.Uri | undefined = context && context instanceof vscode.Uri ? context : undefined;
-    let node: IAzureParentNode<FunctionAppTreeItem> | undefined = context && !(context instanceof vscode.Uri) ? context : undefined;
+export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    let deployFsPath: string;
+    if (!deployPath) {
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
+    } else if (deployPath instanceof vscode.Uri) {
+        deployFsPath = deployPath.fsPath;
+    } else {
+        deployFsPath = deployPath;
+    }
 
-    let folderPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
-
-    if (!node) {
+    let node: IAzureParentNode<FunctionAppTreeItem>;
+    if (!functionAppId || typeof (functionAppId) !== 'string') {
         node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+    } else {
+        const subscriptionId: string = azUtils.getSubscriptionFromId(functionAppId);
+        const subscriptionNode: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscription.subscriptionId === subscriptionId);
+        if (subscriptionNode) {
+            const functionAppNode: IAzureNode | undefined = (await subscriptionNode.getCachedChildren()).find((n: IAzureNode) => n.treeItem.id === functionAppId);
+            if (functionAppNode) {
+                node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+            } else {
+                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
+            }
+        } else {
+            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscriptionId));
+        }
     }
 
     const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
     const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
 
-    const language: ProjectLanguage = await getProjectLanguage(folderPath, ui);
+    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        folderPath = await getJavaFolderPath(outputChannel, folderPath, ui);
+        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
     }
 
     await verifyRuntimeIsCompatible(runtime, outputChannel, client, siteWrapper);
@@ -63,7 +82,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
                     await siteWrapper.stop(client);
                 }
-                await siteWrapper.deploy(folderPath, client, outputChannel, extensionPrefix);
+                await siteWrapper.deploy(deployFsPath, client, outputChannel, extensionPrefix);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));

@@ -12,7 +12,7 @@ export namespace gitUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, '--version');
             return true;
-        } catch {
+        } catch (error) {
             return false;
         }
     }

@@ -39,17 +39,21 @@ const funcProblemMatcher: {} = {
     }
 };
 
-export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
+    await fse.ensureDir(functionAppPath);
 
     // Only display 'supported' languages that can be debugged in VS Code
     const languagePicks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
         new Pick(ProjectLanguage.Java)
     ];
-    const language: string = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+
+    if (!language) {
+        language = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+    }
     telemetryProperties.projectLanguage = language;
 
     let projectCreator: IProjectCreator;

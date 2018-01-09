@@ -11,7 +11,7 @@ export namespace mavenUtils {
     export async function validateMavenInstalled(workingDirectory: string): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
-        } catch {
+        } catch (error) {
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
     }

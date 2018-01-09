@@ -28,6 +28,7 @@ import { TemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
+import { VSCodeUI } from './VSCodeUI';
 
 let reporter: TelemetryReporter | undefined;
 
@@ -58,14 +59,16 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
         actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
-        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements) => await createFunction(properties, outputChannel, azureAccount, templateData));
-        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createNewProject', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements) => await createNewProject(properties, outputChannel));
+        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, templateId?: string, functionName?: string, ...functionSettings: string[]) => {
+            await createFunction(properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, ...functionSettings);
+        });
+        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createNewProject', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, language?: string, openFolder?: boolean | undefined) => await createNewProject(properties, outputChannel, functionAppPath, language, openFolder));
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async (node?: IAzureParentNode) => await createChildNode(tree, AzureTreeDataProvider.subscriptionContextValue, node));
         actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         actionHandler.registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         actionHandler.registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
         actionHandler.registerCommand('azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
-        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.deploy', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, arg?: IAzureParentNode<FunctionAppTreeItem> | vscode.Uri) => await deploy(properties, tree, outputChannel, arg));
+        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.deploy', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, deployPath: vscode.Uri | string, functionAppId?: string) => await deploy(properties, tree, outputChannel, deployPath, functionAppId));
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.configureDeploymentSource', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, node?: IAzureNode<FunctionAppTreeItem>) => await configureDeploymentSource(properties, tree, outputChannel, node));
         actionHandler.registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
         actionHandler.registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
