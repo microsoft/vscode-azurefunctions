@@ -16,14 +16,22 @@ import { IUserInterface, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
-function getResourceGroupFromId(id: string): string {
+function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
 
     if (matches === null || matches.length < 3) {
         throw new Error(localize('azFunc.InvalidResourceId', 'Invalid Azure Resource Id'));
     }
 
-    return matches[2];
+    return matches;
+}
+
+function getResourceGroupFromId(id: string): string {
+    return parseResourceId(id) [2];
+}
+
+export function getSubscriptionFromId(id: string): string {
+    return parseResourceId(id) [1];
 }
 
 interface IBaseResourceWithName extends BaseResource {

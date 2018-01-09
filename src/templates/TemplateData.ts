@@ -173,7 +173,7 @@ export class TemplateData {
         for (const rawTemplate of rawTemplates) {
             try {
                 this._templatesMap[runtime].push(new Template(rawTemplate, resources));
-            } catch {
+            } catch (error) {
                 // Ignore errors so that a single poorly formed template does not affect other templates
             }
         }

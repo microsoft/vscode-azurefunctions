@@ -20,7 +20,7 @@ import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
 import { VSCodeUI } from '../../VSCodeUI';
 import { createNewProject } from '../createNewProject/createNewProject';
-import { AbstractFunctionCreator } from './AbstractFunctionCreator';
+import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
@@ -35,7 +35,7 @@ async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, o
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(telemetryProperties, outputChannel, functionAppPath, false, ui);
+            await createNewProject(telemetryProperties, outputChannel, functionAppPath, undefined, false, ui);
         } else if (result !== DialogResponses.skipForNow) {
             throw new UserCancelledError();
         }
@@ -82,10 +82,17 @@ export async function createFunction(
     outputChannel: vscode.OutputChannel,
     azureAccount: AzureAccount,
     templateData: TemplateData,
-    ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    ui: IUserInterface = new VSCodeUI(),
+    functionAppPath?: string,
+    templateId?: string,
+    functionName?: string,
+    ...functionSettings: (string)[]): Promise<void> {
 
-    const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
-    const functionAppPath: string = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
+    if (functionAppPath === undefined) {
+        const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
+        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
+    }
+
     await validateIsFunctionApp(telemetryProperties, outputChannel, functionAppPath, ui);
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
@@ -97,16 +104,29 @@ export async function createFunction(
     const templateFilter: TemplateFilter = await getTemplateFilter();
     telemetryProperties.templateFilter = templateFilter;
 
-    const templatePicks: PickWithData<Template>[] = (await templateData.getTemplates(language, runtime, templateFilter, ui)).map((t: Template) => new PickWithData<Template>(t, t.name));
-    const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
-    const template: Template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
+    let template: Template;
+    if (!templateId) {
+        const templates: Template[] = await templateData.getTemplates(language, runtime, templateFilter, ui);
+        const templatePicks: PickWithData<Template>[] = templates.map((t: Template) => new PickWithData<Template>(t, t.name));
+        const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
+        template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
+    } else {
+        const templates: Template[] = await templateData.getTemplates(language, runtime, TemplateFilter.All, ui);
+        const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
+        if (foundTemplate) {
+            template = foundTemplate;
+        } else {
+            throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", runtime "{1}", and id "{2}".', language, runtime, templateId));
+        }
+    }
+
     telemetryProperties.templateId = template.id;
 
     if (!template.functionConfig.isHttpTrigger) {
         await localAppSettings.validateAzureWebJobsStorage();
     }
 
-    let functionCreator: AbstractFunctionCreator;
+    let functionCreator: FunctionCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
             functionCreator = new JavaFunctionCreator(functionAppPath, template, outputChannel);
@@ -116,14 +136,20 @@ export async function createFunction(
             break;
     }
 
-    await functionCreator.promptForSettings(ui);
+    await functionCreator.promptForSettings(ui, functionName);
 
     const userSettings: { [propertyName: string]: string } = {};
     for (const settingName of template.userPromptedSettings) {
         const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
-            const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
-            const settingValue: string | undefined = await promptForSetting(ui, localAppSettings, setting, defaultValue);
+            let settingValue: string | undefined;
+            if (functionSettings.length > 0) {
+                settingValue = functionSettings.shift();
+            } else {
+                const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
+                settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);
+            }
+
             userSettings[settingName] = settingValue ? settingValue : '';
         }
     }

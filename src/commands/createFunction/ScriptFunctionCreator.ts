@@ -10,7 +10,7 @@ import { localize } from "../../localize";
 import { ProjectLanguage } from '../../ProjectSettings';
 import { Template } from "../../templates/Template";
 import * as fsUtil from '../../utils/fs';
-import { AbstractFunctionCreator } from './AbstractFunctionCreator';
+import { FunctionCreatorBase } from './FunctionCreatorBase';
 
 function getFileNameFromLanguage(language: string): string | undefined {
     switch (language) {
@@ -38,7 +38,7 @@ function getFileNameFromLanguage(language: string): string | undefined {
 /**
  * Function creator for multiple languages that don't require compilation (JavaScript, C# Script, Bash, etc.)
  */
-export class ScriptFunctionCreator extends AbstractFunctionCreator {
+export class ScriptFunctionCreator extends FunctionCreatorBase {
     private _language: string;
     private _functionName: string;
 
@@ -47,11 +47,15 @@ export class ScriptFunctionCreator extends AbstractFunctionCreator {
         this._language = language;
     }
 
-    public async promptForSettings(ui: IUserInterface): Promise<void> {
-        const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, this._template.defaultFunctionName);
-        const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-        const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-        this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+    public async promptForSettings(ui: IUserInterface, functionName: string | undefined): Promise<void> {
+        if (!functionName) {
+            const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, this._template.defaultFunctionName);
+            const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
+            const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
+            this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+        } else {
+            this._functionName = functionName;
+        }
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string; }): Promise<string | undefined> {
