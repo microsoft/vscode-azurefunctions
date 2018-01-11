@@ -16,7 +16,7 @@ install:
 script:
   - npm run vscode:prepublish
   - npm run lint
-  - npm run test
+  - gulp test
 
 notifications:
   email:
