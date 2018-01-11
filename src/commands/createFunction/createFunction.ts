@@ -20,6 +20,7 @@ import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
 import { VSCodeUI } from '../../VSCodeUI';
 import { createNewProject } from '../createNewProject/createNewProject';
+import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
@@ -86,7 +87,7 @@ export async function createFunction(
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    ...functionSettings: (string)[]): Promise<void> {
+    ...functionSettings: (string) []): Promise<void> {
 
     if (functionAppPath === undefined) {
         const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
@@ -130,6 +131,9 @@ export async function createFunction(
     switch (language) {
         case ProjectLanguage.Java:
             functionCreator = new JavaFunctionCreator(functionAppPath, template, outputChannel);
+            break;
+        case ProjectLanguage.CSharp:
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template, outputChannel);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);

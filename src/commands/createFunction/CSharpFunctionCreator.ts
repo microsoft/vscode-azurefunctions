@@ -11,18 +11,12 @@ import { localize } from "../../localize";
 import { Template } from "../../templates/Template";
 import { removeLanguageFromId } from "../../templates/TemplateData";
 import { cpUtils } from "../../utils/cpUtils";
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import * as fsUtil from '../../utils/fs';
-import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
-import { mavenUtils } from "../../utils/mavenUtils";
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 
-function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string, functionName: string): string {
-    return path.join(functionAppPath, 'src', 'main', 'java', ...packageName.split('.'), `${parseJavaClassName(functionName)}.java`);
-}
-
-export class JavaFunctionCreator extends FunctionCreatorBase {
+export class CSharpFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
-    private _packageName: string;
     private _functionName: string;
 
     constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
@@ -31,12 +25,8 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     }
 
     public async promptForSettings(ui: IUserInterface, functionName: string | undefined): Promise<void> {
-        const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-        const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
-        this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
-
         if (!functionName) {
-            const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${removeLanguageFromId(this._template.id)}Java`);
+            const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, removeLanguageFromId(this._template.id), '.cs');
             const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
             const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
             this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
@@ -46,33 +36,39 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
-        const javaFuntionProperties: string[] = [];
+        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._functionAppPath);
+
+        const args: string[] = [];
         for (const key of Object.keys(userSettings)) {
-            javaFuntionProperties.push(`"-D${key}=${userSettings[key]}"`);
+            let parameter: string = key.charAt(0).toUpperCase() + key.slice(1);
+            // the parameters for dotnet templates are not consistent. Hence, we have to special-case a few of them:
+            if (parameter === 'AuthLevel') {
+                parameter = 'AccessRights';
+            } else if (parameter === 'QueueName') {
+                parameter = 'Path';
+            }
+
+            args.push(`--${parameter}="${userSettings[key]}"`);
         }
 
-        await mavenUtils.validateMavenInstalled(this._functionAppPath);
-        this._outputChannel.show();
         await cpUtils.executeCommand(
             this._outputChannel,
             this._functionAppPath,
-            'mvn',
-            'azure-functions:add',
-            '-B',
-            `"-Dfunctions.package=${this._packageName}"`,
-            `"-Dfunctions.name=${this._functionName}"`,
-            `"-Dfunctions.template=${removeLanguageFromId(this._template.id)}"`,
-            ...javaFuntionProperties
+            'dotnet',
+            'new',
+            removeLanguageFromId(this._template.id),
+            `--name="${this._functionName}"`,
+            ...args
         );
 
-        return getNewJavaFunctionFilePath(this._functionAppPath, this._packageName, this._functionName);
+        return path.join(this._functionAppPath, `${this._functionName}.cs`);
     }
 
     private validateTemplateName(name: string | undefined): string | undefined {
         if (!name) {
             return localize('azFunc.emptyTemplateNameError', 'The template name cannot be empty.');
-        } else if (fse.existsSync(getNewJavaFunctionFilePath(this._functionAppPath, this._packageName, name))) {
-            return localize('azFunc.existingFolderError', 'The Java class \'{0}\' already exists.', getFullClassName(this._packageName, name));
+        } else if (fse.existsSync(path.join(this._functionAppPath, `${name}.cs`))) {
+            return localize('azFunc.existingCSFile', 'A CSharp file with the name \'{0}\' already exists.', name);
         } else if (!this._functionNameRegex.test(name)) {
             return localize('azFunc.functionNameInvalidError', 'Function name must start with a letter and can contain letters, digits, \'_\' and \'-\'');
         } else {

@@ -4,17 +4,19 @@
 * For local debugging:
   * [.NET Core 2.0](https://www.microsoft.com/net/download/core)
   * Install the [Azure Core Function Tools 2.0](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local) with the following command
-
-```bash
-npm install -g azure-functions-core-tools@core
-```
-> Note: when installing on Ubuntu, you may need to use `sudo`. On MacOS and LInux, you may need to include the `unsafe-perm` flag, as follows:
-```bash
-sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
- ```
+  ```bash
+  npm install -g azure-functions-core-tools@core
+  ```
+  > Note: when installing on Ubuntu, you may need to use `sudo`. On MacOS and LInux, you may need to include the `unsafe-perm` flag, as follows:
+  ```bash
+  sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
+  ```
 
 * For JavaScript based Functions:
   * [Node 8.0+](https://nodejs.org/)
+
+* For C# based Functions:
+  * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
 
 * For Java based Functions:
   * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)

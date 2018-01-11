@@ -22,6 +22,7 @@ const previewDescription: string = localize('previewDescription', '(Preview)');
 export enum ProjectLanguage {
     Bash = 'Bash',
     Batch = 'Batch',
+    CSharp = 'C#',
     FSharp = 'F#',
     Java = 'Java',
     JavaScript = 'JavaScript',
