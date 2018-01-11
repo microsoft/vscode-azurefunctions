@@ -9,6 +9,14 @@ const download = require('gulp-download');
 const path = require('path');
 const os = require('os');
 const fse = require('fs-extra');
+const cp = require('child_process');
+
+gulp.task('test', ['install-azure-account'], (cb) => {
+    const cmd = cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit' });
+    cmd.on('close', (code) => {
+        cb(code);
+    });
+});
 
 gulp.task('install-azure-account', async () => {
     const version = '0.2.2';
