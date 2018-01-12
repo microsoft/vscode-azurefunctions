@@ -47,6 +47,7 @@
         "onCommand:azureFunctions.appSettings.edit",
         "onCommand:azureFunctions.appSettings.rename",
         "onCommand:azureFunctions.appSettings.delete",
+        "onCommand:azureFunctions.pickProcess",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -156,6 +157,11 @@
             {
                 "command": "azureFunctions.appSettings.delete",
                 "title": "%azFunc.appSettings.delete%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.pickProcess",
+                "title": "%azFunc.pickProcess%",
                 "category": "Azure Functions"
             }
         ],
@@ -293,6 +299,10 @@
                 {
                     "command": "azureFunctions.loadMore",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.pickProcess",
+                    "when": "never"
                 }
             ]
         },
@@ -352,6 +362,7 @@
                         "enum": [
                             "Bash",
                             "Batch",
+                            "C#",
                             "F#",
                             "Java",
                             "JavaScript",
@@ -398,6 +409,7 @@
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
+        "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "vscode-azureappservice": "~0.8.2",
         "vscode-azureextensionui": "~0.5.1",

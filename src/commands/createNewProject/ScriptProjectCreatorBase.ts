@@ -41,8 +41,8 @@ local.settings.json
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
 export abstract class ScriptProjectCreatorBase implements IProjectCreator {
-    public abstract getTasksJson(launchTaskId: string, funcProblemMatcher: {}): {};
-    public abstract getLaunchJson(launchTaskId: string): {};
+    public abstract getTasksJson(): {};
+    public abstract getLaunchJson(): {};
     public abstract getRuntime(): ProjectRuntime;
 
     public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {

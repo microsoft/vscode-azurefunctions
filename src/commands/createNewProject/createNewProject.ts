@@ -16,28 +16,10 @@ import { confirmOverwriteFile } from '../../utils/fs';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { VSCodeUI } from '../../VSCodeUI';
+import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { IProjectCreator } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
-
-const launchTaskId: string = 'launchFunctionApp';
-
-const funcProblemMatcher: {} = {
-    owner: extensionPrefix,
-    pattern: [
-        {
-            regexp: '\\b\\B',
-            file: 1,
-            location: 2,
-            message: 3
-        }
-    ],
-    background: {
-        activeOnStart: true,
-        beginsPattern: '^.*Stopping host.*',
-        endsPattern: '^.*Job host started.*'
-    }
-};
 
 export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
@@ -48,6 +30,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     // Only display 'supported' languages that can be debugged in VS Code
     const languagePicks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
+        new Pick(ProjectLanguage.CSharp),
         new Pick(ProjectLanguage.Java)
     ];
 
@@ -64,6 +47,9 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         case ProjectLanguage.JavaScript:
             projectCreator = new JavaScriptProjectCreator();
             break;
+        case ProjectLanguage.CSharp:
+            projectCreator = new CSharpProjectCreator(outputChannel);
+            break;
         default:
             throw new Error(localize('unrecognizedLanguage', 'Unrecognized language "{0}"', language));
     }
@@ -79,12 +65,12 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
 
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
-        await fsUtil.writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson(launchTaskId, funcProblemMatcher));
+        await fsUtil.writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson());
     }
 
     const launchJsonPath: string = path.join(vscodePath, 'launch.json');
     if (await confirmOverwriteFile(launchJsonPath)) {
-        await fsUtil.writeFormattedJson(launchJsonPath, projectCreator.getLaunchJson(launchTaskId));
+        await fsUtil.writeFormattedJson(launchJsonPath, projectCreator.getLaunchJson());
     }
 
     const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
@@ -94,6 +80,15 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         settings[`${extensionPrefix}.${projectLanguageSetting}`] = language;
         settings[`${extensionPrefix}.${templateFilterSetting}`] = TemplateFilter.Verified;
         await fsUtil.writeFormattedJson(settingsJsonPath, settings);
+    }
+
+    if (projectCreator.getRecommendedExtensions) {
+        const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
+        if (await confirmOverwriteFile(extensionsJsonPath)) {
+            await fsUtil.writeFormattedJson(extensionsJsonPath, {
+                recommendations: projectCreator.getRecommendedExtensions()
+            });
+        }
     }
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {

@@ -21,5 +21,6 @@
     "azFunc.appSettings.add": "Add new setting...",
     "azFunc.appSettings.edit": "Edit setting...",
     "azFunc.appSettings.rename": "Rename setting...",
-    "azFunc.appSettings.delete": "Delete setting"
+    "azFunc.appSettings.delete": "Delete setting",
+    "azFunc.pickProcess": "Pick Process"
 }

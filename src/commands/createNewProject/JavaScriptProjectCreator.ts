@@ -5,6 +5,7 @@
 
 import { localize } from "../../localize";
 import { ProjectRuntime } from "../../ProjectSettings";
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
@@ -12,13 +13,13 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         return ProjectRuntime.one;
     }
 
-    public getTasksJson(launchTaskId: string, funcProblemMatcher: {}): {} {
+    public getTasksJson(): {} {
         return {
             version: '2.0.0',
             tasks: [
                 {
-                    label: localize('azFunc.launchFuncApp', 'Launch Function App'),
-                    identifier: launchTaskId,
+                    label: funcHostTaskLabel,
+                    identifier: funcHostTaskId,
                     type: 'shell',
                     command: 'func host start',
                     isBackground: true,
@@ -26,14 +27,14 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                         reveal: 'always'
                     },
                     problemMatcher: [
-                        funcProblemMatcher
+                        funcHostProblemMatcher
                     ]
                 }
             ]
         };
     }
 
-    public getLaunchJson(launchTaskId: string): {} {
+    public getLaunchJson(): {} {
         return {
             version: '0.2.0',
             configurations: [
@@ -43,7 +44,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     request: 'attach',
                     port: 5858,
                     protocol: 'inspector',
-                    preLaunchTask: launchTaskId
+                    preLaunchTask: funcHostTaskId
                 }
             ]
         };

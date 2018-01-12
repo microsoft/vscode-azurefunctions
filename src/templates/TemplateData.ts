@@ -40,7 +40,11 @@ export class TemplateData {
         'HttpTriggerWithParameters-JavaScript',
         'ManualTrigger-JavaScript',
         'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript'
+        'TimerTrigger-JavaScript',
+        'HttpTrigger-CSharp',
+        'BlobTrigger-CSharp',
+        'QueueTrigger-CSharp',
+        'TimerTrigger-CSharp'
     ];
 
     private readonly _javaTemplates: string[] = [
@@ -80,7 +84,7 @@ export class TemplateData {
             // Will refactor the code here when templates HTTP API is ready.
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
             const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
-            return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === convertTemplateIdToJava(t.id)));
+            return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
         } else {
             let templates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
@@ -181,6 +185,6 @@ export class TemplateData {
     }
 }
 
-export function convertTemplateIdToJava(id: string): string {
-    return id.replace('-JavaScript', '');
+export function removeLanguageFromId(id: string): string {
+    return id.split('-')[0];
 }

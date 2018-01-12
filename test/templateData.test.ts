@@ -20,4 +20,9 @@ suite('Template Data Tests', () => {
         const templates: Template[] = await templateData.getTemplates(ProjectLanguage.Java, ProjectRuntime.beta, TemplateFilter.Verified);
         assert.equal(templates.length, 4);
     });
+
+    test('Default CSharp Templates Count', async () => {
+        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
+        assert.equal(templates.length, 4);
+    });
 });

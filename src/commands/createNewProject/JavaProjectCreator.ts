@@ -14,7 +14,7 @@ import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
-import { IProjectCreator } from './IProjectCreator';
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, IProjectCreator } from './IProjectCreator';
 
 export class JavaProjectCreator implements IProjectCreator {
     private _javaTargetPath: string;
@@ -78,13 +78,13 @@ export class JavaProjectCreator implements IProjectCreator {
         return ProjectRuntime.beta;
     }
 
-    public getTasksJson(launchTaskId: string, funcProblemMatcher: {}): {} {
+    public getTasksJson(): {} {
         let tasksJson: {} = {
             version: '2.0.0',
             tasks: [
                 {
-                    label: localize('azFunc.launchFuncApp', 'Launch Function App'),
-                    identifier: launchTaskId,
+                    label: funcHostTaskLabel,
+                    identifier: funcHostTaskId,
                     linux: {
                         command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
                     },
@@ -100,7 +100,7 @@ export class JavaProjectCreator implements IProjectCreator {
                         reveal: 'always'
                     },
                     problemMatcher: [
-                        funcProblemMatcher
+                        funcHostProblemMatcher
                     ]
                 }
             ]
@@ -114,7 +114,7 @@ export class JavaProjectCreator implements IProjectCreator {
         return tasksJson;
     }
 
-    public getLaunchJson(launchTaskId: string): {} {
+    public getLaunchJson(): {} {
         return {
             version: '0.2.0',
             configurations: [
@@ -124,9 +124,13 @@ export class JavaProjectCreator implements IProjectCreator {
                     request: 'attach',
                     hostName: 'localhost',
                     port: 5005,
-                    preLaunchTask: launchTaskId
+                    preLaunchTask: funcHostTaskId
                 }
             ]
         };
+    }
+
+    public getRecommendedExtensions(): string[] {
+        return ['vscjava.vscode-java-debug'];
     }
 }
