@@ -85,7 +85,7 @@ export class CSharpProjectCreator implements IProjectCreator {
         };
     }
 
-    public getRedommendedExtensions(): string[] {
+    public getRecommendedExtensions(): string[] {
         return ['ms-vscode.csharp'];
     }
 }

@@ -130,7 +130,7 @@ export class JavaProjectCreator implements IProjectCreator {
         };
     }
 
-    public getRedommendedExtensions(): string[] {
+    public getRecommendedExtensions(): string[] {
         return ['vscjava.vscode-java-debug'];
     }
 }

@@ -13,7 +13,7 @@ export interface IProjectCreator {
     addNonVSCodeFiles(functionAppPath: string): Promise<void>;
     getTasksJson(): {};
     getLaunchJson(): {};
-    getRedommendedExtensions?(): string[];
+    getRecommendedExtensions?(): string[];
     getRuntime(): ProjectRuntime;
 }
 

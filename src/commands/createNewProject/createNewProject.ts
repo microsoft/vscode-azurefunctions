@@ -82,11 +82,11 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         await fsUtil.writeFormattedJson(settingsJsonPath, settings);
     }
 
-    if (projectCreator.getRedommendedExtensions) {
+    if (projectCreator.getRecommendedExtensions) {
         const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
         if (await confirmOverwriteFile(extensionsJsonPath)) {
             await fsUtil.writeFormattedJson(extensionsJsonPath, {
-                recommendations: projectCreator.getRedommendedExtensions()
+                recommendations: projectCreator.getRecommendedExtensions()
             });
         }
     }
