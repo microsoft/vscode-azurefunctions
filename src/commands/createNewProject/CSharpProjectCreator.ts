@@ -8,7 +8,7 @@ import { localize } from "../../localize";
 import { ProjectRuntime } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostProblemMatcher, funcHostTaskId, IProjectCreator } from './IProjectCreator';
+import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
 
 export class CSharpProjectCreator implements IProjectCreator {
     private _outputChannel: OutputChannel;
@@ -61,10 +61,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
-                    },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
+                    }
                 }
             ]
         };
