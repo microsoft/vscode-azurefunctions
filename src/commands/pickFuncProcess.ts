@@ -6,12 +6,35 @@
 // tslint:disable-next-line:no-require-imports
 import ps = require('ps-node');
 import * as vscode from 'vscode';
-import { MessageItem } from 'vscode';
-import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 
 export async function pickFuncProcess(): Promise<string | undefined> {
+    let funcProcess: string | undefined = await getFuncPid();
+
+    if (funcProcess === undefined) {
+        // If the functions host isn't running, start the task for the user
+        await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
+
+        const timeout: number = 15;
+        const maxTime: number = Date.now() + timeout * 1000;
+        while (Date.now() < maxTime) {
+            // Wait one second between each attempt
+            await new Promise((resolve: () => void): void => { setTimeout(resolve, 1000); });
+
+            funcProcess = await getFuncPid();
+            if (funcProcess !== undefined) {
+                return funcProcess;
+            }
+        }
+
+        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds.', timeout));
+    } else {
+        return funcProcess;
+    }
+}
+
+async function getFuncPid(): Promise<string | undefined> {
     const processList: IProcess[] = await new Promise((resolve: (processList: IProcess[]) => void, reject: (e: Error) => void): void => {
         //tslint:disable-next-line:no-unsafe-any
         ps.lookup(
@@ -29,11 +52,6 @@ export async function pickFuncProcess(): Promise<string | undefined> {
     });
 
     if (processList.length === 0) {
-        const startHost: vscode.MessageItem = { title: localize('startHost', 'Start Functions Host') };
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(localize('funcHostNotRunning', 'You must have the Functions host running in the background before you debug.'), startHost, DialogResponses.cancel);
-        if (result === startHost) {
-            await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
-        }
         return undefined;
     } else if (processList.length === 1) {
         return processList[0].pid;
