@@ -9,7 +9,7 @@ export interface IUserInterface {
     showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
     showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
 
-    showInputBox(placeHolder: string, prompt: string, ignoreFocusOut?: boolean, validateInput?: (s: string) => string | undefined | null, value?: string): Promise<string>;
+    showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null, value?: string, ignoreFocusOut?: boolean): Promise<string>;
 
     showFolderDialog(): Promise<string>;
 }

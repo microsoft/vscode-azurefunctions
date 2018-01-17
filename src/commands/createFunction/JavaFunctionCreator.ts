@@ -33,13 +33,13 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     public async promptForSettings(ui: IUserInterface, functionName: string | undefined): Promise<void> {
         const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
         const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
-        this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, 'com.function');
+        this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, 'com.function');
 
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${removeLanguageFromId(this._template.id)}Java`);
             const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
             const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-            this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+            this._functionName = await ui.showInputBox(placeHolder, prompt, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
         } else {
             this._functionName = functionName;
         }

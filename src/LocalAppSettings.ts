@@ -79,11 +79,11 @@ export class LocalAppSettings {
         } else {
             const keyPlaceHolder: string = localize('azFunc.AppSettingKeyPlaceholder', '\'{0}\' App Setting Key', resourceTypeLabel);
             const keyPrompt: string = localize('azFunc.AppSettingKeyPrompt', 'Enter a key for your \'{0}\' connection string', resourceTypeLabel);
-            appSettingKey = await this._ui.showInputBox(keyPlaceHolder, keyPrompt, true /* ignoreFocusOut */, undefined /* validateInput */, `example${appSettingSuffix}`);
+            appSettingKey = await this._ui.showInputBox(keyPlaceHolder, keyPrompt, undefined /* validateInput */, `example${appSettingSuffix}`);
 
             const valuePlaceHolder: string = localize('azFunc.AppSettingValuePlaceholder', '\'{0}\' App Setting Value', resourceTypeLabel);
             const valuePrompt: string = localize('azFunc.AppSettingValuePrompt', 'Enter the connection string for your \'{0}\'', resourceTypeLabel);
-            connectionString = await this._ui.showInputBox(valuePlaceHolder, valuePrompt, true /* ignoreFocusOut */);
+            connectionString = await this._ui.showInputBox(valuePlaceHolder, valuePrompt);
         }
 
         await this.setAppSetting(settings, appSettingKey, connectionString);
@@ -112,7 +112,7 @@ export class LocalAppSettings {
                 if (error instanceof NoSubscriptionError) {
                     const placeHolder: string = localize('azFunc.StoragePlaceholder', '\'{0}\' Connection String', this._azureWebJobsStorageKey);
                     const prompt: string = localize('azFunc.StoragePrompt', 'Enter the connection string for your \'{0}\'', this._azureWebJobsStorageKey);
-                    connectionString = await this._ui.showInputBox(placeHolder, prompt, true /* ignoreFocusOut */);
+                    connectionString = await this._ui.showInputBox(placeHolder, prompt);
                 } else {
                     throw error;
                 }
