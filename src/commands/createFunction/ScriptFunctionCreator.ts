@@ -52,7 +52,7 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, this._template.defaultFunctionName);
             const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
             const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-            this._functionName = await ui.showInputBox(placeHolder, prompt, false, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+            this._functionName = await ui.showInputBox(placeHolder, prompt, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
         } else {
             this._functionName = functionName;
         }

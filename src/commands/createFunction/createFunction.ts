@@ -62,20 +62,20 @@ async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSe
 async function promptForEnumSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
     const picks: PickWithData<string>[] = setting.enums.map((ev: EnumValue) => new PickWithData<string>(ev.value, ev.displayName));
 
-    return (await ui.showQuickPick(picks, setting.label, false)).data;
+    return (await ui.showQuickPick(picks, setting.label)).data;
 }
 
 async function promptForBooleanSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
     const picks: Pick[] = [new Pick('true'), new Pick('false')];
 
-    return (await ui.showQuickPick(picks, setting.label, false)).label;
+    return (await ui.showQuickPick(picks, setting.label)).label;
 }
 
 async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     const prompt: string = localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label);
     defaultValue = defaultValue ? defaultValue : setting.defaultValue;
 
-    return await ui.showInputBox(setting.label, prompt, false, (s: string) => setting.validateSetting(s), defaultValue);
+    return await ui.showInputBox(setting.label, prompt, (s: string) => setting.validateSetting(s), defaultValue);
 }
 
 export async function createFunction(

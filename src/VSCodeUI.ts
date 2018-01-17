@@ -11,7 +11,7 @@ import { localize } from './localize';
 export class VSCodeUI implements IUserInterface {
     public async showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
     public async showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
-    public async showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, ignoreFocusOut: boolean = false): Promise<vscode.QuickPickItem> {
+    public async showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, ignoreFocusOut: boolean = true): Promise<vscode.QuickPickItem> {
         const options: vscode.QuickPickOptions = {
             placeHolder: placeHolder,
             ignoreFocusOut: ignoreFocusOut
@@ -25,7 +25,7 @@ export class VSCodeUI implements IUserInterface {
         }
     }
 
-    public async showInputBox(placeHolder: string, prompt: string, ignoreFocusOut: boolean = false, validateInput?: (s: string) => string | undefined | null, defaultValue?: string): Promise<string> {
+    public async showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null, defaultValue?: string, ignoreFocusOut: boolean = true): Promise<string> {
         const options: vscode.InputBoxOptions = {
             placeHolder: placeHolder,
             prompt: prompt,

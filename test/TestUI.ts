@@ -7,15 +7,15 @@ import * as vscode from 'vscode';
 import { IUserInterface, Pick, PickWithData } from '../src/IUserInterface';
 
 export class TestUI implements IUserInterface {
-    private _inputs: (string | undefined)[];
+    private _inputs: (string | undefined) [];
 
-    constructor(inputs: (string | undefined)[]) {
+    constructor(inputs: (string | undefined) []) {
         this._inputs = inputs;
     }
 
     public async showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
     public async showQuickPick(items: Pick[] | Thenable<Pick[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<Pick>;
-    public async showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, _ignoreFocusOut: boolean = false): Promise<vscode.QuickPickItem> {
+    public async showQuickPick(items: vscode.QuickPickItem[] | Thenable<vscode.QuickPickItem[]>, placeHolder: string, _ignoreFocusOut: boolean = true): Promise<vscode.QuickPickItem> {
         if (this._inputs.length > 0) {
             const input: string | undefined = this._inputs.shift();
             const resolvedItems: vscode.QuickPickItem[] = await Promise.resolve(items);
@@ -38,7 +38,7 @@ export class TestUI implements IUserInterface {
         throw new Error(`Unexpected call to showQuickPick. Placeholder: '${placeHolder}'`);
     }
 
-    public async showInputBox(placeHolder: string, prompt: string, _ignoreFocusOut: boolean = false, validateInput?: (s: string) => string | undefined | null, value?: string): Promise<string> {
+    public async showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null, value?: string, _ignoreFocusOut: boolean = true): Promise<string> {
         if (this._inputs.length > 0) {
             let result: string | undefined = this._inputs.shift();
             if (!result) {

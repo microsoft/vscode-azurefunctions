@@ -30,23 +30,23 @@ export class JavaProjectCreator implements IProjectCreator {
 
         const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
         const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-        const groupId: string = await this._ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, false, validateMavenIdentifier, 'com.function');
+        const groupId: string = await this._ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, validateMavenIdentifier, 'com.function');
 
         const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
         const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
-        const artifactId: string = await this._ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, false, validateMavenIdentifier, path.basename(functionAppPath));
+        const artifactId: string = await this._ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, validateMavenIdentifier, path.basename(functionAppPath));
 
         const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
         const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
-        const version: string = await this._ui.showInputBox(versionPlaceHolder, versionPrompt, false, undefined, '1.0-SNAPSHOT');
+        const version: string = await this._ui.showInputBox(versionPlaceHolder, versionPrompt, undefined, '1.0-SNAPSHOT');
 
         const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
         const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
-        const packageName: string = await this._ui.showInputBox(packagePlaceHolder, packagePrompt, false, validatePackageName, groupId);
+        const packageName: string = await this._ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, groupId);
 
         const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
         const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
-        const appName: string = await this._ui.showInputBox(appNamePlaceHolder, appNamePrompt, false, undefined, `${artifactId}-${Date.now()}`);
+        const appName: string = await this._ui.showInputBox(appNamePlaceHolder, appNamePrompt, undefined, `${artifactId}-${Date.now()}`);
 
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
         await fse.ensureDir(tempFolder);
