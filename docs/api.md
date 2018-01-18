@@ -1,4 +1,4 @@
-# Azure Functions API
+# Azure Functions API (Preview)
 
 The following extension commands are supported for programatic use. If a parameter is not specified, the user will be prompted for the value. You must list 'ms-azuretools.vscode-azurefunctions' under the 'extensionDependencies' section of your package.json to ensure these apis are available to your extension.
 > NOTE: The functions extension is still in preview and the apis are subject to change.
