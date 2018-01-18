@@ -11,6 +11,8 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
 
 export class CSharpProjectCreator implements IProjectCreator {
+    public readonly deploySubPath: string = 'bin/Debug/netstandard2.0';
+
     private _outputChannel: OutputChannel;
 
     constructor(outputChannel: OutputChannel) {

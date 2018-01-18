@@ -18,7 +18,7 @@ import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
-import { convertStringToRuntime, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
+import { convertStringToRuntime, deploySubPathSetting, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
@@ -32,7 +32,10 @@ import { VSCodeUI } from '../VSCodeUI';
 export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     let deployFsPath: string;
     if (!deployPath) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'));
+        const configuration: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
+        // tslint:disable-next-line:no-backbone-get-set-outside-model
+        const defaultSubPath: string | undefined = configuration.get(deploySubPathSetting);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), defaultSubPath);
     } else if (deployPath instanceof vscode.Uri) {
         deployFsPath = deployPath.fsPath;
     } else {
