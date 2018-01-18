@@ -3,16 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { IUserInterface, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
 import * as fsUtils from './fs';
 
-export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string): Promise<string> {
+export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string, subPath?: string): Promise<string> {
     const browse: string = ':browse';
     let folder: PickWithData<string> | undefined;
     if (vscode.workspace.workspaceFolders) {
-        const folderPicks: PickWithData<string>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => new PickWithData('', f.uri.fsPath));
+        const folderPicks: PickWithData<string>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
+            const fsPath: string = subPath ? path.join(f.uri.fsPath, subPath) : f.uri.fsPath;
+            return new PickWithData('', fsPath);
+        });
         folderPicks.push(new PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...')));
         folder = await ui.showQuickPick<string>(folderPicks, placeholder);
     }

@@ -7,6 +7,8 @@ import { localize } from "../../localize";
 import { extensionPrefix, ProjectRuntime } from "../../ProjectSettings";
 
 export interface IProjectCreator {
+    deploySubPath?: string;
+
     /**
      * Add all project files not included in the '.vscode' folder
      */
