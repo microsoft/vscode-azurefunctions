@@ -40,20 +40,16 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
     }
 
     let node: IAzureParentNode<FunctionAppTreeItem>;
-    if (!functionAppId || typeof (functionAppId) !== 'string') {
+    if (!functionAppId || typeof functionAppId !== 'string') {
         node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     } else {
         const subscriptionId: string = azUtils.getSubscriptionFromId(functionAppId);
-        const subscriptionNode: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscription.subscriptionId === subscriptionId);
-        if (subscriptionNode) {
-            const functionAppNode: IAzureNode | undefined = (await subscriptionNode.getCachedChildren()).find((n: IAzureNode) => n.treeItem.id === functionAppId);
-            if (functionAppNode) {
-                node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
-            } else {
-                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
-            }
+        const subscriptionNode: IAzureParentNode = await nodeUtils.getSubscriptionNode(tree, subscriptionId);
+        const functionAppNode: IAzureNode | undefined = (await subscriptionNode.getCachedChildren()).find((n: IAzureNode) => n.treeItem.id === functionAppId);
+        if (functionAppNode) {
+            node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
         } else {
-            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscriptionId));
+            throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
         }
     }
 

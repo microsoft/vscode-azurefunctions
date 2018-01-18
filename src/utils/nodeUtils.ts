@@ -8,9 +8,10 @@ import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 import WebSiteManagementClient = require('azure-arm-website');
 import * as path from 'path';
 import { SiteWrapper } from 'vscode-azureappservice';
-import { IAzureNode } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { ArgumentError } from '../errors';
+import { localize } from '../localize';
 
 export namespace nodeUtils {
     export function getWebSiteClient(node: IAzureNode): WebSiteManagementClient {
@@ -41,5 +42,14 @@ export namespace nodeUtils {
             light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${iconName}.svg`),
             dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${iconName}.svg`)
         };
+    }
+
+    export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<IAzureParentNode> {
+        const node: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscription.subscriptionId === subscriptionId);
+        if (node) {
+            return node;
+        } else {
+            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscriptionId));
+        }
     }
 }
