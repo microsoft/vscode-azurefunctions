@@ -55,29 +55,31 @@ export class FunctionConfig {
                 this.disabled = data.disabled === true;
 
                 // tslint:disable-next-line:no-unsafe-any
-                if (!data.bindings || !(data.bindings instanceof Array)) {
+                if (!data.bindings || !(data.bindings instanceof Array) || data.bindings.length === 0) {
                     errMessage = localize('expectedBindings', 'Expected "bindings" element of type "Array".');
                 } else {
                     this.functionJson = <IFunctionJson>data;
 
                     const inBinding: IFunctionBinding | undefined = this.functionJson.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
                     if (inBinding === undefined) {
-                        errMessage = localize('noInBindingError', 'Expected a binding with direction "in".');
+                        // The generated 'function.json' file for C# class libraries doesn't have direction information (by design), so just use the first
+                        this.inBinding = this.functionJson.bindings[0];
                     } else {
                         this.inBinding = inBinding;
-                        if (!inBinding.type) {
-                            errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
-                        } else {
-                            this.inBindingType = inBinding.type;
-                            if (inBinding.type.toLowerCase() === 'httptrigger') {
-                                this.isHttpTrigger = true;
-                                if (inBinding.authLevel) {
-                                    const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[inBinding.authLevel.toLowerCase()];
-                                    if (authLevel === undefined) {
-                                        errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', inBinding.authLevel);
-                                    } else {
-                                        this.authLevel = authLevel;
-                                    }
+                    }
+
+                    if (!this.inBinding.type) {
+                        errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
+                    } else {
+                        this.inBindingType = this.inBinding.type;
+                        if (this.inBinding.type.toLowerCase() === 'httptrigger') {
+                            this.isHttpTrigger = true;
+                            if (this.inBinding.authLevel) {
+                                const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.inBinding.authLevel.toLowerCase()];
+                                if (authLevel === undefined) {
+                                    errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.inBinding.authLevel);
+                                } else {
+                                    this.authLevel = authLevel;
                                 }
                             }
                         }
