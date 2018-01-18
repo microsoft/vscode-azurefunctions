@@ -21,10 +21,10 @@ suite('Function Config Tests', () => {
             (error: Error) => error.message.includes('bindings')
         );
 
-        // there's no binding with directon 'in'
+        // there's no binding
         assert.throws(
             () => new FunctionConfig({ bindings: [] }),
-            (error: Error) => error.message.includes('direction') && error.message.includes('in')
+            (error: Error) => error.message.includes('bindings')
         );
 
         // in binding does not have type
@@ -118,6 +118,17 @@ suite('Function Config Tests', () => {
             },
             {
                 direction: 'in',
+                type: 'httpTrigger',
+                authLevel: 'function'
+            }]
+        });
+        assert.equal(config.disabled, false);
+        assert.equal(config.isHttpTrigger, true);
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+
+        // validate generated function.json that doesn't have 'in' binding
+        config = new FunctionConfig({
+            bindings: [{
                 type: 'httpTrigger',
                 authLevel: 'function'
             }]
