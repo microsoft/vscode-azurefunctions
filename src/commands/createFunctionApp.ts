@@ -8,7 +8,7 @@ import { nodeUtils } from '../utils/nodeUtils';
 
 export async function createFunctionApp(tree: AzureTreeDataProvider, arg?: IAzureParentNode | string): Promise<string> {
     let node: IAzureParentNode;
-    if (typeof (arg) === 'string') {
+    if (typeof arg === 'string') {
         node = await nodeUtils.getSubscriptionNode(tree, arg);
     } else if (!arg) {
         node = <IAzureParentNode>await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);

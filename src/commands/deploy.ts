@@ -40,7 +40,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
     }
 
     let node: IAzureParentNode<FunctionAppTreeItem>;
-    if (!functionAppId || typeof (functionAppId) !== 'string') {
+    if (!functionAppId || typeof functionAppId !== 'string') {
         node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     } else {
         const subscriptionId: string = azUtils.getSubscriptionFromId(functionAppId);
