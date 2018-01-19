@@ -153,7 +153,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputCha
 
 async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
     const pomString: string = await fse.readFile(pomLocation, 'utf-8');
-    return await new Promise((resolve: (ret: string | undefined) => void): void => {
+    return new Promise((resolve: (ret: string | undefined) => void): void => {
         // tslint:disable-next-line:no-any
         xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
             if (result && !err) {
