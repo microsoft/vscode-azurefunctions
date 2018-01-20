@@ -391,6 +391,7 @@
         "@types/request": "2.0.7",
         "@types/request-promise": "4.1.38",
         "@types/xml2js": "^0.4.2",
+        "@types/xregexp": "^3.0.29",
         "gulp": "^3.9.1",
         "gulp-decompress": "^2.0.1",
         "gulp-download": "^0.0.1",
@@ -416,7 +417,8 @@
         "vscode-extension-telemetry": "^0.0.10",
         "vscode-nls": "^2.0.2",
         "vscode-azurekudu": "~0.1.4",
-        "xml2js": "^0.4.19"
+        "xml2js": "^0.4.19",
+        "xregexp": "^4.0.0"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"
