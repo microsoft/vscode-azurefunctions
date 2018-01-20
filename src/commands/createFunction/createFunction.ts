@@ -87,7 +87,7 @@ export async function createFunction(
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    ...functionSettings: (string) []): Promise<void> {
+    ...functionSettings: (string)[]): Promise<void> {
 
     if (functionAppPath === undefined) {
         const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
@@ -140,7 +140,7 @@ export async function createFunction(
             break;
     }
 
-    await functionCreator.promptForSettings(ui, functionName);
+    await functionCreator.promptForSettings(ui, functionName, functionSettings);
 
     const userSettings: { [propertyName: string]: string } = {};
     for (const settingName of template.userPromptedSettings) {

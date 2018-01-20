@@ -42,6 +42,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     test(blobTrigger, async () => {
         await csTester.testCreateFunction(
             blobTrigger,
+            undefined, // namespace
             undefined, // New App Setting
             'connectionStringKey1',
             'connectionString',
@@ -53,6 +54,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     test(httpTrigger, async () => {
         await csTester.testCreateFunction(
             httpTrigger,
+            undefined, // namespace
             undefined // Use default Authorization level
         );
     });
@@ -61,6 +63,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     test(queueTrigger, async () => {
         await csTester.testCreateFunction(
             queueTrigger,
+            undefined, // namespace
             undefined, // New App Setting
             'connectionStringKey4',
             'connectionString',
@@ -72,6 +75,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     test(timerTrigger, async () => {
         await csTester.testCreateFunction(
             timerTrigger,
+            undefined, // namespace
             undefined // Use default schedule
         );
     });
@@ -79,8 +83,9 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     test('createFunction API', async () => {
         const templateId: string = 'HttpTrigger-CSharp';
         const functionName: string = 'createFunctionApi';
+        const namespace: string = 'Company.Function';
         const authLevel: string = 'Anonymous';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.testFolder, templateId, functionName, authLevel);
+        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.testFolder, templateId, functionName, namespace, authLevel);
         await csTester.validateFunction(functionName);
     });
 });
