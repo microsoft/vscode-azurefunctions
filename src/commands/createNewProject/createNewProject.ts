@@ -17,6 +17,7 @@ import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { VSCodeUI } from '../../VSCodeUI';
 import { CSharpProjectCreator } from './CSharpProjectCreator';
+import { CSharpScriptProjectCreator } from './CSharpScriptProjectCreator';
 import { IProjectCreator } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
@@ -53,6 +54,9 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
             break;
         case ProjectLanguage.CSharp:
             projectCreator = new CSharpProjectCreator(outputChannel);
+            break;
+        case ProjectLanguage.CSharpScript:
+            projectCreator = new CSharpScriptProjectCreator();
             break;
         default:
             projectCreator = new ScriptProjectCreatorBase();
