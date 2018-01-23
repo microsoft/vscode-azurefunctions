@@ -18,7 +18,9 @@ function getFileNameFromLanguage(language: string): string | undefined {
             return 'run.sh';
         case ProjectLanguage.Batch:
             return 'run.bat';
-        case ProjectLanguage.FSharp:
+        case ProjectLanguage.CSharpScript:
+            return 'run.csx';
+        case ProjectLanguage.FSharpScript:
             return 'run.fsx';
         case ProjectLanguage.JavaScript:
             return 'index.js';

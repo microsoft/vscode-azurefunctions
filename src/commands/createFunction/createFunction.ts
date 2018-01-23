@@ -27,8 +27,7 @@ import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
 const requiredFunctionAppFiles: string[] = [
     'host.json',
-    'local.settings.json',
-    path.join('.vscode', 'launch.json') // NOTE: tasks.json is not required if the user prefers to run 'func host start' from the command line
+    'local.settings.json'
 ];
 
 async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {

@@ -86,6 +86,15 @@ export class TemplateData {
             const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
         } else {
+            switch (language) {
+                case ProjectLanguage.CSharpScript:
+                case ProjectLanguage.FSharpScript:
+                    // The functions portal only supports script languages, so it doesn't have the notion of 'C#' vs 'C#Script'
+                    language = language.replace('Script', '');
+                    break;
+                default:
+            }
+
             let templates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
                 case TemplateFilter.All:

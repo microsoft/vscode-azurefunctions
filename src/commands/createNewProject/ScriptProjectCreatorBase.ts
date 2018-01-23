@@ -5,10 +5,10 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ProjectRuntime } from '../../ProjectSettings';
+import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
-import { IProjectCreator } from './IProjectCreator';
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, IProjectCreator } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
@@ -40,10 +40,31 @@ local.settings.json
 /**
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
-export abstract class ScriptProjectCreatorBase implements IProjectCreator {
-    public abstract getTasksJson(): {};
-    public abstract getLaunchJson(): {};
-    public abstract getRuntime(): ProjectRuntime;
+export class ScriptProjectCreatorBase implements IProjectCreator {
+    public readonly runtime: ProjectRuntime = ProjectRuntime.one;
+    // Default template filter to 'All' since preview langauges have not been 'verified'
+    public readonly templateFilter: TemplateFilter = TemplateFilter.All;
+
+    public getTasksJson(): {} {
+        return {
+            version: '2.0.0',
+            tasks: [
+                {
+                    label: funcHostTaskLabel,
+                    identifier: funcHostTaskId,
+                    type: 'shell',
+                    command: 'func host start',
+                    isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: [
+                        funcHostProblemMatcher
+                    ]
+                }
+            ]
+        };
+    }
 
     public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
         const hostJsonPath: string = path.join(functionAppPath, 'host.json');

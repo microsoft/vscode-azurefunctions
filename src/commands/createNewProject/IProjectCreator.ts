@@ -4,19 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from "../../localize";
-import { extensionPrefix, ProjectRuntime } from "../../ProjectSettings";
+import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../ProjectSettings";
 
 export interface IProjectCreator {
     deploySubPath?: string;
+    runtime: ProjectRuntime;
+    templateFilter: TemplateFilter;
 
     /**
      * Add all project files not included in the '.vscode' folder
      */
     addNonVSCodeFiles(functionAppPath: string): Promise<void>;
     getTasksJson(): {};
-    getLaunchJson(): {};
+    getLaunchJson?(): {};
     getRecommendedExtensions?(): string[];
-    getRuntime(): ProjectRuntime;
 }
 
 export const funcHostTaskId: string = 'runFunctionsHost';

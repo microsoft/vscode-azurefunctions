@@ -10,7 +10,7 @@ import { OutputChannel } from 'vscode';
 import { TelemetryProperties } from 'vscode-azureextensionui';
 import { IUserInterface, Pick } from '../../IUserInterface';
 import { localize } from '../../localize';
-import { deploySubPathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../ProjectSettings';
+import { deploySubPathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting, tryGetLanguageSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { confirmOverwriteFile } from '../../utils/fs';
 import { gitUtils } from '../../utils/gitUtils';
@@ -20,6 +20,7 @@ import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { IProjectCreator } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
@@ -27,15 +28,18 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     }
     await fse.ensureDir(functionAppPath);
 
-    // Only display 'supported' languages that can be debugged in VS Code
-    const languagePicks: Pick[] = [
-        new Pick(ProjectLanguage.JavaScript),
-        new Pick(ProjectLanguage.CSharp),
-        new Pick(ProjectLanguage.Java)
-    ];
-
     if (!language) {
-        language = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+        language = tryGetLanguageSetting();
+
+        if (!language) {
+            // Only display 'supported' languages that can be debugged in VS Code
+            const languagePicks: Pick[] = [
+                new Pick(ProjectLanguage.JavaScript),
+                new Pick(ProjectLanguage.CSharp),
+                new Pick(ProjectLanguage.Java)
+            ];
+            language = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+        }
     }
     telemetryProperties.projectLanguage = language;
 
@@ -51,7 +55,8 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
             projectCreator = new CSharpProjectCreator(outputChannel);
             break;
         default:
-            throw new Error(localize('unrecognizedLanguage', 'Unrecognized language "{0}"', language));
+            projectCreator = new ScriptProjectCreatorBase();
+            break;
     }
 
     await projectCreator.addNonVSCodeFiles(functionAppPath);
@@ -68,17 +73,19 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         await fsUtil.writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson());
     }
 
-    const launchJsonPath: string = path.join(vscodePath, 'launch.json');
-    if (await confirmOverwriteFile(launchJsonPath)) {
-        await fsUtil.writeFormattedJson(launchJsonPath, projectCreator.getLaunchJson());
+    if (projectCreator.getLaunchJson) {
+        const launchJsonPath: string = path.join(vscodePath, 'launch.json');
+        if (await confirmOverwriteFile(launchJsonPath)) {
+            await fsUtil.writeFormattedJson(launchJsonPath, projectCreator.getLaunchJson());
+        }
     }
 
     const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
     if (await confirmOverwriteFile(settingsJsonPath)) {
         const settings: {} = {};
-        settings[`${extensionPrefix}.${projectRuntimeSetting}`] = projectCreator.getRuntime();
+        settings[`${extensionPrefix}.${projectRuntimeSetting}`] = projectCreator.runtime;
         settings[`${extensionPrefix}.${projectLanguageSetting}`] = language;
-        settings[`${extensionPrefix}.${templateFilterSetting}`] = TemplateFilter.Verified;
+        settings[`${extensionPrefix}.${templateFilterSetting}`] = projectCreator.templateFilter;
         if (projectCreator.deploySubPath) {
             settings[`${extensionPrefix}.${deploySubPathSetting}`] = projectCreator.deploySubPath;
         }

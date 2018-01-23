@@ -4,35 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from "../../localize";
-import { ProjectRuntime } from "../../ProjectSettings";
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
+import { TemplateFilter } from "../../ProjectSettings";
+import { funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
-    public getRuntime(): ProjectRuntime {
-        return ProjectRuntime.one;
-    }
-
-    public getTasksJson(): {} {
-        return {
-            version: '2.0.0',
-            tasks: [
-                {
-                    label: funcHostTaskLabel,
-                    identifier: funcHostTaskId,
-                    type: 'shell',
-                    command: 'func host start',
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
-                }
-            ]
-        };
-    }
+    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     public getLaunchJson(): {} {
         return {
