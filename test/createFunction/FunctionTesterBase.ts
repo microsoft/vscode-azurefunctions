@@ -5,6 +5,7 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
+import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -16,6 +17,15 @@ import * as fsUtil from '../../src/utils/fs';
 import { TestAzureAccount } from '../TestAzureAccount';
 import { TestUI } from '../TestUI';
 
+const templateData: TemplateData = new TemplateData();
+
+// tslint:disable-next-line:no-function-expression
+suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
+    this.timeout(15 * 1000);
+    // Ensure template data is initialized before any 'Create Function' test is run
+    await templateData.getTemplates('JavaScript');
+});
+
 export abstract class FunctionTesterBase implements vscode.Disposable {
     public testFolder: string;
     public outputChannel: vscode.OutputChannel;
@@ -23,7 +33,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
 
-    private _templateData: TemplateData;
     private _projectConfiguration: WorkspaceConfiguration;
     private _oldTemplateFilter: string | undefined;
     private _oldProjectLanguage: string | undefined;
@@ -32,7 +41,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     constructor() {
         this.testFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
         this.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-        this._templateData = new TemplateData();
         this._projectConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
     }
 
@@ -64,7 +72,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         await this._projectConfiguration.update(projectRuntimeSetting, this._oldProjectRuntime, vscode.ConfigurationTarget.Global);
     }
 
-    public async testCreateFunction(templateName: string, ...inputs: (string | undefined) []): Promise<void> {
+    public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
         const funcName: string = templateName.replace(/ /g, '');
         inputs.unshift(funcName); // Specify the function name
@@ -75,7 +83,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await createFunction({}, this.outputChannel, new TestAzureAccount(), this._templateData, ui);
+        await createFunction({}, this.outputChannel, new TestAzureAccount(), templateData, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(funcName);

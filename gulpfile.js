@@ -19,7 +19,7 @@ gulp.task('test', ['install-azure-account'], (cb) => {
 });
 
 gulp.task('install-azure-account', async () => {
-    const version = '0.2.2';
+    const version = '0.3.0';
     const extensionPath = path.join(os.homedir(), `.vscode/extensions/ms-vscode.azure-account-${version}`);
     if (!await fse.pathExists(extensionPath)) {
         return download(`http://ms-vscode.gallery.vsassets.io/_apis/public/gallery/publisher/ms-vscode/extension/azure-account/${version}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`)

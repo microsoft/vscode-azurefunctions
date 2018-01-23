@@ -5,13 +5,15 @@
 
 import { OutputChannel } from 'vscode';
 import { localize } from "../../localize";
-import { ProjectRuntime } from '../../ProjectSettings';
+import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
 
 export class CSharpProjectCreator implements IProjectCreator {
     public readonly deploySubPath: string = 'bin/Debug/netstandard2.0';
+    public readonly runtime: ProjectRuntime = ProjectRuntime.beta;
+    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _outputChannel: OutputChannel;
 
@@ -28,10 +30,6 @@ export class CSharpProjectCreator implements IProjectCreator {
             'new',
             dotnetUtils.funcProjectId
         );
-    }
-
-    public getRuntime(): ProjectRuntime {
-        return ProjectRuntime.beta;
     }
 
     public getTasksJson(): {} {

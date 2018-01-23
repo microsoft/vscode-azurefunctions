@@ -24,7 +24,8 @@ export enum ProjectLanguage {
     Bash = 'Bash',
     Batch = 'Batch',
     CSharp = 'C#',
-    FSharp = 'F#',
+    CSharpScript = 'C#Script',
+    FSharpScript = 'F#Script',
     Java = 'Java',
     JavaScript = 'JavaScript',
     PHP = 'PHP',
@@ -52,7 +53,7 @@ async function updateWorkspaceSetting(section: string, value: string): Promise<v
 export async function selectProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
     const picks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
-        new Pick(ProjectLanguage.FSharp),
+        new Pick(ProjectLanguage.FSharpScript),
         new Pick(ProjectLanguage.Bash, previewDescription),
         new Pick(ProjectLanguage.Batch, previewDescription),
         new Pick(ProjectLanguage.Java, previewDescription),
@@ -90,15 +91,18 @@ export async function selectTemplateFilter(ui: IUserInterface): Promise<Template
     return <TemplateFilter>result;
 }
 
+export function tryGetLanguageSetting(): ProjectLanguage | undefined {
+    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
+    // tslint:disable-next-line:no-backbone-get-set-outside-model
+    return projectConfiguration.get(projectLanguageSetting);
+}
+
 export async function getProjectLanguage(projectPath: string, ui: IUserInterface): Promise<ProjectLanguage> {
     if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
         return ProjectLanguage.Java;
     } else {
-        const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
-        // tslint:disable-next-line:no-backbone-get-set-outside-model
-        let language: string | undefined = projectConfiguration.get(projectLanguageSetting);
-
-        if (!language) {
+        let language: ProjectLanguage | undefined = tryGetLanguageSetting();
+        if (language === undefined) {
             const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
             const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
             const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, selectLanguage, DialogResponses.cancel);

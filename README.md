@@ -11,17 +11,16 @@
   ```bash
   sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
   ```
-
 * For JavaScript based Functions:
   * [Node 8.0+](https://nodejs.org/)
-
 * For C# based Functions:
   * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
-
 * For Java based Functions:
   * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
   * [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
   * [Maven 3.0+](https://maven.apache.org/)
+
+> NOTE: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
 
 ## Features
 

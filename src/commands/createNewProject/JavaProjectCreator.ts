@@ -9,7 +9,7 @@ import * as path from 'path';
 import { OutputChannel } from 'vscode';
 import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
-import { ProjectRuntime } from '../../ProjectSettings';
+import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
@@ -17,9 +17,13 @@ import { mavenUtils } from '../../utils/mavenUtils';
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, IProjectCreator } from './IProjectCreator';
 
 export class JavaProjectCreator implements IProjectCreator {
+    public readonly runtime: ProjectRuntime = ProjectRuntime.beta;
+    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+
     private _javaTargetPath: string;
     private _outputChannel: OutputChannel;
     private _ui: IUserInterface;
+
     constructor(outputChannel: OutputChannel, ui: IUserInterface) {
         this._outputChannel = outputChannel;
         this._ui = ui;
@@ -72,10 +76,6 @@ export class JavaProjectCreator implements IProjectCreator {
             await fse.remove(tempFolder);
         }
         this._javaTargetPath = `target/azure-functions/${appName}/`;
-    }
-
-    public getRuntime(): ProjectRuntime {
-        return ProjectRuntime.beta;
     }
 
     public getTasksJson(): {} {
