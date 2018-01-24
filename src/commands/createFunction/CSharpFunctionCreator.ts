@@ -60,8 +60,9 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
             }
 
             // https://github.com/Microsoft/vscode-azurefunctions/issues/166
-            if (userSettings[key].endsWith('/{name}')) {
-                userSettings[key] = userSettings[key].slice(0, -7);
+            const nameSuffix: string = '/{name}';
+            if (userSettings[key].endsWith(nameSuffix)) {
+                userSettings[key] = userSettings[key].slice(0, -1 * nameSuffix.length);
             }
 
             args.push(`--${parameter}="${userSettings[key]}"`);
