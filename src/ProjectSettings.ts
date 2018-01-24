@@ -95,7 +95,7 @@ export function getFuncExtensionSetting<T>(key: string, ignoreWorkspaceSettings:
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
     if (ignoreWorkspaceSettings) {
         const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
-        return result ? result.globalValue : undefined;
+        return result && result.globalValue;
     } else {
         // tslint:disable-next-line:no-backbone-get-set-outside-model
         return projectConfiguration.get<T>(key);
