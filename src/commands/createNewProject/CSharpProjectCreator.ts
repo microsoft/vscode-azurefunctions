@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
+import * as path from 'path';
 import { OutputChannel } from 'vscode';
+import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
@@ -11,18 +14,20 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
 
 export class CSharpProjectCreator implements IProjectCreator {
-    public readonly deploySubPath: string = 'bin/Debug/netstandard2.0';
-    public readonly runtime: ProjectRuntime = ProjectRuntime.beta;
+    public deploySubPath: string;
+    public runtime: ProjectRuntime;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _outputChannel: OutputChannel;
+    private _ui: IUserInterface;
 
-    constructor(outputChannel: OutputChannel) {
+    constructor(outputChannel: OutputChannel, ui: IUserInterface) {
         this._outputChannel = outputChannel;
+        this._ui = ui;
     }
 
     public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, functionAppPath);
+        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, functionAppPath, this._ui);
         await cpUtils.executeCommand(
             this._outputChannel,
             functionAppPath,
@@ -30,6 +35,22 @@ export class CSharpProjectCreator implements IProjectCreator {
             'new',
             dotnetUtils.funcProjectId
         );
+
+        const csProjName: string = `${path.basename(functionAppPath)}.csproj`;
+        const csprojPath: string = path.join(functionAppPath, csProjName);
+        const csprojContents: string = (await fse.readFile(csprojPath)).toString();
+        const matches: RegExpMatchArray | null = csprojContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
+        if (matches === null || matches.length < 1) {
+            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
+        } else {
+            const targetFramework: string = matches[1];
+            if (targetFramework.startsWith('netstandard')) {
+                this.runtime = ProjectRuntime.beta;
+            } else {
+                this.runtime = ProjectRuntime.one;
+            }
+            this.deploySubPath = `bin/Debug/${targetFramework}`;
+        }
     }
 
     public getTasksJson(): {} {
@@ -55,7 +76,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
-                        cwd: '\${workspaceFolder}/bin/Debug/netstandard2.0'
+                        cwd: `\${workspaceFolder}/${this.deploySubPath}`
                     },
                     command: 'func host start',
                     isBackground: true,

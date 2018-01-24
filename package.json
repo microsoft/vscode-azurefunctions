@@ -48,6 +48,8 @@
         "onCommand:azureFunctions.appSettings.rename",
         "onCommand:azureFunctions.appSettings.delete",
         "onCommand:azureFunctions.pickProcess",
+        "onCommand:azureFunctions.installDotnetTemplates",
+        "onCommand:azureFunctions.uninstallDotnetTemplates",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -162,6 +164,16 @@
             {
                 "command": "azureFunctions.pickProcess",
                 "title": "%azFunc.pickProcess%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.installDotnetTemplates",
+                "title": "%azFunc.installDotnetTemplates%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.uninstallDotnetTemplates",
+                "title": "%azFunc.uninstallDotnetTemplates%",
                 "category": "Azure Functions"
             }
         ],

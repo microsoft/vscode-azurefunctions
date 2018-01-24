@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
 import { dotnetUtils } from '../../src/utils/dotnetUtils';
+import { TestUI } from '../TestUI';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -31,7 +32,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(60 * 1000);
         await csTester.initAsync();
-        await dotnetUtils.validateTemplatesInstalled(csTester.outputChannel, csTester.testFolder);
+        await dotnetUtils.installDotnetTemplates(csTester.outputChannel, new TestUI([]));
     });
 
     suiteTeardown(async () => {

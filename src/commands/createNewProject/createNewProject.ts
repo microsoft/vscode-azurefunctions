@@ -53,7 +53,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
             projectCreator = new JavaScriptProjectCreator();
             break;
         case ProjectLanguage.CSharp:
-            projectCreator = new CSharpProjectCreator(outputChannel);
+            projectCreator = new CSharpProjectCreator(outputChannel, ui);
             break;
         case ProjectLanguage.CSharpScript:
             projectCreator = new CSharpScriptProjectCreator();

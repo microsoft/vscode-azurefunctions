@@ -16,8 +16,8 @@ export async function pickFuncProcess(): Promise<string | undefined> {
         // If the functions host isn't running, start the task for the user
         await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
 
-        const timeout: number = 15;
-        const maxTime: number = Date.now() + timeout * 1000;
+        const timeoutSeconds: number = 60;
+        const maxTime: number = Date.now() + timeoutSeconds * 1000;
         while (Date.now() < maxTime) {
             // Wait one second between each attempt
             await new Promise((resolve: () => void): void => { setTimeout(resolve, 1000); });
@@ -28,7 +28,7 @@ export async function pickFuncProcess(): Promise<string | undefined> {
             }
         }
 
-        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds.', timeout));
+        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds.', timeoutSeconds));
     } else {
         return funcProcess;
     }

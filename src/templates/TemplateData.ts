@@ -40,7 +40,10 @@ export class TemplateData {
         'HttpTriggerWithParameters-JavaScript',
         'ManualTrigger-JavaScript',
         'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript',
+        'TimerTrigger-JavaScript'
+    ];
+
+    private readonly _cSharpTemplates: string[] = [
         'HttpTrigger-CSharp',
         'BlobTrigger-CSharp',
         'QueueTrigger-CSharp',
@@ -85,6 +88,9 @@ export class TemplateData {
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
             const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => this._javaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
+        } else if (language === ProjectLanguage.CSharp) {
+            // https://github.com/Microsoft/vscode-azurefunctions/issues/179
+            return this._templatesMap[runtime].filter((t: Template) => this._cSharpTemplates.some((id: string) => id === t.id));
         } else {
             switch (language) {
                 case ProjectLanguage.CSharpScript:
