@@ -9,7 +9,7 @@ import { funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
-    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public readonly templateFilter: TemplateFilter = TemplateFilter.Core;
     public readonly runtime: ProjectRuntime = ProjectRuntime.beta;
 
     public getTasksJson(): {} {

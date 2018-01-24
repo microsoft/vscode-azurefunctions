@@ -30,6 +30,7 @@ import { TemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
+import { dotnetUtils } from './utils/dotnetUtils';
 import { VSCodeUI } from './VSCodeUI';
 
 let reporter: TelemetryReporter | undefined;
@@ -79,6 +80,8 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
         actionHandler.registerCommand('azureFunctions.appSettings.rename', async (node: IAzureNode<AppSettingTreeItem>) => await renameAppSetting(tree, node));
         actionHandler.registerCommand('azureFunctions.appSettings.delete', async (node: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
+        actionHandler.registerCommand('azureFunctions.installDotnetTemplates', async () => await dotnetUtils.installDotnetTemplates(outputChannel));
+        actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallDotnetTemplates(outputChannel));
     }
 }
 

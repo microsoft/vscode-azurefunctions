@@ -21,10 +21,12 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _functionName: string;
     private _namespace: string;
+    private _ui: IUserInterface;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
+    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel, ui: IUserInterface) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
+        this._ui = ui;
     }
 
     public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: string[]): Promise<void> {
@@ -47,7 +49,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._functionAppPath);
+        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._functionAppPath, this._ui);
 
         const args: string[] = [];
         for (const key of Object.keys(userSettings)) {
