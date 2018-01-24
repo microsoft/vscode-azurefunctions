@@ -23,7 +23,7 @@
     "azFunc.appSettings.rename": "Rename setting...",
     "azFunc.appSettings.delete": "Delete setting",
     "azFunc.pickProcess": "Pick Process",
-    "azFunc.deploySubPathDescription": "The default subPath of a workspace folder to user when deploying.",
+    "azFunc.deploySubpathDescription": "The default subpath of a workspace folder to use when deploying.",
     "azFunc.installDotnetTemplates": "Install templates for the dotnet cli",
     "azFunc.uninstallDotnetTemplates": "Uninstall templates for the dotnet cli"
 }

@@ -76,7 +76,7 @@ export function isPathEqual(fsPath1: string, fsPath2: string, relativeFunc: path
     return relativePath === '';
 }
 
-export function isSubPath(expectedParent: string, expectedChild: string, relativeFunc: pathRelativeFunc = path.relative): boolean {
+export function isSubpath(expectedParent: string, expectedChild: string, relativeFunc: pathRelativeFunc = path.relative): boolean {
     const relativePath: string = relativeFunc(expectedParent, expectedChild);
     return relativePath !== '' && !relativePath.startsWith('..') && relativePath !== expectedChild;
 }

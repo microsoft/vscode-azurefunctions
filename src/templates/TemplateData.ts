@@ -174,10 +174,10 @@ export class TemplateData {
         return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
     }
 
-    private async requestFunctionPortal<T>(subPath: string, runtime: string, param?: string): Promise<T> {
+    private async requestFunctionPortal<T>(subpath: string, runtime: string, param?: string): Promise<T> {
         const options: request.OptionsWithUri = {
             method: 'GET',
-            uri: `https://functions.azure.com/api/${subPath}?runtime=${runtime}&${param}`,
+            uri: `https://functions.azure.com/api/${subpath}?runtime=${runtime}&${param}`,
             headers: {
                 'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
             }
