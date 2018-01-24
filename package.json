@@ -386,9 +386,9 @@
                         ],
                         "description": "%azFunc.projectLanguageDescription%"
                     },
-                    "azureFunctions.deploySubPath": {
+                    "azureFunctions.deploySubpath": {
                         "type": "string",
-                        "description": "%azFunc.deploySubPathDescription%"
+                        "description": "%azFunc.deploySubpathDescription%"
                     }
                 }
             }

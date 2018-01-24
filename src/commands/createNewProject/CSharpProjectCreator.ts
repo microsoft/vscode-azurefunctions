@@ -14,7 +14,7 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
 
 export class CSharpProjectCreator implements IProjectCreator {
-    public deploySubPath: string;
+    public deploySubpath: string;
     public runtime: ProjectRuntime;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
@@ -49,7 +49,7 @@ export class CSharpProjectCreator implements IProjectCreator {
             } else {
                 this.runtime = ProjectRuntime.one;
             }
-            this.deploySubPath = `bin/Debug/${targetFramework}`;
+            this.deploySubpath = `bin/Debug/${targetFramework}`;
         }
     }
 
@@ -76,7 +76,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
-                        cwd: `\${workspaceFolder}/${this.deploySubPath}`
+                        cwd: `\${workspaceFolder}/${this.deploySubpath}`
                     },
                     command: 'func host start',
                     isBackground: true,

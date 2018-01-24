@@ -7,7 +7,7 @@ import { localize } from "../../localize";
 import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../ProjectSettings";
 
 export interface IProjectCreator {
-    deploySubPath?: string;
+    deploySubpath?: string;
     runtime: ProjectRuntime;
     templateFilter: TemplateFilter;
 

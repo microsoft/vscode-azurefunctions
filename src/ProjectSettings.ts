@@ -16,7 +16,7 @@ export const extensionPrefix: string = 'azureFunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
 export const projectRuntimeSetting: string = 'projectRuntime';
 export const templateFilterSetting: string = 'templateFilter';
-export const deploySubPathSetting: string = 'deploySubPath';
+export const deploySubpathSetting: string = 'deploySubpath';
 
 const previewDescription: string = localize('previewDescription', '(Preview)');
 

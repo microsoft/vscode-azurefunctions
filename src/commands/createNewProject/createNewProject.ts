@@ -10,7 +10,7 @@ import { OutputChannel } from 'vscode';
 import { TelemetryProperties } from 'vscode-azureextensionui';
 import { IUserInterface, Pick } from '../../IUserInterface';
 import { localize } from '../../localize';
-import { deploySubPathSetting, extensionPrefix, getFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../ProjectSettings';
+import { deploySubpathSetting, extensionPrefix, getFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { confirmOverwriteFile } from '../../utils/fs';
 import { gitUtils } from '../../utils/gitUtils';
@@ -97,8 +97,8 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         settings[`${extensionPrefix}.${projectRuntimeSetting}`] = runtime;
         settings[`${extensionPrefix}.${projectLanguageSetting}`] = language;
         settings[`${extensionPrefix}.${templateFilterSetting}`] = templateFilter;
-        if (projectCreator.deploySubPath) {
-            settings[`${extensionPrefix}.${deploySubPathSetting}`] = projectCreator.deploySubPath;
+        if (projectCreator.deploySubpath) {
+            settings[`${extensionPrefix}.${deploySubpathSetting}`] = projectCreator.deploySubpath;
         }
         await fsUtil.writeFormattedJson(settingsJsonPath, settings);
     }

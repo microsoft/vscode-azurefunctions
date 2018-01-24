@@ -49,7 +49,7 @@ suite('fsUtils Tests', () => {
         // completely different path
         fsPath1 = '/test/sub';
         fsPath2 = '/test2/sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), false);
     });
 
     test('isPathEqual, win32, false', () => {
@@ -62,64 +62,64 @@ suite('fsUtils Tests', () => {
         // completely different path
         fsPath1 = 'C:\\test\\sub';
         fsPath2 = 'D:\\test2\\sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), false);
     });
 
-    test('isSubPath, posix, true', () => {
+    test('isSubpath, posix, true', () => {
         // sub path
         let fsPath1: string = '/test/';
         let fsPath2: string = '/test/sub';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), true);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), true);
 
         // nested sub path
         fsPath1 = '/test/';
         fsPath2 = '/test/sub2/sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), true);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), true);
     });
 
-    test('isSubPath, win32, true', () => {
+    test('isSubpath, win32, true', () => {
         // sub path
         let fsPath1: string = 'C:\\test';
         let fsPath2: string = 'C:\\test\\sub';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), true);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), true);
 
         // nested sub path
         fsPath1 = 'C:\\test';
         fsPath2 = 'C:\\test\\sub\\sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), true);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), true);
     });
 
-    test('isSubPath, posix, false', () => {
+    test('isSubpath, posix, false', () => {
         // opposite of subpath
         let fsPath1: string = '/test/sub';
         let fsPath2: string = '/test/';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), false);
 
         // completely different path
         fsPath1 = '/test/sub';
         fsPath2 = '/test2/sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), false);
 
         // same path
         fsPath1 = '/test/';
         fsPath2 = '/test/';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.posix.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.posix.relative), false);
     });
 
-    test('isSubPath, win32, false', () => {
+    test('isSubpath, win32, false', () => {
         // opposite of subpath
         let fsPath1: string = 'C:\\test\\sub\\';
         let fsPath2: string = 'C:\\test\\';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), false);
 
         // completely different path
         fsPath1 = 'C:\\test\\sub';
         fsPath2 = 'D:\\test2\\sub2';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), false);
 
         // same path
         fsPath1 = 'C:\\test\\';
         fsPath2 = 'C:\\test\\';
-        assert.equal(fsUtils.isSubPath(fsPath1, fsPath2, path.win32.relative), false);
+        assert.equal(fsUtils.isSubpath(fsPath1, fsPath2, path.win32.relative), false);
     });
 });
