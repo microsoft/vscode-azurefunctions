@@ -59,6 +59,11 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
                 parameter = 'Path';
             }
 
+            // https://github.com/Microsoft/vscode-azurefunctions/issues/166
+            if (userSettings[key].endsWith('/{name}')) {
+                userSettings[key] = userSettings[key].slice(0, -7);
+            }
+
             args.push(`--${parameter}="${userSettings[key]}"`);
         }
 
