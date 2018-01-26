@@ -93,7 +93,7 @@ export class CSharpProjectCreator implements IProjectCreator {
             version: '0.2.0',
             configurations: [
                 {
-                    name: localize('azFunc.attachToNetCoreFunc', "Attach to .NET Core Functions"),
+                    name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
                     type: 'coreclr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}',
