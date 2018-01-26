@@ -15,6 +15,8 @@
   * [Node 8.0+](https://nodejs.org/)
 * For C# based Functions:
   * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
+  * If you are using the beta version of the functions cli (as described above), you must install the beta (.NET Core) templates when prompted
+  * If you are using v1 of the functions cli (Windows only), you must install the v1 (.NET Framework) templates when prompted
   > NOTE: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
 * For Java based Functions:
   * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
