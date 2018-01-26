@@ -110,6 +110,10 @@ export namespace dotnetUtils {
             await cpUtils.executeCommand(undefined, tempFolder, 'dotnet', 'new', '--install', path.join(functionsPackageId, templateVersion, `${fullFunctionsPackageId}.nupkg`));
 
             outputChannel.appendLine(localize('finishedInstallingTemplates', 'Finished installing Azure Functions templates.'));
+            outputChannel.appendLine(localize('howToUninstall', 'NOTE: You may uninstall or reinstall the templates with the following steps:'));
+            outputChannel.appendLine(localize('howToUninstall1', '1. Open Command Palette (View -> Command Palette...)'));
+            outputChannel.appendLine(localize('howToUninstall2', '2. Search for "Azure Functions" and "install" or "uninstall"'));
+            outputChannel.appendLine(localize('howToUninstall3', '3. Run the corresponding command for dotnet templates'));
         } finally {
             await fse.remove(tempFolder);
         }
