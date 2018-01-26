@@ -9,7 +9,9 @@ import * as vscode from 'vscode';
 import { localize } from '../localize';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 
-export async function pickFuncProcess(): Promise<string | undefined> {
+export async function pickFuncProcess(outputChannel: vscode.OutputChannel): Promise<string | undefined> {
+    outputChannel.show();
+    outputChannel.appendLine(localize('searchingFuncHost', 'Searching for Azure Functions host process...'));
     let funcProcess: string | undefined = await getFuncPid();
 
     if (funcProcess === undefined) {
