@@ -19,7 +19,7 @@
     ```
 * Install the prerequisites for your desired language:
   * [JavaScript](#javascript)
-  * [C#](#csharp)
+  * [C#](#c)
   * [Java](#java)
 > NOTE: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
 
@@ -50,7 +50,7 @@
 
 * [Node 8.0+](https://nodejs.org/)
 
-### CSharp
+### C#
 
 * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
 * [Dotnet cli](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
