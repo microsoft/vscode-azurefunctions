@@ -24,7 +24,8 @@ export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
-                    }
+                    },
+                    problemMatcher: []
                 }
             ]
         };
