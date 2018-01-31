@@ -82,7 +82,8 @@ export class CSharpProjectCreator implements IProjectCreator {
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
-                    }
+                    },
+                    problemMatcher: []
                 }
             ]
         };
@@ -96,8 +97,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
                     type: 'coreclr',
                     request: 'attach',
-                    processId: '\${command:azureFunctions.pickProcess}',
-                    preLaunchTask: 'build'
+                    processId: '\${command:azureFunctions.pickProcess}'
                 }
             ]
         };

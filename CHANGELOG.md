@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.5.1 - 2018-02-01
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.5.1%22+label%3Abug+is%3Aclosed)
+- C# local debugging
+  - Fixed "Cannot access the file because it is being used by another process." error by automatically restarting the functions host
+  - Fixed project being built twice for every F5
+  - Improved performance of 'azureFunctions.pickProcess' on Windows
+
 ## 0.5.0 - 2018-01-25
 ### Added
 - Create, Debug, and Deploy a C# class library project
