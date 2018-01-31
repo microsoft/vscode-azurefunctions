@@ -11,7 +11,7 @@ import { localize } from '../localize';
 export namespace cpUtils {
     export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
         let result: string = '';
-        workingDirectory = workingDirectory !== undefined ? workingDirectory : os.tmpdir();
+        workingDirectory = workingDirectory || os.tmpdir();
         await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
             const options: cp.SpawnOptions = {
                 cwd: workingDirectory,
