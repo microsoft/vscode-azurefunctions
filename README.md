@@ -2,28 +2,26 @@
 [![Build Status](https://travis-ci.org/Microsoft/vscode-azurefunctions.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-azurefunctions) [![Release Status](https://img.shields.io/github/tag/Microsoft/vscode-azurefunctions.svg?label=prerelease&colorB=0E7FC0)](https://github.com/Microsoft/vscode-azurefunctions/releases)
 
 ## Prerequisites
-* For local debugging:
-  * [.NET Core 2.0](https://www.microsoft.com/net/download/core)
-  * Install the [Azure Core Function Tools 2.0](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local) with the following command
-  ```bash
-  npm install -g azure-functions-core-tools@core
-  ```
-  > Note: when installing on Ubuntu, you may need to use `sudo`. On MacOS and LInux, you may need to include the `unsafe-perm` flag, as follows:
-  ```bash
-  sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
-  ```
-* For JavaScript based Functions:
-  * [Node 8.0+](https://nodejs.org/)
-* For C# based Functions:
-  * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
-  * If you are using the beta version of the functions cli (as described above), you must install the beta (.NET Core) templates when prompted
-  * If you are using v1 of the functions cli (Windows only), you must install the v1 (.NET Framework) templates when prompted
-  > NOTE: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
-* For Java based Functions:
-  * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
-  * [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
-  * [Maven 3.0+](https://maven.apache.org/)
 
+* Install your desired version of the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local)
+  * For version 2.0 (This version works cross-platform, but is still in preview and not recommended for production):
+    * Install [.NET Core 2.0](https://www.microsoft.com/net/download/core)
+    * Install the Azure Functions Core Tools:
+    ```bash
+    npm install -g azure-functions-core-tools@core
+    ```
+    > Note: When installing on Ubuntu, you may need to use `sudo`. On MacOS and Linux, you may need to include the `unsafe-perm` flag, as follows:
+    ```bash
+    sudo npm install -g azure-functions-core-tools@core --unsafe-perm true
+    ```
+  * For version 1.0 (This version is only supported on Windows):
+    ```bash
+    npm install -g azure-functions-core-tools
+    ```
+* Install the prerequisites for your desired language:
+  * [JavaScript](#javascript)
+  * [C#](#c)
+  * [Java](#java)
 > NOTE: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
 
 ## Features
@@ -46,6 +44,33 @@
 ### Deploy to Azure
 
 ![Deploy](resources/Deploy.gif)
+
+## Language-Specific Prerequisites
+
+### JavaScript
+
+* [Node 8.0+](https://nodejs.org/)
+
+### C#
+
+* [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
+* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+* .NET Templates for Azure Functions
+  * You will be automatically prompted to install these templates when you first create a project/function
+    * If you are using v2.0 of the Azure Functions runtime, you must install the beta (.NET Core) templates
+    * If you are using v1.0 of the Azure Functions runtime, you must install the v1.0 (.NET Framework) templates
+  * You may uninstall or reinstall the templates with the following steps:
+    1. Open Command Palette (View -> Command Palette...)
+    1. Search for "Azure Functions" and "install" or "uninstall"
+    1. Run the corresponding command for .NET templates
+
+> NOTE: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
+
+### Java
+
+* [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
+* [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [Maven 3.0+](https://maven.apache.org/)
 
 ## Contributing
 There are a couple of ways you can contribute to this repo:
