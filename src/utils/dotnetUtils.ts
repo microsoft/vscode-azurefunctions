@@ -42,7 +42,7 @@ export namespace dotnetUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--version');
         } catch (error) {
-            throw new Error(localize('azFunc.dotnetNotInstalled', 'You must have the "dotnet" cli installed to perform this operation.'));
+            throw new Error(localize('azFunc.dotnetNotInstalled', 'You must have the .NET CLI installed to perform this operation.'));
         }
     }
 
@@ -53,7 +53,7 @@ export namespace dotnetUtils {
         const listOutput: string = await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', 'new', '--list');
         if (!listOutput.includes(funcProjectId) || !listOutput.includes('HttpTrigger')) {
             const installTemplates: vscode.MessageItem = { title: localize('installTemplates', 'Install Templates') };
-            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the dotnet cli.'), installTemplates, DialogResponses.cancel);
+            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), installTemplates, DialogResponses.cancel);
             if (result === installTemplates) {
                 await installDotnetTemplates(outputChannel, ui);
             } else {
@@ -98,7 +98,7 @@ export namespace dotnetUtils {
             // 'dotnet new --install' doesn't allow you to specify a source when installing templates
             // Once these templates are published to Nuget.org, we can just call 'dotnet new --install' directly and skip all the tempFolder/restore stuff
             outputChannel.show();
-            outputChannel.appendLine(localize('downloadingTemplates', 'Downloading dotnet templates for Azure Functions...'));
+            outputChannel.appendLine(localize('downloadingTemplates', 'Downloading .NET templates for Azure Functions...'));
             await cpUtils.executeCommand(undefined, tempFolder, 'dotnet', 'restore', '--packages', '.', '--source', 'https://www.myget.org/F/azure-appservice/api/v3/index.json', '--source', 'https://api.nuget.org/v3/index.json');
 
             const fullProjectPackageId: string = `${projectPackageId}.${templateVersion}`;
@@ -113,7 +113,7 @@ export namespace dotnetUtils {
             outputChannel.appendLine(localize('howToUninstall', 'NOTE: You may uninstall or reinstall the templates with the following steps:'));
             outputChannel.appendLine(localize('howToUninstall1', '1. Open Command Palette (View -> Command Palette...)'));
             outputChannel.appendLine(localize('howToUninstall2', '2. Search for "Azure Functions" and "install" or "uninstall"'));
-            outputChannel.appendLine(localize('howToUninstall3', '3. Run the corresponding command for dotnet templates'));
+            outputChannel.appendLine(localize('howToUninstall3', '3. Run the corresponding command for .NET templates'));
         } finally {
             await fse.remove(tempFolder);
         }

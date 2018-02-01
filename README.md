@@ -53,15 +53,15 @@
 ### C#
 
 * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
-* [Dotnet cli](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
-* Dotnet Templates for Azure Functions
+* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+* .NET Templates for Azure Functions
   * You will be automatically prompted to install these templates when you first create a project/function
     * If you are using v2.0 of the Azure Functions runtime, you must install the beta (.NET Core) templates
     * If you are using v1.0 of the Azure Functions runtime, you must install the v1.0 (.NET Framework) templates
   * You may uninstall or reinstall the templates with the following steps:
     1. Open Command Palette (View -> Command Palette...)
     1. Search for "Azure Functions" and "install" or "uninstall"
-    1. Run the corresponding command for dotnet templates
+    1. Run the corresponding command for .NET templates
 
 > NOTE: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
 
