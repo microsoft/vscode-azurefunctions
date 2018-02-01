@@ -45,7 +45,7 @@ async function getFuncHostPid(): Promise<string | undefined> {
         // Ideally we could use 'ps.lookup' for all OS's, but unfortunately it's very slow on windows
         // Instead, we will call 'wmic' manually and parse the results
         const processList: string = await cpUtils.executeCommand(undefined, undefined, 'wmic', 'process', 'get', 'CommandLine,Name,ProcessId', '/FORMAT:csv');
-        const regExp: RegExp = new RegExp(/^.*,.*azure.*functions.*host.*start.*,(?:dotnet\.exe|func\.exe),(\d+)$/gmi);
+        const regExp: RegExp = new RegExp(/^.*,.*azure.*functions.*host.*start.*,(?:dotnet\.exe|func.*\.exe),(\d+)$/gmi);
         const matches: RegExpMatchArray | null = regExp.exec(processList);
         if (matches === null) {
             return undefined;
