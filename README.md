@@ -58,7 +58,8 @@
 * .NET Templates for Azure Functions
   * You will be automatically prompted to install these templates when you first create a project/function
     * If you are using v2.0 of the Azure Functions runtime, you must install the beta (.NET Core) templates
-    * If you are using v1.0 of the Azure Functions runtime, you must install the v1.0 (.NET Framework) templates
+    * If you are using v1.0 of the Azure Functions runtime, you must install the v1.0 (.NET Framework) templates.
+    > NOTE: The VS Code Debugger for C# [only supports](https://github.com/OmniSharp/omnisharp-vscode/issues/1716) attaching to 64-bit processes. v1.0 of the Azure Functions runtime defaults to 32-bit and you must install a 64-bit version. See [here](https://github.com/Azure/azure-functions-cli/issues/117) for instructions.
   * You may uninstall or reinstall the templates with the following steps:
     1. Open Command Palette (View -> Command Palette...)
     1. Search for "Azure Functions" and "install" or "uninstall"
