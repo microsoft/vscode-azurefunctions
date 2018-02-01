@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
+import * as vscode from 'vscode';
 import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
@@ -48,6 +49,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                 this.runtime = ProjectRuntime.beta;
             } else {
                 this.runtime = ProjectRuntime.one;
+                await vscode.window.showWarningMessage('In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the runtime. See https://github.com/Azure/azure-functions-cli/issues/117');
             }
             this.deploySubpath = `bin/Debug/${targetFramework}`;
         }
@@ -95,7 +97,7 @@ export class CSharpProjectCreator implements IProjectCreator {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: 'coreclr',
+                    type: this.runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
