@@ -49,7 +49,7 @@ export class CSharpProjectCreator implements IProjectCreator {
                 this.runtime = ProjectRuntime.beta;
             } else {
                 this.runtime = ProjectRuntime.one;
-                await vscode.window.showWarningMessage('In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the runtime. See https://github.com/Azure/azure-functions-cli/issues/117');
+                await vscode.window.showWarningMessage('In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the runtime. See https://aka.ms/azFunc64bit');
             }
             this.deploySubpath = `bin/Debug/${targetFramework}`;
         }
