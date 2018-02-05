@@ -33,7 +33,7 @@ export namespace cpUtils {
 
             childProc.on('error', reject);
             childProc.on('close', (code: number) => {
-                if (code !== 0) {
+                if (code !== 0 && command !== 'npm') {
                     reject(new Error(localize('azFunc.commandError', 'Command "{0} {1}" failed with exit code "{2}".', command, args.toString(), code)));
                 } else {
                     resolve();

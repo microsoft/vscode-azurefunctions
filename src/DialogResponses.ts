@@ -7,6 +7,7 @@ import { MessageItem } from 'vscode';
 import { localize } from './localize';
 
 export namespace DialogResponses {
+    export const neverAskWithNo: MessageItem = { title: localize('azFunc.NeverAskWithNo', 'No and never ask again'), isCloseAffordance: true };
     export const skipForNow: MessageItem = { title: localize('azFunc.SkipForNow', 'Skip for now') };
     export const yes: MessageItem = { title: localize('azFunc.Yes', 'Yes') };
     export const no: MessageItem = { title: localize('azFunc.No', 'No') };

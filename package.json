@@ -389,6 +389,11 @@
                     "azureFunctions.deploySubpath": {
                         "type": "string",
                         "description": "%azFunc.deploySubpathDescription%"
+                    },
+                    "azureFunctions.checkFunctionRuntime": {
+                        "type": "boolean",
+                        "description": "%azFunc.checkFunctionRuntimeDescription%",
+                        "default": true
                     }
                 }
             }
@@ -427,13 +432,14 @@
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
+        "opn": "^5.2.0",
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "vscode-azureappservice": "~0.8.2",
         "vscode-azureextensionui": "~0.5.1",
+        "vscode-azurekudu": "~0.1.4",
         "vscode-extension-telemetry": "^0.0.10",
         "vscode-nls": "^2.0.2",
-        "vscode-azurekudu": "~0.1.4",
         "xml2js": "^0.4.19",
         "xregexp": "^4.0.0"
     },

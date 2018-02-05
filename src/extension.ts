@@ -26,11 +26,13 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { localize } from './localize';
+import { getFuncExtensionSetting } from './ProjectSettings';
 import { TemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
+import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
 import { VSCodeUI } from './VSCodeUI';
 
 let reporter: TelemetryReporter | undefined;
@@ -50,6 +52,10 @@ export function activate(context: vscode.ExtensionContext): void {
         const azureAccount: AzureAccount = azureAccountExtension.exports;
 
         const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
+        if (getFuncExtensionSetting<boolean>('checkFunctionRuntime')) {
+            // tslint:disable-next-line:no-floating-promises
+            functionRuntimeUtils.validateFunctionRuntimeInstallation(outputChannel);
+        }
         context.subscriptions.push(outputChannel);
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(context.globalState, outputChannel), 'azureFunctions.loadMore');
