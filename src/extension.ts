@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
         if (getFuncExtensionSetting<boolean>('checkFunctionRuntime')) {
             // tslint:disable-next-line:no-floating-promises
-            functionRuntimeUtils.validateFunctionRuntimeInstallation(outputChannel);
+            functionRuntimeUtils.validateFunctionRuntime(outputChannel);
         }
         context.subscriptions.push(outputChannel);
 

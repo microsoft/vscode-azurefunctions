@@ -7,11 +7,13 @@ import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { ArgumentError } from '../errors';
 import { localize } from '../localize';
+import { cpUtils } from './cpUtils';
 
 export namespace nodeUtils {
     export function getWebSiteClient(node: IAzureNode): WebSiteManagementClient {
@@ -50,6 +52,13 @@ export namespace nodeUtils {
             return node;
         } else {
             throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscriptionId));
+        }
+    }
+    export async function validateNpmInstalled(outputChannel?: vscode.OutputChannel): Promise<void> {
+        try {
+            await cpUtils.executeCommand(outputChannel, undefined, 'npm', '-v');
+        } catch (error) {
+            throw new Error(localize('azFunc.npmNotFound', 'Failed to find "npm" on path.'));
         }
     }
 }
