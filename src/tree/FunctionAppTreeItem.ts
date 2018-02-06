@@ -8,7 +8,7 @@ import WebSiteManagementClient = require('azure-arm-website');
 import { Site } from 'azure-arm-website/lib/models';
 import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, SiteWrapper } from 'vscode-azureappservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, ILogStream, SiteWrapper } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
@@ -20,8 +20,9 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly siteWrapper: SiteWrapper;
-    public logStream: vscode.Disposable | undefined;
+    public logStream: ILogStream | undefined;
     public logStreamPath: string = '';
+    public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private _state?: string;
     private _temporaryState?: string;

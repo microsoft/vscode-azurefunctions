@@ -4,12 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { SiteWrapper } from 'vscode-azureappservice';
+import { ILogStream, SiteWrapper } from 'vscode-azureappservice';
 import { IAzureTreeItem } from 'vscode-azureextensionui';
 
 export interface ILogStreamTreeItem extends IAzureTreeItem {
-    logStream: vscode.Disposable | undefined;
+    logStream: ILogStream | undefined;
     logStreamPath: string;
     logStreamLabel: string;
     siteWrapper: SiteWrapper;
+    logStreamOutputChannel: vscode.OutputChannel | undefined;
 }

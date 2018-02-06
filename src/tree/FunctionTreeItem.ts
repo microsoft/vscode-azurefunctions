@@ -6,7 +6,7 @@
 import { URL } from 'url';
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { SiteWrapper } from 'vscode-azureappservice';
+import { ILogStream, SiteWrapper } from 'vscode-azureappservice';
 import { IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
@@ -22,7 +22,8 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public readonly contextValue: string = FunctionTreeItem.contextValue;
     public readonly config: FunctionConfig;
     public readonly siteWrapper: SiteWrapper;
-    public logStream: vscode.Disposable | undefined;
+    public logStream: ILogStream | undefined;
+    public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private readonly _name: string;
     private readonly _parentId: string;
