@@ -7,17 +7,22 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import { Site } from 'azure-arm-website/lib/models';
 import { OutputChannel } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, SiteWrapper } from 'vscode-azureappservice';
+import * as vscode from 'vscode';
+import { AppSettingsTreeItem, AppSettingTreeItem, ILogStream, SiteWrapper } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
+import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
 
-export class FunctionAppTreeItem implements IAzureParentTreeItem {
+export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly siteWrapper: SiteWrapper;
+    public logStream: ILogStream | undefined;
+    public logStreamPath: string = '';
+    public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private _state?: string;
     private _temporaryState?: string;
@@ -34,6 +39,10 @@ export class FunctionAppTreeItem implements IAzureParentTreeItem {
         this._outputChannel = outputChannel;
         this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
+    }
+
+    public get logStreamLabel(): string {
+        return this.siteWrapper.appName;
     }
 
     private get _effectiveState(): string | undefined {

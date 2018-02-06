@@ -25,5 +25,7 @@
     "azFunc.pickProcess": "Pick Process",
     "azFunc.deploySubpathDescription": "The default subpath of a workspace folder to use when deploying.",
     "azFunc.installDotnetTemplates": "Install templates for the .NET CLI",
-    "azFunc.uninstallDotnetTemplates": "Uninstall templates for the .NET CLI"
+    "azFunc.uninstallDotnetTemplates": "Uninstall templates for the .NET CLI",
+    "azFunc.startStreamingLogs": "Start Streaming Logs",
+    "azFunc.stopStreamingLogs": "Stop Streaming Logs"
 }
