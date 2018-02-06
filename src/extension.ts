@@ -19,6 +19,9 @@ import { createNewProject } from './commands/createNewProject/createNewProject';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy';
 import { editAppSetting } from './commands/editAppSetting';
+import { ILogStreamTreeItem } from './commands/logstream/ILogStreamTreeItem';
+import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
+import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
 import { pickFuncProcess } from './commands/pickFuncProcess';
 import { renameAppSetting } from './commands/renameAppSetting';
@@ -75,6 +78,8 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.deploy', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, deployPath: vscode.Uri | string, functionAppId?: string) => await deploy(properties, tree, outputChannel, deployPath, functionAppId));
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.configureDeploymentSource', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, node?: IAzureNode<FunctionAppTreeItem>) => await configureDeploymentSource(properties, tree, outputChannel, node));
         actionHandler.registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
+        actionHandler.registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, actionHandler, tree, node));
+        actionHandler.registerCommand('azureFunctions.stopStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await stopStreamingLogs(tree, node));
         actionHandler.registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
         actionHandler.registerCommand('azureFunctions.appSettings.add', async (node: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
         actionHandler.registerCommand('azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
