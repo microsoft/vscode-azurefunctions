@@ -53,6 +53,8 @@ async function updateWorkspaceSetting(section: string, value: string): Promise<v
 export async function selectProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
     const picks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
+        new Pick(ProjectLanguage.CSharp),
+        new Pick(ProjectLanguage.CSharpScript),
         new Pick(ProjectLanguage.FSharpScript),
         new Pick(ProjectLanguage.Bash, previewDescription),
         new Pick(ProjectLanguage.Batch, previewDescription),
@@ -106,8 +108,8 @@ export async function getProjectLanguage(projectPath: string, ui: IUserInterface
     if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
         return ProjectLanguage.Java;
     } else {
-        let language: ProjectLanguage | undefined = getFuncExtensionSetting(projectLanguageSetting);
-        if (language === undefined) {
+        let language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
+        if (!language) {
             const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
             const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
             const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, selectLanguage, DialogResponses.cancel);
