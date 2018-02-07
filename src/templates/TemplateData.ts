@@ -74,7 +74,7 @@ export class TemplateData {
         this._refreshTask = this.refreshTemplates(globalState);
     }
 
-    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string, ui: IUserInterface = new VSCodeUI()): Promise<Template[]> {
+    public async getTemplates(projectPath: string, language: string, runtime: string = ProjectRuntime.one, templateFilter?: string, ui: IUserInterface = new VSCodeUI()): Promise<Template[]> {
         if (this._templatesMap[runtime] === undefined) {
             await this._refreshTask;
             if (this._templatesMap[runtime] === undefined) {
@@ -121,12 +121,12 @@ export class TemplateData {
                 if (result !== DialogResponses.yes) {
                     throw new UserCancelledError();
                 } else {
-                    language = await selectProjectLanguage(ui);
-                    runtime = await selectProjectRuntime(ui);
-                    templateFilter = await selectTemplateFilter(ui);
+                    language = await selectProjectLanguage(projectPath, ui);
+                    runtime = await selectProjectRuntime(projectPath, ui);
+                    templateFilter = await selectTemplateFilter(projectPath, ui);
 
                     // Try to get templates again
-                    return await this.getTemplates(language, runtime, templateFilter, ui);
+                    return await this.getTemplates(projectPath, language, runtime, templateFilter, ui);
                 }
             }
         }

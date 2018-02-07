@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ConfigurationTarget, MessageItem, WorkspaceConfiguration } from "vscode";
+import { MessageItem, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from './DialogResponses';
@@ -45,12 +45,12 @@ export enum TemplateFilter {
     Verified = 'Verified'
 }
 
-async function updateWorkspaceSetting(section: string, value: string): Promise<void> {
-    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
-    await projectConfiguration.update(section, value, ConfigurationTarget.Workspace);
+async function updateWorkspaceSetting(section: string, value: string, fsPath: string): Promise<void> {
+    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, vscode.Uri.file(fsPath));
+    await projectConfiguration.update(section, value);
 }
 
-export async function selectProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
+export async function selectProjectLanguage(projectPath: string, ui: IUserInterface): Promise<ProjectLanguage> {
     const picks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
         new Pick(ProjectLanguage.CSharp),
@@ -66,22 +66,22 @@ export async function selectProjectLanguage(ui: IUserInterface): Promise<Project
     ];
 
     const result: string = (await ui.showQuickPick(picks, localize('selectLanguage', 'Select a language'))).label;
-    await updateWorkspaceSetting(projectLanguageSetting, result);
+    await updateWorkspaceSetting(projectLanguageSetting, result, projectPath);
     return <ProjectLanguage>result;
 }
 
-export async function selectProjectRuntime(ui: IUserInterface): Promise<ProjectRuntime> {
+export async function selectProjectRuntime(projectPath: string, ui: IUserInterface): Promise<ProjectRuntime> {
     const picks: Pick[] = [
         new Pick(ProjectRuntime.one, localize('productionUseDescription', '(Approved for production use)')),
         new Pick(ProjectRuntime.beta, previewDescription)
     ];
 
     const result: string = (await ui.showQuickPick(picks, localize('selectRuntime', 'Select a runtime'))).label;
-    await updateWorkspaceSetting(projectRuntimeSetting, result);
+    await updateWorkspaceSetting(projectRuntimeSetting, result, projectPath);
     return <ProjectRuntime>result;
 }
 
-export async function selectTemplateFilter(ui: IUserInterface): Promise<TemplateFilter> {
+export async function selectTemplateFilter(projectPath: string, ui: IUserInterface): Promise<TemplateFilter> {
     const picks: Pick[] = [
         new Pick(TemplateFilter.Verified, localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)')),
         new Pick(TemplateFilter.Core),
@@ -89,9 +89,10 @@ export async function selectTemplateFilter(ui: IUserInterface): Promise<Template
     ];
 
     const result: string = (await ui.showQuickPick(picks, localize('selectFilter', 'Select a template filter'))).label;
-    await updateWorkspaceSetting(templateFilterSetting, result);
+    await updateWorkspaceSetting(templateFilterSetting, result, projectPath);
     return <TemplateFilter>result;
 }
+
 export function getGlobalFuncExtensionSetting<T>(key: string): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
     const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
@@ -116,7 +117,7 @@ export async function getProjectLanguage(projectPath: string, ui: IUserInterface
             if (result !== selectLanguage) {
                 throw new UserCancelledError();
             } else {
-                language = await selectProjectLanguage(ui);
+                language = await selectProjectLanguage(projectPath, ui);
             }
         }
 
@@ -138,7 +139,7 @@ export async function getProjectRuntime(language: ProjectLanguage, projectPath: 
         if (result !== selectRuntime) {
             throw new UserCancelledError();
         } else {
-            runtime = await selectProjectRuntime(ui);
+            runtime = await selectProjectRuntime(projectPath, ui);
         }
     }
 

@@ -23,7 +23,7 @@ const templateData: TemplateData = new TemplateData();
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(15 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    await templateData.getTemplates('JavaScript');
+    await templateData.getTemplates('fakeProjectPath', 'JavaScript');
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
