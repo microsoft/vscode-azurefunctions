@@ -43,7 +43,8 @@ export namespace cpUtils {
                         outputChannel.show();
                         reject(new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', command)));
                     } else {
-                        // Include all of the output in the error since we couldn't display it directly in the outputChannel
+                        // Include as much information as possible in the error since we couldn't display it directly in the outputChannel
+                        // The AzureActionHandler will handle this multi-line error and display it in the outputChannel anyways
                         reject(new Error(localize('azFunc.commandError', 'Command "{0} {1}" failed with exit code "{2}":{3}{4}', command, formattedArgs, code, os.EOL, result)));
                     }
                 } else {
