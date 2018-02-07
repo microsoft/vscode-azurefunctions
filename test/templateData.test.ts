@@ -12,17 +12,17 @@ suite('Template Data Tests', () => {
     const templateData: TemplateData = new TemplateData();
 
     test('Default JavaScript Templates Count', async () => {
-        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.one, TemplateFilter.Verified);
+        const templates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.JavaScript, ProjectRuntime.one, TemplateFilter.Verified);
         assert.equal(templates.length, 8);
     });
 
     test('Default Java Templates Count', async () => {
-        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.Java, ProjectRuntime.beta, TemplateFilter.Verified);
+        const templates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.Java, ProjectRuntime.beta, TemplateFilter.Verified);
         assert.equal(templates.length, 4);
     });
 
     test('Default CSharp Templates Count', async () => {
-        const templates: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
+        const templates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
         assert.equal(templates.length, 4);
     });
 });

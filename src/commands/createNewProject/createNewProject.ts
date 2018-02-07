@@ -10,7 +10,7 @@ import { OutputChannel } from 'vscode';
 import { TelemetryProperties } from 'vscode-azureextensionui';
 import { IUserInterface, Pick } from '../../IUserInterface';
 import { localize } from '../../localize';
-import { deploySubpathSetting, extensionPrefix, getFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../ProjectSettings';
+import { deploySubpathSetting, extensionPrefix, getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { confirmOverwriteFile } from '../../utils/fs';
 import { gitUtils } from '../../utils/gitUtils';
@@ -30,7 +30,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     await fse.ensureDir(functionAppPath);
 
     if (!language) {
-        language = getFuncExtensionSetting(projectLanguageSetting, true /* ignoreWorkspaceSettings */);
+        language = getGlobalFuncExtensionSetting(projectLanguageSetting);
 
         if (!language) {
             // Only display 'supported' languages that can be debugged in VS Code
@@ -84,8 +84,8 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
         }
     }
 
-    const globalRuntimeSetting: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, true /* ignoreWorkspaceSettings */);
-    const globalFilterSetting: string | undefined = getFuncExtensionSetting(templateFilterSetting, true /* ignoreWorkspaceSettings */);
+    const globalRuntimeSetting: string | undefined = getGlobalFuncExtensionSetting(projectRuntimeSetting);
+    const globalFilterSetting: string | undefined = getGlobalFuncExtensionSetting(templateFilterSetting);
     const runtime: string = globalRuntimeSetting ? globalRuntimeSetting : projectCreator.runtime;
     const templateFilter: string = globalFilterSetting ? globalFilterSetting : projectCreator.templateFilter;
     telemetryProperties.projectRuntime = runtime;

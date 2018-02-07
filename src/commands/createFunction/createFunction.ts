@@ -99,19 +99,19 @@ export async function createFunction(
 
     const language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, functionAppPath, ui);
     telemetryProperties.projectRuntime = runtime;
-    const templateFilter: TemplateFilter = await getTemplateFilter();
+    const templateFilter: TemplateFilter = await getTemplateFilter(functionAppPath);
     telemetryProperties.templateFilter = templateFilter;
 
     let template: Template;
     if (!templateId) {
-        const templates: Template[] = await templateData.getTemplates(language, runtime, templateFilter, ui);
+        const templates: Template[] = await templateData.getTemplates(functionAppPath, language, runtime, templateFilter, ui);
         const templatePicks: PickWithData<Template>[] = templates.map((t: Template) => new PickWithData<Template>(t, t.name));
         const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
         template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
     } else {
-        const templates: Template[] = await templateData.getTemplates(language, runtime, TemplateFilter.All, ui);
+        const templates: Template[] = await templateData.getTemplates(functionAppPath, language, runtime, TemplateFilter.All, ui);
         const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
