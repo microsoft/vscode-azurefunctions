@@ -26,5 +26,7 @@
     "azFunc.deploySubpathDescription": "The default subpath of a workspace folder to use when deploying.",
     "azFunc.installDotnetTemplates": "Install templates for the .NET CLI",
     "azFunc.uninstallDotnetTemplates": "Uninstall templates for the .NET CLI",
-    "azFunc.checkFunctionRuntimeDescription": "Specify whether the extension checks Azure Functions runtime."
+    "azFunc.checkFunctionRuntimeDescription": "Specify whether the extension checks Azure Functions runtime.",
+    "azFunc.startStreamingLogs": "Start Streaming Logs",
+    "azFunc.stopStreamingLogs": "Stop Streaming Logs"
 }

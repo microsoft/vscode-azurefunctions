@@ -50,6 +50,8 @@
         "onCommand:azureFunctions.pickProcess",
         "onCommand:azureFunctions.installDotnetTemplates",
         "onCommand:azureFunctions.uninstallDotnetTemplates",
+        "onCommand:azureFunctions.startStreamingLogs",
+        "onCommand:azureFunctions.stopStreamingLogs",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
@@ -175,6 +177,16 @@
                 "command": "azureFunctions.uninstallDotnetTemplates",
                 "title": "%azFunc.uninstallDotnetTemplates%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startStreamingLogs",
+                "title": "%azFunc.startStreamingLogs%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.stopStreamingLogs",
+                "title": "%azFunc.stopStreamingLogs%",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -246,6 +258,16 @@
                     "group": "3@1"
                 },
                 {
+                    "command": "azureFunctions.startStreamingLogs",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "4@1"
+                },
+                {
+                    "command": "azureFunctions.stopStreamingLogs",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "4@2"
+                },
+                {
                     "command": "azureFunctions.deleteFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "2@4"
@@ -253,7 +275,7 @@
                 {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
-                    "group": "4@1"
+                    "group": "5@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
@@ -268,7 +290,17 @@
                 {
                     "command": "azureFunctions.deleteFunction",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
-                    "group": "1@2"
+                    "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.startStreamingLogs",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.stopStreamingLogs",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.add",
@@ -435,7 +467,7 @@
         "opn": "^5.2.0",
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
-        "vscode-azureappservice": "~0.8.2",
+        "vscode-azureappservice": "~0.8.3",
         "vscode-azureextensionui": "~0.5.1",
         "vscode-azurekudu": "~0.1.4",
         "vscode-extension-telemetry": "^0.0.10",
