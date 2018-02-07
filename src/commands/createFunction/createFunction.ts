@@ -99,9 +99,9 @@ export async function createFunction(
 
     const language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, functionAppPath, ui);
     telemetryProperties.projectRuntime = runtime;
-    const templateFilter: TemplateFilter = await getTemplateFilter();
+    const templateFilter: TemplateFilter = await getTemplateFilter(functionAppPath);
     telemetryProperties.templateFilter = templateFilter;
 
     let template: Template;

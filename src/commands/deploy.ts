@@ -18,7 +18,7 @@ import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
-import { convertStringToRuntime, deploySubpathSetting, extensionPrefix, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
+import { convertStringToRuntime, deploySubpathSetting, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
@@ -32,8 +32,7 @@ import { VSCodeUI } from '../VSCodeUI';
 export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     let deployFsPath: string;
     if (!deployPath) {
-        const defaultSubpath: string | undefined = getFuncExtensionSetting(deploySubpathSetting);
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), defaultSubpath);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
     } else if (deployPath instanceof vscode.Uri) {
         deployFsPath = deployPath.fsPath;
     } else {
@@ -59,7 +58,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
 
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, ui);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {

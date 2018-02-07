@@ -7,13 +7,19 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { IUserInterface, PickWithData } from '../IUserInterface';
 import { localize } from '../localize';
+import { getFuncExtensionSetting } from '../ProjectSettings';
 import * as fsUtils from './fs';
 
-export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string, subpath?: string): Promise<string> {
+export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string, subpathSettingKey?: string): Promise<string> {
     const browse: string = ':browse';
     let folder: PickWithData<string> | undefined;
     if (vscode.workspace.workspaceFolders) {
         const folderPicks: PickWithData<string>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
+            let subpath: string | undefined;
+            if (subpathSettingKey) {
+                subpath = getFuncExtensionSetting(subpathSettingKey, f.uri.fsPath);
+            }
+
             const fsPath: string = subpath ? path.join(f.uri.fsPath, subpath) : f.uri.fsPath;
             return new PickWithData('', fsPath);
         });

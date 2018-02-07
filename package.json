@@ -374,6 +374,7 @@
                         "description": "%azFunc.showExplorerDescription%"
                     },
                     "azureFunctions.templateFilter": {
+                        "scope": "resource",
                         "type": "string",
                         "default": "Verified",
                         "enum": [
@@ -384,16 +385,19 @@
                         "description": "%azFunc.templateFilterDescription%"
                     },
                     "azureFunctions.zipGlobPattern": {
+                        "scope": "resource",
                         "type": "string",
                         "default": "**/*",
                         "description": "Defines which files in the workspace to deploy. This applies to Zip deploy only, has no effect on other deployment methods."
                     },
                     "azureFunctions.zipIgnorePattern": {
+                        "scope": "resource",
                         "type": "string",
                         "default": "",
                         "description": "Defines which files in the workspace to ignore for Zip deploy. This applies to Zip deploy only, has no effect on other deployment methods."
                     },
                     "azureFunctions.projectRuntime": {
+                        "scope": "resource",
                         "type": "string",
                         "enum": [
                             "~1",
@@ -402,6 +406,7 @@
                         "description": "%azFunc.projectRuntimeDescription%"
                     },
                     "azureFunctions.projectLanguage": {
+                        "scope": "resource",
                         "type": "string",
                         "enum": [
                             "Bash",
@@ -419,6 +424,7 @@
                         "description": "%azFunc.projectLanguageDescription%"
                     },
                     "azureFunctions.deploySubpath": {
+                        "scope": "resource",
                         "type": "string",
                         "description": "%azFunc.deploySubpathDescription%"
                     }

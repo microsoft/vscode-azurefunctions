@@ -92,23 +92,23 @@ export async function selectTemplateFilter(ui: IUserInterface): Promise<Template
     await updateWorkspaceSetting(templateFilterSetting, result);
     return <TemplateFilter>result;
 }
-
-export function getFuncExtensionSetting<T>(key: string, ignoreWorkspaceSettings: boolean = false): T | undefined {
+export function getGlobalFuncExtensionSetting<T>(key: string): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
-    if (ignoreWorkspaceSettings) {
-        const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
-        return result && result.globalValue;
-    } else {
-        // tslint:disable-next-line:no-backbone-get-set-outside-model
-        return projectConfiguration.get<T>(key);
-    }
+    const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
+    return result && result.globalValue;
+}
+
+export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | undefined {
+    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, fsPath ? vscode.Uri.file(fsPath) : undefined);
+    // tslint:disable-next-line:no-backbone-get-set-outside-model
+    return projectConfiguration.get<T>(key);
 }
 
 export async function getProjectLanguage(projectPath: string, ui: IUserInterface): Promise<ProjectLanguage> {
     if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
         return ProjectLanguage.Java;
     } else {
-        let language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
+        let language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, projectPath);
         if (!language) {
             const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
             const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
@@ -124,13 +124,13 @@ export async function getProjectLanguage(projectPath: string, ui: IUserInterface
     }
 }
 
-export async function getProjectRuntime(language: ProjectLanguage, ui: IUserInterface): Promise<ProjectRuntime> {
+export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IUserInterface): Promise<ProjectRuntime> {
     if (language === ProjectLanguage.Java) {
         // Java only supports beta
         return ProjectRuntime.beta;
     }
 
-    let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting));
+    let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting, projectPath));
     if (!runtime) {
         const message: string = localize('noRuntime', 'You must have a project runtime set to perform this operation.');
         const selectRuntime: MessageItem = { title: localize('selectRuntimeButton', 'Select Runtime') };
@@ -145,8 +145,8 @@ export async function getProjectRuntime(language: ProjectLanguage, ui: IUserInte
     return <ProjectRuntime>runtime;
 }
 
-export async function getTemplateFilter(): Promise<TemplateFilter> {
-    const templateFilter: string | undefined = getFuncExtensionSetting(templateFilterSetting);
+export async function getTemplateFilter(projectPath: string): Promise<TemplateFilter> {
+    const templateFilter: string | undefined = getFuncExtensionSetting(templateFilterSetting, projectPath);
     return templateFilter ? <TemplateFilter>templateFilter : TemplateFilter.Verified;
 }
 
