@@ -4,68 +4,81 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as opn from 'opn';
+import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { extensionPrefix } from '../../src/ProjectSettings';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
-import { nodeUtils } from './nodeUtils';
 
 export namespace functionRuntimeUtils {
 
     const runtimePackage: string = 'azure-functions-core-tools';
 
     export async function validateFunctionRuntime(outputChannel: vscode.OutputChannel): Promise<void> {
-        const errorMessage: string | undefined = await getRuntimeValidationError(outputChannel);
-        if (errorMessage) {
-            await promptDocumentationAction(errorMessage);
-        }
-    }
-
-    async function getRuntimeValidationError(outputChannel: vscode.OutputChannel): Promise<string | undefined> {
         try {
-            await cpUtils.executeCommand(outputChannel, undefined, 'func');
+            const localVersion: string | null = await getLocalFunctionRuntimeVersion();
+            if (!localVersion) {
+                return;
+            }
+            const newestVersion: string | null = await getNewestFunctionRuntimeVersion(semver.major(localVersion));
+            if (!newestVersion) {
+                return;
+            }
+            if (semver.gt(newestVersion, localVersion)) {
+                await promptDocumentationAction(
+                    localize(
+                        'azFunc.outdatedFunctionRuntime',
+                        '[Azure Functions] Your installed version of the Azure Functions Core Tools ("{0}") does not match the latest ("{1}"). Please update for the best experience.',
+                        localVersion,
+                        newestVersion
+                    )
+                );
+            }
         } catch (error) {
-            return localize(
-                'azFunc.noFunctionRuntime',
-                '[Azure Functions] Azure-functions-core-tools is not installed. Please install it otherwise Azure Functions extension may fail.'
-            );
-        }
-
-        try {
-            await nodeUtils.validateNpmInstalled(outputChannel);
-        } catch (error) {
-            return localize(
-                'azFunc.npmNotFound',
-                '[Azure Functions] Failed to check function runtime version caused by "npm" not in path, would you like to check the document for the prerequisites?'
-            );
-        }
-
-        const outdatedInfo: string = await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'outdated', runtimePackage, '-g');
-        const runtimeDetail: string[] = outdatedInfo.slice(outdatedInfo.indexOf(runtimePackage)).trim().split(/\s+/);
-        if (runtimeDetail[1] !== runtimeDetail[2]) {
-            return localize(
-                'azFunc.outdatedFunctionRuntime',
-                '[Azure Functions] New Function Runtime version "{0}" found. Current is "{1}". Please update it otherwise Azure Functions extension may fail.',
-                runtimeDetail[2],
-                runtimeDetail[1]
-            );
+            outputChannel.appendLine(`Error occurred when checking function runtime: ${error}`);
         }
 
         return undefined;
     }
 
-    async function promptDocumentationAction(message: string): Promise<void> {
-        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.openDocument, DialogResponses.skipForNow, DialogResponses.never);
-        if (result === DialogResponses.openDocument) {
-            // tslint:disable-next-line:no-unsafe-any
-            opn('https://github.com/Microsoft/vscode-azurefunctions#prerequisites');
-        } else if (result === DialogResponses.never) {
-            await updateCheckingRuntimeSetting(false);
+    async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
+        const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
+        const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
+        if (matchResult) {
+            const localVersion: string = matchResult[1].trim();
+            return semver.valid(localVersion);
+        }
+        return null;
+    }
+
+    async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
+        switch (major) {
+            case FunctionRuntimeTag.latest:
+                return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.latest')).trim());
+            case FunctionRuntimeTag.core:
+                return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.core')).trim());
+            default:
+                return null;
         }
     }
 
-    async function updateCheckingRuntimeSetting(value: boolean): Promise<void> {
-        vscode.workspace.getConfiguration(extensionPrefix).update('checkFunctionRuntime', value, true /* User Setting */);
+    async function promptDocumentationAction(message: string): Promise<void> {
+        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.seeMoreInfo, DialogResponses.dontWarnAgain);
+        if (result === DialogResponses.seeMoreInfo) {
+            // tslint:disable-next-line:no-unsafe-any
+            opn('https://aka.ms/azFuncOutdated');
+        } else if (result === DialogResponses.dontWarnAgain) {
+            await vscode.workspace.getConfiguration(extensionPrefix).update(
+                'showCoreToolsWarning',
+                false /* value */,
+                true /* User Setting */
+            );
+        }
+    }
+
+    enum FunctionRuntimeTag {
+        latest = 1,
+        core = 2
     }
 }

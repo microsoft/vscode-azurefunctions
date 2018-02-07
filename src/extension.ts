@@ -55,7 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const azureAccount: AzureAccount = azureAccountExtension.exports;
 
         const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
-        if (getFuncExtensionSetting<boolean>('checkFunctionRuntime')) {
+        if (getFuncExtensionSetting<boolean>('showCoreToolsWarning')) {
             // tslint:disable-next-line:no-floating-promises
             functionRuntimeUtils.validateFunctionRuntime(outputChannel);
         }

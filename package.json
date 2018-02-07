@@ -422,9 +422,9 @@
                         "type": "string",
                         "description": "%azFunc.deploySubpathDescription%"
                     },
-                    "azureFunctions.checkFunctionRuntime": {
+                    "azureFunctions.showCoreToolsWarning": {
                         "type": "boolean",
-                        "description": "%azFunc.checkFunctionRuntimeDescription%",
+                        "description": "%azFunc.showCoreToolsWarningDescription%",
                         "default": true
                     }
                 }
@@ -444,6 +444,7 @@
         "@types/node": "^8.0.28",
         "@types/request": "2.0.7",
         "@types/request-promise": "4.1.38",
+        "@types/semver": "^5.5.0",
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "gulp": "^3.9.1",
@@ -467,6 +468,7 @@
         "opn": "^5.2.0",
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
+        "semver": "^5.5.0",
         "vscode-azureappservice": "~0.8.3",
         "vscode-azureextensionui": "~0.5.1",
         "vscode-azurekudu": "~0.1.4",
