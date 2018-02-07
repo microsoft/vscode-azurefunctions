@@ -18,11 +18,11 @@ export namespace functionRuntimeUtils {
     export async function validateFunctionRuntime(outputChannel: vscode.OutputChannel): Promise<void> {
         try {
             const localVersion: string | null = await getLocalFunctionRuntimeVersion();
-            if (!localVersion) {
+            if (localVersion === null) {
                 return;
             }
             const newestVersion: string | null = await getNewestFunctionRuntimeVersion(semver.major(localVersion));
-            if (!newestVersion) {
+            if (newestVersion === null) {
                 return;
             }
             if (semver.gt(newestVersion, localVersion)) {
@@ -45,11 +45,16 @@ export namespace functionRuntimeUtils {
     async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
         const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
         const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
-        if (matchResult) {
+        if (matchResult !== null) {
             const localVersion: string = matchResult[1].trim();
             return semver.valid(localVersion);
         }
         return null;
+    }
+
+    enum FunctionRuntimeTag {
+        latest = 1,
+        core = 2
     }
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
@@ -75,10 +80,5 @@ export namespace functionRuntimeUtils {
                 true /* User Setting */
             );
         }
-    }
-
-    enum FunctionRuntimeTag {
-        latest = 1,
-        core = 2
     }
 }
