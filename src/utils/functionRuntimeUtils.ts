@@ -6,6 +6,7 @@
 import * as opn from 'opn';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { parseError } from 'vscode-azureextensionui';
 import { extensionPrefix } from '../../src/ProjectSettings';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
@@ -29,14 +30,14 @@ export namespace functionRuntimeUtils {
                 await promptDocumentationAction(
                     localize(
                         'azFunc.outdatedFunctionRuntime',
-                        '[Azure Functions] Your installed version of the Azure Functions Core Tools ("{0}") does not match the latest ("{1}"). Please update for the best experience.',
+                        'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
                         localVersion,
                         newestVersion
                     )
                 );
             }
         } catch (error) {
-            outputChannel.appendLine(`Error occurred when checking function runtime: ${error}`);
+            outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
         }
 
         return undefined;
