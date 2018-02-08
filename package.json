@@ -432,6 +432,11 @@
                         "type": "boolean",
                         "description": "%azFunc.showCoreToolsWarningDescription%",
                         "default": true
+                    },
+                    "azureFunctions.show64BitWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.show64BitWarningDescription%",
+                        "default": true
                     }
                 }
             }

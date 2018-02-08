@@ -29,7 +29,6 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { localize } from './localize';
-import { getFuncExtensionSetting } from './ProjectSettings';
 import { TemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
@@ -55,11 +54,10 @@ export function activate(context: vscode.ExtensionContext): void {
         const azureAccount: AzureAccount = azureAccountExtension.exports;
 
         const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
-        if (getFuncExtensionSetting<boolean>('showCoreToolsWarning')) {
-            // tslint:disable-next-line:no-floating-promises
-            functionRuntimeUtils.validateFunctionRuntime(outputChannel);
-        }
         context.subscriptions.push(outputChannel);
+
+        // tslint:disable-next-line:no-floating-promises
+        functionRuntimeUtils.validateFunctionRuntime(outputChannel);
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(context.globalState, outputChannel), 'azureFunctions.loadMore');
         context.subscriptions.push(tree);

@@ -45,7 +45,12 @@ export enum TemplateFilter {
     Verified = 'Verified'
 }
 
-async function updateWorkspaceSetting(section: string, value: string, fsPath: string): Promise<void> {
+export async function updateGlobalSetting<T = string>(section: string, value: T): Promise<void> {
+    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
+    await projectConfiguration.update(section, value, vscode.ConfigurationTarget.Global);
+}
+
+async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, vscode.Uri.file(fsPath));
     await projectConfiguration.update(section, value);
 }

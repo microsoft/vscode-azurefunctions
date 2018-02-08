@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as opn from 'opn';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
+import { DialogResponses } from '../../DialogResponses';
 import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
-import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
+import { getFuncExtensionSetting, ProjectRuntime, TemplateFilter, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
@@ -49,7 +51,17 @@ export class CSharpProjectCreator implements IProjectCreator {
                 this.runtime = ProjectRuntime.beta;
             } else {
                 this.runtime = ProjectRuntime.one;
-                await vscode.window.showWarningMessage('In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the runtime. See https://aka.ms/azFunc64bit');
+                const settingKey: string = 'show64BitWarning';
+                if (getFuncExtensionSetting<boolean>(settingKey)) {
+                    const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
+                    const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.seeMoreInfo, DialogResponses.dontWarnAgain);
+                    if (result === DialogResponses.seeMoreInfo) {
+                        // tslint:disable-next-line:no-unsafe-any
+                        opn('https://aka.ms/azFunc64bit');
+                    } else if (result === DialogResponses.dontWarnAgain) {
+                        await updateGlobalSetting(settingKey, false);
+                    }
+                }
             }
             this.deploySubpath = `bin/Debug/${targetFramework}`;
         }
