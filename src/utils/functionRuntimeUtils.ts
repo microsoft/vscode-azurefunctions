@@ -39,8 +39,6 @@ export namespace functionRuntimeUtils {
         } catch (error) {
             outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
         }
-
-        return undefined;
     }
 
     async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
