@@ -1,6 +1,10 @@
 # Azure Functions for Visual Studio Code (Preview)
 [![Build Status](https://travis-ci.org/Microsoft/vscode-azurefunctions.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-azurefunctions) [![Release Status](https://img.shields.io/github/tag/Microsoft/vscode-azurefunctions.svg?label=prerelease&colorB=0E7FC0)](https://github.com/Microsoft/vscode-azurefunctions/releases)
 
+Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
+out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
+to get started with the Azure Functions extension.
+
 ## Prerequisites
 
 * Install your desired version of the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local)
