@@ -9,9 +9,8 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { WorkspaceConfiguration } from 'vscode';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
-import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/ProjectSettings';
+import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { TemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
 import { TestAzureAccount } from '../TestAzureAccount';
@@ -33,7 +32,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
 
-    private _projectConfiguration: WorkspaceConfiguration;
     private _oldTemplateFilter: string | undefined;
     private _oldProjectLanguage: string | undefined;
     private _oldProjectRuntime: string | undefined;
@@ -41,14 +39,12 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     constructor() {
         this.testFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
         this.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-        this._projectConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
     }
 
     public async initAsync(): Promise<void> {
-        // tslint:disable-next-line:no-backbone-get-set-outside-model
-        this._oldTemplateFilter = this._projectConfiguration.get(templateFilterSetting);
-        this._oldProjectLanguage = this._projectConfiguration.get(projectLanguageSetting);
-        this._oldProjectRuntime = this._projectConfiguration.get(projectRuntimeSetting);
+        this._oldTemplateFilter = getGlobalFuncExtensionSetting(templateFilterSetting);
+        this._oldProjectLanguage = getGlobalFuncExtensionSetting(projectLanguageSetting);
+        this._oldProjectRuntime = getGlobalFuncExtensionSetting(projectRuntimeSetting);
 
         await fse.ensureDir(path.join(this.testFolder, '.vscode'));
         // Pretend to create the parent function app
@@ -58,18 +54,18 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
             fse.writeFile(path.join(this.testFolder, '.vscode', 'launch.json'), '')
         ]);
 
-        await this._projectConfiguration.update(templateFilterSetting, TemplateFilter.All, vscode.ConfigurationTarget.Global);
-        await this._projectConfiguration.update(projectLanguageSetting, this._language, vscode.ConfigurationTarget.Global);
-        await this._projectConfiguration.update(projectRuntimeSetting, this._runtime, vscode.ConfigurationTarget.Global);
+        await updateGlobalSetting(templateFilterSetting, TemplateFilter.All);
+        await updateGlobalSetting(projectLanguageSetting, this._language);
+        await updateGlobalSetting(projectRuntimeSetting, this._runtime);
     }
 
     public async dispose(): Promise<void> {
         this.outputChannel.dispose();
         await fse.remove(this.testFolder);
 
-        await this._projectConfiguration.update(templateFilterSetting, this._oldTemplateFilter, vscode.ConfigurationTarget.Global);
-        await this._projectConfiguration.update(projectLanguageSetting, this._oldProjectLanguage, vscode.ConfigurationTarget.Global);
-        await this._projectConfiguration.update(projectRuntimeSetting, this._oldProjectRuntime, vscode.ConfigurationTarget.Global);
+        await updateGlobalSetting(templateFilterSetting, this._oldTemplateFilter);
+        await updateGlobalSetting(projectLanguageSetting, this._oldProjectLanguage);
+        await updateGlobalSetting(projectRuntimeSetting, this._oldProjectRuntime);
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
