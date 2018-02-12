@@ -20,8 +20,8 @@ import * as fsUtil from './fs';
 export namespace dotnetUtils {
     const projectPackageId: string = 'microsoft.azurefunctions.projecttemplates';
     const functionsPackageId: string = 'azure.functions.templates';
-    const betaTemplateVersion: string = '2.0.0-beta-10153';
-    const v1TemplateVersion: string = '1.0.3.10152';
+    const betaTemplateVersion: string = '2.0.0-beta-10167';
+    const v1TemplateVersion: string = '1.0.3.10168';
 
     function getPackagesCsproj(version: string): string {
         // tslint:disable:no-multiline-string
