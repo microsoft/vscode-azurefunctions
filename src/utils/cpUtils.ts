@@ -39,12 +39,13 @@ export namespace cpUtils {
             childProc.on('error', reject);
             childProc.on('close', (code: number) => {
                 if (code !== 0) {
+                    // We want to make sure the full error message is displayed to the user, not just the error code.
+                    // If outputChannel is defined, then we simply call 'outputChannel.show()' and throw a generic error telling the user to check the output window
+                    // If outputChannel is _not_ defined, then we include the command's output in the error itself and rely on AzureActionHandler to display it properly
                     if (outputChannel) {
                         outputChannel.show();
                         reject(new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', command)));
                     } else {
-                        // Include as much information as possible in the error since we couldn't display it directly in the outputChannel
-                        // The AzureActionHandler will handle this multi-line error and display it in the outputChannel anyways
                         reject(new Error(localize('azFunc.commandError', 'Command "{0} {1}" failed with exit code "{2}":{3}{4}', command, formattedArgs, code, os.EOL, result)));
                     }
                 } else {
