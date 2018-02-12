@@ -10,7 +10,8 @@ import { localize } from '../localize';
 
 export namespace cpUtils {
     export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
-        let result: string = '';
+        let cmdOutput: string = '';
+        let cmdOutputIncludingStderr: string = '';
         workingDirectory = workingDirectory || os.tmpdir();
         const formattedArgs: string = args.join(' ');
         await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
@@ -26,15 +27,20 @@ export namespace cpUtils {
 
             childProc.stdout.on('data', (data: string | Buffer) => {
                 data = data.toString();
-                result = result.concat(data);
+                cmdOutput = cmdOutput.concat(data);
+                cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
                 if (outputChannel) {
                     outputChannel.append(data);
                 }
             });
 
-            if (outputChannel) {
-                childProc.stderr.on('data', (data: string | Buffer) => outputChannel.append(data.toString()));
-            }
+            childProc.stderr.on('data', (data: string | Buffer) => {
+                data = data.toString();
+                cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
+                if (outputChannel) {
+                    outputChannel.append(data);
+                }
+            });
 
             childProc.on('error', reject);
             childProc.on('close', (code: number) => {
@@ -46,7 +52,7 @@ export namespace cpUtils {
                         outputChannel.show();
                         reject(new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', command)));
                     } else {
-                        reject(new Error(localize('azFunc.commandError', 'Command "{0} {1}" failed with exit code "{2}":{3}{4}', command, formattedArgs, code, os.EOL, result)));
+                        reject(new Error(localize('azFunc.commandError', 'Command "{0} {1}" failed with exit code "{2}":{3}{4}', command, formattedArgs, code, os.EOL, cmdOutputIncludingStderr)));
                     }
                 } else {
                     if (outputChannel) {
@@ -57,6 +63,6 @@ export namespace cpUtils {
             });
         });
 
-        return result;
+        return cmdOutput;
     }
 }
