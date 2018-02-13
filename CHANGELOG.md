@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
-## 0.6.0 - 2018-02-12
+## 0.6.0 - 2018-02-13
 ### Added
 - Stream logs from your remote Function Apps
 - Support projects in multi-root workspaces
