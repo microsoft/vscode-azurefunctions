@@ -1,6 +1,16 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.6.0 - 2018-02-12
+### Added
+- Stream logs from your remote Function Apps
+- Support projects in multi-root workspaces
+- Link to deployment tutorial
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.6.0%22+label%3Abug+is%3Aclosed)
+- Show warning if your Azure Functions Core Tools version is out-of-date
+- Update Microsoft.Net.Sdk.Functions version so that C# functions work on Mac/Linux
+
 ## 0.5.1 - 2018-02-01
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.5.1%22+label%3Abug+is%3Aclosed)
 - C# local debugging
