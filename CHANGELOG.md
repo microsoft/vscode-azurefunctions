@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.6.1 - 2018-02-16
+### Fixed
+- Fix "Failed to retrieve templates from the Azure Functions Portal."
+
 ## 0.6.0 - 2018-02-13
 ### Added
 - Stream logs from your remote Function Apps
