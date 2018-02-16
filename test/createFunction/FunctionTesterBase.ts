@@ -16,7 +16,7 @@ import * as fsUtil from '../../src/utils/fs';
 import { TestAzureAccount } from '../TestAzureAccount';
 import { TestUI } from '../TestUI';
 
-const templateData: TemplateData = new TemplateData();
+const templateData: TemplateData = new TemplateData(path.join(__dirname, '..', '..', '..'));
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {

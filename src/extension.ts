@@ -63,7 +63,7 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(tree);
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
 
-        const templateData: TemplateData = new TemplateData(context.globalState);
+        const templateData: TemplateData = new TemplateData(context.extensionPath, context.globalState);
 
         const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
