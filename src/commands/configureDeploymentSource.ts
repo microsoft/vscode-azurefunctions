@@ -13,10 +13,8 @@ export async function configureDeploymentSource(telemetryProperties: TelemetryPr
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    const updatedScmType: string | undefined = await node.treeItem.siteWrapper.editScmType(nodeUtils.getWebSiteClient(node));
+    const updatedScmType: string | undefined = await node.treeItem.siteWrapper.editScmType(node, nodeUtils.getWebSiteClient(node), outputChannel);
     if (updatedScmType !== undefined) {
         telemetryProperties.updatedScmType = updatedScmType;
-        outputChannel.show(true);
-        outputChannel.appendLine(`Deployment source for "${node.treeItem.siteWrapper.name}" has been updated to "${updatedScmType}".`);
     }
 }
