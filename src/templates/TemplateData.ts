@@ -169,9 +169,9 @@ export class TemplateData {
                     if (this._configMap[runtime] === undefined) {
                         // Fall back to a version of the templates shipped with the extension if we've never cached anything before
                         const templatePath: string = path.join(this._extensionPath, 'resources', 'templates', runtime);
-                        rawResources = await fse.readJSON(path.join(templatePath, 'resources.json'));
-                        rawTemplates = await fse.readJSON(path.join(templatePath, 'templates.json'));
-                        rawConfig = await fse.readJSON(path.join(templatePath, 'bindingconfig.json'));
+                        rawResources = <object>await fse.readJSON(path.join(templatePath, 'resources.json'));
+                        rawTemplates = <object[]>await fse.readJSON(path.join(templatePath, 'templates.json'));
+                        rawConfig = <object>await fse.readJSON(path.join(templatePath, 'bindingconfig.json'));
                     } else {
                         throw error;
                     }
