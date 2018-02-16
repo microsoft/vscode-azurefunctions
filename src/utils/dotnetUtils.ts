@@ -38,9 +38,9 @@ export namespace dotnetUtils {
 `;
     }
 
-    async function validateDotnetInstalled(workingDirectory: string): Promise<void> {
+    async function validateDotnetInstalled(): Promise<void> {
         try {
-            await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--version');
+            await cpUtils.executeCommand(undefined, undefined, 'dotnet', '--version');
         } catch (error) {
             throw new Error(localize('azFunc.dotnetNotInstalled', 'You must have the .NET CLI installed to perform this operation.'));
         }
@@ -48,9 +48,9 @@ export namespace dotnetUtils {
 
     export const funcProjectId: string = 'azureFunctionsProjectTemplates';
 
-    export async function validateTemplatesInstalled(outputChannel: OutputChannel, workingDirectory: string, ui: IUserInterface): Promise<void> {
-        await validateDotnetInstalled(workingDirectory);
-        const listOutput: string = await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', 'new', '--list');
+    export async function validateTemplatesInstalled(outputChannel: OutputChannel, ui: IUserInterface): Promise<void> {
+        await validateDotnetInstalled();
+        const listOutput: string = await cpUtils.executeCommand(undefined, undefined, 'dotnet', 'new', '--list');
         if (!listOutput.includes(funcProjectId) || !listOutput.includes('HttpTrigger')) {
             const installTemplates: vscode.MessageItem = { title: localize('installTemplates', 'Install Templates') };
             const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), installTemplates, DialogResponses.cancel);
@@ -63,6 +63,8 @@ export namespace dotnetUtils {
     }
 
     export async function uninstallDotnetTemplates(outputChannel: OutputChannel): Promise<void> {
+        await validateDotnetInstalled();
+
         const tempFolder: string = os.tmpdir();
 
         outputChannel.show();
@@ -74,6 +76,8 @@ export namespace dotnetUtils {
     }
 
     export async function installDotnetTemplates(outputChannel: OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+        await validateDotnetInstalled();
+
         let templateVersion: string = betaTemplateVersion;
 
         if (/^win/.test(process.platform)) {

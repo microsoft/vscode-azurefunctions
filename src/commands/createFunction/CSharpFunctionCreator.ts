@@ -49,7 +49,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._functionAppPath, this._ui);
+        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._ui);
 
         const args: string[] = [];
         for (const key of Object.keys(userSettings)) {
