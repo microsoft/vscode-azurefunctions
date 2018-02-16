@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
+import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
@@ -31,6 +33,7 @@ export class TemplateData {
     private readonly _refreshTask: Promise<void>;
     private readonly _templatesMap: { [runtime: string]: Template[] } = {};
     private readonly _configMap: { [runtime: string]: Config } = {};
+    private readonly _extensionPath: string;
 
     private readonly _verifiedTemplates: string[] = [
         'BlobTrigger-JavaScript',
@@ -57,7 +60,9 @@ export class TemplateData {
         'TimerTrigger'
     ];
 
-    constructor(globalState?: vscode.Memento) {
+    constructor(extensionPath: string, globalState?: vscode.Memento) {
+        this._extensionPath = extensionPath;
+
         if (globalState) {
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
@@ -153,9 +158,24 @@ export class TemplateData {
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
 
-                const rawResources: object = await this.requestFunctionPortal<object>('resources', runtime, 'name=en-us');
-                const rawTemplates: object[] = await this.requestFunctionPortal<object[]>('templates', runtime);
-                const rawConfig: object = await this.requestFunctionPortal<object>('bindingconfig', runtime);
+                let rawResources: object;
+                let rawTemplates: object[];
+                let rawConfig: object;
+                try {
+                    rawResources = await this.requestFunctionPortal<object>('resources', runtime, 'name=en-us');
+                    rawTemplates = await this.requestFunctionPortal<object[]>('templates', runtime);
+                    rawConfig = await this.requestFunctionPortal<object>('bindingconfig', runtime);
+                } catch (error) {
+                    if (this._configMap[runtime] === undefined) {
+                        // Fall back to a version of the templates shipped with the extension if we've never cached anything before
+                        const templatePath: string = path.join(this._extensionPath, 'resources', 'templates', runtime);
+                        rawResources = await fse.readJSON(path.join(templatePath, 'resources.json'));
+                        rawTemplates = await fse.readJSON(path.join(templatePath, 'templates.json'));
+                        rawConfig = await fse.readJSON(path.join(templatePath, 'bindingconfig.json'));
+                    } else {
+                        throw error;
+                    }
+                }
 
                 this.parseTemplates(runtime, rawResources, rawTemplates, rawConfig);
 
