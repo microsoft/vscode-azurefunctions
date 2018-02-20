@@ -24,7 +24,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(60 * 1000);
+        this.timeout(120 * 1000);
         await fse.ensureDir(testFolderPath);
         await dotnetUtils.installDotnetTemplates(outputChannel, new TestUI([]));
     });

@@ -9,8 +9,9 @@ import { funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
+    public static defaultRuntime: ProjectRuntime = ProjectRuntime.beta;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Core;
-    public readonly runtime: ProjectRuntime = ProjectRuntime.beta;
+    public readonly runtime: ProjectRuntime = CSharpScriptProjectCreator.defaultRuntime;
 
     public getTasksJson(): {} {
         return {
