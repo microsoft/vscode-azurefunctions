@@ -42,8 +42,8 @@ export class DebugProxy extends EventEmitter {
 
             this._server.on('connection', (socket: Socket) => {
                 if (this._wsclient) {
-                    this._outputChannel.appendLine(`[Proxy Server] The server is already connected to client "${this._wsclient.url}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
-                    this.emit('error', new Error(`[Proxy Server]  The server is already connected to client "${this._wsclient.url}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
+                    this._outputChannel.appendLine(`[Proxy Server] The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
+                    this.emit('error', new Error(`[Proxy Server]  The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
                     socket.destroy();
                 } else {
                     this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
@@ -129,7 +129,10 @@ export class DebugProxy extends EventEmitter {
             this._wsconnection.close();
             this._wsconnection = undefined;
         }
-        this._wsclient = undefined;
+        if (this._wsclient) {
+            this._wsclient.abort();
+            this._wsclient = undefined;
+        }
         if (this._server) {
             this._server.close();
             this._server = undefined;

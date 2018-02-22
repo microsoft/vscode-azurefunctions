@@ -477,7 +477,7 @@
         "@types/request": "2.0.7",
         "@types/request-promise": "4.1.38",
         "@types/semver": "^5.5.0",
-        "@types/websocket": "0.0.36",
+        "@types/websocket": "^0.0.37",
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "gulp": "^3.9.1",
