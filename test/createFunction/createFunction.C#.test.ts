@@ -17,8 +17,8 @@ class CSharpFunctionTester extends FunctionTesterBase {
     protected _language: ProjectLanguage = ProjectLanguage.CSharp;
     protected _runtime: ProjectRuntime = ProjectRuntime.beta;
 
-    public async validateFunction(funcName: string): Promise<void> {
-        assert.equal(await fse.pathExists(path.join(this.testFolder, `${funcName}.cs`)), true, 'cs file does not exist');
+    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
+        assert.equal(await fse.pathExists(path.join(testFolder, `${funcName}.cs`)), true, 'cs file does not exist');
     }
 }
 
@@ -30,12 +30,14 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(60 * 1000);
+        this.timeout(120 * 1000);
         await csTester.initAsync();
         await dotnetUtils.installDotnetTemplates(csTester.outputChannel, new TestUI([]));
     });
 
-    suiteTeardown(async () => {
+    // tslint:disable-next-line:no-function-expression
+    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+        this.timeout(15 * 1000);
         await csTester.dispose();
     });
 
@@ -86,7 +88,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         const functionName: string = 'createFunctionApi';
         const namespace: string = 'Company.Function';
         const authLevel: string = 'Anonymous';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.testFolder, templateId, functionName, namespace, authLevel);
-        await csTester.validateFunction(functionName);
+        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, namespace, authLevel);
+        await csTester.validateFunction(csTester.funcPortalTestFolder, functionName);
     });
 });
