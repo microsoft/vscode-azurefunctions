@@ -17,5 +17,5 @@ export async function createFunctionApp(tree: AzureTreeDataProvider, arg?: IAzur
     }
 
     const funcAppNode: IAzureNode = await node.createChild();
-    return funcAppNode.treeItem.id;
+    return funcAppNode.id;
 }

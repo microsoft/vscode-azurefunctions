@@ -27,7 +27,7 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     }
 
     public get id(): string {
-        return `${this._siteWrapper.id}/functions`;
+        return 'functions';
     }
 
     public get iconPath(): nodeUtils.IThemedIconPath {
@@ -42,7 +42,7 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
         const client: KuduClient = await nodeUtils.getKuduClient(node, this._siteWrapper);
         const funcs: FunctionEnvelope[] = await client.functionModel.list();
         return await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
-            const treeItem: FunctionTreeItem = new FunctionTreeItem(this._siteWrapper, fe, this.id, this._outputChannel);
+            const treeItem: FunctionTreeItem = new FunctionTreeItem(this._siteWrapper, fe, this._outputChannel);
             if (treeItem.config.isHttpTrigger) {
                 // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
                 // (Otherwise there might be a second or two delay which could lead to confusion)
