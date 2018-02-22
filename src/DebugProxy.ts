@@ -42,8 +42,8 @@ export class DebugProxy extends EventEmitter {
 
             this._server.on('connection', (socket: Socket) => {
                 if (this._wsclient) {
-                    this._outputChannel.appendLine(`[Proxy Server] client rejected ${socket.remoteAddress}:${socket.remotePort}`);
-                    this.emit('error', new Error(`[Proxy Server] client rejected ${socket.remoteAddress}:${socket.remotePort}`));
+                    this._outputChannel.appendLine(`[Proxy Server] The server is already connected to client "${this._wsclient.url}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
+                    this.emit('error', new Error(`[Proxy Server]  The server is already connected to client "${this._wsclient.url}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
                     socket.destroy();
                 } else {
                     this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
@@ -83,32 +83,32 @@ export class DebugProxy extends EventEmitter {
                     });
 
                     this._wsclient.connect(
-                        `wss://${this._siteWrapper.appName}.scm.azurewebsites.net/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
+                        `wss://${this._siteWrapper.kuduUrl.replace(/https?:\/\//, '')}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
                         undefined,
                         undefined,
                         { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
                         { auth: `${this._publishProfile.publishingUserName}:${this._publishProfile.publishingPassword}` }
                     );
+
+                    socket.on('data', (data: Buffer) => {
+                        if (this._wsconnection) {
+                            this._wsconnection.send(data);
+                        }
+                    });
+
+                    socket.on('end', () => {
+                        this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
+                        this.dispose();
+                        this.emit('end');
+                    });
+
+                    socket.on('error', (err: Error) => {
+                        this._outputChannel.appendLine(`[Proxy Server] ${err}`);
+                        this.dispose();
+                        socket.destroy();
+                        this.emit('error', err);
+                    });
                 }
-
-                socket.on('data', (data: Buffer) => {
-                    if (this._wsconnection) {
-                        this._wsconnection.send(data);
-                    }
-                });
-
-                socket.on('end', () => {
-                    this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
-                    this.dispose();
-                    this.emit('end');
-                });
-
-                socket.on('error', (err: Error) => {
-                    this._outputChannel.appendLine(`[Proxy Server] ${err}`);
-                    this.dispose();
-                    socket.destroy();
-                    this.emit('error', err);
-                });
             });
 
             this._server.on('listening', () => {

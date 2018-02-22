@@ -279,12 +279,12 @@
                     "group": "4@2"
                 },
                 {
-                    "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
                 },
                 {
-                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "6@1"
                 },
@@ -358,6 +358,10 @@
                 {
                     "command": "azureFunctions.pickProcess",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "when": "config.azureFunctions.enableRemoteDebugging == true"
                 }
             ]
         },
@@ -448,6 +452,11 @@
                         "type": "boolean",
                         "description": "%azFunc.show64BitWarningDescription%",
                         "default": true
+                    },
+                    "azureFunctions.enableRemoteDebugging": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableRemoteDebugging%",
+                        "default": false
                     }
                 }
             }

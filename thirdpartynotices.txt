@@ -160,6 +160,7 @@ END OF xregexp NOTICES AND INFORMATION
 ==================================
 
 opn NOTICES BEGIN HERE
+=============================
 
 MIT License
 
@@ -195,7 +196,7 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 END OF semver NOTICES AND INFORMATION
 ==================================
-=======
+
 node-fetch NOTICES BEGIN HERE
 =============================
 

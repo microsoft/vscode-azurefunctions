@@ -37,7 +37,7 @@ to get started with the Azure Functions extension.
 * View, create, delete, start, stop, and restart Azure Function Apps
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 * Stream logs from your remote Function Apps
-* Debug Function App on Azure (experimental)
+* Debug Java Function App on Azure (experimental)
 
 ### Create New Project
 
@@ -46,18 +46,6 @@ to get started with the Azure Functions extension.
 ### Debug Function App Locally
 
 ![Debug](resources/Debug.gif)
-
-### Debug Function App on Azure (experimental)
-![Remote Debug](resources/RemoteDebug.gif)
-> Note: This is an experimental feature and currently only support Java Function Apps.
-
-To enable remote debugging, the following configurations of the selected function app will be changed:
-- `use32BitWorkerProcess` will be set to false
-- `webSocketsEnabled` will be set to true
-
-The following key-value pairs will be added to the Application Settings:
-- JAVA_OPTS: `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:8898`
-- HTTP_PLATFORM_DEBUG_PORT: `8898`
 
 ### Deploy to Azure
 
