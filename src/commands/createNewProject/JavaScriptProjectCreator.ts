@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from "../../localize";
-import { TemplateFilter } from "../../ProjectSettings";
+import { ProjectRuntime, TemplateFilter } from "../../ProjectSettings";
 import { funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
+    public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public readonly runtime: ProjectRuntime = JavaScriptProjectCreator.defaultRuntime;
 
     public getLaunchJson(): {} {
         return {
