@@ -65,17 +65,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
 
-        const funcPortalTemplateDataTask: Promise<TemplateData | undefined> = tryGetTemplateDataFromFuncPortal(actionHandler, context.globalState);
-        const cachedTemplateDataTask: Promise<TemplateData | undefined> = tryGetTemplateDataFromCache(actionHandler, context.globalState);
-        const backupTemplateDataTask: Promise<TemplateData> = getTemplateDataFromBackup(actionHandler, context.extensionPath);
+        const templateDataTask: Promise<TemplateData> = getTemplateData(actionHandler, context);
 
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
         actionHandler.registerCommand('azureFunctions.pickProcess', async () => await pickFuncProcess());
         actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, templateId?: string, functionName?: string, ...functionSettings: string[]) => {
-            // tslint:disable-next-line:strict-boolean-expressions
-            const templateData: TemplateData = await funcPortalTemplateDataTask || await cachedTemplateDataTask || await backupTemplateDataTask;
+            const templateData: TemplateData = await templateDataTask;
             await createFunction(properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, ...functionSettings);
         });
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createNewProject', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, language?: string, openFolder?: boolean | undefined) => await createNewProject(properties, outputChannel, functionAppPath, language, openFolder));
@@ -97,6 +94,11 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.installDotnetTemplates', async () => await dotnetUtils.installDotnetTemplates(outputChannel));
         actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallDotnetTemplates(outputChannel));
     }
+}
+
+async function getTemplateData(actionHandler: AzureActionHandler, context: vscode.ExtensionContext): Promise<TemplateData> {
+    // tslint:disable-next-line:strict-boolean-expressions
+    return await tryGetTemplateDataFromFuncPortal(actionHandler, context.globalState) || await tryGetTemplateDataFromCache(actionHandler, context.globalState) || await getTemplateDataFromBackup(actionHandler, context.extensionPath);
 }
 
 // tslint:disable-next-line:no-empty
