@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.6.1 - 2018-02-22
+### Fixed
+- Add backup templates in case there is no internet or in case the functions portal api changes
+
 ## 0.6.0 - 2018-02-13
 ### Added
 - Stream logs from your remote Function Apps
