@@ -22,7 +22,6 @@ import { convertStringToRuntime, deploySubpathSetting, extensionPrefix, getProje
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
-import * as azUtils from '../utils/azure';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -43,9 +42,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
     if (!functionAppId || typeof functionAppId !== 'string') {
         node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     } else {
-        const subscriptionId: string = azUtils.getSubscriptionFromId(functionAppId);
-        const subscriptionNode: IAzureParentNode = await nodeUtils.getSubscriptionNode(tree, subscriptionId);
-        const functionAppNode: IAzureNode | undefined = (await subscriptionNode.getCachedChildren()).find((n: IAzureNode) => n.treeItem.id === functionAppId);
+        const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
         if (functionAppNode) {
             node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
         } else {

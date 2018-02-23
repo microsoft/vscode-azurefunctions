@@ -34,7 +34,7 @@ export class CSharpProjectCreator implements IProjectCreator {
     }
 
     public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, functionAppPath, this._ui);
+        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._ui);
         await cpUtils.executeCommand(
             this._outputChannel,
             functionAppPath,

@@ -41,7 +41,8 @@ local.settings.json
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
 export class ScriptProjectCreatorBase implements IProjectCreator {
-    public readonly runtime: ProjectRuntime = ProjectRuntime.one;
+    public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
+    public readonly runtime: ProjectRuntime = ScriptProjectCreatorBase.defaultRuntime;
     // Default template filter to 'All' since preview langauges have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
 

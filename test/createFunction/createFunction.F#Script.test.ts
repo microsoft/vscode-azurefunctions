@@ -5,16 +5,18 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
+import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
+import { ScriptProjectCreatorBase } from '../../src/commands/createNewProject/ScriptProjectCreatorBase';
 import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class FSharpScriptFunctionTester extends FunctionTesterBase {
     protected _language: ProjectLanguage = ProjectLanguage.FSharpScript;
-    protected _runtime: ProjectRuntime = ProjectRuntime.one;
+    protected _runtime: ProjectRuntime = ScriptProjectCreatorBase.defaultRuntime;
 
-    public async validateFunction(funcName: string): Promise<void> {
-        const functionPath: string = path.join(this.testFolder, funcName);
+    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
+        const functionPath: string = path.join(testFolder, funcName);
         assert.equal(await fse.pathExists(path.join(functionPath, 'run.fsx')), true, 'run.fsx does not exist');
         assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
     }
@@ -27,7 +29,9 @@ suite('Create F# Script Function Tests', async () => {
         await tester.initAsync();
     });
 
-    suiteTeardown(async () => {
+    // tslint:disable-next-line:no-function-expression
+    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+        this.timeout(15 * 1000);
         await tester.dispose();
     });
 

@@ -26,25 +26,23 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private readonly _name: string;
-    private readonly _parentId: string;
     private readonly _outputChannel: OutputChannel;
     private _triggerUrl: string;
 
-    public constructor(siteWrapper: SiteWrapper, func: FunctionEnvelope, parentId: string, outputChannel: OutputChannel) {
+    public constructor(siteWrapper: SiteWrapper, func: FunctionEnvelope, outputChannel: OutputChannel) {
         if (!func.name) {
             throw new ArgumentError(func);
         }
 
         this.siteWrapper = siteWrapper;
         this._name = func.name;
-        this._parentId = parentId;
         this._outputChannel = outputChannel;
 
         this.config = new FunctionConfig(func.config);
     }
 
     public get id(): string {
-        return `${this._parentId}/${this._name}`;
+        return this._name;
     }
 
     public get label(): string {

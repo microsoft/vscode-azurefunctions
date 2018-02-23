@@ -2,12 +2,12 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%extension.description%",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "engines": {
-        "vscode": "^1.17.0"
+        "vscode": "^1.20.0"
     },
     "repository": {
         "type": "git",
@@ -230,13 +230,18 @@
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureSubscription",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureSubscription",
+                    "command": "azureFunctions.openInPortal",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
                     "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
