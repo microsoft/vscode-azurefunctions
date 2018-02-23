@@ -155,7 +155,8 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
         const templateId: string = 'HttpTrigger-JavaScript';
         const functionName: string = 'createFunctionApi';
         const authLevel: string = 'Anonymous';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', jsTester.funcPortalTestFolder, templateId, functionName, authLevel);
+        // Intentionally testing weird casing for authLevel
+        await vscode.commands.executeCommand('azureFunctions.createFunction', jsTester.funcPortalTestFolder, templateId, functionName, { aUtHLevel: authLevel });
         await jsTester.validateFunction(jsTester.funcPortalTestFolder, functionName);
     });
 });

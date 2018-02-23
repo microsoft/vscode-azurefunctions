@@ -86,7 +86,12 @@ export async function createFunction(
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    ...functionSettings: (string)[]): Promise<void> {
+    caseSensitiveFunctionSettings?: {}): Promise<void> {
+
+    const functionSettings: {} = {};
+    if (caseSensitiveFunctionSettings) {
+        Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => functionSettings[key.toLowerCase()] = <string>caseSensitiveFunctionSettings[key]);
+    }
 
     if (functionAppPath === undefined) {
         const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
@@ -146,8 +151,8 @@ export async function createFunction(
         const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
             let settingValue: string | undefined;
-            if (functionSettings.length > 0) {
-                settingValue = functionSettings.shift();
+            if (functionSettings[settingName.toLowerCase()]) {
+                settingValue = <string>functionSettings[settingName.toLowerCase()];
             } else {
                 const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
                 settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);
