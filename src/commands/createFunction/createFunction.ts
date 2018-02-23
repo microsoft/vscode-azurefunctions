@@ -86,11 +86,11 @@ export async function createFunction(
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: {}): Promise<void> {
+    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; }): Promise<void> {
 
-    const functionSettings: {} = {};
+    const functionSettings: { [key: string]: string | undefined; } = {};
     if (caseSensitiveFunctionSettings) {
-        Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => functionSettings[key.toLowerCase()] = <string>caseSensitiveFunctionSettings[key]);
+        Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => functionSettings[key.toLowerCase()] = caseSensitiveFunctionSettings[key]);
     }
 
     if (functionAppPath === undefined) {
@@ -151,8 +151,8 @@ export async function createFunction(
         const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
             let settingValue: string | undefined;
-            if (functionSettings[settingName.toLowerCase()]) {
-                settingValue = <string>functionSettings[settingName.toLowerCase()];
+            if (functionSettings[settingName.toLowerCase()] !== undefined) {
+                settingValue = functionSettings[settingName.toLowerCase()];
             } else {
                 const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
                 settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);

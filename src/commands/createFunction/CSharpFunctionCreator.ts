@@ -29,7 +29,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         this._ui = ui;
     }
 
-    public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: {}): Promise<void> {
+    public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, removeLanguageFromId(this._template.id), '.cs');
             const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
@@ -39,9 +39,8 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
             this._functionName = functionName;
         }
 
-        const namespaceKey: string = 'namespace';
-        if (functionSettings[namespaceKey]) {
-            this._namespace = <string>functionSettings[namespaceKey];
+        if (functionSettings.namespace !== undefined) {
+            this._namespace = functionSettings.namespace;
         } else {
             const namespacePlaceHolder: string = localize('azFunc.namespacePlaceHolder', 'Namespace');
             const namespacePrompt: string = localize('azFunc.namespacePrompt', 'Provide a namespace');

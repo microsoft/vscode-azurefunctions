@@ -34,7 +34,7 @@ await vscode.commands.executeCommand('azureFunctions.createNewProject', projectP
 |projectPath|string|Absolute file path that contains your project.|
 |templateId|string|The id of the template you want to create.|
 |functionName|string|The name of the function to be created.|
-|functionSettings|object|Any settings unique to a template. For example, the HttpTrigger template requires an AuthorizationLevel parameter.|
+|functionSettings|{ [key: string]: string; }|Any settings unique to a template. For example, the HttpTrigger template requires an AuthorizationLevel parameter.|
 
 ### Example Usage
 
