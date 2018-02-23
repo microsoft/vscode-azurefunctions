@@ -6,28 +6,28 @@
 import { User } from 'azure-arm-website/lib/models';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
-import * as fetch from 'node-fetch';
 import { OutputChannel } from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
+import KuduClient from 'vscode-azurekudu';
 import * as websocket from 'websocket';
 
 export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
     private _wsclient: websocket.client | undefined;
     private _wsconnection: websocket.connection | undefined;
-    private _accessToken: string;
     private _siteWrapper: SiteWrapper;
+    private _kuduClient: KuduClient;
     private _port: number;
-    private _publishProfile: User;
+    private _publishCredential: User;
     private _keepAlive: boolean;
     private _outputChannel: OutputChannel;
 
-    constructor(outputChannel: OutputChannel, siteWrapper: SiteWrapper, port: number, publishProfile: User, accessToken: string) {
+    constructor(outputChannel: OutputChannel, siteWrapper: SiteWrapper, port: number, publishCredential: User, kuduClient: KuduClient) {
         super();
         this._siteWrapper = siteWrapper;
         this._port = port;
-        this._publishProfile = publishProfile;
-        this._accessToken = accessToken;
+        this._publishCredential = publishCredential;
+        this._kuduClient = kuduClient;
         this._keepAlive = true;
         this._outputChannel = outputChannel;
         this._server = createServer();
@@ -87,7 +87,7 @@ export class DebugProxy extends EventEmitter {
                         undefined,
                         undefined,
                         { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-                        { auth: `${this._publishProfile.publishingUserName}:${this._publishProfile.publishingPassword}` }
+                        { auth: `${this._publishCredential.publishingUserName}:${this._publishCredential.publishingPassword}` }
                     );
 
                     socket.on('data', (data: Buffer) => {
@@ -144,7 +144,7 @@ export class DebugProxy extends EventEmitter {
     private async keepAlive(): Promise<void> {
         if (this._keepAlive) {
             try {
-                await this.getFunctionState();
+                await this.pingFunctionApp();
                 setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {
                 this._outputChannel.appendLine(`[Proxy Server] ${err}`);
@@ -153,34 +153,7 @@ export class DebugProxy extends EventEmitter {
         }
     }
 
-    private async getFunctionState(): Promise<void> {
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        const functionAccessToken: string = await this.requestAsync(
-            `https://${this._siteWrapper.appName}.scm.azurewebsites.net/api/functions/admin/token`,
-            { headers: { Authorization: `Bearer ${this._accessToken}` } }
-        );
-
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        const functionMasterKey: {} = await this.requestAsync(
-            `https://${this._siteWrapper.appName}.azurewebsites.net/admin/host/systemkeys/_master`,
-            { headers: { Authorization: `Bearer ${functionAccessToken}` } }
-        );
-
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        await this.requestAsync(`https://${this._siteWrapper.appName}.azurewebsites.net/admin/host/status?code=${functionMasterKey['value']}`, {});
-    }
-
-    // tslint:disable-next-line:no-any
-    private async requestAsync(url: string, options: fetch.RequestInit): Promise<any> {
-        const response: fetch.Response = await fetch.default(url, options);
-        if (response.ok) {
-            try {
-                return JSON.parse(await response.clone().json<string>());
-            } catch (err) {
-                return JSON.parse(await response.text());
-            }
-        } else {
-            throw new Error(`Failed when requesting '${url}'`);
-        }
+    private async pingFunctionApp(): Promise<void> {
+        await this._siteWrapper.pingFunctionApp(this._kuduClient);
     }
 }

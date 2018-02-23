@@ -6,12 +6,12 @@
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import { SiteConfigResource, StringDictionary, User } from 'azure-arm-website/lib/models';
-import { DeviceTokenCredentials } from 'ms-rest-azure';
 import * as opn from "opn";
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteWrapper } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import KuduClient from 'vscode-azurekudu';
 import { DebugProxy } from '../DebugProxy';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
@@ -29,8 +29,8 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
     const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
     const portNumber: number = await portfinder.getPortPromise();
     const publishCredential: User = await siteWrapper.getWebAppPublishCredential(client);
-    const accessToken: string = await acquireToken(node.credentials);
-    const debugProxy: DebugProxy = new DebugProxy(outputChannel, siteWrapper, portNumber, publishCredential, accessToken);
+    const kuduClient: KuduClient = await siteWrapper.getKuduClient(client);
+    const debugProxy: DebugProxy = new DebugProxy(outputChannel, siteWrapper, portNumber, publishCredential, kuduClient);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();
@@ -116,21 +116,6 @@ async function updateAppSettings(outputChannel: vscode.OutputChannel, siteWrappe
         p.report({ message: 'Updating application settings done...' });
         outputChannel.appendLine('Updating application settings done...');
     }
-}
-
-async function acquireToken(credentials: DeviceTokenCredentials): Promise<string> {
-    // tslint:disable-next-line:no-any typedef
-    return new Promise((resolve: (res: string) => void, reject: (err: any) => void) => {
-        // tslint:disable-next-line:no-string-literal no-any no-unsafe-any
-        credentials['context'].acquireToken(credentials['environment']['activeDirectoryResourceId'], credentials['username'], credentials['clientId'], (err: any, result: any) => {
-            if (err) {
-                reject(err);
-            } else {
-                // tslint:disable-next-line:no-unsafe-any
-                resolve(result.accessToken);
-            }
-        });
-    });
 }
 
 function needUpdateSiteConfig(siteConfig: SiteConfigResource): boolean {
