@@ -6,7 +6,6 @@
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, IAzureNode, TelemetryProperties } from 'vscode-azureextensionui';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
-import { nodeUtils } from '../utils/nodeUtils';
 
 export async function configureDeploymentSource(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
     if (!node) {
