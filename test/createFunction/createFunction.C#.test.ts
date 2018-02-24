@@ -88,7 +88,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         const functionName: string = 'createFunctionApi';
         const namespace: string = 'Company.Function';
         const authLevel: string = 'Anonymous';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, namespace, authLevel);
+        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, { namespace, authLevel });
         await csTester.validateFunction(csTester.funcPortalTestFolder, functionName);
     });
 });

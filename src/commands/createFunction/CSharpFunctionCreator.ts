@@ -29,7 +29,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         this._ui = ui;
     }
 
-    public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: string[]): Promise<void> {
+    public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, removeLanguageFromId(this._template.id), '.cs');
             const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
@@ -39,8 +39,8 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
             this._functionName = functionName;
         }
 
-        if (functionSettings.length > 0) {
-            this._namespace = <string>functionSettings.shift();
+        if (functionSettings.namespace !== undefined) {
+            this._namespace = functionSettings.namespace;
         } else {
             const namespacePlaceHolder: string = localize('azFunc.namespacePlaceHolder', 'Namespace');
             const namespacePrompt: string = localize('azFunc.namespacePrompt', 'Provide a namespace');
@@ -55,9 +55,9 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         for (const key of Object.keys(userSettings)) {
             let parameter: string = key.charAt(0).toUpperCase() + key.slice(1);
             // the parameters for dotnet templates are not consistent. Hence, we have to special-case a few of them:
-            if (parameter === 'AuthLevel') {
+            if (parameter.toLowerCase() === 'authlevel') {
                 parameter = 'AccessRights';
-            } else if (parameter === 'QueueName') {
+            } else if (parameter.toLowerCase() === 'queuename') {
                 parameter = 'Path';
             }
 
