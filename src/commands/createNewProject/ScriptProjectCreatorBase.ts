@@ -17,7 +17,6 @@ csx
 .vs
 edge
 Publish
-.vscode
 
 *.user
 *.suo

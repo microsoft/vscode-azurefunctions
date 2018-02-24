@@ -15,7 +15,5 @@ export async function configureDeploymentSource(telemetryProperties: TelemetryPr
     const updatedScmType: string | undefined = await node.treeItem.siteWrapper.editScmType(node, outputChannel);
     if (updatedScmType !== undefined) {
         telemetryProperties.updatedScmType = updatedScmType;
-        outputChannel.show(true);
-        outputChannel.appendLine(`Deployment source for "${node.treeItem.siteWrapper.name}" has been updated to "${updatedScmType}".`);
     }
 }

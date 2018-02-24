@@ -72,9 +72,9 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.pickProcess', async () => await pickFuncProcess());
         actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
-        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, templateId?: string, functionName?: string, ...functionSettings: string[]) => {
+        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createFunction', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}) => {
             const templateData: TemplateData = await templateDataTask;
-            await createFunction(properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, ...functionSettings);
+            await createFunction(properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, functionSettings);
         });
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createNewProject', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, language?: string, openFolder?: boolean | undefined) => await createNewProject(properties, outputChannel, functionAppPath, language, openFolder));
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
