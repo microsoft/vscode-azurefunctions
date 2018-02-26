@@ -31,5 +31,6 @@
     "azFunc.show64BitWarningDescription": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
     "azFunc.startStreamingLogs": "Start Streaming Logs",
     "azFunc.stopStreamingLogs": "Stop Streaming Logs",
-    "azFunc.enableRemoteDebugging": "Enable remote debugging, an experimental feature that only supports Java-based Functions Apps."
+    "azFunc.enableRemoteDebugging": "Enable remote debugging, an experimental feature that only supports Java-based Functions Apps.",
+    "azFunc.deleteProxy": "Delete Proxy"
 }

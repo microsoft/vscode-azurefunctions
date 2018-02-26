@@ -15,6 +15,8 @@ import { ArgumentError } from '../errors';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
+import { ProxiesTreeItem } from './ProxiesTreeItem';
+import { ProxyTreeItem } from './ProxyTreeItem';
 
 export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctionApp';
@@ -28,6 +30,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     private _temporaryState?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
+    private readonly _proxiesTreeItem: ProxiesTreeItem;
     private readonly _outputChannel: OutputChannel;
 
     public constructor(site: Site, outputChannel: OutputChannel) {
@@ -39,6 +42,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         this._outputChannel = outputChannel;
         this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
+        this._proxiesTreeItem = new ProxiesTreeItem(this.siteWrapper, this._outputChannel);
     }
 
     public get logStreamLabel(): string {
@@ -82,16 +86,20 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     }
 
     public async loadMoreChildren(_node: IAzureNode<IAzureTreeItem>, _clearCache: boolean | undefined): Promise<IAzureTreeItem[]> {
-        return [this._functionsTreeItem, this._appSettingsTreeItem];
+        return [this._functionsTreeItem, this._appSettingsTreeItem, this._proxiesTreeItem];
     }
 
     public pickTreeItem(expectedContextValue: string): IAzureTreeItem | undefined {
         switch (expectedContextValue) {
+            case FunctionsTreeItem.contextValue:
             case FunctionTreeItem.contextValue:
                 return this._functionsTreeItem;
             case AppSettingsTreeItem.contextValue:
             case AppSettingTreeItem.contextValue:
                 return this._appSettingsTreeItem;
+            case ProxiesTreeItem.contextValue:
+            case ProxyTreeItem.contextValue:
+                return this._proxiesTreeItem;
             default:
                 return undefined;
         }
