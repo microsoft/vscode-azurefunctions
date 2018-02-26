@@ -37,6 +37,7 @@ to get started with the Azure Functions extension.
 * View, create, delete, start, stop, and restart Azure Function Apps
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 * Stream logs from your remote Function Apps
+* Debug Java Function App on Azure (experimental)
 
 ### Create New Project
 

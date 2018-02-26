@@ -43,6 +43,7 @@
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.configureDeploymentSource",
+        "onCommand:azureFunctions.debugFunctionAppOnAzure",
         "onCommand:azureFunctions.appSettings.add",
         "onCommand:azureFunctions.appSettings.edit",
         "onCommand:azureFunctions.appSettings.rename",
@@ -131,6 +132,11 @@
             {
                 "command": "azureFunctions.configureDeploymentSource",
                 "title": "%azFunc.configureDeploymentSource%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.debugFunctionAppOnAzure",
+                "title": "%azFunc.debugFunctionAppOnAzure%",
                 "category": "Azure Functions"
             },
             {
@@ -258,6 +264,11 @@
                     "group": "2@3"
                 },
                 {
+                    "command": "azureFunctions.deleteFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "2@4"
+                },
+                {
                     "command": "azureFunctions.configureDeploymentSource",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "3@1"
@@ -273,14 +284,14 @@
                     "group": "4@2"
                 },
                 {
-                    "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
-                    "group": "2@4"
+                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp && config.azureFunctions.enableRemoteDebugging == true",
+                    "group": "5@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
-                    "group": "5@1"
+                    "group": "6@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
@@ -352,6 +363,10 @@
                 {
                     "command": "azureFunctions.pickProcess",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "when": "config.azureFunctions.enableRemoteDebugging == true"
                 }
             ]
         },
@@ -442,6 +457,11 @@
                         "type": "boolean",
                         "description": "%azFunc.show64BitWarningDescription%",
                         "default": true
+                    },
+                    "azureFunctions.enableRemoteDebugging": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableRemoteDebugging%",
+                        "default": false
                     }
                 }
             }
@@ -461,6 +481,7 @@
         "@types/request": "2.0.7",
         "@types/request-promise": "4.1.38",
         "@types/semver": "^5.5.0",
+        "@types/websocket": "^0.0.37",
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "gulp": "^3.9.1",
@@ -482,6 +503,7 @@
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.2.0",
+        "portfinder": "^1.0.13",
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
@@ -490,6 +512,7 @@
         "vscode-azurekudu": "~0.1.4",
         "vscode-extension-telemetry": "^0.0.10",
         "vscode-nls": "^2.0.2",
+        "websocket": "^1.0.25",
         "xml2js": "^0.4.19",
         "xregexp": "^4.0.0"
     },
