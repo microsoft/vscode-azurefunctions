@@ -34,6 +34,7 @@ import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromCache, t
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
+import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
 import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
 import { VSCodeUI } from './VSCodeUI';
@@ -95,6 +96,7 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.installDotnetTemplates', async () => await dotnetUtils.installDotnetTemplates(outputChannel));
         actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallDotnetTemplates(outputChannel));
         actionHandler.registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, tree, node));
+        actionHandler.registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
     }
 }
 
