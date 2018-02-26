@@ -12,7 +12,7 @@ import { Template } from "../../templates/Template";
 import * as fsUtil from '../../utils/fs';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 
-function getFileNameFromLanguage(language: string): string | undefined {
+export function getScriptFileNameFromLanguage(language: string): string | undefined {
     switch (language) {
         case ProjectLanguage.Bash:
             return 'run.sh';
@@ -72,7 +72,7 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
         }
         await fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), this._template.functionConfig.functionJson);
 
-        const mainFileName: string | undefined = getFileNameFromLanguage(this._language);
+        const mainFileName: string | undefined = getScriptFileNameFromLanguage(this._language);
         if (mainFileName) {
             return path.join(functionPath, mainFileName);
         } else {

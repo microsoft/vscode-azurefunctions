@@ -7,13 +7,12 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
-import { CSharpScriptProjectCreator } from '../../src/commands/createNewProject/CSharpScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
     protected _language: ProjectLanguage = ProjectLanguage.CSharpScript;
-    protected _runtime: ProjectRuntime = CSharpScriptProjectCreator.defaultRuntime;
+    protected _runtime: ProjectRuntime = ProjectRuntime.beta;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         const functionPath: string = path.join(testFolder, funcName);

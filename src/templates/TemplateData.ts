@@ -15,7 +15,7 @@ import { DialogResponses } from '../DialogResponses';
 import { IActionHandler } from '../IActionHandler';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
-import { ProjectLanguage, ProjectRuntime, selectProjectLanguage, selectProjectRuntime, selectTemplateFilter, TemplateFilter } from '../ProjectSettings';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, TemplateFilter, updateWorkspaceSetting } from '../ProjectSettings';
 import { VSCodeUI } from '../VSCodeUI';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
@@ -117,8 +117,10 @@ export class TemplateData {
                 if (result !== DialogResponses.yes) {
                     throw new UserCancelledError();
                 } else {
-                    language = await selectProjectLanguage(projectPath, ui);
-                    runtime = await selectProjectRuntime(projectPath, ui);
+                    language = await promptForProjectLanguage(ui);
+                    await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
+                    runtime = await promptForProjectRuntime(ui);
+                    await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
                     templateFilter = await selectTemplateFilter(projectPath, ui);
 
                     // Try to get templates again

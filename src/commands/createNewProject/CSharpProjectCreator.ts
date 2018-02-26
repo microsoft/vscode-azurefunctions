@@ -8,46 +8,43 @@ import * as opn from 'opn';
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
-import { OutputChannel } from 'vscode';
-import { parseError, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { parseError, UserCancelledError } from 'vscode-azureextensionui';
+import { isWindows } from '../../constants';
 import { DialogResponses } from '../../DialogResponses';
-import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, ProjectRuntime, TemplateFilter, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostTaskId, IProjectCreator } from './IProjectCreator';
+import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 
-export class CSharpProjectCreator implements IProjectCreator {
+export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
-    public runtime: ProjectRuntime;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
-    private _outputChannel: OutputChannel;
-    private _ui: IUserInterface;
-    private _telemetryProperties: TelemetryProperties;
+    private _runtime: ProjectRuntime;
 
-    constructor(outputChannel: OutputChannel, ui: IUserInterface, telemetryProperties: TelemetryProperties) {
-        this._outputChannel = outputChannel;
-        this._ui = ui;
-        this._telemetryProperties = telemetryProperties;
-    }
+    public async addNonVSCodeFiles(): Promise<void> {
+        await dotnetUtils.validateTemplatesInstalled(this.outputChannel, this.ui);
 
-    public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._ui);
-
-        const csProjName: string = `${path.basename(functionAppPath)}.csproj`;
-        const overwriteExisting: boolean = await this.confirmOverwriteExisting(functionAppPath, csProjName);
+        const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
+        const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
         await cpUtils.executeCommand(
-            this._outputChannel,
-            functionAppPath,
+            this.outputChannel,
+            this.functionAppPath,
             'dotnet',
             'new',
             dotnetUtils.funcProjectId,
             overwriteExisting ? '--force' : ''
         );
+    }
 
-        const csprojPath: string = path.join(functionAppPath, csProjName);
+    public async getRuntime(): Promise<ProjectRuntime> {
+        const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
+        if (!csProjName) {
+            throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
+        }
+
+        const csprojPath: string = path.join(this.functionAppPath, csProjName);
         const csprojContents: string = (await fse.readFile(csprojPath)).toString();
 
         await this.validateFuncSdkVersion(csprojPath, csprojContents);
@@ -57,11 +54,11 @@ export class CSharpProjectCreator implements IProjectCreator {
             throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
         } else {
             const targetFramework: string = matches[1];
-            this._telemetryProperties.cSharpTargetFramework = targetFramework;
+            this.telemetryProperties.cSharpTargetFramework = targetFramework;
             if (targetFramework.startsWith('netstandard')) {
-                this.runtime = ProjectRuntime.beta;
+                this._runtime = ProjectRuntime.beta;
             } else {
-                this.runtime = ProjectRuntime.one;
+                this._runtime = ProjectRuntime.one;
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
@@ -76,6 +73,8 @@ export class CSharpProjectCreator implements IProjectCreator {
             }
             this.deploySubpath = `bin/Debug/${targetFramework}`;
         }
+
+        return this._runtime;
     }
 
     public getTasksJson(): {} {
@@ -120,7 +119,7 @@ export class CSharpProjectCreator implements IProjectCreator {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this.runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
+                    type: this._runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
@@ -129,7 +128,7 @@ export class CSharpProjectCreator implements IProjectCreator {
     }
 
     public getRecommendedExtensions(): string[] {
-        return ['ms-vscode.csharp'];
+        return super.getRecommendedExtensions().concat(['ms-vscode.csharp']);
     }
 
     /**
@@ -137,24 +136,26 @@ export class CSharpProjectCreator implements IProjectCreator {
      * See this bug for more info: https://github.com/Microsoft/vscode-azurefunctions/issues/164
      */
     private async validateFuncSdkVersion(csprojPath: string, csprojContents: string): Promise<void> {
-        try {
-            const minVersion: string = '1.0.8';
-            const lineMatches: RegExpMatchArray | null = /^.*Microsoft\.NET\.Sdk\.Functions.*$/gm.exec(csprojContents);
-            if (lineMatches !== null && lineMatches.length > 0) {
-                const line: string = lineMatches[0];
-                const versionMatches: RegExpMatchArray | null = /Version=(?:"([^"]+)"|'([^']+)')/g.exec(line);
-                if (versionMatches !== null && versionMatches.length > 2) {
-                    const version: SemVer = new SemVer(versionMatches[1] || versionMatches[2]);
-                    this._telemetryProperties.cSharpFuncSdkVersion = version.raw;
-                    if (version.compare(minVersion) < 0) {
-                        const newContents: string = csprojContents.replace(line, line.replace(version.raw, minVersion));
-                        await fse.writeFile(csprojPath, newContents);
+        if (!isWindows) {
+            try {
+                const minVersion: string = '1.0.8';
+                const lineMatches: RegExpMatchArray | null = /^.*Microsoft\.NET\.Sdk\.Functions.*$/gm.exec(csprojContents);
+                if (lineMatches !== null && lineMatches.length > 0) {
+                    const line: string = lineMatches[0];
+                    const versionMatches: RegExpMatchArray | null = /Version=(?:"([^"]+)"|'([^']+)')/g.exec(line);
+                    if (versionMatches !== null && versionMatches.length > 2) {
+                        const version: SemVer = new SemVer(versionMatches[1] || versionMatches[2]);
+                        this.telemetryProperties.cSharpFuncSdkVersion = version.raw;
+                        if (version.compare(minVersion) < 0) {
+                            const newContents: string = csprojContents.replace(line, line.replace(version.raw, minVersion));
+                            await fse.writeFile(csprojPath, newContents);
+                        }
                     }
                 }
+            } catch (err) {
+                this.telemetryProperties.cSharpFuncSdkError = parseError(err).message;
+                // ignore errors and assume the version of the templates installed on the user's machine works for them
             }
-        } catch (err) {
-            this._telemetryProperties.cSharpFuncSdkError = parseError(err).message;
-            // ignore errors and assume the version of the templates installed on the user's machine works for them
         }
     }
 
@@ -178,4 +179,10 @@ export class CSharpProjectCreator implements IProjectCreator {
             return false;
         }
     }
+}
+
+export async function tryGetCsprojFile(functionAppPath: string): Promise<string | undefined> {
+    const files: string[] = await fse.readdir(functionAppPath);
+    const projectFiles: string[] = files.filter((f: string) => f.endsWith('.csproj'));
+    return projectFiles.length === 1 ? projectFiles[0] : undefined;
 }

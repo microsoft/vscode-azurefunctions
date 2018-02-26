@@ -6,6 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import ps = require('ps-node');
 import * as vscode from 'vscode';
+import { isWindows } from '../constants';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
@@ -35,13 +36,9 @@ export async function pickFuncProcess(): Promise<string | undefined> {
     throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds.', timeoutSeconds));
 }
 
-function isWindows(): boolean {
-    return /^win/.test(process.platform);
-}
-
 async function getFuncHostPid(): Promise<string | undefined> {
     const multipleProcError: Error = new Error(localize('multipleFuncHost', 'Detected multiple processes running the Functions host. Stop all but one process in order to debug.'));
-    if (isWindows()) {
+    if (isWindows) {
         // Ideally we could use 'ps.lookup' for all OS's, but unfortunately it's very slow on windows
         // Instead, we will call 'wmic' manually and parse the results
         const processList: string = await cpUtils.executeCommand(undefined, undefined, 'wmic', 'process', 'get', 'CommandLine,Name,ProcessId', '/FORMAT:csv');
@@ -86,7 +83,7 @@ interface IProcess {
 }
 
 async function killProcess(pid: string, timeoutInSeconds: number = 60): Promise<void> {
-    if (isWindows()) {
+    if (isWindows) {
         // Just like 'ps.lookup', 'ps.kill' is very slow on windows
         // We can use it to kill the process, but we have to implement our own 'wait' logic to make sure the process actually stopped
         //tslint:disable-next-line:no-unsafe-any

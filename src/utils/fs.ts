@@ -6,10 +6,9 @@
 import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { MessageItem } from "vscode";
-import { UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from "../DialogResponses";
+import { IUserInterface } from "../IUserInterface";
 import { localize } from "../localize";
 import { parseJavaClassName } from './javaNameUtils';
 
@@ -17,31 +16,49 @@ export async function writeFormattedJson(fsPath: string, data: object): Promise<
     await fse.writeJson(fsPath, data, { spaces: 2 });
 }
 
-export async function copyFolder(fromPath: string, toPath: string): Promise<void> {
+export async function copyFolder(fromPath: string, toPath: string, ui: IUserInterface): Promise<void> {
     const files: string[] = await fse.readdir(fromPath);
     for (const file of files) {
         const originPath: string = path.join(fromPath, file);
         const stat: fse.Stats = await fse.stat(originPath);
         const targetPath: string = path.join(toPath, file);
         if (stat.isFile()) {
-            if (await confirmOverwriteFile(targetPath)) {
+            if (await confirmOverwriteFile(targetPath, ui)) {
                 await fse.copy(originPath, targetPath, { overwrite: true });
             }
         } else if (stat.isDirectory()) {
-            await copyFolder(originPath, targetPath);
+            await copyFolder(originPath, targetPath, ui);
         }
     }
 }
 
-export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
+export async function confirmEditJsonFile(fsPath: string, editJson: (existingData: {}) => {}, ui: IUserInterface): Promise<void> {
+    let newData: {};
     if (await fse.pathExists(fsPath)) {
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+        try {
+            newData = editJson(<{}>await fse.readJson(fsPath));
+        } catch (error) {
+            // If we failed to parse or edit the existing file, just ask to overwrite the file completely
+            if (await confirmOverwriteFile(fsPath, ui)) {
+                newData = editJson({});
+            } else {
+                return;
+            }
+        }
+    } else {
+        newData = editJson({});
+    }
+
+    await writeFormattedJson(fsPath, newData);
+}
+
+export async function confirmOverwriteFile(fsPath: string, ui: IUserInterface): Promise<boolean> {
+    if (await fse.pathExists(fsPath)) {
+        const result: MessageItem | undefined = await ui.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             return true;
-        } else if (result === DialogResponses.no) {
-            return false;
         } else {
-            throw new UserCancelledError();
+            return false;
         }
     } else {
         return true;

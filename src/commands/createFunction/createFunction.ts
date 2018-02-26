@@ -12,7 +12,7 @@ import { DialogResponses } from '../../DialogResponses';
 import { IUserInterface, Pick, PickWithData } from '../../IUserInterface';
 import { LocalAppSettings } from '../../LocalAppSettings';
 import { localize } from '../../localize';
-import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
+import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, requiredFunctionAppFiles, TemplateFilter } from '../../ProjectSettings';
 import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
 import { EnumValue } from '../../templates/EnumValue';
 import { Template } from '../../templates/Template';
@@ -24,11 +24,6 @@ import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
-
-const requiredFunctionAppFiles: string[] = [
-    'host.json',
-    'local.settings.json'
-];
 
 async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {

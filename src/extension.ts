@@ -16,6 +16,8 @@ import { createChildNode } from './commands/createChildNode';
 import { createFunction } from './commands/createFunction/createFunction';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
+import { initProjectForVSCode } from './commands/createNewProject/initProjectForVSCode';
+import { validateFunctionProjects } from './commands/createNewProject/validateFunctionProjects';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy';
 import { editAppSetting } from './commands/editAppSetting';
@@ -67,6 +69,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
 
+        // tslint:disable-next-line:no-floating-promises
+        validateFunctionProjects(actionHandler, outputChannel);
+
         const templateDataTask: Promise<TemplateData> = getTemplateData(actionHandler, context);
 
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
@@ -78,6 +83,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await createFunction(properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, functionSettings);
         });
         actionHandler.registerCommandWithCustomTelemetry('azureFunctions.createNewProject', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements, functionAppPath?: string, language?: string, openFolder?: boolean | undefined) => await createNewProject(properties, outputChannel, functionAppPath, language, openFolder));
+        actionHandler.registerCommandWithCustomTelemetry('azureFunctions.initProjectForVSCode', async (properties: TelemetryProperties, _measurements: TelemetryMeasurements) => await initProjectForVSCode(properties, outputChannel));
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
         actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         actionHandler.registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
