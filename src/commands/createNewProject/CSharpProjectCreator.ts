@@ -9,7 +9,7 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
+import { parseError, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../../DialogResponses';
 import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
@@ -35,15 +35,18 @@ export class CSharpProjectCreator implements IProjectCreator {
 
     public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
         await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._ui);
+
+        const csProjName: string = `${path.basename(functionAppPath)}.csproj`;
+        const overwriteExisting: boolean = await this.confirmOverwriteExisting(functionAppPath, csProjName);
         await cpUtils.executeCommand(
             this._outputChannel,
             functionAppPath,
             'dotnet',
             'new',
-            dotnetUtils.funcProjectId
+            dotnetUtils.funcProjectId,
+            overwriteExisting ? '--force' : ''
         );
 
-        const csProjName: string = `${path.basename(functionAppPath)}.csproj`;
         const csprojPath: string = path.join(functionAppPath, csProjName);
         const csprojContents: string = (await fse.readFile(csprojPath)).toString();
 
@@ -152,6 +155,27 @@ export class CSharpProjectCreator implements IProjectCreator {
         } catch (err) {
             this._telemetryProperties.cSharpFuncSdkError = parseError(err).message;
             // ignore errors and assume the version of the templates installed on the user's machine works for them
+        }
+    }
+
+    private async confirmOverwriteExisting(functionAppPath: string, csProjName: string): Promise<boolean> {
+        const filesToCheck: string[] = [csProjName, '.gitignore', 'local.settings.json', 'host.json'];
+        const existingFiles: string[] = [];
+        for (const fileName of filesToCheck) {
+            if (await fse.pathExists(path.join(functionAppPath, fileName))) {
+                existingFiles.push(fileName);
+            }
+        }
+
+        if (existingFiles.length > 0) {
+            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), DialogResponses.yes, DialogResponses.cancel);
+            if (result === DialogResponses.yes) {
+                return true;
+            } else {
+                throw new UserCancelledError();
+            }
+        } else {
+            return false;
         }
     }
 }
