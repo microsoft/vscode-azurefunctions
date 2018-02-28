@@ -7,15 +7,16 @@
 import WebSiteManagementClient = require('azure-arm-website');
 import { SiteLogsConfig } from 'azure-arm-website/lib/models';
 import * as vscode from 'vscode';
-import { AzureActionHandler, AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
+import TelemetryReporter from 'vscode-extension-telemetry';
 import { DialogResponses } from '../../DialogResponses';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { nodeUtils } from '../../utils/nodeUtils';
 import { ILogStreamTreeItem } from './ILogStreamTreeItem';
 
-export async function startStreamingLogs(context: vscode.ExtensionContext, actionHandler: AzureActionHandler, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
+export async function startStreamingLogs(context: vscode.ExtensionContext, reporter: TelemetryReporter | undefined, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
     if (!node) {
         node = <IAzureNode<ILogStreamTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
@@ -52,7 +53,7 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, actio
             context.subscriptions.push(outputChannel);
             treeItem.logStreamOutputChannel = outputChannel;
         }
-        treeItem.logStream = await treeItem.siteWrapper.startStreamingLogs(kuduClient, actionHandler, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
+        treeItem.logStream = await treeItem.siteWrapper.startStreamingLogs(kuduClient, reporter, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
     }
 }
 
