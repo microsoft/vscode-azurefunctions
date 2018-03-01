@@ -17,7 +17,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, ou
     for (const folder of folders) {
         const folderPath: string = folder.uri.fsPath;
         if (await isFunctionProject(folderPath)) {
-            actionContext.sendTelemetry = true;
+            actionContext.suppressTelemetry = false;
 
             if (isInitializedProject(folderPath)) {
                 actionContext.properties.isInitialized = 'true';

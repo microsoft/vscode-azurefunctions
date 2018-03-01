@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceFoldersChangeEvent } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem } from 'vscode-azureappservice';
-import { AzureActionHandler, AzureTreeDataProvider, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { AzureActionHandler, AzureTreeDataProvider, callWithTelemetryAndErrorHandling, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
@@ -71,14 +71,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
-        AzureActionHandler.callWithTelemetryAndErrorHandling(validateEventId, reporter, outputChannel, async function (this: IActionContext): Promise<void> {
-            this.sendTelemetry = false;
+        callWithTelemetryAndErrorHandling(validateEventId, reporter, outputChannel, async function (this: IActionContext): Promise<void> {
+            this.suppressTelemetry = true;
             if (vscode.workspace.workspaceFolders) {
                 await validateFunctionProjects(this, outputChannel, vscode.workspace.workspaceFolders);
             }
         });
         actionHandler.registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: WorkspaceFoldersChangeEvent): Promise<void> {
-            this.sendTelemetry = false;
+            this.suppressTelemetry = true;
             await validateFunctionProjects(this, outputChannel, event.added);
         });
 

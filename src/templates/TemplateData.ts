@@ -9,7 +9,7 @@ import * as path from 'path';
 import request = require('request-promise');
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
-import { AzureActionHandler, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { JavaScriptProjectCreator } from '../commands/createNewProject/JavaScriptProjectCreator';
 import { DialogResponses } from '../DialogResponses';
@@ -142,7 +142,8 @@ export class TemplateData {
 
 export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | undefined, globalState: vscode.Memento): Promise<TemplateData | undefined> {
     try {
-        return <TemplateData | undefined>await AzureActionHandler.callWithTelemetry('azureFunctions.tryGetTemplateDataFromCache', reporter, async function (this: IActionContext): Promise<TemplateData | undefined> {
+        return <TemplateData | undefined>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromCache', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+            this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
@@ -169,7 +170,8 @@ export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | 
 
 export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento, hostname: string = 'functions.azure.com'): Promise<TemplateData | undefined> {
     try {
-        return <TemplateData>await AzureActionHandler.callWithTelemetry('azureFunctions.tryGetTemplateDataFromFuncPortal', reporter, async function (this: IActionContext): Promise<TemplateData> {
+        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromFuncPortal', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
+            this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
@@ -197,7 +199,8 @@ export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReport
 }
 
 export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, extensionPath: string): Promise<TemplateData> {
-    return <TemplateData>await AzureActionHandler.callWithTelemetry('azureFunctions.getTemplateDataFromBackup', reporter, async function (this: IActionContext): Promise<TemplateData | undefined> {
+    return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+        this.suppressErrorDisplay = true;
         this.properties.isActivationEvent = 'true';
         const templatesMap: { [runtime: string]: Template[] } = {};
         const configMap: { [runtime: string]: Config } = {};
