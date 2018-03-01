@@ -32,6 +32,7 @@ export abstract class ProjectCreatorBase {
     }
 
     public getLaunchJson(): {} | undefined {
+        // By default languages do not support attaching on F5. Each language that supports F5'ing will have to overwrite this method in the subclass
         return undefined;
     }
 

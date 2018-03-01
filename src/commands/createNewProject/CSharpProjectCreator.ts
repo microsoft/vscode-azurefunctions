@@ -136,7 +136,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
      * See this bug for more info: https://github.com/Microsoft/vscode-azurefunctions/issues/164
      */
     private async validateFuncSdkVersion(csprojPath: string, csprojContents: string): Promise<void> {
-        if (!isWindows) {
+        if (!isWindows) { // No need to validate on Windows - it should work with previous versions
             try {
                 const minVersion: string = '1.0.8';
                 const lineMatches: RegExpMatchArray | null = /^.*Microsoft\.NET\.Sdk\.Functions.*$/gm.exec(csprojContents);
