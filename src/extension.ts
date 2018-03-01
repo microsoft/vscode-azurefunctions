@@ -72,13 +72,9 @@ export function activate(context: vscode.ExtensionContext): void {
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
         callWithTelemetryAndErrorHandling(validateEventId, reporter, outputChannel, async function (this: IActionContext): Promise<void> {
-            this.suppressTelemetry = true;
-            if (vscode.workspace.workspaceFolders) {
-                await validateFunctionProjects(this, outputChannel, vscode.workspace.workspaceFolders);
-            }
+            await validateFunctionProjects(this, outputChannel, vscode.workspace.workspaceFolders);
         });
         actionHandler.registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: WorkspaceFoldersChangeEvent): Promise<void> {
-            this.suppressTelemetry = true;
             await validateFunctionProjects(this, outputChannel, event.added);
         });
 

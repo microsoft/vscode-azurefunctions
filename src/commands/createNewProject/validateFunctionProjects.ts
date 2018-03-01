@@ -13,18 +13,21 @@ import { localize } from '../../localize';
 import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, requiredFunctionAppFiles, updateGlobalSetting } from '../../ProjectSettings';
 import { initProjectForVSCode } from './initProjectForVSCode';
 
-export async function validateFunctionProjects(actionContext: IActionContext, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[]): Promise<void> {
-    for (const folder of folders) {
-        const folderPath: string = folder.uri.fsPath;
-        if (await isFunctionProject(folderPath)) {
-            actionContext.suppressTelemetry = false;
+export async function validateFunctionProjects(actionContext: IActionContext, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+    actionContext.suppressTelemetry = true;
+    if (folders) {
+        for (const folder of folders) {
+            const folderPath: string = folder.uri.fsPath;
+            if (await isFunctionProject(folderPath)) {
+                actionContext.suppressTelemetry = false;
 
-            if (isInitializedProject(folderPath)) {
-                actionContext.properties.isInitialized = 'true';
-            } else {
-                actionContext.properties.isInitialized = 'false';
-                if (await promptToInitializeProject(folderPath)) {
-                    await initProjectForVSCode(actionContext.properties, outputChannel, folderPath);
+                if (isInitializedProject(folderPath)) {
+                    actionContext.properties.isInitialized = 'true';
+                } else {
+                    actionContext.properties.isInitialized = 'false';
+                    if (await promptToInitializeProject(folderPath)) {
+                        await initProjectForVSCode(actionContext.properties, outputChannel, folderPath);
+                    }
                 }
             }
         }
