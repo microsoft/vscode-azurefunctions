@@ -8,7 +8,7 @@ import * as path from 'path';
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, IProjectCreator } from './IProjectCreator';
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
@@ -39,7 +39,7 @@ local.settings.json
 /**
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
-export class ScriptProjectCreatorBase implements IProjectCreator {
+export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
     public readonly runtime: ProjectRuntime = ScriptProjectCreatorBase.defaultRuntime;
     // Default template filter to 'All' since preview langauges have not been 'verified'
@@ -66,15 +66,15 @@ export class ScriptProjectCreatorBase implements IProjectCreator {
         };
     }
 
-    public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
-        const hostJsonPath: string = path.join(functionAppPath, 'host.json');
-        if (await confirmOverwriteFile(hostJsonPath)) {
+    public async addNonVSCodeFiles(): Promise<void> {
+        const hostJsonPath: string = path.join(this.functionAppPath, 'host.json');
+        if (await confirmOverwriteFile(hostJsonPath, this.ui)) {
             const hostJson: {} = {};
             await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
         }
 
-        const localSettingsJsonPath: string = path.join(functionAppPath, 'local.settings.json');
-        if (await confirmOverwriteFile(localSettingsJsonPath)) {
+        const localSettingsJsonPath: string = path.join(this.functionAppPath, 'local.settings.json');
+        if (await confirmOverwriteFile(localSettingsJsonPath, this.ui)) {
             const localSettingsJson: {} = {
                 IsEncrypted: false,
                 Values: {
@@ -84,8 +84,8 @@ export class ScriptProjectCreatorBase implements IProjectCreator {
             await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
-        const gitignorePath: string = path.join(functionAppPath, '.gitignore');
-        if (await confirmOverwriteFile(gitignorePath)) {
+        const gitignorePath: string = path.join(this.functionAppPath, '.gitignore');
+        if (await confirmOverwriteFile(gitignorePath, this.ui)) {
             await fse.writeFile(gitignorePath, gitignore);
         }
     }

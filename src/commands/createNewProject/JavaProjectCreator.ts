@@ -6,60 +6,54 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { OutputChannel } from 'vscode';
-import { IUserInterface } from '../../IUserInterface';
 import { localize } from "../../localize";
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, IProjectCreator } from './IProjectCreator';
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
 
-export class JavaProjectCreator implements IProjectCreator {
+export class JavaProjectCreator extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.beta;
-    public readonly runtime: ProjectRuntime = JavaProjectCreator.defaultRuntime;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _javaTargetPath: string;
-    private _outputChannel: OutputChannel;
-    private _ui: IUserInterface;
 
-    constructor(outputChannel: OutputChannel, ui: IUserInterface) {
-        this._outputChannel = outputChannel;
-        this._ui = ui;
+    public async getRuntime(): Promise<ProjectRuntime> {
+        return JavaProjectCreator.defaultRuntime;
     }
 
-    public async addNonVSCodeFiles(functionAppPath: string): Promise<void> {
-        await mavenUtils.validateMavenInstalled(functionAppPath);
+    public async addNonVSCodeFiles(): Promise<void> {
+        await mavenUtils.validateMavenInstalled(this.functionAppPath);
 
         const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
         const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-        const groupId: string = await this._ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, validateMavenIdentifier, 'com.function');
+        const groupId: string = await this.ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, validateMavenIdentifier, 'com.function');
 
         const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
         const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
-        const artifactId: string = await this._ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, validateMavenIdentifier, path.basename(functionAppPath));
+        const artifactId: string = await this.ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, validateMavenIdentifier, path.basename(this.functionAppPath));
 
         const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
         const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
-        const version: string = await this._ui.showInputBox(versionPlaceHolder, versionPrompt, undefined, '1.0-SNAPSHOT');
+        const version: string = await this.ui.showInputBox(versionPlaceHolder, versionPrompt, undefined, '1.0-SNAPSHOT');
 
         const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
         const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
-        const packageName: string = await this._ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, groupId);
+        const packageName: string = await this.ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, groupId);
 
         const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
         const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
-        const appName: string = await this._ui.showInputBox(appNamePlaceHolder, appNamePrompt, undefined, `${artifactId}-${Date.now()}`);
+        const appName: string = await this.ui.showInputBox(appNamePlaceHolder, appNamePrompt, undefined, `${artifactId}-${Date.now()}`);
 
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
         await fse.ensureDir(tempFolder);
         try {
             // Use maven command to init Java function project.
-            this._outputChannel.show();
+            this.outputChannel.show();
             await cpUtils.executeCommand(
-                this._outputChannel,
+                this.outputChannel,
                 tempFolder,
                 'mvn',
                 'archetype:generate',
@@ -72,7 +66,7 @@ export class JavaProjectCreator implements IProjectCreator {
                 `-DappName="${appName}"`,
                 '-B' // in Batch Mode
             );
-            await fsUtil.copyFolder(path.join(tempFolder, artifactId), functionAppPath);
+            await fsUtil.copyFolder(path.join(tempFolder, artifactId), this.functionAppPath, this.ui);
         } finally {
             await fse.remove(tempFolder);
         }
@@ -132,6 +126,6 @@ export class JavaProjectCreator implements IProjectCreator {
     }
 
     public getRecommendedExtensions(): string[] {
-        return ['vscjava.vscode-java-debug'];
+        return super.getRecommendedExtensions().concat(['vscjava.vscode-java-debug']);
     }
 }

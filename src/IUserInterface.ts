@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { QuickPickItem } from 'vscode';
+import { MessageItem, QuickPickItem } from 'vscode';
 
 export interface IUserInterface {
     showQuickPick<T>(items: PickWithData<T>[] | Thenable<PickWithData<T>[]>, placeHolder: string, ignoreFocusOut?: boolean): Promise<PickWithData<T>>;
@@ -12,6 +12,8 @@ export interface IUserInterface {
     showInputBox(placeHolder: string, prompt: string, validateInput?: (s: string) => string | undefined | null, value?: string, ignoreFocusOut?: boolean): Promise<string>;
 
     showFolderDialog(): Promise<string>;
+
+    showWarningMessage(message: string, ...items: MessageItem[]): Promise<MessageItem>;
 }
 
 export class Pick implements QuickPickItem {

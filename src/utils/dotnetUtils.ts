@@ -9,6 +9,7 @@ import * as path from 'path';
 import { OutputChannel } from "vscode";
 import * as vscode from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
+import { isWindows } from '../constants';
 import { DialogResponses } from '../DialogResponses';
 import { IUserInterface, Pick } from '../IUserInterface';
 import { localize } from "../localize";
@@ -80,7 +81,7 @@ export namespace dotnetUtils {
 
         let templateVersion: string = betaTemplateVersion;
 
-        if (/^win/.test(process.platform)) {
+        if (isWindows) {
             const picks: Pick[] = [
                 new Pick(ProjectRuntime.beta, '(.NET Core)'),
                 new Pick(ProjectRuntime.one, '(.NET Framework)')

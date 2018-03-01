@@ -7,9 +7,10 @@ import * as opn from 'opn';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { parseError } from 'vscode-azureextensionui';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
+import { isWindows } from '../constants';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
+import { getFuncExtensionSetting, ProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {
@@ -46,6 +47,30 @@ export namespace functionRuntimeUtils {
             } catch (error) {
                 outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
             }
+        }
+    }
+
+    export async function tryGetLocalRuntimeVersion(): Promise<ProjectRuntime | undefined> {
+        if (!isWindows) {
+            return ProjectRuntime.beta;
+        } else {
+            try {
+                const version: string | null = await getLocalFunctionRuntimeVersion();
+                if (version !== null) {
+                    switch (semver.major(version)) {
+                        case 2:
+                            return ProjectRuntime.beta;
+                        case 1:
+                            return ProjectRuntime.one;
+                        default:
+                            return undefined;
+                    }
+                }
+            } catch (err) {
+                // swallow errors and return undefined
+            }
+
+            return undefined;
         }
     }
 

@@ -45,17 +45,22 @@ export enum TemplateFilter {
     Verified = 'Verified'
 }
 
+export const requiredFunctionAppFiles: string[] = [
+    'host.json',
+    'local.settings.json'
+];
+
 export async function updateGlobalSetting<T = string>(section: string, value: T): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
     await projectConfiguration.update(section, value, vscode.ConfigurationTarget.Global);
 }
 
-async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
+export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, vscode.Uri.file(fsPath));
     await projectConfiguration.update(section, value);
 }
 
-export async function selectProjectLanguage(projectPath: string, ui: IUserInterface): Promise<ProjectLanguage> {
+export async function promptForProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
     const picks: Pick[] = [
         new Pick(ProjectLanguage.JavaScript),
         new Pick(ProjectLanguage.CSharp),
@@ -70,20 +75,16 @@ export async function selectProjectLanguage(projectPath: string, ui: IUserInterf
         new Pick(ProjectLanguage.TypeScript, previewDescription)
     ];
 
-    const result: string = (await ui.showQuickPick(picks, localize('selectLanguage', 'Select a language'))).label;
-    await updateWorkspaceSetting(projectLanguageSetting, result, projectPath);
-    return <ProjectLanguage>result;
+    return <ProjectLanguage>(await ui.showQuickPick(picks, localize('selectLanguage', 'Select a language'))).label;
 }
 
-export async function selectProjectRuntime(projectPath: string, ui: IUserInterface): Promise<ProjectRuntime> {
+export async function promptForProjectRuntime(ui: IUserInterface): Promise<ProjectRuntime> {
     const picks: Pick[] = [
         new Pick(ProjectRuntime.one, localize('productionUseDescription', '(Approved for production use)')),
         new Pick(ProjectRuntime.beta, previewDescription)
     ];
 
-    const result: string = (await ui.showQuickPick(picks, localize('selectRuntime', 'Select a runtime'))).label;
-    await updateWorkspaceSetting(projectRuntimeSetting, result, projectPath);
-    return <ProjectRuntime>result;
+    return <ProjectRuntime>(await ui.showQuickPick(picks, localize('selectRuntime', 'Select a runtime'))).label;
 }
 
 export async function selectTemplateFilter(projectPath: string, ui: IUserInterface): Promise<TemplateFilter> {
@@ -122,7 +123,8 @@ export async function getProjectLanguage(projectPath: string, ui: IUserInterface
             if (result !== selectLanguage) {
                 throw new UserCancelledError();
             } else {
-                language = await selectProjectLanguage(projectPath, ui);
+                language = await promptForProjectLanguage(ui);
+                await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
             }
         }
 
@@ -144,7 +146,8 @@ export async function getProjectRuntime(language: ProjectLanguage, projectPath: 
         if (result !== selectRuntime) {
             throw new UserCancelledError();
         } else {
-            runtime = await selectProjectRuntime(projectPath, ui);
+            runtime = await promptForProjectRuntime(ui);
+            await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
         }
     }
 

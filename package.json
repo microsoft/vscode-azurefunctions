@@ -32,6 +32,7 @@
         "onCommand:azureFunctions.refresh",
         "onCommand:azureFunctions.loadMore",
         "onCommand:azureFunctions.createNewProject",
+        "onCommand:azureFunctions.initProjectForVSCode",
         "onCommand:azureFunctions.createFunction",
         "onCommand:azureFunctions.createFunctionApp",
         "onCommand:azureFunctions.openInPortal",
@@ -81,6 +82,11 @@
                     "light": "resources/light/CreateNewProject.svg",
                     "dark": "resources/dark/CreateNewProject.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.initProjectForVSCode",
+                "title": "%azFunc.initProjectForVSCode%",
+                "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.createFunction",
@@ -478,6 +484,11 @@
                         "type": "boolean",
                         "description": "%azFunc.enableRemoteDebugging%",
                         "default": false
+                    },
+                    "azureFunctions.showProjectWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showProjectWarningDescription%",
+                        "default": true
                     }
                 }
             }

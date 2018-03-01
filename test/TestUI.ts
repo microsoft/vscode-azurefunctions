@@ -7,9 +7,9 @@ import * as vscode from 'vscode';
 import { IUserInterface, Pick, PickWithData } from '../src/IUserInterface';
 
 export class TestUI implements IUserInterface {
-    private _inputs: (string | undefined) [];
+    private _inputs: (string | undefined)[];
 
-    constructor(inputs: (string | undefined) []) {
+    constructor(inputs: (string | undefined)[]) {
         this._inputs = inputs;
     }
 
@@ -70,5 +70,17 @@ export class TestUI implements IUserInterface {
         }
 
         throw new Error('Unexpected call to showFolderDialog');
+    }
+
+    public async showWarningMessage(message: string, ...items: vscode.MessageItem[]): Promise<vscode.MessageItem> {
+        if (this._inputs.length > 0) {
+            const result: string | undefined = this._inputs.shift();
+            const matchingItem: vscode.MessageItem | undefined = items.find((item: vscode.MessageItem) => item.title === result);
+            if (matchingItem) {
+                return matchingItem;
+            }
+        }
+
+        throw new Error(`Unexpected call to showWarningMessage. Message: ${message}`);
     }
 }

@@ -59,4 +59,13 @@ export class VSCodeUI implements IUserInterface {
             return result[0].fsPath;
         }
     }
+
+    public async showWarningMessage(message: string, ...items: vscode.MessageItem[]): Promise<vscode.MessageItem> {
+        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, ...items);
+        if (result === undefined || result.isCloseAffordance) {
+            throw new UserCancelledError();
+        } else {
+            return result;
+        }
+    }
 }
