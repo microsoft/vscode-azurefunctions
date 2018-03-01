@@ -8,6 +8,7 @@ import ps = require('ps-node');
 import * as vscode from 'vscode';
 import { isWindows } from '../constants';
 import { localize } from '../localize';
+import { extensionPrefix, getFuncExtensionSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 
@@ -21,10 +22,17 @@ export async function pickFuncProcess(): Promise<string | undefined> {
     // Start (or restart) functions host (which will also trigger a build)
     await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
 
-    const timeoutSeconds: number = 60;
-    const maxTime: number = Date.now() + timeoutSeconds * 1000;
+    const settingKey: string = 'pickFuncProcessTimeout';
+    const settingValue: number | undefined = getFuncExtensionSetting<number>(settingKey);
+    const timeoutInSeconds: number = Number(settingValue);
+    if (isNaN(timeoutInSeconds)) {
+        throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
+    }
+
+    const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
         // Wait one second between each attempt
+        // NOTE: Intentionally waiting at the beginning of the loop since we don't want to attach to the process we just stopped above
         await new Promise((resolve: () => void): void => { setTimeout(resolve, 1000); });
 
         funcHostPid = await getFuncHostPid();
@@ -33,7 +41,7 @@ export async function pickFuncProcess(): Promise<string | undefined> {
         }
     }
 
-    throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds.', timeoutSeconds));
+    throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
 }
 
 async function getFuncHostPid(): Promise<string | undefined> {
