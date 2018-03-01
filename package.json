@@ -490,9 +490,9 @@
                         "description": "%azFunc.showProjectWarningDescription%",
                         "default": true
                     },
-                    "azureFunctions.pickFuncProcessTimeout": {
+                    "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
-                        "description": "%azFunc.pickFuncProcessTimeoutDescription%",
+                        "description": "%azFunc.pickProcessTimeoutDescription%",
                         "default": 60
                     }
                 }

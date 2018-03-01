@@ -22,7 +22,7 @@ export async function pickFuncProcess(): Promise<string | undefined> {
     // Start (or restart) functions host (which will also trigger a build)
     await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
 
-    const settingKey: string = 'pickFuncProcessTimeout';
+    const settingKey: string = 'pickProcessTimeout';
     const settingValue: number | undefined = getFuncExtensionSetting<number>(settingKey);
     const timeoutInSeconds: number = Number(settingValue);
     if (isNaN(timeoutInSeconds)) {
