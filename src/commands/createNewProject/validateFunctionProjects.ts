@@ -3,33 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as fse from 'fs-extra';
 import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureActionHandler, parseError, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../../DialogResponses';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, requiredFunctionAppFiles, updateGlobalSetting } from '../../ProjectSettings';
 import { initProjectForVSCode } from './initProjectForVSCode';
 
-export async function validateFunctionProjects(actionHandler: AzureActionHandler, outputChannel: vscode.OutputChannel): Promise<void> {
-    try {
-        await actionHandler.callWithTelemetry('azureFunctions.validateFunctionProjects', async (properties: TelemetryProperties) => {
-            if (vscode.workspace.workspaceFolders) {
-                for (const folder of vscode.workspace.workspaceFolders) {
-                    const folderPath: string = folder.uri.fsPath;
-                    if (await isFunctionProject(folderPath) && !isInitializedProject(folderPath) && await promptToInitializeProject(folderPath)) {
-                        await initProjectForVSCode(properties, outputChannel, folderPath);
+export async function validateFunctionProjects(actionContext: IActionContext, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+    actionContext.suppressTelemetry = true;
+    if (folders) {
+        for (const folder of folders) {
+            const folderPath: string = folder.uri.fsPath;
+            if (await isFunctionProject(folderPath)) {
+                actionContext.suppressTelemetry = false;
+
+                if (isInitializedProject(folderPath)) {
+                    actionContext.properties.isInitialized = 'true';
+                } else {
+                    actionContext.properties.isInitialized = 'false';
+                    if (await promptToInitializeProject(folderPath)) {
+                        await initProjectForVSCode(actionContext.properties, outputChannel, folderPath);
                     }
                 }
             }
-        });
-    } catch (err) {
-        // Since this is executed on a different thread, we have to make sure to show error messages
-        await vscode.window.showErrorMessage(parseError(err).message);
+        }
     }
 }
 

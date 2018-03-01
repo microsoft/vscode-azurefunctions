@@ -9,10 +9,10 @@ import * as path from 'path';
 import request = require('request-promise');
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
-import { TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import TelemetryReporter from 'vscode-extension-telemetry';
 import { JavaScriptProjectCreator } from '../commands/createNewProject/JavaScriptProjectCreator';
 import { DialogResponses } from '../DialogResponses';
-import { IActionHandler } from '../IActionHandler';
 import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, TemplateFilter, updateWorkspaceSetting } from '../ProjectSettings';
@@ -140,10 +140,11 @@ export class TemplateData {
     }
 }
 
-export async function tryGetTemplateDataFromCache(actionHandler: IActionHandler, globalState: vscode.Memento): Promise<TemplateData | undefined> {
+export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | undefined, globalState: vscode.Memento): Promise<TemplateData | undefined> {
     try {
-        return <TemplateData | undefined>await actionHandler.callWithTelemetry('azureFunctions.tryGetTemplateDataFromCache', (properties: TelemetryProperties) => {
-            properties.isActivationEvent = 'true';
+        return <TemplateData | undefined>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromCache', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+            this.suppressErrorDisplay = true;
+            this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
 
@@ -167,10 +168,11 @@ export async function tryGetTemplateDataFromCache(actionHandler: IActionHandler,
     }
 }
 
-export async function tryGetTemplateDataFromFuncPortal(actionHandler: IActionHandler, globalState?: vscode.Memento, hostname: string = 'functions.azure.com'): Promise<TemplateData | undefined> {
+export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento, hostname: string = 'functions.azure.com'): Promise<TemplateData | undefined> {
     try {
-        return <TemplateData>await actionHandler.callWithTelemetry('azureFunctions.tryGetTemplateDataFromFuncPortal', async (properties: TelemetryProperties) => {
-            properties.isActivationEvent = 'true';
+        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromFuncPortal', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
+            this.suppressErrorDisplay = true;
+            this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
 
@@ -196,9 +198,10 @@ export async function tryGetTemplateDataFromFuncPortal(actionHandler: IActionHan
     }
 }
 
-export async function getTemplateDataFromBackup(actionHandler: IActionHandler, extensionPath: string): Promise<TemplateData> {
-    return <TemplateData>await actionHandler.callWithTelemetry('azureFunctions.getTemplateDataFromBackup', async (properties: TelemetryProperties) => {
-        properties.isActivationEvent = 'true';
+export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, extensionPath: string): Promise<TemplateData> {
+    return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+        this.suppressErrorDisplay = true;
+        this.properties.isActivationEvent = 'true';
         const templatesMap: { [runtime: string]: Template[] } = {};
         const configMap: { [runtime: string]: Config } = {};
 

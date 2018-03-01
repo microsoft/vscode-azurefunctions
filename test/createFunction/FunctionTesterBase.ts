@@ -10,15 +10,12 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
-import { IActionHandler } from '../../src/IActionHandler';
 import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
-import { TestActionHandler } from '../TestActionHandler';
 import { TestAzureAccount } from '../TestAzureAccount';
 import { TestUI } from '../TestUI';
 
-const actionHandler: IActionHandler = new TestActionHandler();
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
 let funcStagingPortalTemplateData: TemplateData | undefined;
@@ -27,9 +24,9 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    backupTemplateData = await getTemplateDataFromBackup(actionHandler, path.join(__dirname, '..', '..', '..'));
-    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(actionHandler);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(actionHandler, undefined, 'functions-staging.azure.com');
+    backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..', '..'));
+    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
+    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined, 'functions-staging.azure.com');
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {

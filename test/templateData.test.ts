@@ -8,13 +8,10 @@ import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
-import { IActionHandler } from '../src/IActionHandler';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/ProjectSettings';
 import { Template } from '../src/templates/Template';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../src/templates/TemplateData';
-import { TestActionHandler } from './TestActionHandler';
 
-const actionHandler: IActionHandler = new TestActionHandler();
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
 let funcStagingPortalTemplateData: TemplateData | undefined;
@@ -22,9 +19,9 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    backupTemplateData = await getTemplateDataFromBackup(actionHandler, path.join(__dirname, '..', '..'));
-    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(actionHandler);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(actionHandler, undefined, 'functions-staging.azure.com');
+    backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..'));
+    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
+    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined, 'functions-staging.azure.com');
 });
 
 suite('Template Data Tests', async () => {
