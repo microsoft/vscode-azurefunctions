@@ -30,7 +30,7 @@ async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, o
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(telemetryProperties, outputChannel, functionAppPath, undefined, false, ui);
+            await createNewProject(telemetryProperties, outputChannel, functionAppPath, undefined, undefined, false, ui);
         } else if (result !== DialogResponses.skipForNow) {
             throw new UserCancelledError();
         }

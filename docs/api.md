@@ -16,13 +16,14 @@ Commands:
 |Name|Type|Description|
 |---|---|---|
 |projectPath|string|Absolute file path that will contain your new project. If the path doesn't exist, it will be created.|
-|language|string|The currently supported languages are 'JavaScript' and 'Java'.|
+|language|string|The currently supported languages are 'JavaScript', 'C#', and 'Java'.|
+|runtime|string|The currently supported runtimes are "~1" and "beta".|
 |openFolder|boolean|(Defaulted to true) Represents whether or not to open the project folder after it has been created. If true, the extension host may be restarted when the folder is opened.|
 
 ### Example Usage
 
 ```typescript
-await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', false /* openFolder */);
+await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', "~1", false /* openFolder */);
 ```
 
 ## Create Local Function

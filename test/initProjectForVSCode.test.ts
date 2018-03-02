@@ -145,7 +145,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await initProjectForVSCode({}, outputChannel, undefined, undefined, ui);
+        await initProjectForVSCode({}, outputChannel, undefined, undefined, undefined, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });

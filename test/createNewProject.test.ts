@@ -127,7 +127,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', false /* openFolder */);
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~1', false /* openFolder */);
         await validateVSCodeProjectFiles(projectPath);
     });
 
@@ -143,7 +143,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await createNewProject({}, outputChannel, undefined, previewLanguage ? language : undefined, false, ui);
+        await createNewProject({}, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');

@@ -18,7 +18,7 @@ import { getProjectCreator } from './createNewProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
 import { ProjectCreatorBase } from './IProjectCreator';
 
-export async function initProjectForVSCode(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, ui: IUserInterface = new VSCodeUI(), projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
+export async function initProjectForVSCode(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, ui: IUserInterface = new VSCodeUI(), projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder to initialize for use with VS Code'));
     }
@@ -37,13 +37,14 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
         projectCreator = getProjectCreator(language, functionAppPath, outputChannel, ui, telemetryProperties);
     }
 
-    const globalRuntimeSetting: string | undefined = getGlobalFuncExtensionSetting(projectRuntimeSetting);
-    const globalFilterSetting: string | undefined = getGlobalFuncExtensionSetting(templateFilterSetting);
-    const runtime: string = globalRuntimeSetting ? globalRuntimeSetting : await projectCreator.getRuntime();
+    // tslint:disable-next-line:strict-boolean-expressions
+    runtime = runtime || getGlobalFuncExtensionSetting(projectRuntimeSetting) || await projectCreator.getRuntime();
     outputChannel.appendLine(localize('usingRuntime', 'Using "{0}" as the project runtime...', runtime));
-    const templateFilter: string = globalFilterSetting ? globalFilterSetting : projectCreator.templateFilter;
-    outputChannel.appendLine(localize('usingTemplateFilter', 'Using "{0}" as the project templateFilter...', templateFilter));
     telemetryProperties.projectRuntime = runtime;
+
+    // tslint:disable-next-line:strict-boolean-expressions
+    const templateFilter: string = getGlobalFuncExtensionSetting(templateFilterSetting) || projectCreator.templateFilter;
+    outputChannel.appendLine(localize('usingTemplateFilter', 'Using "{0}" as the project templateFilter...', templateFilter));
     telemetryProperties.templateFilter = templateFilter;
 
     const vscodePath: string = path.join(functionAppPath, '.vscode');
