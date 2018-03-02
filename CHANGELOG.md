@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.7.0 - 2018-03-05
+### Added
+- Automatically detect projects created outside of VS Code and prompt to initialize
+- View/Delete Proxies
+- Remote Debug Java Function Apps (experimental)
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.7.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.6.1 - 2018-02-22
 ### Fixed
 - Add backup templates in case there is no internet or in case the functions portal api changes
