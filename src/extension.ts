@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
             const templateDataTask: Promise<TemplateData> = getTemplateData(reporter, context);
 
             actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
-            actionHandler.registerCommand('azureFunctions.pickProcess', async function (this: IActionContext): Promise<void> { await pickFuncProcess(this); });
+            actionHandler.registerCommand('azureFunctions.pickProcess', async function (this: IActionContext): Promise<string | undefined> { return await pickFuncProcess(this); });
             actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
             actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
             actionHandler.registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
