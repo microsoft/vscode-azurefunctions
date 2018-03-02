@@ -21,7 +21,7 @@ import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
@@ -45,7 +45,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, outputChannel, ui, telemetryProperties);
     await projectCreator.addNonVSCodeFiles();
 
-    await initProjectForVSCode(telemetryProperties, outputChannel, functionAppPath, language, ui, projectCreator);
+    await initProjectForVSCode(telemetryProperties, outputChannel, functionAppPath, language, runtime, ui, projectCreator);
 
     if (await gitUtils.isGitInstalled(functionAppPath)) {
         await gitUtils.gitInit(outputChannel, functionAppPath);

@@ -88,7 +88,7 @@ export function activate(context: vscode.ExtensionContext): void {
             const templateData: TemplateData = await templateDataTask;
             await createFunction(this.properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, functionSettings);
         });
-        actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, functionAppPath, language, openFolder); });
+        actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, functionAppPath, language, runtime, openFolder); });
         actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, outputChannel); });
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
         actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
