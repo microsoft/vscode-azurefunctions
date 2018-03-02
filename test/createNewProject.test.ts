@@ -18,7 +18,7 @@ import { TestUI } from './TestUI';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
-    this.timeout(30 * 1000);
+    this.timeout(60 * 1000);
 
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
