@@ -55,6 +55,8 @@
         "onCommand:azureFunctions.startStreamingLogs",
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
+        "workspaceContains:local.settings.json",
+        "workspaceContains:host.json",
         "onView:azureFunctionsExplorer"
     ],
     "main": "./out/src/extension",
