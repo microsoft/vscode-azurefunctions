@@ -38,6 +38,7 @@ to get started with the Azure Functions extension.
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 * Stream logs from your remote Function Apps
 * Debug Java Function App on Azure (experimental)
+    > NOTE: To enable it, you can set `azureFunctions.enableRemoteDebugging` to true.
 
 ### Create New Project
 
