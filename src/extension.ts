@@ -43,73 +43,77 @@ import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
 import { VSCodeUI } from './VSCodeUI';
 
 export function activate(context: vscode.ExtensionContext): void {
-    const azureAccountExtension: vscode.Extension<AzureAccount> | undefined = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
-    if (!azureAccountExtension) {
-        vscode.window.showErrorMessage(localize('azFunc.noAccountExtensionError', 'The Azure Account Extension is required for the Azure Functions extension.'));
-    } else {
-        let reporter: TelemetryReporter | undefined;
-        try {
-            const packageInfo: IPackageInfo = (<(id: string) => IPackageInfo>require)(context.asAbsolutePath('./package.json'));
-            reporter = new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
-        } catch (error) {
-            // swallow exceptions so that telemetry doesn't affect user
-        }
-
-        const azureAccount: AzureAccount = azureAccountExtension.exports;
-
-        const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
-        context.subscriptions.push(outputChannel);
-
-        // tslint:disable-next-line:no-floating-promises
-        functionRuntimeUtils.validateFunctionRuntime(outputChannel);
-
-        const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(context.globalState, outputChannel), 'azureFunctions.loadMore');
-        context.subscriptions.push(tree);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
-
-        const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
-
-        const validateEventId: string = 'azureFunctions.validateFunctionProjects';
-        // tslint:disable-next-line:no-floating-promises
-        callWithTelemetryAndErrorHandling(validateEventId, reporter, outputChannel, async function (this: IActionContext): Promise<void> {
-            await validateFunctionProjects(this, outputChannel, vscode.workspace.workspaceFolders);
-        });
-        actionHandler.registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: WorkspaceFoldersChangeEvent): Promise<void> {
-            await validateFunctionProjects(this, outputChannel, event.added);
-        });
-
-        const templateDataTask: Promise<TemplateData> = getTemplateData(reporter, context);
-
-        actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
-        actionHandler.registerCommand('azureFunctions.pickProcess', async () => await pickFuncProcess());
-        actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
-        actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
-        actionHandler.registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            const templateData: TemplateData = await templateDataTask;
-            await createFunction(this.properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, functionSettings);
-        });
-        actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, functionAppPath, language, runtime, openFolder); });
-        actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, outputChannel); });
-        actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
-        actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
-        actionHandler.registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
-        actionHandler.registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
-        actionHandler.registerCommand('azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
-        actionHandler.registerCommand('azureFunctions.deploy', async function (this: IActionContext, deployPath: vscode.Uri | string, functionAppId?: string): Promise<void> { await deploy(this.properties, tree, outputChannel, deployPath, functionAppId); });
-        actionHandler.registerCommand('azureFunctions.configureDeploymentSource', async function (this: IActionContext, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> { await configureDeploymentSource(this.properties, tree, outputChannel, node); });
-        actionHandler.registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
-        actionHandler.registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, reporter, tree, node));
-        actionHandler.registerCommand('azureFunctions.stopStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await stopStreamingLogs(tree, node));
-        actionHandler.registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
-        actionHandler.registerCommand('azureFunctions.appSettings.add', async (node: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
-        actionHandler.registerCommand('azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
-        actionHandler.registerCommand('azureFunctions.appSettings.rename', async (node: IAzureNode<AppSettingTreeItem>) => await renameAppSetting(tree, node));
-        actionHandler.registerCommand('azureFunctions.appSettings.delete', async (node: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
-        actionHandler.registerCommand('azureFunctions.installDotnetTemplates', async () => await dotnetUtils.installDotnetTemplates(outputChannel));
-        actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallDotnetTemplates(outputChannel));
-        actionHandler.registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, tree, node));
-        actionHandler.registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
+    let reporter: TelemetryReporter | undefined;
+    try {
+        const packageInfo: IPackageInfo = (<(id: string) => IPackageInfo>require)(context.asAbsolutePath('./package.json'));
+        reporter = new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
+    } catch (error) {
+        // swallow exceptions so that telemetry doesn't affect user
     }
+
+    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
+    context.subscriptions.push(outputChannel);
+
+    callWithTelemetryAndErrorHandling('azureFunctions.activate', reporter, outputChannel, async function (this: IActionContext): Promise<void> {
+        this.properties.isActivationEvent = 'true';
+
+        const azureAccountExtension: vscode.Extension<AzureAccount> | undefined = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
+        if (!azureAccountExtension) {
+            throw new Error(localize('azFunc.noAccountExtensionError', 'The Azure Account Extension is required for the Azure Functions extension.'));
+        } else {
+            const azureAccount: AzureAccount = azureAccountExtension.exports;
+
+            // tslint:disable-next-line:no-floating-promises
+            functionRuntimeUtils.validateFunctionRuntime(reporter, outputChannel);
+
+            const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(context.globalState, outputChannel), 'azureFunctions.loadMore');
+            context.subscriptions.push(tree);
+            context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
+
+            const actionHandler: AzureActionHandler = new AzureActionHandler(context, outputChannel, reporter);
+
+            const validateEventId: string = 'azureFunctions.validateFunctionProjects';
+            // tslint:disable-next-line:no-floating-promises
+            callWithTelemetryAndErrorHandling(validateEventId, reporter, outputChannel, async function (this: IActionContext): Promise<void> {
+                await validateFunctionProjects(this, outputChannel, vscode.workspace.workspaceFolders);
+            });
+            actionHandler.registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: WorkspaceFoldersChangeEvent): Promise<void> {
+                await validateFunctionProjects(this, outputChannel, event.added);
+            });
+
+            const templateDataTask: Promise<TemplateData> = getTemplateData(reporter, context);
+
+            actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
+            actionHandler.registerCommand('azureFunctions.pickProcess', async function (this: IActionContext): Promise<void> { await pickFuncProcess(this); });
+            actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
+            actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
+            actionHandler.registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
+                const templateData: TemplateData = await templateDataTask;
+                await createFunction(this.properties, outputChannel, azureAccount, templateData, new VSCodeUI(), functionAppPath, templateId, functionName, functionSettings);
+            });
+            actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, functionAppPath, language, runtime, openFolder); });
+            actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, outputChannel); });
+            actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
+            actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
+            actionHandler.registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
+            actionHandler.registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
+            actionHandler.registerCommand('azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
+            actionHandler.registerCommand('azureFunctions.deploy', async function (this: IActionContext, deployPath: vscode.Uri | string, functionAppId?: string): Promise<void> { await deploy(this.properties, tree, outputChannel, deployPath, functionAppId); });
+            actionHandler.registerCommand('azureFunctions.configureDeploymentSource', async function (this: IActionContext, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> { await configureDeploymentSource(this.properties, tree, outputChannel, node); });
+            actionHandler.registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
+            actionHandler.registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, reporter, tree, node));
+            actionHandler.registerCommand('azureFunctions.stopStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await stopStreamingLogs(tree, node));
+            actionHandler.registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
+            actionHandler.registerCommand('azureFunctions.appSettings.add', async (node: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
+            actionHandler.registerCommand('azureFunctions.appSettings.edit', async (node: IAzureNode<AppSettingTreeItem>) => await editAppSetting(tree, node));
+            actionHandler.registerCommand('azureFunctions.appSettings.rename', async (node: IAzureNode<AppSettingTreeItem>) => await renameAppSetting(tree, node));
+            actionHandler.registerCommand('azureFunctions.appSettings.delete', async (node: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
+            actionHandler.registerCommand('azureFunctions.installDotnetTemplates', async () => await dotnetUtils.installDotnetTemplates(outputChannel));
+            actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallDotnetTemplates(outputChannel));
+            actionHandler.registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, tree, node));
+            actionHandler.registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
+        }
+    });
 }
 
 async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<TemplateData> {
