@@ -434,7 +434,10 @@
                     },
                     "azureFunctions.zipIgnorePattern": {
                         "scope": "resource",
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "array"
+                        ],
                         "default": "",
                         "description": "Defines which files in the workspace to ignore for Zip deploy. This applies to Zip deploy only, has no effect on other deployment methods."
                     },
