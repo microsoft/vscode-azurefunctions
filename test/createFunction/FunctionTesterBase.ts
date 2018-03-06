@@ -113,7 +113,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await createFunction({}, this.outputChannel, new TestAzureAccount(), templateData, ui);
+        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, this.outputChannel, new TestAzureAccount(), templateData, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);

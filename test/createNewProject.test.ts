@@ -143,7 +143,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await createNewProject({}, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
+        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
