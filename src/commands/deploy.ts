@@ -75,7 +75,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
                     await siteWrapper.stop(client);
                 }
-                await siteWrapper.deploy(deployFsPath, client, outputChannel, extensionPrefix);
+                await siteWrapper.deploy(deployFsPath, client, outputChannel, extensionPrefix, true, telemetryProperties);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));
