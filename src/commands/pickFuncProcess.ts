@@ -49,10 +49,12 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
 
 async function getFuncHostPid(): Promise<string | undefined> {
     let pids: string[] = [];
-    // If the cli is self-contained, the command will look like this: func host start
-    pids = pids.concat(await getMatchingPids(/.*func.*/, /.*host.*start.*/));
-    // If the cli is an old version that requires .NET Core to be installed, the command will look like this: dotnet Azure.Functions.Cli.dll host start
-    pids = pids.concat(await getMatchingPids(/.*dotnet.*/, /.*Azure\.Functions\.Cli\.dll.*host.*start.*/));
+    pids = pids.concat(...await Promise.all([
+        // If the cli is self-contained, the command will look like this: func host start
+        getMatchingPids(/.*func.*/, /.*host.*start.*/),
+        // If the cli is an old version that requires .NET Core to be installed, the command will look like this: dotnet Azure.Functions.Cli.dll host start
+        getMatchingPids(/.*dotnet.*/, /.*Azure\.Functions\.Cli\.dll.*host.*start.*/)
+    ]));
 
     if (pids.length === 0) {
         return undefined;
