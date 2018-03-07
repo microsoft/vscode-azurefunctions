@@ -6,13 +6,14 @@
 // tslint:disable-next-line:no-require-imports
 import ps = require('ps-node');
 import * as vscode from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { isWindows } from '../constants';
 import { localize } from '../localize';
 import { extensionPrefix, getFuncExtensionSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 
-export async function pickFuncProcess(): Promise<string | undefined> {
+export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
     let funcHostPid: string | undefined = await getFuncHostPid();
     if (funcHostPid !== undefined) {
         // Stop the functions host to prevent build errors like "Cannot access the file '...' because it is being used by another process."
@@ -28,6 +29,7 @@ export async function pickFuncProcess(): Promise<string | undefined> {
     if (isNaN(timeoutInSeconds)) {
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
     }
+    actionContext.properties.timeoutInSeconds = timeoutInSeconds.toString();
 
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {

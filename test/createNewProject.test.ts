@@ -18,7 +18,7 @@ import { TestUI } from './TestUI';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
-    this.timeout(30 * 1000);
+    this.timeout(60 * 1000);
 
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
@@ -143,7 +143,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         }
 
         const ui: TestUI = new TestUI(inputs);
-        await createNewProject({}, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
+        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
