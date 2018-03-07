@@ -5,6 +5,7 @@
 
 // tslint:disable-next-line:no-require-imports
 import ps = require('ps-node');
+import { isNullOrUndefined } from 'util';
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { isWindows } from '../constants';
@@ -47,27 +48,46 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
 }
 
 async function getFuncHostPid(): Promise<string | undefined> {
-    const multipleProcError: Error = new Error(localize('multipleFuncHost', 'Detected multiple processes running the Functions host. Stop all but one process in order to debug.'));
+    let pids: string[] = [];
+    // If the cli is self-contained, the command will look like this: func host start
+    pids = pids.concat(await getMatchingPids(/.*func.*/, /.*host.*start.*/));
+    // If the cli is an old version that requires .NET Core to be installed, the command will look like this: dotnet Azure.Functions.Cli.dll host start
+    pids = pids.concat(await getMatchingPids(/.*dotnet.*/, /.*Azure\.Functions\.Cli\.dll.*host.*start.*/));
+
+    if (pids.length === 0) {
+        return undefined;
+    } else if (pids.length === 1) {
+        return pids[0];
+    } else {
+        throw new Error(localize('multipleFuncHost', 'Detected multiple processes running the Functions host. Stop all but one process in order to debug.'));
+    }
+}
+
+async function getMatchingPids(commandRegExp: RegExp, argumentsRegExp: RegExp): Promise<string[]> {
     if (isWindows) {
         // Ideally we could use 'ps.lookup' for all OS's, but unfortunately it's very slow on windows
         // Instead, we will call 'wmic' manually and parse the results
         const processList: string = await cpUtils.executeCommand(undefined, undefined, 'wmic', 'process', 'get', 'CommandLine,Name,ProcessId', '/FORMAT:csv');
-        const regExp: RegExp = new RegExp(/^.*,.*azure.*functions.*host.*start.*,(?:dotnet\.exe|func.*\.exe),(\d+)$/gmi);
-        const matches: RegExpMatchArray | null = regExp.exec(processList);
-        if (matches === null) {
-            return undefined;
-        } else if (matches.length === 2) {
-            return matches[1];
-        } else {
-            throw multipleProcError;
+        const regExp: RegExp = new RegExp(`^.*,${argumentsRegExp.source},${commandRegExp.source},(\\d+)$`, 'gmi');
+        const pids: string[] = [];
+        // tslint:disable-next-line:no-constant-condition
+        while (true) {
+            const result: RegExpExecArray | null = regExp.exec(processList);
+            if (!isNullOrUndefined(result) && result.length > 1) {
+                pids.push(result[1]);
+            } else {
+                break;
+            }
         }
+
+        return pids;
     } else {
         const processList: IProcess[] = await new Promise((resolve: (processList: IProcess[]) => void, reject: (e: Error) => void): void => {
             //tslint:disable-next-line:no-unsafe-any
             ps.lookup(
                 {
-                    command: '.*dotnet.*',
-                    arguments: '.*Azure\.Functions.*host.*start'
+                    command: commandRegExp,
+                    arguments: argumentsRegExp
                 },
                 (error: Error | undefined, result: IProcess[]): void => {
                     if (error) {
@@ -78,13 +98,7 @@ async function getFuncHostPid(): Promise<string | undefined> {
                 });
         });
 
-        if (processList.length === 0) {
-            return undefined;
-        } else if (processList.length === 1) {
-            return processList[0].pid;
-        } else {
-            throw multipleProcError;
-        }
+        return processList.map((proc: IProcess) => proc.pid);
     }
 }
 
