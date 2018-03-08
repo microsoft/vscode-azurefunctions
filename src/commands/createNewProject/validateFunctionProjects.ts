@@ -46,7 +46,7 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
         } else if (result === DialogResponses.seeMoreInfo) {
             // tslint:disable-next-line:no-unsafe-any
             opn('https://aka.ms/azFuncProject');
-            await promptToInitializeProject(folderPath);
+            return await promptToInitializeProject(folderPath);
         } else {
             throw new UserCancelledError();
         }
