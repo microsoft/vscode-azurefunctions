@@ -26,6 +26,6 @@ This file defines how VS Code attaches a debugger when you press F5. It is uniqu
 
 This file contains common tasks, such as building your project or running the Azure Functions host (you will never have to run `func host start` manually from the command line again!). It is unique to the language for your project.
 
-## Extension Recommendations
+## Extensions.json
 
 This file lists all of the recommended extensions based on your project's langauge. It notifies any user that opens your project to install these extensions. For example, the [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp) is recommended to debug C# projects.
