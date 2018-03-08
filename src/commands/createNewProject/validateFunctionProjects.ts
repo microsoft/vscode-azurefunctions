@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../../DialogResponses';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, requiredFunctionAppFiles, updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { initProjectForVSCode } from './initProjectForVSCode';
 
 export async function validateFunctionProjects(actionContext: IActionContext, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
@@ -55,14 +55,18 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
     return false;
 }
 
+const hostFileName: string = 'host.json';
+const localSettingsFileName: string = 'local.settings.json';
+const gitignoreFileName: string = '.gitignore';
+
 async function isFunctionProject(folderPath: string): Promise<boolean> {
-    for (const fileName of requiredFunctionAppFiles) {
-        if (!await fse.pathExists(path.join(folderPath, fileName))) {
-            return false;
-        }
+    const gitignorePath: string = path.join(folderPath, gitignoreFileName);
+    let gitignoreContents: string = '';
+    if (await fse.pathExists(gitignorePath)) {
+        gitignoreContents = (await fse.readFile(gitignorePath)).toString();
     }
 
-    return true;
+    return await fse.pathExists(path.join(folderPath, hostFileName)) && (await fse.pathExists(path.join(folderPath, localSettingsFileName)) || gitignoreContents.includes(localSettingsFileName));
 }
 
 function isInitializedProject(folderPath: string): boolean {
