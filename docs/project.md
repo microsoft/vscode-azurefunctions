@@ -1,6 +1,6 @@
 # Project Structure in VS Code
 
-The Azure Functions extension [provides a command](https://github.com/Microsoft/vscode-azurefunctions#create-new-project) to create a project specifically designed to work well in VS Code. However, you can also open an existing project and you will automatically be prompted to initialize it for use with VS Code. This will create several files in the ".vsode" folder at the root of your project:
+The Azure Functions extension [provides a command](https://github.com/Microsoft/vscode-azurefunctions#create-new-project) to create a project specifically designed to work well in VS Code. However, you can also open an existing project and you will automatically be prompted to initialize it for use with VS Code. This will create several files in the ".vscode" folder at the root of your project:
 1. [Settings.json](#settingsjson)
 1. [Launch.json](#launchjson)
 1. [Tasks.json](#tasksjson)
