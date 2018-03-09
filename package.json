@@ -521,6 +521,7 @@
         "@types/websocket": "^0.0.37",
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
+        "azure-storage": "^2.8.1",
         "gulp": "^3.9.1",
         "gulp-decompress": "^2.0.1",
         "gulp-download": "^0.0.1",
@@ -528,7 +529,8 @@
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.0.1",
         "typescript": "^2.0.3",
-        "vscode": "^1.0.0"
+        "vscode": "^1.0.0",
+        "vsce": "^1.37.5"
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.0.0-preview",
