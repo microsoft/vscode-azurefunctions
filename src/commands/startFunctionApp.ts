@@ -3,12 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
 import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
-import { nodeUtils } from '../utils/nodeUtils';
 
 export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
     if (!node) {
@@ -19,10 +16,8 @@ export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzur
         localize('starting', 'Starting...'),
         node,
         async () => {
-            // tslint:disable:no-non-null-assertion
-            const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node!);
-            await node!.treeItem.siteWrapper.start(client);
-            // tslint:enable:no-non-null-assertion
+            // tslint:disable-next-line:no-non-null-assertion
+            await node!.treeItem.client.start();
         }
     );
 }

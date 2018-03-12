@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { Memento, OutputChannel } from "vscode";
-import * as appServiceTools from 'vscode-azureappservice';
+import * as appservice from 'vscode-azureappservice';
+import { SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureTreeItem, IChildProvider, UserCancelledError } from 'vscode-azureextensionui';
+import { ArgumentError } from '../errors';
 import { localize } from "../localize";
-import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
 
 export class FunctionAppProvider implements IChildProvider {
@@ -29,8 +31,12 @@ export class FunctionAppProvider implements IChildProvider {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildren(node: IAzureNode): Promise<IAzureTreeItem[]> {
-        const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
+    public async loadMoreChildren(node: IAzureNode, clearCache: boolean): Promise<IAzureTreeItem[]> {
+        if (clearCache) {
+            this._nextLink = undefined;
+        }
+
+        const client: WebSiteManagementClient = getWebSiteClient(node);
         const webAppCollection: WebAppCollection = this._nextLink === undefined ?
             await client.webApps.list() :
             await client.webApps.listNext(this._nextLink);
@@ -39,15 +45,24 @@ export class FunctionAppProvider implements IChildProvider {
 
         return webAppCollection
             .filter((site: Site) => site.kind === 'functionapp')
-            .map((site: Site) => new FunctionAppTreeItem(site, this._outputChannel));
+            .map((site: Site) => new FunctionAppTreeItem(new SiteClient(site, node), this._outputChannel));
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
-        const site: Site | undefined = await appServiceTools.createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
+        const site: Site | undefined = await appservice.createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
         if (site) {
-            return new FunctionAppTreeItem(site, this._outputChannel);
+            return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
         } else {
             throw new UserCancelledError();
         }
+    }
+}
+
+function getWebSiteClient(node: IAzureNode): WebSiteManagementClient {
+    const subscription: Subscription = node.subscription;
+    if (subscription.subscriptionId) {
+        return new WebSiteManagementClient(node.credentials, subscription.subscriptionId);
+    } else {
+        throw new ArgumentError(subscription);
     }
 }

@@ -7,27 +7,24 @@ import { User } from 'azure-arm-website/lib/models';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
 import { OutputChannel } from 'vscode';
-import { SiteWrapper } from 'vscode-azureappservice';
-import KuduClient from 'vscode-azurekudu';
+import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
 import * as websocket from 'websocket';
 
 export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
     private _wsclient: websocket.client | undefined;
     private _wsconnection: websocket.connection | undefined;
-    private _siteWrapper: SiteWrapper;
-    private _kuduClient: KuduClient;
+    private _client: SiteClient;
     private _port: number;
     private _publishCredential: User;
     private _keepAlive: boolean;
     private _outputChannel: OutputChannel;
 
-    constructor(outputChannel: OutputChannel, siteWrapper: SiteWrapper, port: number, publishCredential: User, kuduClient: KuduClient) {
+    constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: User) {
         super();
-        this._siteWrapper = siteWrapper;
+        this._client = client;
         this._port = port;
         this._publishCredential = publishCredential;
-        this._kuduClient = kuduClient;
         this._keepAlive = true;
         this._outputChannel = outputChannel;
         this._server = createServer();
@@ -83,7 +80,7 @@ export class DebugProxy extends EventEmitter {
                     });
 
                     this._wsclient.connect(
-                        `wss://${this._siteWrapper.kuduUrl.replace(/https?:\/\//, '')}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
+                        `wss://${this._client.kuduHostName}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
                         undefined,
                         undefined,
                         { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
@@ -144,16 +141,12 @@ export class DebugProxy extends EventEmitter {
     private async keepAlive(): Promise<void> {
         if (this._keepAlive) {
             try {
-                await this.pingFunctionApp();
+                await pingFunctionApp(this._client);
                 setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {
                 this._outputChannel.appendLine(`[Proxy Server] ${err}`);
                 setTimeout(this.keepAlive, 5 * 1000 /* 5 seconds */);
             }
         }
-    }
-
-    private async pingFunctionApp(): Promise<void> {
-        await this._siteWrapper.pingFunctionApp(this._kuduClient);
     }
 }

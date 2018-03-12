@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
 import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
-import { SiteWrapper } from 'vscode-azureappservice';
+import { SiteClient } from 'vscode-azureappservice';
+import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
@@ -24,7 +23,6 @@ import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
-import { nodeUtils } from '../utils/nodeUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
@@ -50,8 +48,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
         }
     }
 
-    const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-    const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
+    const client: SiteClient = node.treeItem.client;
 
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
@@ -62,7 +59,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
         deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
     }
 
-    await verifyRuntimeIsCompatible(runtime, outputChannel, client, siteWrapper);
+    await verifyRuntimeIsCompatible(runtime, outputChannel, client);
 
     await node.treeItem.runWithTemporaryState(
         localize('deploying', 'Deploying...'),
@@ -72,14 +69,14 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
                 // Stop function app here to avoid *.jar file in use on server side.
                 // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
                 if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', siteWrapper.appName));
-                    await siteWrapper.stop(client);
+                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                    await client.stop();
                 }
-                await siteWrapper.deploy(deployFsPath, client, outputChannel, extensionPrefix, true, telemetryProperties);
+                await appservice.deploy(client, deployFsPath, outputChannel, extensionPrefix, true, telemetryProperties);
             } finally {
                 if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', siteWrapper.appName));
-                    await siteWrapper.start(client);
+                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                    await client.start();
                 }
             }
         }
@@ -122,8 +119,8 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     }
 }
 
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputChannel: vscode.OutputChannel, client: WebSiteManagementClient, siteWrapper: SiteWrapper): Promise<void> {
-    const appSettings: StringDictionary = await client.webApps.listApplicationSettings(siteWrapper.resourceGroup, siteWrapper.appName);
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputChannel: vscode.OutputChannel, client: SiteClient): Promise<void> {
+    const appSettings: StringDictionary = await client.listApplicationSettings();
     if (!appSettings.properties) {
         throw new ArgumentError(appSettings);
     } else {
@@ -136,11 +133,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputCha
             if (result === DialogResponses.yes) {
                 outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
                 appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
-                await client.webApps.updateApplicationSettings(
-                    siteWrapper.resourceGroup,
-                    siteWrapper.appName,
-                    appSettings
-                );
+                await client.updateApplicationSettings(appSettings);
             } else {
                 throw new UserCancelledError();
             }
