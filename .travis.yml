@@ -29,7 +29,8 @@ install:
   - npm install
 
 script:
-  - npm run vscode:prepublish
+  - gulp package
+  - gulp upload-vsix
   - npm run lint
   - gulp test
 
