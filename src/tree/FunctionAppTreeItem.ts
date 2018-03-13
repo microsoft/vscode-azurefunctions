@@ -3,15 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
-import { Site } from 'azure-arm-website/lib/models';
-import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, ILogStream, SiteWrapper } from 'vscode-azureappservice';
+import { OutputChannel } from 'vscode';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, ILogStream, SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
-import { ArgumentError } from '../errors';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
@@ -21,7 +17,7 @@ import { ProxyTreeItem } from './ProxyTreeItem';
 export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
-    public readonly siteWrapper: SiteWrapper;
+    public readonly client: SiteClient;
     public logStream: ILogStream | undefined;
     public logStreamPath: string = '';
     public logStreamOutputChannel: vscode.OutputChannel | undefined;
@@ -33,20 +29,17 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     private readonly _proxiesTreeItem: ProxiesTreeItem;
     private readonly _outputChannel: OutputChannel;
 
-    public constructor(site: Site, outputChannel: OutputChannel) {
-        this.siteWrapper = new SiteWrapper(site);
-        if (!site.state) {
-            throw new ArgumentError(site);
-        }
-        this._state = site.state;
+    public constructor(client: SiteClient, outputChannel: OutputChannel) {
+        this.client = client;
+        this._state = client.initialState;
         this._outputChannel = outputChannel;
-        this._functionsTreeItem = new FunctionsTreeItem(this.siteWrapper, this._outputChannel);
-        this._appSettingsTreeItem = new AppSettingsTreeItem(this.siteWrapper);
-        this._proxiesTreeItem = new ProxiesTreeItem(this.siteWrapper, this._outputChannel);
+        this._functionsTreeItem = new FunctionsTreeItem(client, this._outputChannel);
+        this._appSettingsTreeItem = new AppSettingsTreeItem(client);
+        this._proxiesTreeItem = new ProxiesTreeItem(client, this._outputChannel);
     }
 
     public get logStreamLabel(): string {
-        return this.siteWrapper.appName;
+        return this.client.fullName;
     }
 
     private get _effectiveState(): string | undefined {
@@ -54,11 +47,11 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     }
 
     public get id(): string {
-        return this.siteWrapper.id;
+        return this.client.id;
     }
 
     public get label(): string {
-        return !this._effectiveState || this._effectiveState === 'Running' ? this.siteWrapper.name : `${this.siteWrapper.name} (${this._effectiveState})`;
+        return !this._effectiveState || this._effectiveState === 'Running' ? this.client.fullName : `${this.client.fullName} (${this._effectiveState})`;
     }
 
     public get iconPath(): string {
@@ -69,9 +62,8 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         return false;
     }
 
-    public async refreshLabel(node: IAzureNode): Promise<void> {
-        const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-        this._state = await this.siteWrapper.getState(client);
+    public async refreshLabel(): Promise<void> {
+        this._state = await this.client.getState();
     }
 
     public async runWithTemporaryState(tempState: string, node: IAzureNode, callback: () => Promise<void>): Promise<void> {
@@ -85,7 +77,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         }
     }
 
-    public async loadMoreChildren(_node: IAzureNode<IAzureTreeItem>, _clearCache: boolean | undefined): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
         return [this._functionsTreeItem, this._appSettingsTreeItem, this._proxiesTreeItem];
     }
 
@@ -105,8 +97,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         }
     }
 
-    public async deleteTreeItem(node: IAzureNode): Promise<void> {
-        const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-        await this.siteWrapper.deleteSite(client, this._outputChannel);
+    public async deleteTreeItem(): Promise<void> {
+        await deleteSite(this.client, this._outputChannel);
     }
 }

@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URL } from 'url';
-import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { ILogStream, SiteWrapper } from 'vscode-azureappservice';
-import { IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import * as vscode from 'vscode';
+import { getKuduClient, ILogStream, SiteClient } from 'vscode-azureappservice';
+import { UserCancelledError } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
@@ -21,7 +21,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public static contextValue: string = 'azFuncFunction';
     public readonly contextValue: string = FunctionTreeItem.contextValue;
     public readonly config: FunctionConfig;
-    public readonly siteWrapper: SiteWrapper;
+    public readonly client: SiteClient;
     public logStream: ILogStream | undefined;
     public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
@@ -29,12 +29,12 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     private readonly _outputChannel: OutputChannel;
     private _triggerUrl: string;
 
-    public constructor(siteWrapper: SiteWrapper, func: FunctionEnvelope, outputChannel: OutputChannel) {
+    public constructor(client: SiteClient, func: FunctionEnvelope, outputChannel: OutputChannel) {
         if (!func.name) {
             throw new ArgumentError(func);
         }
 
-        this.siteWrapper = siteWrapper;
+        this.client = client;
         this._name = func.name;
         this._outputChannel = outputChannel;
 
@@ -58,28 +58,29 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     }
 
     public get logStreamLabel(): string {
-        return `${this.siteWrapper.appName}/${this._name}`;
+        return `${this.client.fullName}/${this._name}`;
     }
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this._name)}`;
     }
 
-    public async deleteTreeItem(node: IAzureNode<FunctionTreeItem>): Promise<void> {
+    public async deleteTreeItem(): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
         if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
             this._outputChannel.show(true);
             this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-            const client: KuduClient = await nodeUtils.getKuduClient(node, this.siteWrapper);
-            await client.functionModel.deleteMethod(this._name);
+            const kuduClient: KuduClient = await getKuduClient(this.client);
+            await kuduClient.functionModel.deleteMethod(this._name);
             this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
         } else {
             throw new UserCancelledError();
         }
     }
 
-    public async initializeTriggerUrl(client: KuduClient): Promise<void> {
-        const functionSecrets: FunctionSecrets = await client.functionModel.getSecrets(this._name);
+    public async initializeTriggerUrl(): Promise<void> {
+        const kuduClient: KuduClient = await getKuduClient(this.client);
+        const functionSecrets: FunctionSecrets = await kuduClient.functionModel.getSecrets(this._name);
         if (functionSecrets.triggerUrl === undefined) {
             throw new ArgumentError(functionSecrets);
         }
@@ -87,7 +88,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
         const triggerUrl: URL = new URL(functionSecrets.triggerUrl);
         switch (this.config.authLevel) {
             case HttpAuthLevel.admin:
-                const keyResult: MasterKey = await client.functionModel.getMasterKey();
+                const keyResult: MasterKey = await kuduClient.functionModel.getMasterKey();
                 if (keyResult.masterKey === undefined) {
                     throw new ArgumentError(keyResult);
                 }

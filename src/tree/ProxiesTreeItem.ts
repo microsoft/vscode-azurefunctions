@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { IFileResult, SiteWrapper } from 'vscode-azureappservice';
-import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
+import { getFile, IFileResult, putFile, SiteClient } from 'vscode-azureappservice';
+import { IAzureParentTreeItem, IAzureTreeItem, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -23,11 +22,11 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
     private _etag: string;
     private _deletingProxy: boolean = false;
 
-    private readonly _siteWrapper: SiteWrapper;
+    private readonly _client: SiteClient;
     private readonly _outputChannel: vscode.OutputChannel;
 
-    public constructor(siteWrapper: SiteWrapper, outputChannel: vscode.OutputChannel) {
-        this._siteWrapper = siteWrapper;
+    public constructor(client: SiteClient, outputChannel: vscode.OutputChannel) {
+        this._client = client;
         this._outputChannel = outputChannel;
     }
 
@@ -43,11 +42,10 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildren(node: IAzureNode<IAzureTreeItem>, _clearCache: boolean | undefined): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
         let proxiesJson: string;
         try {
-            const client: KuduClient = await nodeUtils.getKuduClient(node, this._siteWrapper);
-            const result: IFileResult = await this._siteWrapper.getFile(client, this._proxiesJsonPath);
+            const result: IFileResult = await getFile(this._client, this._proxiesJsonPath);
             proxiesJson = result.data;
             this._etag = result.etag;
         } catch (err) {
@@ -67,7 +65,7 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         }
     }
 
-    public async deleteProxy(node: IAzureNode, name: string): Promise<void> {
+    public async deleteProxy(name: string): Promise<void> {
         const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
         if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
             if (this._deletingProxy) {
@@ -78,9 +76,8 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
                     this._outputChannel.show(true);
                     this._outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                     delete this._proxyConfig.proxies[name];
-                    const client: KuduClient = await nodeUtils.getKuduClient(node, this._siteWrapper);
                     const data: string = JSON.stringify(this._proxyConfig);
-                    this._etag = await this._siteWrapper.putFile(client, data, this._proxiesJsonPath, this._etag);
+                    this._etag = await putFile(this._client, data, this._proxiesJsonPath, this._etag);
                     this._outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
                 } finally {
                     this._deletingProxy = false;

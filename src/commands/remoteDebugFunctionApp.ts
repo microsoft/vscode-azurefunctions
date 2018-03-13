@@ -3,20 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
 import { SiteConfigResource, StringDictionary, User } from 'azure-arm-website/lib/models';
 import * as opn from "opn";
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
-import { SiteWrapper } from 'vscode-azureappservice';
+import { SiteClient } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
 import { DebugProxy } from '../DebugProxy';
 import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
-import { nodeUtils } from '../utils/nodeUtils';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
@@ -25,12 +21,10 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
     if (!node) {
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
-    const client: WebSiteManagementClient = nodeUtils.getWebSiteClient(node);
-    const siteWrapper: SiteWrapper = node.treeItem.siteWrapper;
+    const client: SiteClient = node.treeItem.client;
     const portNumber: number = await portfinder.getPortPromise();
-    const publishCredential: User = await siteWrapper.getWebAppPublishCredential(client);
-    const kuduClient: KuduClient = await siteWrapper.getKuduClient(client);
-    const debugProxy: DebugProxy = new DebugProxy(outputChannel, siteWrapper, portNumber, publishCredential, kuduClient);
+    const publishCredential: User = await client.getWebAppPublishCredential();
+    const debugProxy: DebugProxy = new DebugProxy(outputChannel, client, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();
@@ -41,8 +35,8 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
         // tslint:disable-next-line:no-any
         return new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
             try {
-                const siteConfig: SiteConfigResource = await siteWrapper.getSiteConfig(client);
-                const appSettings: StringDictionary = await client.webApps.listApplicationSettings(siteWrapper.resourceGroup, siteWrapper.appName);
+                const siteConfig: SiteConfigResource = await client.getSiteConfig();
+                const appSettings: StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.seeMoreInfo, DialogResponses.cancel);
@@ -53,8 +47,8 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
                         opn('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
-                        await updateSiteConfig(outputChannel, siteWrapper, client, p, siteConfig);
-                        await updateAppSettings(outputChannel, siteWrapper, client, p, appSettings);
+                        await updateSiteConfig(outputChannel, client, p, siteConfig);
+                        await updateAppSettings(outputChannel, client, p, appSettings);
                     }
                 }
 
@@ -90,7 +84,7 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
 
 }
 
-async function updateSiteConfig(outputChannel: vscode.OutputChannel, siteWrapper: SiteWrapper, client: WebSiteManagementClient, p: vscode.Progress<{}>, siteConfig: SiteConfigResource): Promise<void> {
+async function updateSiteConfig(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, siteConfig: SiteConfigResource): Promise<void> {
     p.report({ message: 'Fetching site configuration...' });
     outputChannel.appendLine('Fetching site configuration...');
     if (needUpdateSiteConfig(siteConfig)) {
@@ -98,13 +92,13 @@ async function updateSiteConfig(outputChannel: vscode.OutputChannel, siteWrapper
         siteConfig.webSocketsEnabled = true;
         p.report({ message: 'Updating site configuration to enable remote debugging...' });
         outputChannel.appendLine('Updating site configuration to enable remote debugging...');
-        await siteWrapper.updateConfiguration(client, siteConfig);
+        await client.updateConfiguration(siteConfig);
         p.report({ message: 'Updating site configuration done...' });
         outputChannel.appendLine('Updating site configuration done...');
     }
 }
 
-async function updateAppSettings(outputChannel: vscode.OutputChannel, siteWrapper: SiteWrapper, client: WebSiteManagementClient, p: vscode.Progress<{}>, appSettings: StringDictionary): Promise<void> {
+async function updateAppSettings(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, appSettings: StringDictionary): Promise<void> {
     p.report({ message: 'Fetching application settings...' });
     outputChannel.appendLine('Fetching application settings...');
     if (appSettings.properties && needUpdateAppSettings(appSettings.properties)) {
@@ -112,7 +106,7 @@ async function updateAppSettings(outputChannel: vscode.OutputChannel, siteWrappe
         appSettings.properties.HTTP_PLATFORM_DEBUG_PORT = HTTP_PLATFORM_DEBUG_PORT;
         p.report({ message: 'Updating application settings to enable remote debugging...' });
         outputChannel.appendLine('Updating application settings to enable remote debugging...');
-        await client.webApps.updateApplicationSettings(siteWrapper.resourceGroup, siteWrapper.appName, appSettings);
+        await client.updateApplicationSettings(appSettings);
         p.report({ message: 'Updating application settings done...' });
         outputChannel.appendLine('Updating application settings done...');
     }
