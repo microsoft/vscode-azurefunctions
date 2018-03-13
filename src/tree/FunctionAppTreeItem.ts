@@ -5,8 +5,7 @@
 
 import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, ILogStream, SiteClient } from 'vscode-azureappservice';
-import * as appservice from 'vscode-azureappservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, ILogStream, SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -99,6 +98,6 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     }
 
     public async deleteTreeItem(): Promise<void> {
-        await appservice.deleteSite(this.client, this._outputChannel);
+        await deleteSite(this.client, this._outputChannel);
     }
 }

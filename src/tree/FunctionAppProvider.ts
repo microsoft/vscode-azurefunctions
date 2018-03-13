@@ -8,8 +8,7 @@ import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 import WebSiteManagementClient = require('azure-arm-website');
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { Memento, OutputChannel } from "vscode";
-import * as appservice from 'vscode-azureappservice';
-import { SiteClient } from 'vscode-azureappservice';
+import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureTreeItem, IChildProvider, UserCancelledError } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { localize } from "../localize";
@@ -49,7 +48,7 @@ export class FunctionAppProvider implements IChildProvider {
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
-        const site: Site | undefined = await appservice.createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
+        const site: Site | undefined = await createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
         if (site) {
             return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
         } else {
