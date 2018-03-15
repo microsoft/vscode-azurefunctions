@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { DialogResponses } from '../DialogResponses';
 import { ArgumentError } from '../errors';
@@ -26,10 +26,10 @@ import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, ui: IAzureUserInput, deployPath?: vscode.Uri | string, functionAppId?: string | {}, oldUi: IUserInterface = new VSCodeUI()): Promise<void> {
     let deployFsPath: string;
     if (!deployPath) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(oldUi, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
     } else if (deployPath instanceof vscode.Uri) {
         deployFsPath = deployPath.fsPath;
     } else {
@@ -50,13 +50,13 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
 
     const client: SiteClient = node.treeItem.client;
 
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, oldUi);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, oldUi);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
+        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, oldUi);
     }
 
     await verifyRuntimeIsCompatible(runtime, outputChannel, client);
@@ -72,7 +72,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                await appservice.deploy(client, deployFsPath, outputChannel, extensionPrefix, true, telemetryProperties);
+                await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, true, telemetryProperties);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));

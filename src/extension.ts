@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceFoldersChangeEvent } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem } from 'vscode-azureappservice';
-import { AzureActionHandler, AzureTreeDataProvider, callWithTelemetryAndErrorHandling, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { AzureActionHandler, AzureTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandling, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { AzureAccount } from './azure-account.api';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
@@ -63,10 +63,12 @@ export function activate(context: vscode.ExtensionContext): void {
         } else {
             const azureAccount: AzureAccount = azureAccountExtension.exports;
 
+            const ui: IAzureUserInput = new AzureUserInput(context.globalState);
+
             // tslint:disable-next-line:no-floating-promises
             functionRuntimeUtils.validateFunctionRuntime(reporter, outputChannel);
 
-            const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(context.globalState, outputChannel), 'azureFunctions.loadMore', undefined, reporter);
+            const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.loadMore', ui, reporter);
             context.subscriptions.push(tree);
             context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
 
@@ -93,12 +95,12 @@ export function activate(context: vscode.ExtensionContext): void {
             });
             actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, functionAppPath, language, runtime, openFolder); });
             actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, outputChannel); });
-            actionHandler.registerCommand('azureFunctions.createFunctionApp', async (arg?: IAzureParentNode | string) => await createFunctionApp(tree, arg));
+            actionHandler.registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, tree, arg); });
             actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
             actionHandler.registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
             actionHandler.registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
             actionHandler.registerCommand('azureFunctions.deleteFunctionApp', async (node?: IAzureParentNode) => await deleteNode(tree, FunctionAppTreeItem.contextValue, node));
-            actionHandler.registerCommand('azureFunctions.deploy', async function (this: IActionContext, deployPath: vscode.Uri | string, functionAppId?: string): Promise<void> { await deploy(this.properties, tree, outputChannel, deployPath, functionAppId); });
+            actionHandler.registerCommand('azureFunctions.deploy', async function (this: IActionContext, deployPath: vscode.Uri | string, functionAppId?: string): Promise<void> { await deploy(this.properties, tree, outputChannel, ui, deployPath, functionAppId); });
             actionHandler.registerCommand('azureFunctions.configureDeploymentSource', async function (this: IActionContext, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> { await configureDeploymentSource(this.properties, tree, outputChannel, node); });
             actionHandler.registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
             actionHandler.registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, reporter, tree, node));
