@@ -39,9 +39,7 @@ suite('Create Bash Function Tests', async () => {
     test(queueTrigger, async () => {
         await tester.testCreateFunction(
             queueTrigger,
-            undefined, // New App Setting
-            'connectionStringKey4',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default queue name
         );
     });

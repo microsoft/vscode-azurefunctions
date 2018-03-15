@@ -6,6 +6,7 @@
 import * as assert from 'assert';
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/ProjectSettings';
@@ -43,15 +44,16 @@ suite('Template Data Tests', async () => {
 });
 
 async function validateTemplateData(templateData: TemplateData): Promise<void> {
-    const jsTemplates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.JavaScript, JavaScriptProjectCreator.defaultRuntime, TemplateFilter.Verified);
+    const ui: TestUserInput = new TestUserInput([]);
+    const jsTemplates: Template[] = await templateData.getTemplates(ui, 'fakeProjectPath', ProjectLanguage.JavaScript, JavaScriptProjectCreator.defaultRuntime, TemplateFilter.Verified);
     assert.equal(jsTemplates.length, 8, 'Unexpected JavaScript templates count.');
 
-    const javaTemplates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.Java, JavaProjectCreator.defaultRuntime, TemplateFilter.Verified);
+    const javaTemplates: Template[] = await templateData.getTemplates(ui, 'fakeProjectPath', ProjectLanguage.Java, JavaProjectCreator.defaultRuntime, TemplateFilter.Verified);
     assert.equal(javaTemplates.length, 4, 'Unexpected Java templates count.');
 
-    const cSharpTemplates: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.CSharp, ProjectRuntime.one, TemplateFilter.Verified);
+    const cSharpTemplates: Template[] = await templateData.getTemplates(ui, 'fakeProjectPath', ProjectLanguage.CSharp, ProjectRuntime.one, TemplateFilter.Verified);
     assert.equal(cSharpTemplates.length, 4, 'Unexpected CSharp (.NET Framework) templates count.');
 
-    const cSharpTemplatesv2: Template[] = await templateData.getTemplates('fakeProjectPath', ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
+    const cSharpTemplatesv2: Template[] = await templateData.getTemplates(ui, 'fakeProjectPath', ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
     assert.equal(cSharpTemplatesv2.length, 4, 'Unexpected CSharp (.NET Core) templates count.');
 }

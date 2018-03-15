@@ -43,9 +43,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(blobTrigger, async () => {
         await jsTester.testCreateFunction(
             blobTrigger,
-            undefined, // New App Setting
-            'connectionStringKey1',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default path
         );
     });
@@ -54,9 +52,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(cosmosDBTrigger, async () => {
         await jsTester.testCreateFunction(
             cosmosDBTrigger,
-            undefined, // New App Setting
-            'connectionStringKey2',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             'dbName',
             'collectionName',
             undefined, // Use default for 'create leases if doesn't exist'
@@ -68,9 +64,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(eventHubTrigger, async () => {
         await jsTester.testCreateFunction(
             eventHubTrigger,
-            undefined, // New App Setting
-            'connectionStringKey3',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined, // Use default event hub name
             undefined // Use default event hub consumer group
         );
@@ -111,9 +105,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(queueTrigger, async () => {
         await jsTester.testCreateFunction(
             queueTrigger,
-            undefined, // New App Setting
-            'connectionStringKey4',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default queue name
         );
     });
@@ -122,9 +114,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(serviceBusQueueTrigger, async () => {
         await jsTester.testCreateFunction(
             serviceBusQueueTrigger,
-            undefined, // New App Setting
-            'connectionStringKey5',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined, // Use default access rights
             undefined // Use default queue name
         );
@@ -134,9 +124,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
     test(serviceBusTopicTrigger, async () => {
         await jsTester.testCreateFunction(
             serviceBusTopicTrigger,
-            undefined, // New App Setting
-            'connectionStringKey6',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined, // Use default access rights
             undefined, // Use default topic name
             undefined // Use default subscription name

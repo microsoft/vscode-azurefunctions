@@ -5,29 +5,35 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IUserInterface, PickWithData } from '../IUserInterface';
+import { IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import * as fsUtils from './fs';
 
-export async function selectWorkspaceFolder(ui: IUserInterface, placeholder: string, subpathSettingKey?: string): Promise<string> {
-    const browse: string = ':browse';
-    let folder: PickWithData<string> | undefined;
+export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: string, subpathSettingKey?: string): Promise<string> {
+    let folder: vscode.QuickPickItem | undefined;
     if (vscode.workspace.workspaceFolders) {
-        const folderPicks: PickWithData<string>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
+        const folderPicks: vscode.QuickPickItem[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
             let subpath: string | undefined;
             if (subpathSettingKey) {
                 subpath = getFuncExtensionSetting(subpathSettingKey, f.uri.fsPath);
             }
 
             const fsPath: string = subpath ? path.join(f.uri.fsPath, subpath) : f.uri.fsPath;
-            return new PickWithData('', fsPath);
+            return { label: path.basename(fsPath), description: fsPath };
         });
-        folderPicks.push(new PickWithData(browse, localize('azFunc.browse', '$(file-directory) Browse...')));
-        folder = await ui.showQuickPick<string>(folderPicks, placeholder);
+
+        folderPicks.push({ label: localize('azFunc.browse', '$(file-directory) Browse...'), description: '' });
+        folder = await ui.showQuickPick(folderPicks, { placeHolder });
     }
 
-    return folder && folder.data !== browse ? folder.label : await ui.showFolderDialog();
+    return folder && folder.description ? folder.description : (await ui.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        defaultUri: vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri : undefined,
+        openLabel: localize('select', 'Select')
+    }))[0].fsPath;
 }
 
 export function isFolderOpenInWorkspace(fsPath: string): boolean {

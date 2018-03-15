@@ -7,8 +7,7 @@ import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem } from "vscode";
-import { DialogResponses } from "../DialogResponses";
-import { IUserInterface } from "../IUserInterface";
+import { DialogResponses, IAzureUserInput } from "vscode-azureextensionui";
 import { localize } from "../localize";
 import { parseJavaClassName } from './javaNameUtils';
 
@@ -16,7 +15,7 @@ export async function writeFormattedJson(fsPath: string, data: object): Promise<
     await fse.writeJson(fsPath, data, { spaces: 2 });
 }
 
-export async function copyFolder(fromPath: string, toPath: string, ui: IUserInterface): Promise<void> {
+export async function copyFolder(fromPath: string, toPath: string, ui: IAzureUserInput): Promise<void> {
     const files: string[] = await fse.readdir(fromPath);
     for (const file of files) {
         const originPath: string = path.join(fromPath, file);
@@ -32,7 +31,7 @@ export async function copyFolder(fromPath: string, toPath: string, ui: IUserInte
     }
 }
 
-export async function confirmEditJsonFile(fsPath: string, editJson: (existingData: {}) => {}, ui: IUserInterface): Promise<void> {
+export async function confirmEditJsonFile(fsPath: string, editJson: (existingData: {}) => {}, ui: IAzureUserInput): Promise<void> {
     let newData: {};
     if (await fse.pathExists(fsPath)) {
         try {
@@ -52,7 +51,7 @@ export async function confirmEditJsonFile(fsPath: string, editJson: (existingDat
     await writeFormattedJson(fsPath, newData);
 }
 
-export async function confirmOverwriteFile(fsPath: string, ui: IUserInterface): Promise<boolean> {
+export async function confirmOverwriteFile(fsPath: string, ui: IAzureUserInput): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
         const result: MessageItem | undefined = await ui.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
         if (result === DialogResponses.yes) {

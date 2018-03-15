@@ -4,15 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
-import { TelemetryProperties } from 'vscode-azureextensionui';
-import { IUserInterface, Pick } from '../../IUserInterface';
+import { OutputChannel, QuickPickItem, QuickPickOptions } from 'vscode';
+import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
-import { VSCodeUI } from '../../VSCodeUI';
 import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { CSharpScriptProjectCreator } from './CSharpScriptProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
@@ -21,7 +19,7 @@ import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, openFolder: boolean = true, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, ui: IAzureUserInput, functionAppPath?: string, language?: string, runtime?: string, openFolder: boolean = true): Promise<void> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
@@ -32,12 +30,13 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
 
         if (!language) {
             // Only display 'supported' languages that can be debugged in VS Code
-            const languagePicks: Pick[] = [
-                new Pick(ProjectLanguage.JavaScript),
-                new Pick(ProjectLanguage.CSharp),
-                new Pick(ProjectLanguage.Java)
+            const languagePicks: QuickPickItem[] = [
+                { label: ProjectLanguage.JavaScript, description: '' },
+                { label: ProjectLanguage.CSharp, description: '' },
+                { label: ProjectLanguage.Java, description: '' }
             ];
-            language = (await ui.showQuickPick(languagePicks, localize('azFunc.selectFuncTemplate', 'Select a language for your function project'))).label;
+            const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
+            language = (await ui.showQuickPick(languagePicks, options)).label;
         }
     }
     telemetryProperties.projectLanguage = language;
@@ -45,7 +44,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, outputChannel, ui, telemetryProperties);
     await projectCreator.addNonVSCodeFiles();
 
-    await initProjectForVSCode(telemetryProperties, outputChannel, functionAppPath, language, runtime, ui, projectCreator);
+    await initProjectForVSCode(telemetryProperties, ui, outputChannel, functionAppPath, language, runtime, projectCreator);
 
     if (await gitUtils.isGitInstalled(functionAppPath)) {
         await gitUtils.gitInit(outputChannel, functionAppPath);
@@ -57,7 +56,7 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     }
 }
 
-export function getProjectCreator(language: string, functionAppPath: string, outputChannel: OutputChannel, ui: IUserInterface, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
+export function getProjectCreator(language: string, functionAppPath: string, outputChannel: OutputChannel, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
     switch (language) {
         case ProjectLanguage.Java:
             return new JavaProjectCreator(functionAppPath, outputChannel, ui, telemetryProperties);

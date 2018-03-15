@@ -6,10 +6,8 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { AzureAccount } from '../../azure-account.api';
-import { DialogResponses } from '../../DialogResponses';
-import { IUserInterface, Pick, PickWithData } from '../../IUserInterface';
+import { QuickPickItem } from 'vscode';
+import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { LocalAppSettings } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, requiredFunctionAppFiles, TemplateFilter } from '../../ProjectSettings';
@@ -18,26 +16,23 @@ import { EnumValue } from '../../templates/EnumValue';
 import { Template } from '../../templates/Template';
 import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
-import { VSCodeUI } from '../../VSCodeUI';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
-async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IUserInterface): Promise<void> {
+async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IAzureUserInput): Promise<void> {
     if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(telemetryProperties, outputChannel, functionAppPath, undefined, undefined, false, ui);
-        } else if (result !== DialogResponses.skipForNow) {
-            throw new UserCancelledError();
+            await createNewProject(telemetryProperties, outputChannel, ui, functionAppPath, undefined, undefined, false);
         }
     }
 }
 
-async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(ui: IAzureUserInput, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
         return await localAppSettings.promptForAppSetting(setting.resourceType);
     } else {
@@ -53,31 +48,37 @@ async function promptForSetting(ui: IUserInterface, localAppSettings: LocalAppSe
     }
 }
 
-async function promptForEnumSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
-    const picks: PickWithData<string>[] = setting.enums.map((ev: EnumValue) => new PickWithData<string>(ev.value, ev.displayName));
+async function promptForEnumSetting(ui: IAzureUserInput, setting: ConfigSetting): Promise<string> {
+    const picks: IAzureQuickPickItem<string>[] = setting.enums.map((ev: EnumValue) => { return { data: ev.value, label: ev.displayName, description: '' }; });
 
-    return (await ui.showQuickPick(picks, setting.label)).data;
+    return (await ui.showQuickPick(picks, { placeHolder: setting.label })).data;
 }
 
-async function promptForBooleanSetting(ui: IUserInterface, setting: ConfigSetting): Promise<string> {
-    const picks: Pick[] = [new Pick('true'), new Pick('false')];
+async function promptForBooleanSetting(ui: IAzureUserInput, setting: ConfigSetting): Promise<string> {
+    const picks: QuickPickItem[] = [
+        { label: 'true', description: '' },
+        { label: 'false', description: '' }
+    ];
 
-    return (await ui.showQuickPick(picks, setting.label)).label;
+    return (await ui.showQuickPick(picks, { placeHolder: setting.label })).label;
 }
 
-async function promptForStringSetting(ui: IUserInterface, setting: ConfigSetting, defaultValue?: string): Promise<string> {
-    const prompt: string = localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label);
-    defaultValue = defaultValue ? defaultValue : setting.defaultValue;
-
-    return await ui.showInputBox(setting.label, prompt, (s: string) => setting.validateSetting(s), defaultValue);
+async function promptForStringSetting(ui: IAzureUserInput, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+    const options: vscode.InputBoxOptions = {
+        placeHolder: setting.label,
+        prompt: localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
+        validateInput: (s: string): string | undefined => setting.validateSetting(s),
+        value: defaultValue ? defaultValue : setting.defaultValue
+    };
+    return await ui.showInputBox(options);
 }
 
 export async function createFunction(
     telemetryProperties: TelemetryProperties,
     outputChannel: vscode.OutputChannel,
-    azureAccount: AzureAccount,
+    tree: AzureTreeDataProvider,
     templateData: TemplateData,
-    ui: IUserInterface = new VSCodeUI(),
+    ui: IAzureUserInput,
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
@@ -95,7 +96,7 @@ export async function createFunction(
 
     await validateIsFunctionApp(telemetryProperties, outputChannel, functionAppPath, ui);
 
-    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, azureAccount, functionAppPath);
+    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, tree, functionAppPath);
 
     const language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
     telemetryProperties.projectLanguage = language;
@@ -106,12 +107,14 @@ export async function createFunction(
 
     let template: Template;
     if (!templateId) {
-        const templates: Template[] = await templateData.getTemplates(functionAppPath, language, runtime, templateFilter, ui);
-        const templatePicks: PickWithData<Template>[] = templates.map((t: Template) => new PickWithData<Template>(t, t.name));
-        const templatePlaceHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
-        template = (await ui.showQuickPick<Template>(templatePicks, templatePlaceHolder)).data;
+        const templates: Template[] = await templateData.getTemplates(ui, functionAppPath, language, runtime, templateFilter);
+        const templatePicks: IAzureQuickPickItem<Template>[] = templates.map((t: Template) => { return { data: t, label: t.name, description: '' }; });
+        const options: vscode.QuickPickOptions = {
+            placeHolder: localize('azFunc.selectFuncTemplate', 'Select a function template')
+        };
+        template = (await ui.showQuickPick(templatePicks, options)).data;
     } else {
-        const templates: Template[] = await templateData.getTemplates(functionAppPath, language, runtime, TemplateFilter.All, ui);
+        const templates: Template[] = await templateData.getTemplates(ui, functionAppPath, language, runtime, TemplateFilter.All);
         const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -123,7 +126,7 @@ export async function createFunction(
     telemetryProperties.templateId = template.id;
 
     if (!template.functionConfig.isHttpTrigger) {
-        await localAppSettings.validateAzureWebJobsStorage();
+        await localAppSettings.validateAzureWebJobsStorage(ui);
     }
 
     let functionCreator: FunctionCreatorBase;

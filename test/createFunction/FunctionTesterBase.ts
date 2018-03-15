@@ -9,12 +9,11 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { AzureTreeDataProvider, TestUserInput } from 'vscode-azureextensionui';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
 import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
-import { TestAzureAccount } from '../TestAzureAccount';
-import { TestUI } from '../TestUI';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
@@ -112,8 +111,8 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUI = new TestUI(inputs);
-        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, this.outputChannel, new TestAzureAccount(), templateData, ui);
+        const ui: TestUserInput = new TestUserInput(inputs);
+        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, this.outputChannel, <AzureTreeDataProvider>{}, templateData, ui);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);

@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IUserInterface } from "../../IUserInterface";
+import { IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
 import { Template } from "../../templates/Template";
 import { removeLanguageFromId } from "../../templates/TemplateData";
@@ -30,16 +30,22 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
         this._outputChannel = outputChannel;
     }
 
-    public async promptForSettings(ui: IUserInterface, functionName: string | undefined): Promise<void> {
-        const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-        const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide a package name');
-        this._packageName = await ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, 'com.function');
+    public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined): Promise<void> {
+        this._packageName = await ui.showInputBox({
+            placeHolder: localize('azFunc.java.packagePlaceHolder', 'Package'),
+            prompt: localize('azFunc.java.packagePrompt', 'Provide a package name'),
+            validateInput: validatePackageName,
+            value: 'com.function'
+        });
 
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueJavaFsPath(this._functionAppPath, this._packageName, `${removeLanguageFromId(this._template.id)}Java`);
-            const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-            const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-            this._functionName = await ui.showInputBox(placeHolder, prompt, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+            this._functionName = await ui.showInputBox({
+                placeHolder: localize('azFunc.funcNamePlaceholder', 'Function name'),
+                prompt: localize('azFunc.funcNamePrompt', 'Provide a function name'),
+                validateInput: (s: string): string | undefined => this.validateTemplateName(s),
+                value: defaultFunctionName || this._template.defaultFunctionName
+            });
         } else {
             this._functionName = functionName;
         }

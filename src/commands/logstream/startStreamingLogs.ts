@@ -6,9 +6,8 @@
 import { SiteLogsConfig } from 'azure-arm-website/lib/models';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
-import { DialogResponses } from '../../DialogResponses';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { ILogStreamTreeItem } from './ILogStreamTreeItem';
@@ -22,25 +21,21 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, repor
     if (treeItem.logStream && treeItem.logStream.isConnected) {
         // tslint:disable-next-line:no-non-null-assertion
         treeItem.logStreamOutputChannel!.show();
-        await vscode.window.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
+        await node.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
     } else {
         const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
             const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', treeItem.client.fullName);
-            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-            if (result === DialogResponses.yes) {
-                // tslint:disable-next-line:strict-boolean-expressions
-                logsConfig.applicationLogs = logsConfig.applicationLogs || {};
-                // tslint:disable-next-line:strict-boolean-expressions
-                logsConfig.applicationLogs.fileSystem = logsConfig.applicationLogs.fileSystem || {};
-                logsConfig.applicationLogs.fileSystem.level = 'Information';
-                // Azure will throw errors if these have incomplete information (aka missing a sasUrl). Since we already know these are turned off, just make them undefined
-                logsConfig.applicationLogs.azureBlobStorage = undefined;
-                logsConfig.applicationLogs.azureTableStorage = undefined;
-                await treeItem.client.updateLogsConfig(logsConfig);
-            } else {
-                throw new UserCancelledError();
-            }
+            await node.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+            // tslint:disable-next-line:strict-boolean-expressions
+            logsConfig.applicationLogs = logsConfig.applicationLogs || {};
+            // tslint:disable-next-line:strict-boolean-expressions
+            logsConfig.applicationLogs.fileSystem = logsConfig.applicationLogs.fileSystem || {};
+            logsConfig.applicationLogs.fileSystem.level = 'Information';
+            // Azure will throw errors if these have incomplete information (aka missing a sasUrl). Since we already know these are turned off, just make them undefined
+            logsConfig.applicationLogs.azureBlobStorage = undefined;
+            logsConfig.applicationLogs.azureTableStorage = undefined;
+            await treeItem.client.updateLogsConfig(logsConfig);
         }
 
         if (!treeItem.logStreamOutputChannel) {

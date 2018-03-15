@@ -10,9 +10,9 @@ import { DatabaseAccount, DatabaseAccountListKeysResult } from 'azure-arm-cosmos
 import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
-import { AzureAccount, AzureResourceFilter } from '../azure-account.api';
-import { ArgumentError, NoSubscriptionError } from '../errors';
-import { IUserInterface, PickWithData } from '../IUserInterface';
+import { QuickPickOptions } from 'vscode';
+import { AzureTreeDataProvider, IAzureNode, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { ArgumentError } from '../errors';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
@@ -27,46 +27,27 @@ function parseResourceId(id: string): RegExpMatchArray {
 }
 
 function getResourceGroupFromId(id: string): string {
-    return parseResourceId(id) [2];
+    return parseResourceId(id)[2];
 }
 
 export function getSubscriptionFromId(id: string): string {
-    return parseResourceId(id) [1];
+    return parseResourceId(id)[1];
 }
 
 interface IBaseResourceWithName extends BaseResource {
     name?: string;
 }
 
-async function promptForResource<T extends IBaseResourceWithName>(ui: IUserInterface, resourceType: string, resourcesTask: Promise<T[]>): Promise<T> {
-    const picksTask: Promise<PickWithData<T>[]> = resourcesTask.then((resources: T[]) => {
-        return <PickWithData<T>[]>(resources
-            .map((br: T) => br.name ? new PickWithData(br, br.name) : undefined)
-            .filter((p: PickWithData<T> | undefined) => p));
+async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUserInput, resourceType: string, resourcesTask: Promise<T[]>): Promise<T> {
+    const picksTask: Promise<IAzureQuickPickItem<T>[]> = resourcesTask.then((resources: T[]) => {
+        return <IAzureQuickPickItem<T>[]>(resources
+            .map((r: T) => r.name ? { data: r, label: r.name } : undefined)
+            .filter((p: IAzureQuickPickItem<T> | undefined) => p));
     });
-    const prompt: string = localize('azFunc.resourcePrompt', 'Select a \'{0}\'', resourceType);
 
-    return (await ui.showQuickPick<T>(picksTask, prompt)).data;
-}
+    const options: QuickPickOptions = { placeHolder: localize('azFunc.resourcePrompt', 'Select a \'{0}\'', resourceType) };
 
-async function promptForSubscription(ui: IUserInterface, azureAccount: AzureAccount, resourceType: string): Promise<AzureResourceFilter> {
-    if (azureAccount.filters.length === 0) {
-        throw new NoSubscriptionError();
-    } else if (azureAccount.filters.length === 1) {
-        return azureAccount.filters[0];
-    } else {
-        const subscriptionPicks: PickWithData<AzureResourceFilter>[] = [];
-        azureAccount.filters.forEach((f: AzureResourceFilter) => {
-            const subscriptionId: string | undefined = f.subscription.subscriptionId;
-            if (subscriptionId) {
-                const label: string = f.subscription.displayName || subscriptionId;
-                subscriptionPicks.push(new PickWithData<AzureResourceFilter>(f, label, subscriptionId));
-            }
-        });
-        const placeHolder: string = localize('azFunc.selectSubscription', 'Select the Subscription containing your \'{0}\'', resourceType);
-
-        return (await ui.showQuickPick<AzureResourceFilter>(subscriptionPicks, placeHolder)).data;
-    }
+    return (await ui.showQuickPick(picksTask, options)).data;
 }
 
 export interface IResourceResult {
@@ -74,14 +55,12 @@ export interface IResourceResult {
     connectionString: string;
 }
 
-export async function promptForCosmosDBAccount(ui: IUserInterface, azureAccount: AzureAccount): Promise<IResourceResult> {
+export async function promptForCosmosDBAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.DocumentDB);
-    const subscription: AzureResourceFilter = await promptForSubscription(ui, azureAccount, resourceTypeLabel);
-    if (!subscription.subscription.subscriptionId) {
-        throw new ArgumentError(subscription);
-    }
+    const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
-    const client: CosmosDBManagementClient = new CosmosDBManagementClient(subscription.session.credentials, subscription.subscription.subscriptionId);
+    // tslint:disable-next-line:no-non-null-assertion
+    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscription.subscriptionId!);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
@@ -96,14 +75,12 @@ export async function promptForCosmosDBAccount(ui: IUserInterface, azureAccount:
     }
 }
 
-export async function promptForStorageAccount(ui: IUserInterface, azureAccount: AzureAccount): Promise<IResourceResult> {
+export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.Storage);
-    const subscription: AzureResourceFilter = await promptForSubscription(ui, azureAccount, resourceTypeLabel);
-    if (!subscription.subscription.subscriptionId) {
-        throw new ArgumentError(subscription);
-    }
+    const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
-    const client: StorageClient = new StorageClient(subscription.session.credentials, subscription.subscription.subscriptionId);
+    // tslint:disable-next-line:no-non-null-assertion
+    const client: StorageClient = new StorageClient(node.credentials, node.subscription.subscriptionId!);
     const storageAccount: StorageAccount = await promptForResource<StorageAccount>(ui, resourceTypeLabel, client.storageAccounts.list());
 
     if (!storageAccount.id || !storageAccount.name) {

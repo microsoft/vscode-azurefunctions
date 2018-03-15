@@ -9,12 +9,12 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { ProjectLanguage } from '../src/ProjectSettings';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
-import { TestUI } from './TestUI';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -27,7 +27,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await fse.ensureDir(testFolderPath);
-        await dotnetUtils.installDotnetTemplates(outputChannel, new TestUI([]));
+        await dotnetUtils.installDotnetTemplates(new TestUserInput([]), outputChannel);
     });
 
     suiteTeardown(async () => {
@@ -142,8 +142,8 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUI = new TestUI(inputs);
-        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, undefined, previewLanguage ? language : undefined, undefined, false, ui);
+        const ui: TestUserInput = new TestUserInput(inputs);
+        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, ui, undefined, previewLanguage ? language : undefined, undefined, false);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
