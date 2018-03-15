@@ -7,9 +7,9 @@ import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
-import { Memento, OutputChannel } from "vscode";
+import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
-import { IAzureNode, IAzureTreeItem, IChildProvider, UserCancelledError } from 'vscode-azureextensionui';
+import { IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { localize } from "../localize";
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
@@ -18,11 +18,9 @@ export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
 
     private _nextLink: string | undefined;
-    private readonly _globalState: Memento;
     private readonly _outputChannel: OutputChannel;
 
-    public constructor(globalState: Memento, outputChannel: OutputChannel) {
-        this._globalState = globalState;
+    public constructor(outputChannel: OutputChannel) {
         this._outputChannel = outputChannel;
     }
 
@@ -47,13 +45,9 @@ export class FunctionAppProvider implements IChildProvider {
             .map((site: Site) => new FunctionAppTreeItem(new SiteClient(site, node), this._outputChannel));
     }
 
-    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void): Promise<IAzureTreeItem> {
-        const site: Site | undefined = await createFunctionApp(this._outputChannel, this._globalState, parent.credentials, parent.subscription, showCreatingNode);
-        if (site) {
-            return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
-        } else {
-            throw new UserCancelledError();
-        }
+    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
+        const site: Site = await createFunctionApp(this._outputChannel, parent.ui, actionContext, parent.credentials, parent.subscription, showCreatingNode);
+        return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }
 
