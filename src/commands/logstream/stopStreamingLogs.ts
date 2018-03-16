@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
@@ -17,6 +16,6 @@ export async function stopStreamingLogs(tree: AzureTreeDataProvider, node?: IAzu
     if (node.treeItem.logStream && node.treeItem.logStream.isConnected) {
         node.treeItem.logStream.dispose();
     } else {
-        await vscode.window.showWarningMessage(localize('logStreamAlreadyDisconnected', 'The log-streaming service for "{0}" is already disconnected.', node.treeItem.logStreamLabel));
+        await node.ui.showWarningMessage(localize('logStreamAlreadyDisconnected', 'The log-streaming service for "{0}" is already disconnected.', node.treeItem.logStreamLabel));
     }
 }

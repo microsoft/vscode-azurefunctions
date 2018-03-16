@@ -8,9 +8,9 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
 import { dotnetUtils } from '../../src/utils/dotnetUtils';
-import { TestUI } from '../TestUI';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -32,7 +32,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await csTester.initAsync();
-        await dotnetUtils.installDotnetTemplates(csTester.outputChannel, new TestUI([]));
+        await dotnetUtils.installDotnetTemplates(new TestUserInput([]), csTester.outputChannel);
     });
 
     // tslint:disable-next-line:no-function-expression
@@ -46,9 +46,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         await csTester.testCreateFunction(
             blobTrigger,
             undefined, // namespace
-            undefined, // New App Setting
-            'connectionStringKey1',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default path
         );
     });
@@ -67,9 +65,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         await csTester.testCreateFunction(
             queueTrigger,
             undefined, // namespace
-            undefined, // New App Setting
-            'connectionStringKey4',
-            'connectionString',
+            'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default queue name
         );
     });

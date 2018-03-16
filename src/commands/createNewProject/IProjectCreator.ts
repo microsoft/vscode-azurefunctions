@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OutputChannel } from "vscode";
-import { TelemetryProperties } from "vscode-azureextensionui";
-import { IUserInterface } from "../../IUserInterface";
+import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
 import { localize } from "../../localize";
 import { extensionPrefix, ProjectRuntime, promptForProjectRuntime, TemplateFilter } from "../../ProjectSettings";
 import { functionRuntimeUtils } from "../../utils/functionRuntimeUtils";
@@ -16,10 +15,10 @@ export abstract class ProjectCreatorBase {
 
     protected readonly functionAppPath: string;
     protected readonly outputChannel: OutputChannel;
-    protected readonly ui: IUserInterface;
+    protected readonly ui: IAzureUserInput;
     protected readonly telemetryProperties: TelemetryProperties;
 
-    constructor(functionAppPath: string, outputChannel: OutputChannel, ui: IUserInterface, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, outputChannel: OutputChannel, ui: IAzureUserInput, telemetryProperties: TelemetryProperties) {
         this.functionAppPath = functionAppPath;
         this.outputChannel = outputChannel;
         this.ui = ui;

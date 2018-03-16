@@ -6,19 +6,17 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
-import { TelemetryProperties } from 'vscode-azureextensionui';
-import { IUserInterface } from '../../IUserInterface';
+import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { deploySubpathSetting, extensionPrefix, getGlobalFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, promptForProjectLanguage, templateFilterSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { confirmOverwriteFile } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
-import { VSCodeUI } from '../../VSCodeUI';
 import { getProjectCreator } from './createNewProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
 import { ProjectCreatorBase } from './IProjectCreator';
 
-export async function initProjectForVSCode(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, ui: IUserInterface = new VSCodeUI(), projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
+export async function initProjectForVSCode(telemetryProperties: TelemetryProperties, ui: IAzureUserInput, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder to initialize for use with VS Code'));
     }
@@ -69,7 +67,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     return projectCreator;
 }
 
-async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IUserInterface): Promise<void> {
+async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IAzureUserInput): Promise<void> {
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath, ui)) {
         await fsUtil.writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson());
@@ -84,7 +82,7 @@ async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscod
     }
 }
 
-async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePath: string, runtime: string, language: string, templateFilter: string, ui: IUserInterface): Promise<void> {
+async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePath: string, runtime: string, language: string, templateFilter: string, ui: IAzureUserInput): Promise<void> {
     const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
     await fsUtil.confirmEditJsonFile(
         settingsJsonPath,
@@ -101,7 +99,7 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
     );
 }
 
-async function writeExtensionRecommendations(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IUserInterface): Promise<void> {
+async function writeExtensionRecommendations(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IAzureUserInput): Promise<void> {
     const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
     await fsUtil.confirmEditJsonFile(
         extensionsJsonPath,

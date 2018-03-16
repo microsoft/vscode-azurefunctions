@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import { InputBoxOptions } from 'vscode';
 import { localize } from "../../localize";
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
@@ -27,25 +28,43 @@ export class JavaProjectCreator extends ProjectCreatorBase {
     public async addNonVSCodeFiles(): Promise<void> {
         await mavenUtils.validateMavenInstalled(this.functionAppPath);
 
-        const groupIdPlaceHolder: string = localize('azFunc.java.groupIdPlaceholder', 'Group ID');
-        const groupIdPrompt: string = localize('azFunc.java.groupIdPrompt', 'Provide value for groupId');
-        const groupId: string = await this.ui.showInputBox(groupIdPlaceHolder, groupIdPrompt, validateMavenIdentifier, 'com.function');
+        const groupOptions: InputBoxOptions = {
+            placeHolder: localize('azFunc.java.groupIdPlaceholder', 'Group ID'),
+            prompt: localize('azFunc.java.groupIdPrompt', 'Provide value for groupId'),
+            validateInput: validateMavenIdentifier,
+            value: 'com.function'
+        };
+        const groupId: string = await this.ui.showInputBox(groupOptions);
 
-        const artifactIdPlaceHolder: string = localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID');
-        const artifactIdprompt: string = localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId');
-        const artifactId: string = await this.ui.showInputBox(artifactIdPlaceHolder, artifactIdprompt, validateMavenIdentifier, path.basename(this.functionAppPath));
+        const artifactOptions: InputBoxOptions = {
+            placeHolder: localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID'),
+            prompt: localize('azFunc.java.artifactIdPrompt', 'Provide value for artifactId'),
+            validateInput: validateMavenIdentifier,
+            value: path.basename(this.functionAppPath)
+        };
+        const artifactId: string = await this.ui.showInputBox(artifactOptions);
 
-        const versionPlaceHolder: string = localize('azFunc.java.versionPlaceHolder', 'Version');
-        const versionPrompt: string = localize('azFunc.java.versionPrompt', 'Provide value for version');
-        const version: string = await this.ui.showInputBox(versionPlaceHolder, versionPrompt, undefined, '1.0-SNAPSHOT');
+        const versionOptions: InputBoxOptions = {
+            placeHolder: localize('azFunc.java.versionPlaceHolder', 'Version'),
+            prompt: localize('azFunc.java.versionPrompt', 'Provide value for version'),
+            value: '1.0-SNAPSHOT'
+        };
+        const version: string = await this.ui.showInputBox(versionOptions);
 
-        const packagePlaceHolder: string = localize('azFunc.java.packagePlaceHolder', 'Package');
-        const packagePrompt: string = localize('azFunc.java.packagePrompt', 'Provide value for package');
-        const packageName: string = await this.ui.showInputBox(packagePlaceHolder, packagePrompt, validatePackageName, groupId);
+        const packageOptions: InputBoxOptions = {
+            placeHolder: localize('azFunc.java.packagePlaceHolder', 'Package'),
+            prompt: localize('azFunc.java.packagePrompt', 'Provide value for package'),
+            validateInput: validatePackageName,
+            value: groupId
+        };
+        const packageName: string = await this.ui.showInputBox(packageOptions);
 
-        const appNamePlaceHolder: string = localize('azFunc.java.appNamePlaceHolder', 'App Name');
-        const appNamePrompt: string = localize('azFunc.java.appNamePrompt', 'Provide value for appName');
-        const appName: string = await this.ui.showInputBox(appNamePlaceHolder, appNamePrompt, undefined, `${artifactId}-${Date.now()}`);
+        const appNameOptions: InputBoxOptions = {
+            placeHolder: localize('azFunc.java.appNamePlaceHolder', 'App Name'),
+            prompt: localize('azFunc.java.appNamePrompt', 'Provide value for appName'),
+            value: `${artifactId}-${Date.now()}`
+        };
+        const appName: string = await this.ui.showInputBox(appNameOptions);
 
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
         await fse.ensureDir(tempFolder);

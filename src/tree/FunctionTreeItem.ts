@@ -7,11 +7,10 @@ import { URL } from 'url';
 import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
 import { getKuduClient, ILogStream, SiteClient } from 'vscode-azureappservice';
-import { UserCancelledError } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
-import { DialogResponses } from '../DialogResponses';
 import { ArgumentError } from '../errors';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
@@ -65,17 +64,14 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
         return `application/functions/function/${encodeURIComponent(this._name)}`;
     }
 
-    public async deleteTreeItem(): Promise<void> {
+    public async deleteTreeItem(node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
-        if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
-            this._outputChannel.show(true);
-            this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-            const kuduClient: KuduClient = await getKuduClient(this.client);
-            await kuduClient.functionModel.deleteMethod(this._name);
-            this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
-        } else {
-            throw new UserCancelledError();
-        }
+        await node.ui.showWarningMessage(message, DialogResponses.deleteResponse, DialogResponses.cancel);
+        this._outputChannel.show(true);
+        this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
+        const kuduClient: KuduClient = await getKuduClient(this.client);
+        await kuduClient.functionModel.deleteMethod(this._name);
+        this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
     }
 
     public async initializeTriggerUrl(): Promise<void> {

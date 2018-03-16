@@ -7,13 +7,12 @@ import * as fse from 'fs-extra';
 import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { DialogResponses } from '../../DialogResponses';
+import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { initProjectForVSCode } from './initProjectForVSCode';
 
-export async function validateFunctionProjects(actionContext: IActionContext, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
     if (folders) {
         for (const folder of folders) {
@@ -25,8 +24,8 @@ export async function validateFunctionProjects(actionContext: IActionContext, ou
                     actionContext.properties.isInitialized = 'true';
                 } else {
                     actionContext.properties.isInitialized = 'false';
-                    if (await promptToInitializeProject(folderPath)) {
-                        await initProjectForVSCode(actionContext.properties, outputChannel, folderPath);
+                    if (await promptToInitializeProject(ui, folderPath)) {
+                        await initProjectForVSCode(actionContext.properties, ui, outputChannel, folderPath);
                     }
                 }
             }
@@ -34,21 +33,19 @@ export async function validateFunctionProjects(actionContext: IActionContext, ou
     }
 }
 
-async function promptToInitializeProject(folderPath: string): Promise<boolean> {
+async function promptToInitializeProject(ui: IAzureUserInput, folderPath: string): Promise<boolean> {
     const settingKey: string = 'showProjectWarning';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
         const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(folderPath));
-        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.seeMoreInfo);
-        if (result === DialogResponses.yes) {
-            return true;
-        } else if (result === DialogResponses.dontWarnAgain) {
+        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
+        if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
-        } else if (result === DialogResponses.seeMoreInfo) {
+        } else if (result === DialogResponses.learnMore) {
             // tslint:disable-next-line:no-unsafe-any
             opn('https://aka.ms/azFuncProject');
-            return await promptToInitializeProject(folderPath);
+            return await promptToInitializeProject(ui, folderPath);
         } else {
-            throw new UserCancelledError();
+            return true;
         }
     }
 

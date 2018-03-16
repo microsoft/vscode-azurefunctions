@@ -5,11 +5,9 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { MessageItem, WorkspaceConfiguration } from "vscode";
+import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
-import { UserCancelledError } from 'vscode-azureextensionui';
-import { DialogResponses } from './DialogResponses';
-import { IUserInterface, Pick } from "./IUserInterface";
+import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "./localize";
 
 export const extensionPrefix: string = 'azureFunctions';
@@ -60,41 +58,44 @@ export async function updateWorkspaceSetting<T = string>(section: string, value:
     await projectConfiguration.update(section, value);
 }
 
-export async function promptForProjectLanguage(ui: IUserInterface): Promise<ProjectLanguage> {
-    const picks: Pick[] = [
-        new Pick(ProjectLanguage.JavaScript),
-        new Pick(ProjectLanguage.CSharp),
-        new Pick(ProjectLanguage.CSharpScript),
-        new Pick(ProjectLanguage.FSharpScript),
-        new Pick(ProjectLanguage.Bash, previewDescription),
-        new Pick(ProjectLanguage.Batch, previewDescription),
-        new Pick(ProjectLanguage.Java, previewDescription),
-        new Pick(ProjectLanguage.PHP, previewDescription),
-        new Pick(ProjectLanguage.PowerShell, previewDescription),
-        new Pick(ProjectLanguage.Python, previewDescription),
-        new Pick(ProjectLanguage.TypeScript, previewDescription)
+export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<ProjectLanguage> {
+    const picks: QuickPickItem[] = [
+        { label: ProjectLanguage.JavaScript, description: '' },
+        { label: ProjectLanguage.CSharp, description: '' },
+        { label: ProjectLanguage.CSharpScript, description: '' },
+        { label: ProjectLanguage.FSharpScript, description: '' },
+        { label: ProjectLanguage.Bash, description: previewDescription },
+        { label: ProjectLanguage.Batch, description: previewDescription },
+        { label: ProjectLanguage.Java, description: previewDescription },
+        { label: ProjectLanguage.PHP, description: previewDescription },
+        { label: ProjectLanguage.PowerShell, description: previewDescription },
+        { label: ProjectLanguage.Python, description: previewDescription },
+        { label: ProjectLanguage.TypeScript, description: previewDescription }
     ];
 
-    return <ProjectLanguage>(await ui.showQuickPick(picks, localize('selectLanguage', 'Select a language'))).label;
+    const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
+    return <ProjectLanguage>(await ui.showQuickPick(picks, options)).label;
 }
 
-export async function promptForProjectRuntime(ui: IUserInterface): Promise<ProjectRuntime> {
-    const picks: Pick[] = [
-        new Pick(ProjectRuntime.one, localize('productionUseDescription', '(Approved for production use)')),
-        new Pick(ProjectRuntime.beta, previewDescription)
+export async function promptForProjectRuntime(ui: IAzureUserInput): Promise<ProjectRuntime> {
+    const picks: QuickPickItem[] = [
+        { label: ProjectRuntime.one, description: localize('productionUseDescription', '(Approved for production use)') },
+        { label: ProjectRuntime.beta, description: previewDescription }
     ];
 
-    return <ProjectRuntime>(await ui.showQuickPick(picks, localize('selectRuntime', 'Select a runtime'))).label;
+    const options: QuickPickOptions = { placeHolder: localize('selectRuntime', 'Select a runtime') };
+    return <ProjectRuntime>(await ui.showQuickPick(picks, options)).label;
 }
 
-export async function selectTemplateFilter(projectPath: string, ui: IUserInterface): Promise<TemplateFilter> {
-    const picks: Pick[] = [
-        new Pick(TemplateFilter.Verified, localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)')),
-        new Pick(TemplateFilter.Core),
-        new Pick(TemplateFilter.All)
+export async function selectTemplateFilter(projectPath: string, ui: IAzureUserInput): Promise<TemplateFilter> {
+    const picks: QuickPickItem[] = [
+        { label: TemplateFilter.Verified, description: localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)') },
+        { label: TemplateFilter.Core, description: '' },
+        { label: TemplateFilter.All, description: '' }
     ];
 
-    const result: string = (await ui.showQuickPick(picks, localize('selectFilter', 'Select a template filter'))).label;
+    const options: QuickPickOptions = { placeHolder: localize('selectFilter', 'Select a template filter') };
+    const result: string = (await ui.showQuickPick(picks, options)).label;
     await updateWorkspaceSetting(templateFilterSetting, result, projectPath);
     return <TemplateFilter>result;
 }
@@ -111,7 +112,7 @@ export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | un
     return projectConfiguration.get<T>(key);
 }
 
-export async function getProjectLanguage(projectPath: string, ui: IUserInterface): Promise<ProjectLanguage> {
+export async function getProjectLanguage(projectPath: string, ui: IAzureUserInput): Promise<ProjectLanguage> {
     if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
         return ProjectLanguage.Java;
     } else {
@@ -119,20 +120,16 @@ export async function getProjectLanguage(projectPath: string, ui: IUserInterface
         if (!language) {
             const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
             const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
-            const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, selectLanguage, DialogResponses.cancel);
-            if (result !== selectLanguage) {
-                throw new UserCancelledError();
-            } else {
-                language = await promptForProjectLanguage(ui);
-                await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
-            }
+            await ui.showWarningMessage(message, selectLanguage, DialogResponses.cancel);
+            language = await promptForProjectLanguage(ui);
+            await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
         }
 
         return <ProjectLanguage>language;
     }
 }
 
-export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IUserInterface): Promise<ProjectRuntime> {
+export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IAzureUserInput): Promise<ProjectRuntime> {
     if (language === ProjectLanguage.Java) {
         // Java only supports beta
         return ProjectRuntime.beta;
@@ -142,13 +139,9 @@ export async function getProjectRuntime(language: ProjectLanguage, projectPath: 
     if (!runtime) {
         const message: string = localize('noRuntime', 'You must have a project runtime set to perform this operation.');
         const selectRuntime: MessageItem = { title: localize('selectRuntimeButton', 'Select Runtime') };
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, selectRuntime, DialogResponses.cancel);
-        if (result !== selectRuntime) {
-            throw new UserCancelledError();
-        } else {
-            runtime = await promptForProjectRuntime(ui);
-            await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
-        }
+        await ui.showWarningMessage(message, selectRuntime, DialogResponses.cancel);
+        runtime = await promptForProjectRuntime(ui);
+        await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
     }
 
     return <ProjectRuntime>runtime;

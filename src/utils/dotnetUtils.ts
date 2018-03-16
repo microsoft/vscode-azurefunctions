@@ -6,15 +6,11 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { OutputChannel } from "vscode";
-import * as vscode from 'vscode';
-import { UserCancelledError } from 'vscode-azureextensionui';
+import { MessageItem, OutputChannel, QuickPickItem, QuickPickOptions } from "vscode";
+import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
 import { isWindows } from '../constants';
-import { DialogResponses } from '../DialogResponses';
-import { IUserInterface, Pick } from '../IUserInterface';
 import { localize } from "../localize";
 import { ProjectRuntime } from '../ProjectSettings';
-import { VSCodeUI } from '../VSCodeUI';
 import { cpUtils } from "./cpUtils";
 import * as fsUtil from './fs';
 
@@ -49,17 +45,13 @@ export namespace dotnetUtils {
 
     export const funcProjectId: string = 'azureFunctionsProjectTemplates';
 
-    export async function validateTemplatesInstalled(outputChannel: OutputChannel, ui: IUserInterface): Promise<void> {
+    export async function validateTemplatesInstalled(outputChannel: OutputChannel, ui: IAzureUserInput): Promise<void> {
         await validateDotnetInstalled();
         const listOutput: string = await cpUtils.executeCommand(undefined, undefined, 'dotnet', 'new', '--list');
         if (!listOutput.includes(funcProjectId) || !listOutput.includes('HttpTrigger')) {
-            const installTemplates: vscode.MessageItem = { title: localize('installTemplates', 'Install Templates') };
-            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), installTemplates, DialogResponses.cancel);
-            if (result === installTemplates) {
-                await installDotnetTemplates(outputChannel, ui);
-            } else {
-                throw new UserCancelledError();
-            }
+            const installTemplates: MessageItem = { title: localize('installTemplates', 'Install Templates') };
+            await ui.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), installTemplates, DialogResponses.cancel);
+            await installDotnetTemplates(ui, outputChannel);
         }
     }
 
@@ -76,18 +68,18 @@ export namespace dotnetUtils {
         outputChannel.appendLine(localize('finishedUninstallingTemplates', 'Finished uninstalling Azure Functions templates.'));
     }
 
-    export async function installDotnetTemplates(outputChannel: OutputChannel, ui: IUserInterface = new VSCodeUI()): Promise<void> {
+    export async function installDotnetTemplates(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
         await validateDotnetInstalled();
 
         let templateVersion: string = betaTemplateVersion;
 
         if (isWindows) {
-            const picks: Pick[] = [
-                new Pick(ProjectRuntime.beta, '(.NET Core)'),
-                new Pick(ProjectRuntime.one, '(.NET Framework)')
+            const picks: QuickPickItem[] = [
+                { label: ProjectRuntime.beta, description: '(.NET Core)' },
+                { label: ProjectRuntime.one, description: '(.NET Framework)' }
             ];
-            const placeholder: string = localize('pickTemplateVersion', 'Select the template version to install');
-            const versionResult: Pick = await ui.showQuickPick(picks, placeholder);
+            const options: QuickPickOptions = { placeHolder: localize('pickTemplateVersion', 'Select the template version to install') };
+            const versionResult: QuickPickItem = await ui.showQuickPick(picks, options);
             if (versionResult.label === ProjectRuntime.one) {
                 templateVersion = v1TemplateVersion;
             }

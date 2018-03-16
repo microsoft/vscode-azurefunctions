@@ -9,11 +9,10 @@ import { ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
-import { DialogResponses } from '../src/DialogResponses';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/ProjectSettings';
 import * as fsUtil from '../src/utils/fs';
-import { TestUI } from './TestUI';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -144,8 +143,8 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUI = new TestUI(inputs);
-        await initProjectForVSCode({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, undefined, undefined, undefined, ui);
+        const ui: TestUserInput = new TestUserInput(inputs);
+        await initProjectForVSCode({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, ui, outputChannel);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });

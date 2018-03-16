@@ -8,16 +8,15 @@ import * as opn from "opn";
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureUserInput } from 'vscode-azureextensionui';
 import { DebugProxy } from '../DebugProxy';
-import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel, tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel, ui: IAzureUserInput, tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
     if (!node) {
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
@@ -39,10 +38,8 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
                 const appSettings: StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
-                    const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.seeMoreInfo, DialogResponses.cancel);
-                    if (result === DialogResponses.cancel) {
-                        throw new UserCancelledError();
-                    } else if (result === DialogResponses.seeMoreInfo) {
+                    const result: vscode.MessageItem = await ui.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
+                    if (result === DialogResponses.learnMore) {
                         // tslint:disable-next-line:no-unsafe-any
                         opn('https://aka.ms/azfunc-remotedebug');
                         return;

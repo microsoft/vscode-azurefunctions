@@ -8,9 +8,8 @@ import * as opn from 'opn';
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
-import { parseError, UserCancelledError } from 'vscode-azureextensionui';
+import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { isWindows } from '../../constants';
-import { DialogResponses } from '../../DialogResponses';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, ProjectRuntime, TemplateFilter, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
@@ -62,12 +61,19 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
-                    const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.seeMoreInfo, DialogResponses.dontWarnAgain);
-                    if (result === DialogResponses.seeMoreInfo) {
-                        // tslint:disable-next-line:no-unsafe-any
-                        opn('https://aka.ms/azFunc64bit');
-                    } else if (result === DialogResponses.dontWarnAgain) {
-                        await updateGlobalSetting(settingKey, false);
+                    try {
+                        const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        if (result === DialogResponses.learnMore) {
+                            // tslint:disable-next-line:no-unsafe-any
+                            opn('https://aka.ms/azFunc64bit');
+                        } else if (result === DialogResponses.dontWarnAgain) {
+                            await updateGlobalSetting(settingKey, false);
+                        }
+                    } catch (err) {
+                        // swallow cancellations (aka if they clicked the 'x' button to dismiss the warning) and proceed to create project
+                        if (!parseError(err).isUserCancelledError) {
+                            throw err;
+                        }
                     }
                 }
             }
@@ -169,12 +175,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         }
 
         if (existingFiles.length > 0) {
-            const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), DialogResponses.yes, DialogResponses.cancel);
-            if (result === DialogResponses.yes) {
-                return true;
-            } else {
-                throw new UserCancelledError();
-            }
+            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), DialogResponses.yes, DialogResponses.cancel);
+            return true;
         } else {
             return false;
         }

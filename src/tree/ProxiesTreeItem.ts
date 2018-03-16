@@ -5,8 +5,7 @@
 
 import * as vscode from 'vscode';
 import { getFile, IFileResult, putFile, SiteClient } from 'vscode-azureappservice';
-import { IAzureParentTreeItem, IAzureTreeItem, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { DialogResponses } from '../DialogResponses';
+import { DialogResponses, IAzureParentTreeItem, IAzureTreeItem, IAzureUserInput, parseError } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
@@ -65,26 +64,23 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         }
     }
 
-    public async deleteProxy(name: string): Promise<void> {
+    public async deleteProxy(ui: IAzureUserInput, name: string): Promise<void> {
         const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        if (await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) === DialogResponses.yes) {
-            if (this._deletingProxy) {
-                throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
-            } else {
-                this._deletingProxy = true;
-                try {
-                    this._outputChannel.show(true);
-                    this._outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
-                    delete this._proxyConfig.proxies[name];
-                    const data: string = JSON.stringify(this._proxyConfig);
-                    this._etag = await putFile(this._client, data, this._proxiesJsonPath, this._etag);
-                    this._outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
-                } finally {
-                    this._deletingProxy = false;
-                }
-            }
+        await ui.showWarningMessage(message, DialogResponses.deleteResponse, DialogResponses.cancel);
+        if (this._deletingProxy) {
+            throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {
-            throw new UserCancelledError();
+            this._deletingProxy = true;
+            try {
+                this._outputChannel.show(true);
+                this._outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
+                delete this._proxyConfig.proxies[name];
+                const data: string = JSON.stringify(this._proxyConfig);
+                this._etag = await putFile(this._client, data, this._proxiesJsonPath, this._etag);
+                this._outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
+            } finally {
+                this._deletingProxy = false;
+            }
         }
     }
 }

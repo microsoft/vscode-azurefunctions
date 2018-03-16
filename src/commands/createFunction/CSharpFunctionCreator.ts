@@ -6,9 +6,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
+import { IAzureUserInput } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
 import XRegExp = require('xregexp');
-import { IUserInterface } from "../../IUserInterface";
 import { localize } from "../../localize";
 import { Template } from "../../templates/Template";
 import { removeLanguageFromId } from "../../templates/TemplateData";
@@ -21,20 +21,23 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _functionName: string;
     private _namespace: string;
-    private _ui: IUserInterface;
+    private _ui: IAzureUserInput;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel, ui: IUserInterface) {
+    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel, ui: IAzureUserInput) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
         this._ui = ui;
     }
 
-    public async promptForSettings(ui: IUserInterface, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
+    public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, removeLanguageFromId(this._template.id), '.cs');
-            const placeHolder: string = localize('azFunc.funcNamePlaceholder', 'Function name');
-            const prompt: string = localize('azFunc.funcNamePrompt', 'Provide a function name');
-            this._functionName = await ui.showInputBox(placeHolder, prompt, (s: string) => this.validateTemplateName(s), defaultFunctionName || this._template.defaultFunctionName);
+            this._functionName = await ui.showInputBox({
+                placeHolder: localize('azFunc.funcNamePlaceholder', 'Function name'),
+                prompt: localize('azFunc.funcNamePrompt', 'Provide a function name'),
+                validateInput: (s: string): string | undefined => this.validateTemplateName(s),
+                value: defaultFunctionName || this._template.defaultFunctionName
+            });
         } else {
             this._functionName = functionName;
         }
@@ -42,9 +45,12 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         if (functionSettings.namespace !== undefined) {
             this._namespace = functionSettings.namespace;
         } else {
-            const namespacePlaceHolder: string = localize('azFunc.namespacePlaceHolder', 'Namespace');
-            const namespacePrompt: string = localize('azFunc.namespacePrompt', 'Provide a namespace');
-            this._namespace = await ui.showInputBox(namespacePlaceHolder, namespacePrompt, validateCSharpNamespace, 'Company.Function');
+            this._namespace = await ui.showInputBox({
+                placeHolder: localize('azFunc.namespacePlaceHolder', 'Namespace'),
+                prompt: localize('azFunc.namespacePrompt', 'Provide a namespace'),
+                validateInput: validateCSharpNamespace,
+                value: 'Company.Function'
+            });
         }
     }
 

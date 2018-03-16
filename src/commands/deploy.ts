@@ -7,15 +7,12 @@ import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { MessageItem } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
-import { DialogResponses } from '../DialogResponses';
 import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
-import { IUserInterface } from '../IUserInterface';
 import { localize } from '../localize';
 import { convertStringToRuntime, deploySubpathSetting, extensionPrefix, getProjectLanguage, getProjectRuntime, ProjectLanguage, ProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
@@ -24,12 +21,11 @@ import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
-import { VSCodeUI } from '../VSCodeUI';
 
-export async function deploy(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, ui: IAzureUserInput, deployPath?: vscode.Uri | string, functionAppId?: string | {}, oldUi: IUserInterface = new VSCodeUI()): Promise<void> {
+export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
     if (!deployPath) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(oldUi, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
     } else if (deployPath instanceof vscode.Uri) {
         deployFsPath = deployPath.fsPath;
     } else {
@@ -50,16 +46,16 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
 
     const client: SiteClient = node.treeItem.client;
 
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, oldUi);
+    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, oldUi);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, oldUi);
+        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
     }
 
-    await verifyRuntimeIsCompatible(runtime, outputChannel, client);
+    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client);
 
     await node.treeItem.runWithTemporaryState(
         localize('deploying', 'Deploying...'),
@@ -99,7 +95,7 @@ export async function deploy(telemetryProperties: TelemetryProperties, tree: Azu
     }
 }
 
-async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IUserInterface): Promise<string> {
+async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput): Promise<string> {
     await mavenUtils.validateMavenInstalled(basePath);
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
@@ -110,16 +106,18 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
         return targetFolder;
     } else {
         const message: string = localize('azFunc.cannotFindPackageFolder', 'Cannot find the packaged function folder, would you like to specify the folder location?');
-        const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-        if (result === DialogResponses.yes) {
-            return await ui.showFolderDialog();
-        } else {
-            throw new UserCancelledError();
-        }
+        await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+        return (await ui.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            defaultUri: vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri : undefined,
+            openLabel: localize('select', 'Select')
+        }))[0].fsPath;
     }
 }
 
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputChannel: vscode.OutputChannel, client: SiteClient): Promise<void> {
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient): Promise<void> {
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (!appSettings.properties) {
         throw new ArgumentError(appSettings);
@@ -129,14 +127,10 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, outputCha
         // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
             const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}". Update remote runtime?', rawAzureRuntime, localRuntime);
-            const result: MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-            if (result === DialogResponses.yes) {
-                outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
-                appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
-                await client.updateApplicationSettings(appSettings);
-            } else {
-                throw new UserCancelledError();
-            }
+            await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+            outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
+            appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
+            await client.updateApplicationSettings(appSettings);
         }
     }
 }

@@ -6,10 +6,9 @@
 import * as opn from 'opn';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, parseError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { isWindows } from '../constants';
-import { DialogResponses } from '../DialogResponses';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, ProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
@@ -17,7 +16,7 @@ import { cpUtils } from './cpUtils';
 export namespace functionRuntimeUtils {
     const runtimePackage: string = 'azure-functions-core-tools';
 
-    export async function validateFunctionRuntime(reporter: TelemetryReporter | undefined, outputChannel: vscode.OutputChannel): Promise<void> {
+    export async function validateFunctionRuntime(reporter: TelemetryReporter | undefined, ui: IAzureUserInput, outputChannel: vscode.OutputChannel): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.validateFunctionRuntime', reporter, undefined, async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
@@ -42,8 +41,8 @@ export namespace functionRuntimeUtils {
                             newestVersion
                         );
 
-                        const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(message, DialogResponses.seeMoreInfo, DialogResponses.dontWarnAgain);
-                        if (result === DialogResponses.seeMoreInfo) {
+                        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        if (result === DialogResponses.learnMore) {
                             // tslint:disable-next-line:no-unsafe-any
                             opn('https://aka.ms/azFuncOutdated');
                         } else if (result === DialogResponses.dontWarnAgain) {
