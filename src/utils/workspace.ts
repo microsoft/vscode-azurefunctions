@@ -5,29 +5,29 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IAzureUserInput } from 'vscode-azureextensionui';
+import { IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import * as fsUtils from './fs';
 
 export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: string, subpathSettingKey?: string): Promise<string> {
-    let folder: vscode.QuickPickItem | undefined;
+    let folder: IAzureQuickPickItem<string | undefined> | undefined;
     if (vscode.workspace.workspaceFolders) {
-        const folderPicks: vscode.QuickPickItem[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
+        const folderPicks: IAzureQuickPickItem<string | undefined>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
             let subpath: string | undefined;
             if (subpathSettingKey) {
                 subpath = getFuncExtensionSetting(subpathSettingKey, f.uri.fsPath);
             }
 
             const fsPath: string = subpath ? path.join(f.uri.fsPath, subpath) : f.uri.fsPath;
-            return { label: path.basename(fsPath), description: fsPath };
+            return { label: path.basename(fsPath), description: fsPath, data: fsPath };
         });
 
-        folderPicks.push({ label: localize('azFunc.browse', '$(file-directory) Browse...'), description: '' });
+        folderPicks.push({ label: localize('azFunc.browse', '$(file-directory) Browse...'), description: '', data: undefined });
         folder = await ui.showQuickPick(folderPicks, { placeHolder });
     }
 
-    return folder && folder.description ? folder.description : (await ui.showOpenDialog({
+    return folder && folder.data ? folder.data : (await ui.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
