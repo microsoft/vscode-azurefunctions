@@ -8,11 +8,11 @@ import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
-import { JavaScriptProjectCreator } from '../commands/createNewProject/JavaScriptProjectCreator';
+import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptProjectCreatorBase';
 import { localize } from '../localize';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, TemplateFilter, updateWorkspaceSetting } from '../ProjectSettings';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../ProjectSettings';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
@@ -58,7 +58,7 @@ export class TemplateData {
 
     constructor(templatesMap: { [runtime: string]: Template[] }, configMap: { [runtime: string]: Config }) {
         for (const verifiedTemplateId of this._verifiedTemplates) {
-            if (!templatesMap[JavaScriptProjectCreator.defaultRuntime].some((t: Template) => t.id === verifiedTemplateId)) {
+            if (!templatesMap[ScriptProjectCreatorBase.defaultRuntime].some((t: Template) => t.id === verifiedTemplateId)) {
                 throw new Error(localize('failedToFindJavaScriptTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
             }
         }
@@ -73,7 +73,7 @@ export class TemplateData {
         this._configMap = configMap;
     }
 
-    public async getTemplates(ui: IAzureUserInput, projectPath: string, language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<Template[]> {
+    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<Template[]> {
         if (language === ProjectLanguage.Java) {
             // Currently we leverage JS templates to get the function metadata of Java Functions.
             // Will refactor the code here when templates HTTP API is ready.
@@ -105,20 +105,7 @@ export class TemplateData {
                     templates = templates.filter((t: Template) => this._verifiedTemplates.find((vt: string) => vt === t.id));
             }
 
-            if (templates.length > 0) {
-                return templates;
-            } else {
-                const message: string = localize('NoTemplatesError', 'No templates found matching language "{0}", runtime "{1}", and filter "{2}". Update settings?', language, runtime, templateFilter);
-                await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-                language = await promptForProjectLanguage(ui);
-                await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
-                runtime = await promptForProjectRuntime(ui);
-                await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
-                templateFilter = await selectTemplateFilter(projectPath, ui);
-
-                // Try to get templates again
-                return await this.getTemplates(ui, projectPath, language, runtime, templateFilter);
-            }
+            return templates;
         }
     }
 

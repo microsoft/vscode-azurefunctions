@@ -8,6 +8,7 @@ import * as path from 'path';
 import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
+import { functionRuntimeUtils } from '../../utils/functionRuntimeUtils';
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
@@ -41,9 +42,13 @@ local.settings.json
  */
 export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
-    public readonly runtime: ProjectRuntime = ScriptProjectCreatorBase.defaultRuntime;
     // Default template filter to 'All' since preview langauges have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
+
+    public async getRuntime(): Promise<ProjectRuntime> {
+        // tslint:disable-next-line:strict-boolean-expressions
+        return await functionRuntimeUtils.tryGetLocalRuntimeVersion() || ScriptProjectCreatorBase.defaultRuntime;
+    }
 
     public getTasksJson(): {} {
         return {

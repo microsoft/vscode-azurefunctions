@@ -38,7 +38,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath);
         await validateVSCodeProjectFiles(projectPath);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.one);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
     });
 
     const csharpProject: string = 'AutoDetectCSharpProject';
@@ -77,7 +77,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
         await validateVSCodeProjectFiles(projectPath, false);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.one);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
     });
 
     const goodExtensionFile: string = 'Existing Extensions File';

@@ -4,18 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from "../../localize";
-import { ProjectRuntime, TemplateFilter } from "../../ProjectSettings";
+import { TemplateFilter } from "../../ProjectSettings";
 import { funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
-    public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-
-    public async getRuntime(): Promise<ProjectRuntime> {
-        // Always use projectruntime.one for JavaScript since it has more templates and there were no major changes across runtime
-        return JavaScriptProjectCreator.defaultRuntime;
-    }
 
     public getLaunchJson(): {} {
         return {

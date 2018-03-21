@@ -5,12 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
+import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { LocalAppSettings } from '../../LocalAppSettings';
 import { localize } from '../../localize';
-import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, ProjectRuntime, requiredFunctionAppFiles, TemplateFilter } from '../../ProjectSettings';
+import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, promptForProjectLanguage, promptForProjectRuntime, requiredFunctionAppFiles, selectTemplateFilter, TemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
 import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
 import { EnumValue } from '../../templates/EnumValue';
 import { Template } from '../../templates/Template';
@@ -98,23 +99,15 @@ export async function createFunction(
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, tree, functionAppPath);
 
-    const language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
-    telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, functionAppPath, ui);
-    telemetryProperties.projectRuntime = runtime;
-    const templateFilter: TemplateFilter = await getTemplateFilter(functionAppPath);
-    telemetryProperties.templateFilter = templateFilter;
+    let language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
+    let runtime: ProjectRuntime = await getProjectRuntime(language, functionAppPath, ui);
+    let templateFilter: TemplateFilter = await getTemplateFilter(functionAppPath);
 
     let template: Template;
     if (!templateId) {
-        const templates: Template[] = await templateData.getTemplates(ui, functionAppPath, language, runtime, templateFilter);
-        const templatePicks: IAzureQuickPickItem<Template>[] = templates.map((t: Template) => { return { data: t, label: t.name, description: '' }; });
-        const options: vscode.QuickPickOptions = {
-            placeHolder: localize('azFunc.selectFuncTemplate', 'Select a function template')
-        };
-        template = (await ui.showQuickPick(templatePicks, options)).data;
+        [template, language, runtime, templateFilter] = await promptForTemplate(ui, functionAppPath, templateData, language, runtime, templateFilter);
     } else {
-        const templates: Template[] = await templateData.getTemplates(ui, functionAppPath, language, runtime, TemplateFilter.All);
+        const templates: Template[] = await templateData.getTemplates(language, runtime, TemplateFilter.All);
         const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -122,6 +115,10 @@ export async function createFunction(
             throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", runtime "{1}", and id "{2}".', language, runtime, templateId));
         }
     }
+
+    telemetryProperties.projectLanguage = language;
+    telemetryProperties.projectRuntime = runtime;
+    telemetryProperties.templateFilter = templateFilter;
 
     telemetryProperties.templateId = template.id;
 
@@ -165,4 +162,43 @@ export async function createFunction(
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
     }
+}
+
+async function promptForTemplate(ui: IAzureUserInput, functionAppPath: string, templateData: TemplateData, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[Template, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
+    const runtimePickId: string = 'runtime';
+    const languagePickId: string = 'language';
+    const filterPickId: string = 'filter';
+
+    let template: Template | undefined;
+    while (!template) {
+        const templates: Template[] = await templateData.getTemplates(language, runtime, templateFilter);
+        let picks: IAzureQuickPickItem<Template | string>[] = templates.map((t: Template) => { return { data: t, label: t.name, description: '' }; });
+        picks = picks.concat([
+            { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
+            { label: localize('selectLanguage', '$(gear) Change project language'), description: localize('currentLanguage', 'Current: {0}', language), data: languagePickId, suppressPersistence: true },
+            { label: localize('selectFilter', '$(gear) Change template filter'), description: localize('currentFilter', 'Current: {0}', templateFilter), data: filterPickId, suppressPersistence: true }
+        ]);
+
+        const placeHolder: string = templates.length > 0 ? localize('azFunc.selectFuncTemplate', 'Select a function template') : localize('azFunc.noTemplatesFound', 'No templates found. Change your settings to view more templates');
+        const result: Template | string = (await ui.showQuickPick(picks, { placeHolder })).data;
+        if (isString(result)) {
+            switch (result) {
+                case runtimePickId:
+                    runtime = await promptForProjectRuntime(ui);
+                    await updateWorkspaceSetting(projectRuntimeSetting, runtime, functionAppPath);
+                    break;
+                case languagePickId:
+                    language = await promptForProjectLanguage(ui);
+                    await updateWorkspaceSetting(projectLanguageSetting, language, functionAppPath);
+                    break;
+                default:
+                    templateFilter = await selectTemplateFilter(functionAppPath, ui);
+                    break;
+            }
+        } else {
+            template = result;
+        }
+    }
+
+    return [template, language, runtime, templateFilter];
 }
