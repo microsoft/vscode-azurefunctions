@@ -77,7 +77,7 @@ to get started with the Azure Functions extension.
 ### Java
 
 * [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
-* [JDK 1.8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+* [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [Maven 3.0+](https://maven.apache.org/)
   > NOTE: Once Maven is downloaded, you must ensure that Maven is in your PATH environment variable. You can check this by running: `mvn -v`.
 
