@@ -63,6 +63,14 @@
     "contributes": {
         "commands": [
             {
+                "command": "azureFunctions.selectSubscriptions",
+                "title": "Select Subscriptions...",
+                "icon": {
+                    "light": "resources/light/filter.svg",
+                    "dark": "resources/dark/filter.svg"
+                }
+            },
+            {
                 "command": "azureFunctions.refresh",
                 "title": "%azFunc.refresh%",
                 "category": "Azure Functions",
@@ -242,6 +250,11 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureFunctions.selectSubscriptions",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "group": "inline"
+                },
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
