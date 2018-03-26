@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ProjectLanguage } from "../../ProjectSettings";
+import { ProjectLanguage } from '../../constants';
 import { getScriptFileNameFromLanguage } from '../createFunction/ScriptFunctionCreator';
 import { tryGetCsprojFile } from './CSharpProjectCreator';
 

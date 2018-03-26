@@ -8,9 +8,9 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, parseError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
-import { isWindows } from '../constants';
+import { isWindows, ProjectRuntime } from '../constants';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, ProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {

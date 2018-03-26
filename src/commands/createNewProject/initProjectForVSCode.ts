@@ -7,10 +7,11 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
 import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { deploySubpathSetting, extensionPrefix, gitignoreFileName, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { localize } from '../../localize';
-import { deploySubpathSetting, extensionPrefix, getGlobalFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, promptForProjectLanguage, templateFilterSetting } from '../../ProjectSettings';
-import * as fsUtil from '../../utils/fs';
+import { getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
 import { confirmOverwriteFile } from '../../utils/fs';
+import * as fsUtil from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getProjectCreator } from './createNewProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
@@ -55,7 +56,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     await writeExtensionRecommendations(projectCreator, vscodePath, ui);
 
     // Remove '.vscode' from gitignore if applicable
-    const gitignorePath: string = path.join(functionAppPath, '.gitignore');
+    const gitignorePath: string = path.join(functionAppPath, gitignoreFileName);
     if (await fse.pathExists(gitignorePath)) {
         outputChannel.appendLine(localize('gitignoreVSCode', 'Verifying ".vscode" is not listed in gitignore...'));
         let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();

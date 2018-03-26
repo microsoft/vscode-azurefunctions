@@ -4,27 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as path from 'path';
 import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { LocalAppSettings } from '../../LocalAppSettings';
 import { localize } from '../../localize';
-import { getProjectLanguage, getProjectRuntime, getTemplateFilter, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, promptForProjectLanguage, promptForProjectRuntime, requiredFunctionAppFiles, selectTemplateFilter, TemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
+import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
 import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
 import { EnumValue } from '../../templates/EnumValue';
 import { Template } from '../../templates/Template';
 import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
+import { isFunctionProject } from '../createNewProject/validateFunctionProjects';
 import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
 async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IAzureUserInput): Promise<void> {
-    if (requiredFunctionAppFiles.find((file: string) => !fse.existsSync(path.join(functionAppPath, file))) !== undefined) {
+    if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ProjectLanguage } from '../constants';
 import { FunctionConfig } from '../FunctionConfig';
-import { ProjectLanguage } from '../ProjectSettings';
 import { Resources } from './Resources';
 
 interface ITemplate {

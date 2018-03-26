@@ -5,8 +5,9 @@
 
 import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
+import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
-import { extensionPrefix, ProjectRuntime, promptForProjectRuntime, TemplateFilter } from "../../ProjectSettings";
+import { promptForProjectRuntime } from "../../ProjectSettings";
 import { functionRuntimeUtils } from "../../utils/functionRuntimeUtils";
 
 export abstract class ProjectCreatorBase {

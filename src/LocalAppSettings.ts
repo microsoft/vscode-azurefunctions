@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { localize } from './localize';
 import { getResourceTypeLabel, ResourceType } from './templates/ConfigSetting';
@@ -23,12 +24,11 @@ export class LocalAppSettings {
     private _ui: IAzureUserInput;
     private _tree: AzureTreeDataProvider;
     private readonly _azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
-    private readonly _fileName: string = 'local.settings.json';
 
     constructor(ui: IAzureUserInput, tree: AzureTreeDataProvider, functionAppPath: string) {
         this._tree = tree;
         this._ui = ui;
-        this._localAppSettingsPath = path.join(functionAppPath, this._fileName);
+        this._localAppSettingsPath = path.join(functionAppPath, localSettingsFileName);
     }
 
     public async promptForAppSetting(resourceType: ResourceType): Promise<string> {
@@ -98,7 +98,7 @@ export class LocalAppSettings {
             return;
         }
 
-        const message: string = localize('azFunc.AzureWebJobsStorageWarning', 'All non-HTTP triggers require AzureWebJobsStorage to be set in \'{0}\' for local debugging.', this._fileName);
+        const message: string = localize('azFunc.AzureWebJobsStorageWarning', 'All non-HTTP triggers require AzureWebJobsStorage to be set in \'{0}\' for local debugging.', localSettingsFileName);
         const selectStorageAccount: vscode.MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
         const result: vscode.MessageItem = await ui.showWarningMessage(message, selectStorageAccount, DialogResponses.skipForNow);
         if (result === selectStorageAccount) {

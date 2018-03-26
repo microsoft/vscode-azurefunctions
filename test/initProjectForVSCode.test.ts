@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
-import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/ProjectSettings';
+import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
 import * as fsUtil from '../src/utils/fs';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length

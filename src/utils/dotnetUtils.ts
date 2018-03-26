@@ -8,9 +8,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { MessageItem, OutputChannel, QuickPickItem, QuickPickOptions } from "vscode";
 import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
-import { isWindows } from '../constants';
+import { isWindows, ProjectRuntime } from '../constants';
 import { localize } from "../localize";
-import { ProjectRuntime } from '../ProjectSettings';
 import { cpUtils } from "./cpUtils";
 import * as fsUtil from './fs';
 

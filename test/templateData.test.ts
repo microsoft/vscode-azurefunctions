@@ -8,7 +8,7 @@ import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/ProjectSettings';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../src/templates/TemplateData';
 

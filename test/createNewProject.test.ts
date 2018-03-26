@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
-import { ProjectLanguage } from '../src/ProjectSettings';
+import { ProjectLanguage } from '../src/constants';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
