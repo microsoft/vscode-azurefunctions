@@ -389,6 +389,10 @@
                 }
             ],
             "commandPalette": [
+				{
+					"command": "cosmosDB.selectSubscriptions",
+					"when": "never"
+				},
                 {
                     "command": "azureFunctions.refresh",
                     "when": "never"
