@@ -8,8 +8,9 @@ import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { gitignoreFileName, hostFileName, localSettingsFileName, projectLanguageSetting, projectRuntimeSetting } from '../../constants';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, projectLanguageSetting, projectRuntimeSetting, updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { initProjectForVSCode } from './initProjectForVSCode';
 
 export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
@@ -52,11 +53,7 @@ async function promptToInitializeProject(ui: IAzureUserInput, folderPath: string
     return false;
 }
 
-const hostFileName: string = 'host.json';
-const localSettingsFileName: string = 'local.settings.json';
-const gitignoreFileName: string = '.gitignore';
-
-async function isFunctionProject(folderPath: string): Promise<boolean> {
+export async function isFunctionProject(folderPath: string): Promise<boolean> {
     const gitignorePath: string = path.join(folderPath, gitignoreFileName);
     let gitignoreContents: string = '';
     if (await fse.pathExists(gitignorePath)) {

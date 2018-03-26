@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
-import { TemplateFilter } from "../../ProjectSettings";
 import { funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 

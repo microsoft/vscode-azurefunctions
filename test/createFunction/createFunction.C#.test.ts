@@ -9,7 +9,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestUserInput } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
+import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
 import { dotnetUtils } from '../../src/utils/dotnetUtils';
 import { FunctionTesterBase } from './FunctionTesterBase';
 

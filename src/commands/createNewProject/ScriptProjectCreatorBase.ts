@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ProjectRuntime, TemplateFilter } from '../../ProjectSettings';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
 import { functionRuntimeUtils } from '../../utils/functionRuntimeUtils';
@@ -72,13 +72,13 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
-        const hostJsonPath: string = path.join(this.functionAppPath, 'host.json');
+        const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath, this.ui)) {
             const hostJson: {} = {};
             await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
         }
 
-        const localSettingsJsonPath: string = path.join(this.functionAppPath, 'local.settings.json');
+        const localSettingsJsonPath: string = path.join(this.functionAppPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath, this.ui)) {
             const localSettingsJson: {} = {
                 IsEncrypted: false,
@@ -89,7 +89,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
             await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
-        const gitignorePath: string = path.join(this.functionAppPath, '.gitignore');
+        const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await confirmOverwriteFile(gitignorePath, this.ui)) {
             await fse.writeFile(gitignorePath, gitignore);
         }

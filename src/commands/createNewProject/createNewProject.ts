@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as vscode from 'vscode';
 import { OutputChannel, QuickPickItem, QuickPickOptions } from 'vscode';
+import * as vscode from 'vscode';
 import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { ProjectLanguage, projectLanguageSetting } from '../../constants';
 import { localize } from '../../localize';
-import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting } from '../../ProjectSettings';
+import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { CSharpProjectCreator } from './CSharpProjectCreator';

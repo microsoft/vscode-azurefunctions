@@ -11,7 +11,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, TestUserInput } from 'vscode-azureextensionui';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
-import { getGlobalFuncExtensionSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, updateGlobalSetting } from '../../src/ProjectSettings';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
+import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
 

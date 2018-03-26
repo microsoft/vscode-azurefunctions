@@ -6,8 +6,8 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IAzureUserInput } from 'vscode-azureextensionui';
+import { ProjectLanguage } from '../../constants';
 import { localize } from "../../localize";
-import { ProjectLanguage } from '../../ProjectSettings';
 import { Template } from "../../templates/Template";
 import * as fsUtil from '../../utils/fs';
 import { FunctionCreatorBase } from './FunctionCreatorBase';

@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import { ScriptProjectCreatorBase } from '../../src/commands/createNewProject/ScriptProjectCreatorBase';
-import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
+import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class PythonFunctionTester extends FunctionTesterBase {

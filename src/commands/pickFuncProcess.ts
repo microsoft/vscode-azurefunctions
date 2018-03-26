@@ -8,9 +8,9 @@ import ps = require('ps-node');
 import { isNullOrUndefined } from 'util';
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { isWindows } from '../constants';
+import { extensionPrefix, isWindows } from '../constants';
 import { localize } from '../localize';
-import { extensionPrefix, getFuncExtensionSetting } from '../ProjectSettings';
+import { getFuncExtensionSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 

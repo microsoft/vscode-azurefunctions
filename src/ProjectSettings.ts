@@ -8,45 +8,10 @@ import * as path from 'path';
 import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
 import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
+import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
 import { localize } from "./localize";
 
-export const extensionPrefix: string = 'azureFunctions';
-export const projectLanguageSetting: string = 'projectLanguage';
-export const projectRuntimeSetting: string = 'projectRuntime';
-export const templateFilterSetting: string = 'templateFilter';
-export const deploySubpathSetting: string = 'deploySubpath';
-
 const previewDescription: string = localize('previewDescription', '(Preview)');
-
-export enum ProjectLanguage {
-    Bash = 'Bash',
-    Batch = 'Batch',
-    CSharp = 'C#',
-    CSharpScript = 'C#Script',
-    FSharpScript = 'F#Script',
-    Java = 'Java',
-    JavaScript = 'JavaScript',
-    PHP = 'PHP',
-    PowerShell = 'PowerShell',
-    Python = 'Python',
-    TypeScript = 'TypeScript'
-}
-
-export enum ProjectRuntime {
-    one = '~1',
-    beta = 'beta'
-}
-
-export enum TemplateFilter {
-    All = 'All',
-    Core = 'Core',
-    Verified = 'Verified'
-}
-
-export const requiredFunctionAppFiles: string[] = [
-    'host.json',
-    'local.settings.json'
-];
 
 export async function updateGlobalSetting<T = string>(section: string, value: T): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);

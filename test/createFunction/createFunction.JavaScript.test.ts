@@ -9,7 +9,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { JavaScriptProjectCreator } from '../../src/commands/createNewProject/JavaScriptProjectCreator';
-import { ProjectLanguage, ProjectRuntime } from '../../src/ProjectSettings';
+import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {

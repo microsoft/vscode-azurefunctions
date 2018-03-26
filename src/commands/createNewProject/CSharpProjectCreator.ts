@@ -9,9 +9,9 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { isWindows } from '../../constants';
+import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
-import { getFuncExtensionSetting, ProjectRuntime, TemplateFilter, updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
@@ -166,7 +166,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     }
 
     private async confirmOverwriteExisting(functionAppPath: string, csProjName: string): Promise<boolean> {
-        const filesToCheck: string[] = [csProjName, '.gitignore', 'local.settings.json', 'host.json'];
+        const filesToCheck: string[] = [csProjName, gitignoreFileName, localSettingsFileName, hostFileName];
         const existingFiles: string[] = [];
         for (const fileName of filesToCheck) {
             if (await fse.pathExists(path.join(functionAppPath, fileName))) {
