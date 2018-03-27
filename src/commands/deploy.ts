@@ -132,6 +132,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
             const result: vscode.MessageItem = await ui.showWarningMessage(message, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
             if (result === DialogResponses.learnMore) {
+                // tslint:disable-next-line:no-unsafe-any
                 opn('https://aka.ms/azFuncRuntime');
                 telemetryProperties.cancelStep = 'learnMoreRuntime';
                 throw new UserCancelledError();
