@@ -25,7 +25,7 @@ export namespace nodeUtils {
     }
 
     export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<IAzureParentNode> {
-        const node: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscription.subscriptionId === subscriptionId);
+        const node: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscriptionId === subscriptionId);
         if (node) {
             return node;
         } else {

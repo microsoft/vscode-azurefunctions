@@ -3,14 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Subscription } from 'azure-arm-resource/lib/subscription/models';
 // tslint:disable-next-line:no-require-imports
 import WebSiteManagementClient = require('azure-arm-website');
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
 import { IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
-import { ArgumentError } from '../errors';
 import { localize } from "../localize";
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
 
@@ -33,7 +31,7 @@ export class FunctionAppProvider implements IChildProvider {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = getWebSiteClient(node);
+        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId);
         const webAppCollection: WebAppCollection = this._nextLink === undefined ?
             await client.webApps.list() :
             await client.webApps.listNext(this._nextLink);
@@ -46,16 +44,7 @@ export class FunctionAppProvider implements IChildProvider {
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
-        const site: Site = await createFunctionApp(this._outputChannel, parent.ui, actionContext, parent.credentials, parent.subscription, showCreatingNode);
+        const site: Site = await createFunctionApp(this._outputChannel, parent.ui, actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
-    }
-}
-
-function getWebSiteClient(node: IAzureNode): WebSiteManagementClient {
-    const subscription: Subscription = node.subscription;
-    if (subscription.subscriptionId) {
-        return new WebSiteManagementClient(node.credentials, subscription.subscriptionId);
-    } else {
-        throw new ArgumentError(subscription);
     }
 }
