@@ -5,11 +5,12 @@
 
 import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
+import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
@@ -56,7 +57,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
     }
 
-    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client);
+    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
 
     await node.treeItem.runWithTemporaryState(
         localize('deploying', 'Deploying...'),
@@ -118,7 +119,7 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     }
 }
 
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient): Promise<void> {
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (!appSettings.properties) {
         throw new ArgumentError(appSettings);
@@ -127,11 +128,18 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
         const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
         // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
-            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}". Update remote runtime?', rawAzureRuntime, localRuntime);
-            await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-            outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
-            appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
-            await client.updateApplicationSettings(appSettings);
+            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
+            const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
+            const result: vscode.MessageItem = await ui.showWarningMessage(message, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
+            if (result === DialogResponses.learnMore) {
+                opn('https://aka.ms/azFuncRuntime');
+                telemetryProperties.cancelStep = 'learnMoreRuntime';
+                throw new UserCancelledError();
+            } else {
+                outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
+                appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
+                await client.updateApplicationSettings(appSettings);
+            }
         }
     }
 }
