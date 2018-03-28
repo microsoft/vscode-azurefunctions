@@ -59,9 +59,8 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
 
     await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
 
-    await node.treeItem.runWithTemporaryState(
+    await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
-        node,
         async () => {
             try {
                 // Stop function app here to avoid *.jar file in use on server side.
