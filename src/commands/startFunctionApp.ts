@@ -12,9 +12,8 @@ export async function startFunctionApp(tree: AzureTreeDataProvider, node?: IAzur
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    await node.treeItem.runWithTemporaryState(
+    await node.runWithTemporaryDescription(
         localize('starting', 'Starting...'),
-        node,
         async () => {
             // tslint:disable-next-line:no-non-null-assertion
             await node!.treeItem.client.start();
