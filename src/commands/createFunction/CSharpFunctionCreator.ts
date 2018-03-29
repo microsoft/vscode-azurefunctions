@@ -43,7 +43,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         }
 
         if (functionSettings.namespace !== undefined) {
-            this._namespace = functionSettings.namespace;
+            this._namespace = <string>functionSettings.namespace;
         } else {
             this._namespace = await ui.showInputBox({
                 placeHolder: localize('azFunc.namespacePlaceHolder', 'Namespace'),
