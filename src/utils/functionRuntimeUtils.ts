@@ -8,7 +8,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, parseError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
-import { isWindows, ProjectRuntime } from '../constants';
+import { isWindows, Platform, ProjectRuntime } from '../constants';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
@@ -57,12 +57,12 @@ export namespace functionRuntimeUtils {
         });
     }
 
-    export async function tryGetLocalRuntimeVersion(): Promise<ProjectRuntime | undefined> {
+    export async function tryGetLocalRuntimeVersion(outputChannel: vscode.OutputChannel): Promise<ProjectRuntime | undefined> {
         if (!isWindows) {
             return ProjectRuntime.beta;
         } else {
             try {
-                const version: string | null = await getLocalFunctionRuntimeVersion();
+                const version: string | null = await getLocalFunctionRuntimeVersion(outputChannel);
                 if (version !== null) {
                     switch (semver.major(version)) {
                         case 2:
@@ -81,14 +81,19 @@ export namespace functionRuntimeUtils {
         }
     }
 
-    async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
-        const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
-        const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
-        if (matchResult !== null) {
-            const localVersion: string = matchResult[1].trim();
-            return semver.valid(localVersion);
+    async function getLocalFunctionRuntimeVersion(outputChannel: vscode.OutputChannel): Promise<string | null> {
+        try {
+            const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'func');
+            const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)Function Runtime Version: (.*)/);
+            if (matchResult !== null) {
+                const localVersion: string = matchResult[1].trim();
+                return semver.valid(localVersion);
+            }
+            return null;
+        } catch (error) {
+            await thinkOfNameLater(outputChannel);
+            return null;
         }
-        return null;
     }
 
     enum FunctionRuntimeTag {
@@ -105,5 +110,42 @@ export namespace functionRuntimeUtils {
             default:
                 return null;
         }
+    }
+
+    async function thinkOfNameLater(outputChannel: vscode.OutputChannel): Promise<void> {
+        try {
+            switch (process.platform) {
+                case Platform.Windows:
+                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                    break;
+                case Platform.MacOS:
+                    try {
+                        await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                    } catch (error) {
+                        try {
+                            await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
+                            await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
+                        } catch (error) {
+                            console.log(error);
+                        }
+                    }
+                    break;
+                case Platform.Linux:
+                    try {
+                        await cpUtils.executeCommand(outputChannel, undefined, 'curl', 'https://packages.microsoft.com/keys/microsoft.asc', '|', 'gpg', '--dearmor', '>', 'microsoft.gpg');
+                        await cpUtils.executeCommand(outputChannel, undefined, 'sudo', 'mv', 'microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg');
+                        // a lot of different OS's use different cmds...
+
+                    } catch (error) {
+                        console.log(error);
+                    }
+                    break;
+                default:
+                    console.log('I dunno');
+            }
+        } catch (error) {
+            console.log(error);
+        }
+
     }
 }

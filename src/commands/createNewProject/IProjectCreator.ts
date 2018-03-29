@@ -28,7 +28,7 @@ export abstract class ProjectCreatorBase {
 
     public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
-        return await functionRuntimeUtils.tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
+        return await functionRuntimeUtils.tryGetLocalRuntimeVersion(this.outputChannel) || await promptForProjectRuntime(this.ui);
     }
 
     public getLaunchJson(): {} | undefined {
