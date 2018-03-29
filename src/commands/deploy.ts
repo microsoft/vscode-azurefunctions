@@ -24,25 +24,30 @@ import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}): Promise<void> {
+export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
-    if (!deployPath) {
+    let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
+    if (!target) {
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
-    } else if (deployPath instanceof vscode.Uri) {
-        deployFsPath = deployPath.fsPath;
+    } else if (target instanceof vscode.Uri) {
+        deployFsPath = target.fsPath;
+    } else if (typeof target === 'string') {
+        deployFsPath = target;
     } else {
-        deployFsPath = deployPath;
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        node = target;
     }
 
-    let node: IAzureParentNode<FunctionAppTreeItem>;
-    if (!functionAppId || typeof functionAppId !== 'string') {
-        node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
-    } else {
-        const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
-        if (functionAppNode) {
-            node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+    if (!node) {
+        if (!functionAppId || typeof functionAppId !== 'string') {
+            node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
         } else {
-            throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
+            const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
+            if (functionAppNode) {
+                node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+            } else {
+                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
+            }
         }
     }
 
