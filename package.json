@@ -296,9 +296,14 @@
                     "group": "2@4"
                 },
                 {
-                    "command": "azureFunctions.configureDeploymentSource",
+                    "command": "azureFunctions.deploy",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.configureDeploymentSource",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",

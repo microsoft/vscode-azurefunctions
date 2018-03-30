@@ -4,14 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { OutputChannel, QuickPickItem, QuickPickOptions } from 'vscode';
+import { QuickPickItem, QuickPickOptions } from 'vscode';
 import * as vscode from 'vscode';
-import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting } from '../../constants';
+import { TelemetryProperties } from 'vscode-azureextensionui';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
+import { createFunction } from '../createFunction/createFunction';
 import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { CSharpScriptProjectCreator } from './CSharpScriptProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
@@ -20,9 +22,18 @@ import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export async function createNewProject(telemetryProperties: TelemetryProperties, outputChannel: OutputChannel, ui: IAzureUserInput, functionAppPath?: string, language?: string, runtime?: string, openFolder: boolean = true): Promise<void> {
+export async function createNewProject(
+    telemetryProperties: TelemetryProperties,
+    functionAppPath?: string,
+    language?: string,
+    runtime?: string,
+    openFolder: boolean = true,
+    templateId?: string,
+    functionName?: string,
+    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; }): Promise<void> {
+
     if (functionAppPath === undefined) {
-        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
     }
     await fse.ensureDir(functionAppPath);
 
@@ -37,18 +48,22 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
                 { label: ProjectLanguage.Java, description: '' }
             ];
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
-            language = (await ui.showQuickPick(languagePicks, options)).label;
+            language = (await ext.ui.showQuickPick(languagePicks, options)).label;
         }
     }
     telemetryProperties.projectLanguage = language;
 
-    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, outputChannel, ui, telemetryProperties);
+    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, telemetryProperties);
     await projectCreator.addNonVSCodeFiles();
 
-    await initProjectForVSCode(telemetryProperties, ui, outputChannel, functionAppPath, language, runtime, projectCreator);
+    await initProjectForVSCode(telemetryProperties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
     if (await gitUtils.isGitInstalled(functionAppPath)) {
-        await gitUtils.gitInit(outputChannel, functionAppPath);
+        await gitUtils.gitInit(ext.outputChannel, functionAppPath);
+    }
+
+    if (templateId) {
+        await createFunction(telemetryProperties, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
@@ -57,17 +72,17 @@ export async function createNewProject(telemetryProperties: TelemetryProperties,
     }
 }
 
-export function getProjectCreator(language: string, functionAppPath: string, outputChannel: OutputChannel, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
+export function getProjectCreator(language: string, functionAppPath: string, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
     switch (language) {
         case ProjectLanguage.Java:
-            return new JavaProjectCreator(functionAppPath, outputChannel, ui, telemetryProperties);
+            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         case ProjectLanguage.JavaScript:
-            return new JavaScriptProjectCreator(functionAppPath, outputChannel, ui, telemetryProperties);
+            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         case ProjectLanguage.CSharp:
-            return new CSharpProjectCreator(functionAppPath, outputChannel, ui, telemetryProperties);
+            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         case ProjectLanguage.CSharpScript:
-            return new CSharpScriptProjectCreator(functionAppPath, outputChannel, ui, telemetryProperties);
+            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         default:
-            return new ScriptProjectCreatorBase(functionAppPath, outputChannel, ui, telemetryProperties);
+            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
     }
 }

@@ -7,15 +7,15 @@ import * as fse from 'fs-extra';
 import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { LocalAppSettings } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
 import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
 import { EnumValue } from '../../templates/EnumValue';
 import { Template } from '../../templates/Template';
-import { TemplateData } from '../../templates/TemplateData';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { isFunctionProject } from '../createNewProject/validateFunctionProjects';
@@ -24,67 +24,65 @@ import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
-async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel, functionAppPath: string, ui: IAzureUserInput): Promise<void> {
+async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, functionAppPath: string): Promise<void> {
     if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(telemetryProperties, outputChannel, ui, functionAppPath, undefined, undefined, false);
+            await createNewProject(telemetryProperties, functionAppPath, undefined, undefined, false);
         }
     }
 }
 
-async function promptForSetting(ui: IAzureUserInput, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
         return await localAppSettings.promptForAppSetting(setting.resourceType);
     } else {
         switch (setting.valueType) {
             case ValueType.boolean:
-                return await promptForBooleanSetting(ui, setting);
+                return await promptForBooleanSetting(setting);
             case ValueType.enum:
-                return await promptForEnumSetting(ui, setting);
+                return await promptForEnumSetting(setting);
             default:
                 // Default to 'string' type for any setting that isn't supported
-                return await promptForStringSetting(ui, setting, defaultValue);
+                return await promptForStringSetting(setting, defaultValue);
         }
     }
 }
 
-async function promptForEnumSetting(ui: IAzureUserInput, setting: ConfigSetting): Promise<string> {
+async function promptForEnumSetting(setting: ConfigSetting): Promise<string> {
     const picks: IAzureQuickPickItem<string>[] = setting.enums.map((ev: EnumValue) => { return { data: ev.value, label: ev.displayName, description: '' }; });
 
-    return (await ui.showQuickPick(picks, { placeHolder: setting.label })).data;
+    return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).data;
 }
 
-async function promptForBooleanSetting(ui: IAzureUserInput, setting: ConfigSetting): Promise<string> {
+async function promptForBooleanSetting(setting: ConfigSetting): Promise<string> {
     const picks: QuickPickItem[] = [
         { label: 'true', description: '' },
         { label: 'false', description: '' }
     ];
 
-    return (await ui.showQuickPick(picks, { placeHolder: setting.label })).label;
+    return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).label;
 }
 
-async function promptForStringSetting(ui: IAzureUserInput, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForStringSetting(setting: ConfigSetting, defaultValue?: string): Promise<string> {
     const options: vscode.InputBoxOptions = {
         placeHolder: setting.label,
         prompt: localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
         validateInput: (s: string): string | undefined => setting.validateSetting(s),
         value: defaultValue ? defaultValue : setting.defaultValue
     };
-    return await ui.showInputBox(options);
+    return await ext.ui.showInputBox(options);
 }
 
 export async function createFunction(
     telemetryProperties: TelemetryProperties,
-    outputChannel: vscode.OutputChannel,
-    tree: AzureTreeDataProvider,
-    templateData: TemplateData,
-    ui: IAzureUserInput,
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; }): Promise<void> {
+    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; },
+    language?: ProjectLanguage,
+    runtime?: ProjectRuntime): Promise<void> {
 
     const functionSettings: { [key: string]: string | undefined; } = {};
     if (caseSensitiveFunctionSettings) {
@@ -93,22 +91,29 @@ export async function createFunction(
 
     if (functionAppPath === undefined) {
         const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
-        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, folderPlaceholder);
+        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 
-    await validateIsFunctionApp(telemetryProperties, outputChannel, functionAppPath, ui);
+    await validateIsFunctionApp(telemetryProperties, functionAppPath);
 
-    const localAppSettings: LocalAppSettings = new LocalAppSettings(ui, tree, functionAppPath);
+    const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, functionAppPath);
 
-    let language: ProjectLanguage = await getProjectLanguage(functionAppPath, ui);
-    let runtime: ProjectRuntime = await getProjectRuntime(language, functionAppPath, ui);
-    let templateFilter: TemplateFilter = await getTemplateFilter(functionAppPath);
+    if (language === undefined) {
+        language = await getProjectLanguage(functionAppPath, ext.ui);
+    }
 
+    if (runtime === undefined) {
+        runtime = await getProjectRuntime(language, functionAppPath, ext.ui);
+    }
+
+    let templateFilter: TemplateFilter;
     let template: Template;
     if (!templateId) {
-        [template, language, runtime, templateFilter] = await promptForTemplate(ui, functionAppPath, templateData, language, runtime, templateFilter);
+        templateFilter = await getTemplateFilter(functionAppPath);
+        [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter);
     } else {
-        const templates: Template[] = await templateData.getTemplates(language, runtime, TemplateFilter.All);
+        templateFilter = TemplateFilter.All;
+        const templates: Template[] = await ext.templateData.getTemplates(language, runtime, TemplateFilter.All);
         const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -124,34 +129,34 @@ export async function createFunction(
     telemetryProperties.templateId = template.id;
 
     if (!template.functionConfig.isHttpTrigger) {
-        await localAppSettings.validateAzureWebJobsStorage(ui);
+        await localAppSettings.validateAzureWebJobsStorage(ext.ui);
     }
 
     let functionCreator: FunctionCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(functionAppPath, template, outputChannel);
+            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel);
             break;
         case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template, outputChannel, ui);
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel, ext.ui);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);
             break;
     }
 
-    await functionCreator.promptForSettings(ui, functionName, functionSettings);
+    await functionCreator.promptForSettings(ext.ui, functionName, functionSettings);
 
     const userSettings: { [propertyName: string]: string } = {};
     for (const settingName of template.userPromptedSettings) {
-        const setting: ConfigSetting | undefined = await templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
+        const setting: ConfigSetting | undefined = await ext.templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
         if (setting) {
             let settingValue: string | undefined;
             if (functionSettings[settingName.toLowerCase()] !== undefined) {
                 settingValue = functionSettings[settingName.toLowerCase()];
             } else {
                 const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
-                settingValue = await promptForSetting(ui, localAppSettings, setting, defaultValue);
+                settingValue = await promptForSetting(localAppSettings, setting, defaultValue);
             }
 
             userSettings[settingName] = settingValue ? settingValue : '';
@@ -165,14 +170,14 @@ export async function createFunction(
     }
 }
 
-async function promptForTemplate(ui: IAzureUserInput, functionAppPath: string, templateData: TemplateData, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[Template, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
+async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[Template, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
     const runtimePickId: string = 'runtime';
     const languagePickId: string = 'language';
     const filterPickId: string = 'filter';
 
     let template: Template | undefined;
     while (!template) {
-        const templates: Template[] = await templateData.getTemplates(language, runtime, templateFilter);
+        const templates: Template[] = await ext.templateData.getTemplates(language, runtime, templateFilter);
         let picks: IAzureQuickPickItem<Template | string>[] = templates.map((t: Template) => { return { data: t, label: t.name, description: '' }; });
         picks = picks.concat([
             { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
@@ -181,19 +186,19 @@ async function promptForTemplate(ui: IAzureUserInput, functionAppPath: string, t
         ]);
 
         const placeHolder: string = templates.length > 0 ? localize('azFunc.selectFuncTemplate', 'Select a function template') : localize('azFunc.noTemplatesFound', 'No templates found. Change your settings to view more templates');
-        const result: Template | string = (await ui.showQuickPick(picks, { placeHolder })).data;
+        const result: Template | string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
         if (isString(result)) {
             switch (result) {
                 case runtimePickId:
-                    runtime = await promptForProjectRuntime(ui);
+                    runtime = await promptForProjectRuntime(ext.ui);
                     await updateWorkspaceSetting(projectRuntimeSetting, runtime, functionAppPath);
                     break;
                 case languagePickId:
-                    language = await promptForProjectLanguage(ui);
+                    language = await promptForProjectLanguage(ext.ui);
                     await updateWorkspaceSetting(projectLanguageSetting, language, functionAppPath);
                     break;
                 default:
-                    templateFilter = await selectTemplateFilter(functionAppPath, ui);
+                    templateFilter = await selectTemplateFilter(functionAppPath, ext.ui);
                     break;
             }
         } else {
