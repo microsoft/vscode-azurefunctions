@@ -84,7 +84,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                     }
                     if (newNodes.length > 0) {
                         for (const newFunctionApp of newNodes) {
-                            if (newFunctionApp.id === node.id) {
+                            if (node && newFunctionApp.id === node.id) {
                                 // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
                                 confirmDeployment = false;
                             }
