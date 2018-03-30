@@ -9,9 +9,10 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, TestUserInput } from 'vscode-azureextensionui';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
+import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
@@ -49,6 +50,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         this.funcPortalTestFolder = path.join(this._testFolder, 'funcPortal');
         this.funcStagingPortalTestFolder = path.join(this._testFolder, 'funcStagingPortal');
         this.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
+        ext.outputChannel = this.outputChannel;
     }
 
     public async initAsync(): Promise<void> {
@@ -112,8 +114,9 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUserInput = new TestUserInput(inputs);
-        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, this.outputChannel, <AzureTreeDataProvider>{}, templateData, ui);
+        ext.ui = new TestUserInput(inputs);
+        ext.templateData = templateData;
+        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' });
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);

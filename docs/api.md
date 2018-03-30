@@ -19,6 +19,9 @@ Commands:
 |language|string|The currently supported languages are 'JavaScript', 'C#', and 'Java'.|
 |runtime|string|The currently supported runtimes are "~1" and "beta".|
 |openFolder|boolean|(Defaulted to true) Represents whether or not to open the project folder after it has been created. If true, the extension host may be restarted when the folder is opened.|
+|templateId|string|The id of an optional template you want to create with the new project.|
+|functionName|string|The name of the optional function to be created with the new project.|
+|functionSettings|{ [key: string]: string; }|Any settings unique to the optional function template. For example, the HttpTrigger template requires an AuthorizationLevel parameter.|
 
 ### Example Usage
 
