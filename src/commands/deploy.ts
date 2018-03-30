@@ -24,9 +24,13 @@ import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 
+// tslint:disable-next-line:max-func-body-length
 export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
+    const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
+    let confirmDeployment: boolean = true;
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
+
     if (!target) {
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
     } else if (target instanceof vscode.Uri) {
@@ -37,52 +41,67 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
         node = target;
     }
-
-    if (!node) {
-        if (!functionAppId || typeof functionAppId !== 'string') {
-            node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
-        } else {
-            const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
-            if (functionAppNode) {
-                node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
+        // event is fired from azure-extensionui if node was created during deployment
+        newNodes.push(newNode);
+    });
+    try {
+        if (!node) {
+            if (!functionAppId || typeof functionAppId !== 'string') {
+                node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
             } else {
-                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
-            }
-        }
-    }
-
-    const client: SiteClient = node.treeItem.client;
-
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
-    telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
-    telemetryProperties.projectRuntime = runtime;
-
-    if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
-    }
-
-    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
-
-    await node.runWithTemporaryDescription(
-        localize('deploying', 'Deploying...'),
-        async () => {
-            try {
-                // Stop function app here to avoid *.jar file in use on server side.
-                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-                if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
-                    await client.stop();
-                }
-                await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, true, telemetryProperties);
-            } finally {
-                if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
-                    await client.start();
+                const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
+                if (functionAppNode) {
+                    node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+                } else {
+                    throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
                 }
             }
         }
-    );
+
+        const client: SiteClient = node.treeItem.client;
+
+        const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+        telemetryProperties.projectLanguage = language;
+        const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+        telemetryProperties.projectRuntime = runtime;
+
+        if (language === ProjectLanguage.Java) {
+            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
+        }
+
+        await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+
+        await node.runWithTemporaryDescription(
+            localize('deploying', 'Deploying...'),
+            async () => {
+                try {
+                    // Stop function app here to avoid *.jar file in use on server side.
+                    // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                    if (language === ProjectLanguage.Java) {
+                        outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                        await client.stop();
+                    }
+                    if (newNodes.length > 0) {
+                        for (const newFunctionApp of newNodes) {
+                            if (node && newFunctionApp.id === node.id) {
+                                // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
+                                confirmDeployment = false;
+                            }
+                        }
+                    }
+                    await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                } finally {
+                    if (language === ProjectLanguage.Java) {
+                        outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                        await client.start();
+                    }
+                }
+            }
+        );
+    } finally {
+        onNodeCreatedFromQuickPickDisposable.dispose();
+    }
 
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
