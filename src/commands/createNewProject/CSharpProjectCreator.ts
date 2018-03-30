@@ -88,9 +88,19 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             version: '2.0.0',
             tasks: [
                 {
+                    label: 'clean',
+                    command: 'dotnet clean',
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
                     label: 'build',
                     command: 'dotnet build',
                     type: 'shell',
+                    dependsOn: 'clean',
                     group: {
                         kind: 'build',
                         isDefault: true

@@ -59,8 +59,7 @@ export async function promptForCosmosDBAccount(ui: IAzureUserInput, tree: AzureT
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.DocumentDB);
     const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
-    // tslint:disable-next-line:no-non-null-assertion
-    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscription.subscriptionId!);
+    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
@@ -79,8 +78,7 @@ export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTr
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.Storage);
     const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
-    // tslint:disable-next-line:no-non-null-assertion
-    const client: StorageClient = new StorageClient(node.credentials, node.subscription.subscriptionId!);
+    const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
     const storageAccount: StorageAccount = await promptForResource<StorageAccount>(ui, resourceTypeLabel, client.storageAccounts.list());
 
     if (!storageAccount.id || !storageAccount.name) {

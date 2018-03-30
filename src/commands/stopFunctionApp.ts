@@ -12,9 +12,8 @@ export async function stopFunctionApp(tree: AzureTreeDataProvider, node?: IAzure
         node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
-    await node.treeItem.runWithTemporaryState(
+    await node.runWithTemporaryDescription(
         localize('stopping', 'Stopping...'),
-        node,
         async () => {
             // tslint:disable-next-line:no-non-null-assertion
             await node!.treeItem.client.stop();

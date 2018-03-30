@@ -31,7 +31,8 @@ import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
-import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromCache, tryGetTemplateDataFromFuncPortal } from './templates/TemplateData';
+import { ext } from './extensionVariables';
+import { getTemplateDataFromBackup, tryGetTemplateDataFromCache, tryGetTemplateDataFromFuncPortal } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
@@ -49,16 +50,19 @@ export function activate(context: vscode.ExtensionContext): void {
     }
 
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
+    ext.outputChannel = outputChannel;
     context.subscriptions.push(outputChannel);
 
     callWithTelemetryAndErrorHandling('azureFunctions.activate', reporter, outputChannel, async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
         const ui: IAzureUserInput = new AzureUserInput(context.globalState);
+        ext.ui = ui;
 
         // tslint:disable-next-line:no-floating-promises
         functionRuntimeUtils.validateFunctionRuntime(reporter, ui, outputChannel);
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.loadMore', ui, reporter);
+        ext.tree = tree;
         context.subscriptions.push(tree);
         context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
 
@@ -73,17 +77,21 @@ export function activate(context: vscode.ExtensionContext): void {
             await validateFunctionProjects(this, ui, outputChannel, event.added);
         });
 
-        const templateDataTask: Promise<TemplateData> = getTemplateData(reporter, context);
+        const templateDataTask: Promise<void> = getTemplateData(reporter, context);
 
+        actionHandler.registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
         actionHandler.registerCommand('azureFunctions.pickProcess', async function (this: IActionContext): Promise<string | undefined> { return await pickFuncProcess(this); });
         actionHandler.registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         actionHandler.registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            const templateData: TemplateData = await templateDataTask;
-            await createFunction(this.properties, outputChannel, tree, templateData, ui, functionAppPath, templateId, functionName, functionSettings);
+            await templateDataTask;
+            await createFunction(this.properties, functionAppPath, templateId, functionName, functionSettings);
         });
-        actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined): Promise<void> { await createNewProject(this.properties, outputChannel, ui, functionAppPath, language, runtime, openFolder); });
+        actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
+            await templateDataTask;
+            await createNewProject(this.properties, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
+        });
         actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, tree, arg); });
         actionHandler.registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
@@ -107,9 +115,9 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 }
 
-async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<TemplateData> {
+async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<void> {
     // tslint:disable-next-line:strict-boolean-expressions
-    return await tryGetTemplateDataFromFuncPortal(reporter, context.globalState) || await tryGetTemplateDataFromCache(reporter, context.globalState) || await getTemplateDataFromBackup(reporter, context.extensionPath);
+    ext.templateData = await tryGetTemplateDataFromFuncPortal(reporter, context.globalState) || await tryGetTemplateDataFromCache(reporter, context.globalState) || await getTemplateDataFromBackup(reporter, context.extensionPath);
 }
 
 // tslint:disable-next-line:no-empty

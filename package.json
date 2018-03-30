@@ -63,6 +63,14 @@
     "contributes": {
         "commands": [
             {
+                "command": "azureFunctions.selectSubscriptions",
+                "title": "Select Subscriptions...",
+                "icon": {
+                    "light": "resources/light/filter.svg",
+                    "dark": "resources/dark/filter.svg"
+                }
+            },
+            {
                 "command": "azureFunctions.refresh",
                 "title": "%azFunc.refresh%",
                 "category": "Azure Functions",
@@ -243,6 +251,11 @@
             ],
             "view/item/context": [
                 {
+                    "command": "azureFunctions.selectSubscriptions",
+                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "group": "inline"
+                },
+                {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
@@ -283,9 +296,14 @@
                     "group": "2@4"
                 },
                 {
-                    "command": "azureFunctions.configureDeploymentSource",
+                    "command": "azureFunctions.deploy",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
                     "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.configureDeploymentSource",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
@@ -376,6 +394,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureFunctions.selectSubscriptions",
+                    "when": "never"
+                },
                 {
                     "command": "azureFunctions.refresh",
                     "when": "never"
@@ -546,8 +568,8 @@
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "~0.13.1",
-        "vscode-azureextensionui": "~0.9.1",
+        "vscode-azureappservice": "~0.14.0",
+        "vscode-azureextensionui": "~0.11.3",
         "vscode-azurekudu": "~0.1.7",
         "vscode-extension-telemetry": "^0.0.15",
         "vscode-nls": "^2.0.2",

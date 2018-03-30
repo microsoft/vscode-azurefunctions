@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { ProjectLanguage } from '../src/constants';
+import { ext } from '../src/extensionVariables';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
@@ -22,6 +23,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
+    ext.outputChannel = outputChannel;
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
@@ -143,7 +145,8 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         }
 
         const ui: TestUserInput = new TestUserInput(inputs);
-        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, outputChannel, ui, undefined, previewLanguage ? language : undefined, undefined, false);
+        ext.ui = ui;
+        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, undefined, previewLanguage ? language : undefined, undefined, false);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');

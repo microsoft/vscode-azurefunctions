@@ -23,7 +23,6 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private _state?: string;
-    private _temporaryState?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
@@ -42,16 +41,16 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         return this.client.fullName;
     }
 
-    private get _effectiveState(): string | undefined {
-        return this._temporaryState || this._state;
-    }
-
     public get id(): string {
         return this.client.id;
     }
 
     public get label(): string {
-        return !this._effectiveState || this._effectiveState === 'Running' ? this.client.fullName : `${this.client.fullName} (${this._effectiveState})`;
+        return this.client.fullName;
+    }
+
+    public get description(): string | undefined {
+        return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): string {
@@ -64,17 +63,6 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
 
     public async refreshLabel(): Promise<void> {
         this._state = await this.client.getState();
-    }
-
-    public async runWithTemporaryState(tempState: string, node: IAzureNode, callback: () => Promise<void>): Promise<void> {
-        this._temporaryState = tempState;
-        try {
-            await node.refresh();
-            await callback();
-        } finally {
-            this._temporaryState = undefined;
-            await node.refresh();
-        }
     }
 
     public async loadMoreChildren(): Promise<IAzureTreeItem[]> {

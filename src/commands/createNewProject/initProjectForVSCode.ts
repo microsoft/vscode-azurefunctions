@@ -33,7 +33,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     outputChannel.appendLine(localize('usingLanguage', 'Using "{0}" as the project langauge...', language));
 
     if (!projectCreator) {
-        projectCreator = getProjectCreator(language, functionAppPath, outputChannel, ui, telemetryProperties);
+        projectCreator = getProjectCreator(language, functionAppPath, telemetryProperties);
     }
 
     // tslint:disable-next-line:strict-boolean-expressions

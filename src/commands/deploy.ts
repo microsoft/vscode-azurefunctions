@@ -5,11 +5,12 @@
 
 import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
+import * as opn from 'opn';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
@@ -23,61 +24,84 @@ import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, deployPath?: vscode.Uri | string, functionAppId?: string | {}): Promise<void> {
+// tslint:disable-next-line:max-func-body-length
+export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
-    if (!deployPath) {
+    const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
+    let confirmDeployment: boolean = true;
+    let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
+
+    if (!target) {
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
-    } else if (deployPath instanceof vscode.Uri) {
-        deployFsPath = deployPath.fsPath;
+    } else if (target instanceof vscode.Uri) {
+        deployFsPath = target.fsPath;
+    } else if (typeof target === 'string') {
+        deployFsPath = target;
     } else {
-        deployFsPath = deployPath;
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        node = target;
     }
-
-    let node: IAzureParentNode<FunctionAppTreeItem>;
-    if (!functionAppId || typeof functionAppId !== 'string') {
-        node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
-    } else {
-        const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
-        if (functionAppNode) {
-            node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
-        } else {
-            throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
-        }
-    }
-
-    const client: SiteClient = node.treeItem.client;
-
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
-    telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
-    telemetryProperties.projectRuntime = runtime;
-
-    if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
-    }
-
-    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client);
-
-    await node.treeItem.runWithTemporaryState(
-        localize('deploying', 'Deploying...'),
-        node,
-        async () => {
-            try {
-                // Stop function app here to avoid *.jar file in use on server side.
-                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-                if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
-                    await client.stop();
-                }
-                await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, true, telemetryProperties);
-            } finally {
-                if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
-                    await client.start();
+    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
+        // event is fired from azure-extensionui if node was created during deployment
+        newNodes.push(newNode);
+    });
+    try {
+        if (!node) {
+            if (!functionAppId || typeof functionAppId !== 'string') {
+                node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+            } else {
+                const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
+                if (functionAppNode) {
+                    node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+                } else {
+                    throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
                 }
             }
         }
-    );
+
+        const client: SiteClient = node.treeItem.client;
+
+        const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+        telemetryProperties.projectLanguage = language;
+        const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+        telemetryProperties.projectRuntime = runtime;
+
+        if (language === ProjectLanguage.Java) {
+            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
+        }
+
+        await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+
+        await node.runWithTemporaryDescription(
+            localize('deploying', 'Deploying...'),
+            async () => {
+                try {
+                    // Stop function app here to avoid *.jar file in use on server side.
+                    // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                    if (language === ProjectLanguage.Java) {
+                        outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                        await client.stop();
+                    }
+                    if (newNodes.length > 0) {
+                        for (const newFunctionApp of newNodes) {
+                            if (node && newFunctionApp.id === node.id) {
+                                // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
+                                confirmDeployment = false;
+                            }
+                        }
+                    }
+                    await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                } finally {
+                    if (language === ProjectLanguage.Java) {
+                        outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                        await client.start();
+                    }
+                }
+            }
+        );
+    } finally {
+        onNodeCreatedFromQuickPickDisposable.dispose();
+    }
 
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
@@ -118,7 +142,7 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     }
 }
 
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient): Promise<void> {
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (!appSettings.properties) {
         throw new ArgumentError(appSettings);
@@ -127,11 +151,19 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
         const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
         // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
-            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}". Update remote runtime?', rawAzureRuntime, localRuntime);
-            await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-            outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
-            appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
-            await client.updateApplicationSettings(appSettings);
+            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
+            const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
+            const result: vscode.MessageItem = await ui.showWarningMessage(message, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
+            if (result === DialogResponses.learnMore) {
+                // tslint:disable-next-line:no-unsafe-any
+                opn('https://aka.ms/azFuncRuntime');
+                telemetryProperties.cancelStep = 'learnMoreRuntime';
+                throw new UserCancelledError();
+            } else {
+                outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
+                appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
+                await client.updateApplicationSettings(appSettings);
+            }
         }
     }
 }
