@@ -46,9 +46,13 @@
         "onCommand:azureFunctions.configureDeploymentSource",
         "onCommand:azureFunctions.debugFunctionAppOnAzure",
         "onCommand:azureFunctions.appSettings.add",
+        "onCommand:azureFunctions.appSettings.download",
+        "onCommand:azureFunctions.appSettings.upload",
         "onCommand:azureFunctions.appSettings.edit",
         "onCommand:azureFunctions.appSettings.rename",
         "onCommand:azureFunctions.appSettings.delete",
+        "onCommand:azureFunctions.appSettings.encrypt",
+        "onCommand:azureFunctions.appSettings.decrypt",
         "onCommand:azureFunctions.pickProcess",
         "onCommand:azureFunctions.installDotnetTemplates",
         "onCommand:azureFunctions.uninstallDotnetTemplates",
@@ -172,6 +176,16 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.appSettings.download",
+                "title": "%azFunc.appSettings.download%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.upload",
+                "title": "%azFunc.appSettings.upload%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.appSettings.edit",
                 "title": "%azFunc.appSettings.edit%",
                 "category": "Azure Functions"
@@ -184,6 +198,16 @@
             {
                 "command": "azureFunctions.appSettings.delete",
                 "title": "%azFunc.appSettings.delete%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.encrypt",
+                "title": "%azFunc.appSettings.encrypt%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.decrypt",
+                "title": "%azFunc.appSettings.decrypt%",
                 "category": "Azure Functions"
             },
             {
@@ -356,6 +380,16 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.appSettings.download",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureFunctions.appSettings.upload",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "group": "1@3"
+                },
+                {
                     "command": "azureFunctions.refresh",
                     "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
                     "group": "2@1"
@@ -391,6 +425,16 @@
                     "command": "azureFunctions.deploy",
                     "when": "explorerResourceIsFolder == true",
                     "group": "zzz_@1"
+                },
+                {
+                    "command": "azureFunctions.appSettings.decrypt",
+                    "when": "resourceFilename==local.settings.json",
+                    "group": "zzz_@1"
+                },
+                {
+                    "command": "azureFunctions.appSettings.encrypt",
+                    "when": "resourceFilename==local.settings.json",
+                    "group": "zzz_@2"
                 }
             ],
             "commandPalette": [

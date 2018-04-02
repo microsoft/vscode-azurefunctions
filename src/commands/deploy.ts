@@ -16,7 +16,7 @@ import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime 
 import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
@@ -31,14 +31,15 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     let confirmDeployment: boolean = true;
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
 
+    const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
     if (!target) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
     } else if (target instanceof vscode.Uri) {
         deployFsPath = target.fsPath;
     } else if (typeof target === 'string') {
         deployFsPath = target;
     } else {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy'), deploySubpathSetting);
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
         node = target;
     }
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
