@@ -17,11 +17,11 @@ export async function validateFuncCliInstalled(ui: IAzureUserInput, outputChanne
         this.suppressErrorDisplay = true;
         const settingKey: string = 'showFuncInstallation';
         if (getFuncExtensionSetting<boolean>(settingKey)) {
-            if (!funcCliInstalled() && brewOrNpmInstalled() && process.platform !== Platform.Linux) {
+            if (!(await funcCliInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
                 // https://github.com/Microsoft/vscode-azurefunctions/issues/311
                 const input: MessageItem = await ui.showWarningMessage(localize('installFuncCli', 'You need Azure Functions Core Tools CLI to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
                 if (input === DialogResponses.yes) {
-                    attemptToInstallLatestFunctionRuntime(ui, outputChannel);
+                    await attemptToInstallLatestFunctionRuntime(ui, outputChannel);
                 } else if (input === DialogResponses.dontWarnAgain) {
                     await updateGlobalSetting(settingKey, false);
                 }
@@ -59,8 +59,9 @@ async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, output
         throw new Error('Installation of Azure Functions Core Tools CLI failed.');
     } finally {
         // validate that Func CLI was installed
-        if (await !funcCliInstalled()) {
+        if (!(await funcCliInstalled())) {
             if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+                // tslint:disable-next-line:no-unsafe-any
                 opn('https://aka.ms/Dqur4e');
             }
         }
