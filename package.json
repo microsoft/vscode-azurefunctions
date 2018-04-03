@@ -521,6 +521,11 @@
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",
                         "default": 60
+                    },
+                    "azureFunctions.showFuncInstallation": {
+                        "type": "boolean",
+                        "description": "%azFunc.showFuncInstallationDescription%",
+                        "default": true
                     }
                 }
             }
