@@ -45,7 +45,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     // Default template filter to 'All' since preview langauges have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
 
-    public async tryGetLocalRuntimeVersiontryGetLocalRuntimeVersion(): Promise<ProjectRuntime> {
+    public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
         return await functionRuntimeUtils.tryGetLocalRuntimeVersion() || ScriptProjectCreatorBase.defaultRuntime;
     }
