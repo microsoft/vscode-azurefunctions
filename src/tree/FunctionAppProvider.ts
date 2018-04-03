@@ -39,7 +39,7 @@ export class FunctionAppProvider implements IChildProvider {
         this._nextLink = webAppCollection.nextLink;
 
         return webAppCollection
-            .filter((site: Site) => site.kind === 'functionapp')
+            .filter((site: Site) => site.kind && site.kind.startsWith('functionapp'))
             .map((site: Site) => new FunctionAppTreeItem(new SiteClient(site, node), this._outputChannel));
     }
 
