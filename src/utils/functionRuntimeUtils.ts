@@ -82,17 +82,13 @@ export namespace functionRuntimeUtils {
     }
 
     export async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
-        try {
-            const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'func');
-            const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)Function Runtime Version: (.*)/);
-            if (matchResult !== null) {
-                const localVersion: string = matchResult[1].trim();
-                return semver.valid(localVersion);
-            }
-            return null;
-        } catch (error) {
-            return null;
+        const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
+        const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
+        if (matchResult !== null) {
+            const localVersion: string = matchResult[1].trim();
+            return semver.valid(localVersion);
         }
+        return null;
     }
 
     enum FunctionRuntimeTag {
@@ -101,26 +97,13 @@ export namespace functionRuntimeUtils {
     }
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
-        switch (process.platform) {
-            case Platform.MacOS:
-                try {
-                    const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'brew', 'info', runtimePackage);
-                    const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)stable (.*)/);
-                    if (matchResult !== null) {
-                        return semver.valid(matchResult[1].trim());
-                    }
-                } catch (error) {
-                    // just fall through to try npm
-                }
+        switch (major) {
+            case FunctionRuntimeTag.latest:
+                return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.latest')).trim());
+            case FunctionRuntimeTag.core:
+                return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.core')).trim());
             default:
-                switch (major) {
-                    case FunctionRuntimeTag.latest:
-                        return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.latest')).trim());
-                    case FunctionRuntimeTag.core:
-                        return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.core')).trim());
-                    default:
-                        return null;
-                }
+                return null;
         }
     }
 }
