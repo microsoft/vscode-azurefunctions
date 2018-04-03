@@ -37,7 +37,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     }
 
     // tslint:disable-next-line:strict-boolean-expressions
-    runtime = runtime || getGlobalFuncExtensionSetting(projectRuntimeSetting) || await projectCreator.getRuntime(outputChannel);
+    runtime = runtime || getGlobalFuncExtensionSetting(projectRuntimeSetting) || await projectCreator.getRuntime();
     outputChannel.appendLine(localize('usingRuntime', 'Using "{0}" as the project runtime...', runtime));
     telemetryProperties.projectRuntime = runtime;
 

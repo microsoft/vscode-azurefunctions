@@ -21,7 +21,7 @@ import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-import { validateFunctionsToolsInstallation } from './validateFunctionsToolsInstallation';
+import { validateFuncCliInstalled } from './validateFuncCliInstalled';
 
 export async function createNewProject(
     telemetryProperties: TelemetryProperties,
@@ -68,7 +68,7 @@ export async function createNewProject(
     }
     const settingKey: string = 'showFuncInstallation';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
-        await validateFunctionsToolsInstallation(ext.ui, ext.outputChannel);
+        await validateFuncCliInstalled(ext.ui, ext.outputChannel);
     }
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {

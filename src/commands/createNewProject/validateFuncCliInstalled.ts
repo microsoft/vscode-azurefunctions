@@ -44,7 +44,7 @@ async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, output
     } finally {
         // validate that Func CLI was installed
         if (await functionRuntimeUtils.getLocalFunctionRuntimeVersion() === null) {
-            await (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore); {
+            if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
                 opn('https://github.com/Azure/azure-functions-core-tools#installing');
             }
         }
