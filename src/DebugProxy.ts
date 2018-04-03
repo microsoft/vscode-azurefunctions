@@ -7,17 +7,14 @@ import { User } from 'azure-arm-website/lib/models';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
 import { OutputChannel } from 'vscode';
-import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
+import { SiteClient } from 'vscode-azureappservice';
 import * as websocket from 'websocket';
 
 export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
-    private _wsclient: websocket.client | undefined;
-    private _wsconnection: websocket.connection | undefined;
     private _client: SiteClient;
     private _port: number;
     private _publishCredential: User;
-    private _keepAlive: boolean;
     private _outputChannel: OutputChannel;
 
     constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: User) {
@@ -25,87 +22,21 @@ export class DebugProxy extends EventEmitter {
         this._client = client;
         this._port = port;
         this._publishCredential = publishCredential;
-        this._keepAlive = true;
         this._outputChannel = outputChannel;
         this._server = createServer();
     }
 
     public async startProxy(): Promise<void> {
+
         if (!this._server) {
             this.emit('error', new Error('Proxy server is not started.'));
         } else {
             // wake up the function app before connecting to it.
-            await this.keepAlive();
+            //await this.keepAlive();
 
             this._server.on('connection', (socket: Socket) => {
-                if (this._wsclient) {
-                    this._outputChannel.appendLine(`[Proxy Server] The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
-                    this.emit('error', new Error(`[Proxy Server]  The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
-                    socket.destroy();
-                } else {
-                    this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
-                    socket.pause();
-
-                    this._wsclient = new websocket.client();
-
-                    this._wsclient.on('connect', (connection: websocket.connection) => {
-                        this._outputChannel.appendLine('[WebSocket] client connected');
-                        this._wsconnection = connection;
-
-                        connection.on('close', () => {
-                            this._outputChannel.appendLine('[WebSocket] client closed');
-                            this.dispose();
-                            socket.destroy();
-                            this.emit('end');
-                        });
-
-                        connection.on('error', (err: Error) => {
-                            this._outputChannel.appendLine(`[WebSocket] ${err}`);
-                            this.dispose();
-                            socket.destroy();
-                            this.emit('error', err);
-                        });
-
-                        connection.on('message', (data: websocket.IMessage) => {
-                            socket.write(data.binaryData);
-                        });
-                        socket.resume();
-                    });
-
-                    this._wsclient.on('connectFailed', (err: Error) => {
-                        this._outputChannel.appendLine(`[WebSocket] ${err}`);
-                        this.dispose();
-                        socket.destroy();
-                        this.emit('error', err);
-                    });
-
-                    this._wsclient.connect(
-                        `wss://${this._client.kuduHostName}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
-                        undefined,
-                        undefined,
-                        { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-                        { auth: `${this._publishCredential.publishingUserName}:${this._publishCredential.publishingPassword}` }
-                    );
-
-                    socket.on('data', (data: Buffer) => {
-                        if (this._wsconnection) {
-                            this._wsconnection.send(data);
-                        }
-                    });
-
-                    socket.on('end', () => {
-                        this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
-                        this.dispose();
-                        this.emit('end');
-                    });
-
-                    socket.on('error', (err: Error) => {
-                        this._outputChannel.appendLine(`[Proxy Server] ${err}`);
-                        this.dispose();
-                        socket.destroy();
-                        this.emit('error', err);
-                    });
-                }
+                this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
+                this.createTunnelForSocket(socket);
             });
 
             this._server.on('listening', () => {
@@ -122,31 +53,100 @@ export class DebugProxy extends EventEmitter {
     }
 
     public dispose(): void {
-        if (this._wsconnection) {
-            this._wsconnection.close();
-            this._wsconnection = undefined;
-        }
-        if (this._wsclient) {
-            this._wsclient.abort();
-            this._wsclient = undefined;
-        }
         if (this._server) {
             this._server.close();
-            this._server = undefined;
         }
-        this._keepAlive = false;
     }
 
-    //keep querying the function app state, otherwise the connection will lose.
-    private async keepAlive(): Promise<void> {
-        if (this._keepAlive) {
-            try {
-                await pingFunctionApp(this._client);
-                setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
-            } catch (err) {
-                this._outputChannel.appendLine(`[Proxy Server] ${err}`);
-                setTimeout(this.keepAlive, 5 * 1000 /* 5 seconds */);
+    private async createTunnelForSocket(socket: Socket): Promise<void> {
+        this._outputChannel.appendLine('[createTunnelForSocket] init');
+
+        let wsConnection: websocket.connection;
+        const wsClient: websocket.client = new websocket.client();
+
+        // Pause socket until tunnel connection has been established
+        socket.pause();
+
+        const dispose: () => void = (): void => {
+            this._outputChannel.appendLine('[createTunnelForSocket] dispose');
+
+            if (wsConnection) {
+                wsConnection.close();
             }
-        }
+
+            if (wsClient) {
+                wsClient.abort();
+            }
+
+            if (socket) {
+                socket.destroy();
+            }
+        };
+
+        socket.on('data', (data: Buffer) => {
+            this._outputChannel.appendLine('[Proxy Server socket data]');
+            if (wsConnection) {
+                wsConnection.send(data);
+            }
+        });
+
+        socket.on('end', () => {
+            this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
+
+            dispose();
+            this.emit('end');
+        });
+
+        socket.on('error', (err: Error) => {
+            this._outputChannel.appendLine(`[Proxy Server] ${err}`);
+
+            dispose();
+            this.emit('error', err);
+        });
+
+        wsClient.on('connect', (connection: websocket.connection) => {
+            this._outputChannel.appendLine('[WebSocket] client connected');
+            wsConnection = connection;
+
+            // resune socket after connection to make sure we dont loose data
+            socket.resume();
+
+            connection.on('close', () => {
+                this._outputChannel.appendLine('[WebSocket] client closed');
+
+                dispose();
+                this.emit('end');
+            });
+
+            connection.on('error', (err: Error) => {
+                this._outputChannel.appendLine(`[WebSocket error] ${err}`);
+
+                dispose();
+                this.emit('error', err);
+            });
+
+            connection.on('message', (data: websocket.IMessage) => {
+                this._outputChannel.appendLine('[WebSocket] data');
+                socket.write(data.binaryData);
+            });
+
+        });
+
+        wsClient.on('connectFailed', (err: Error) => {
+            this._outputChannel.appendLine(`[WebSocket connectFailed] ${err}`);
+
+            dispose();
+            this.emit('error', err);
+        });
+
+        wsClient.connect(
+            `wss://${this._client.kuduHostName}/AppServiceTunnel/Tunnel.ashx`,
+            undefined,
+            undefined,
+            { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+            { auth: `${this._publishCredential.publishingUserName}:${this._publishCredential.publishingPassword}` }
+        );
+
     }
+
 }
