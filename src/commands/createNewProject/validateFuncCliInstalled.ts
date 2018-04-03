@@ -5,47 +5,63 @@
 
 import * as opn from 'opn';
 import { MessageItem, OutputChannel } from 'vscode';
-import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { Platform } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
-import { functionRuntimeUtils } from '../../utils/functionRuntimeUtils';
 
 export async function validateFuncCliInstalled(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
-    const runtime: string | null = await functionRuntimeUtils.getLocalFunctionRuntimeVersion();
-    const settingKey: string = 'showFuncInstallation';
-    if (runtime === null && process.platform !== Platform.Linux) {
-        // command currently does not support Linux
-        const input: MessageItem = await ui.showWarningMessage(localize('installFuncCli', 'You need Azure Functions Core Tools CLI to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
-        if (input === DialogResponses.yes) {
-            attemptToInstallLatestFunctionRuntime(ui, outputChannel);
-        } else if (input === DialogResponses.dontWarnAgain) {
-            await updateGlobalSetting(settingKey, false);
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCliInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+        this.suppressErrorDisplay = true;
+        const settingKey: string = 'showFuncInstallation';
+        if (getFuncExtensionSetting<boolean>(settingKey)) {
+            if (!funcCliInstalled() && brewOrNpmInstalled() && process.platform !== Platform.Linux) {
+                // https://github.com/Microsoft/vscode-azurefunctions/issues/311
+                const input: MessageItem = await ui.showWarningMessage(localize('installFuncCli', 'You need Azure Functions Core Tools CLI to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
+                if (input === DialogResponses.yes) {
+                    attemptToInstallLatestFunctionRuntime(ui, outputChannel);
+                } else if (input === DialogResponses.dontWarnAgain) {
+                    await updateGlobalSetting(settingKey, false);
+                }
+            }
         }
-    }
+    });
 }
 
 async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
     try {
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core');
+                const v1: MessageItem = { title: 'v1' };
+                const v2: MessageItem = { title: 'v2' };
+                const winput: MessageItem = await ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1, v2);
+                if (winput === v1) {
+                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
+                } else if (winput === v2) {
+                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                }
                 break;
             case Platform.MacOS:
-                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
-                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
+                try {
+                    await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
+                    await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
+                } catch (error) {
+                    // if brew fails for whatever reason, fall back to npm
+                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                }
                 break;
             default:
                 break;
         }
     } catch (error) {
-        // swallow the error
+        throw new Error('Installation of Azure Functions Core Tools CLI failed.');
     } finally {
         // validate that Func CLI was installed
-        if (await functionRuntimeUtils.getLocalFunctionRuntimeVersion() === null) {
+        if (await !funcCliInstalled()) {
             if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-                opn('https://github.com/Azure/azure-functions-core-tools#installing');
+                opn('https://aka.ms/Dqur4e');
             }
         }
     }
@@ -57,5 +73,33 @@ function getCommandForPlatform(): string {
             return '`brew tap azure/functions && brew install azure-functions-core-tools`';
         default:
             return '`npm install -g azure-functions-core-tools@core`';
+    }
+}
+
+async function funcCliInstalled(): Promise<boolean> {
+    try {
+        await cpUtils.executeCommand(undefined, undefined, 'func');
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function brewOrNpmInstalled(): Promise<boolean> {
+    switch (process.platform) {
+        case Platform.MacOS:
+            try {
+                await cpUtils.executeCommand(undefined, undefined, 'brew', '--version');
+                return true;
+            } catch (error) {
+                // an error indicates no brew; continue to default, npm case
+            }
+        default:
+            try {
+                await cpUtils.executeCommand(undefined, undefined, 'npm', '--version');
+                return true;
+            } catch (error) {
+                return false;
+            }
     }
 }

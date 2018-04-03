@@ -8,7 +8,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, parseError } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
-import { isWindows, Platform, ProjectRuntime } from '../constants';
+import { isWindows, ProjectRuntime } from '../constants';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
@@ -81,7 +81,7 @@ export namespace functionRuntimeUtils {
         }
     }
 
-    export async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
+    async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
         const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
         const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
         if (matchResult !== null) {

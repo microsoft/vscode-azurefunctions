@@ -45,6 +45,7 @@ export function activate(context: vscode.ExtensionContext): void {
     try {
         const packageInfo: IPackageInfo = (<(id: string) => IPackageInfo>require)(context.asAbsolutePath('./package.json'));
         reporter = new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
+        ext.reporter = reporter;
     } catch (error) {
         // swallow exceptions so that telemetry doesn't affect user
     }
