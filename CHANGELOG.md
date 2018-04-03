@@ -4,6 +4,24 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.8.0 - 2018-04-05
+
+### Added
+
+- Upload and download application settings
+- Prompt to automatically install the Azure Functions Core Tools when possible
+- "Report an issue" button on error dialogs that links to the GitHub repo
+- Subscription filter button next to Subscription nodes in the explorer
+- Deploy to Function App context menu action for Function Apps
+
+### Changed
+
+- JavaScript projects will default to runtime "beta" instead of "~1" on Mac/Linux. See [here](https://aka.ms/azfuncruntime) for more information.
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.7.0 - 2018-03-05
 
 ### Added
