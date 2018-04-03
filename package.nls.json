@@ -19,7 +19,7 @@
     "azFunc.projectLanguageDescription": "The default language to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"F#\", and \"JavaScript\" are currently the only languages approved for production use with runtime \"~1\". \"JavaScript\", \"C#\", and \"Java\" are the only languages that currently support debugging in VS Code.",
     "azFunc.deploy": "Deploy to Function App",
     "azFunc.configureDeploymentSource": "Configure Deployment Source",
-    "azFunc.debugFunctionAppOnAzure": "Attach Debugger",
+    "azFunc.debugFunctionAppOnAzure": "Start Remote Debugging on Azure",
     "azFunc.appSettings.add": "Add new setting...",
     "azFunc.appSettings.edit": "Edit setting...",
     "azFunc.appSettings.rename": "Rename setting...",
