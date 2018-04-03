@@ -57,14 +57,15 @@ async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, output
         }
     } catch (error) {
         throw new Error('Installation of Azure Functions Core Tools CLI failed.');
-    } finally {
-        // validate that Func CLI was installed
-        if (!(await funcCliInstalled())) {
-            if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-                // tslint:disable-next-line:no-unsafe-any
-                opn('https://aka.ms/Dqur4e');
-            }
+    }
+
+    // validate that Func CLI was installed
+    if (!(await funcCliInstalled())) {
+        if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+            // tslint:disable-next-line:no-unsafe-any
+            opn('https://aka.ms/Dqur4e');
         }
+
     }
 }
 
