@@ -58,61 +58,71 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
         p.report({ message: 'checking app settings...' });
 
         // Use or update App Settings
-        await new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
-            const isEnabled: Boolean = await isRemoteDebuggingEnabled(debugRemotePort, client);
 
-            if (isEnabled) {
-                // All good
-                resolve();
-            } else {
-                const confirmMsg: string = 'We need to enable remote debugging for the selected app. Would you like to continue?';
-                const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
-                if (result === DialogResponses.learnMore) {
-                    opn('https://aka.ms/');
-                    reject('');
-                } else {
-                    p.report({ message: 'Updating application settings to enable remote debugging...' });
-                    outputChannel.appendLine('Updating application settings to enable remote debugging...');
-                    await updateAppSettings(debugRemotePort, client);
+        try {
+            await new Promise(async (resolve, reject) => {
+                const isEnabled: Boolean = await isRemoteDebuggingEnabled(debugRemotePort, client);
 
-                    p.report({ message: 'Waiting for 60sec to let app reboot...' });
-                    outputChannel.appendLine('Waiting for 60sec to let app reboot...');
-
-                    // tslint:disable-next-line:no-suspicious-comment
-                    // TODO: Get rid of hard-coded timeout and enable polling of app settings to make sure the setting is applied.
-                    //await delay(60000);
-
+                if (isEnabled) {
+                    // All good
                     resolve();
+                } else {
+                    const confirmMsg: string = 'We need to enable remote debugging for the selected app. Would you like to continue?';
+                    const result: vscode.MessageItem | undefined = await vscode.window.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
+                    if (result === DialogResponses.learnMore) {
+                        opn('https://aka.ms/');
+                        reject('');
+                    } else {
+                        p.report({ message: 'Updating application settings to enable remote debugging...' });
+                        outputChannel.appendLine('Updating application settings to enable remote debugging...');
+                        await updateAppSettings(debugRemotePort, client);
+
+                        p.report({ message: 'Waiting for 60sec to let app reboot...' });
+                        outputChannel.appendLine('Waiting for 60sec to let app reboot...');
+
+                        // tslint:disable-next-line:no-suspicious-comment
+                        // TODO: Get rid of hard-coded timeout and enable polling of app settings to make sure the setting is applied.
+                        //await delay(60000);
+
+                        resolve();
+                    }
                 }
-            }
-        });
+            });
+        } catch (err) {
+            outputChannel.appendLine('An error occured while updating app settings: ' + err);
+            throw new Error('An error occured while updating app settings: ' + err);
+        }
 
         // Setup Debug Proxy Tunnel
-        await new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
-            p.report({ message: 'starting debug proxy...' });
-            outputChannel.appendLine('starting debug proxy...');
+        try {
+            await new Promise(async (resolve, reject) => {
+                p.report({ message: 'starting debug proxy...' });
 
-            const publishCredential: User = await client.getWebAppPublishCredential();
-            debugProxy = new DebugProxy(outputChannel, client, debugConfig.port, publishCredential);
-            debugProxy.on('error', (err: Error) => {
-                debugProxy.dispose();
-                p.report({ message: 'debug proxy encourtered an error' + err });
-                reject(err);
-                throw err;
-            });
+                let debugProxy: DebugProxy;
+                const publishCredential: User = await client.getWebAppPublishCredential();
 
-            debugProxy.on('stop', () => {
-                // DebugProxy is stopped, while debugging, try to stop debug secssion
-                if (vscode.debug.activeDebugSession) {
-                    vscode.commands.executeCommand('workbench.action.debug.stop')
-                }
-            });
+                outputChannel.appendLine('starting debug proxy...');
 
+                debugProxy = new DebugProxy(outputChannel, client, debugConfig.port, publishCredential);
+                debugProxy.on('error', (err: Error) => {
+                    debugProxy.dispose();
+                    throw (err)
+                });
 
-            debugProxy.on('start', resolve);
+                debugProxy.on('stop', () => {
+                    outputChannel.appendLine('DebugProxy is stopped. Trying to stop debug session ' + vscode.debug.activeDebugSession);
+                    // If DebugProxy is stopped, while debugging, try to stop debug secssion
+                    if (vscode.debug.activeDebugSession) {
+                        vscode.commands.executeCommand('workbench.action.debug.stop')
+                    }
+                });
 
-            debugProxy.startProxy();
-        });
+                debugProxy.on('start', resolve);
+                debugProxy.startProxy();
+            })
+        } catch (err) {
+            throw new Error('debug proxy encourtered an error: ' + err);
+        }
 
         // // Start remote debugging
         p.report({ message: 'starting debugging...' });
