@@ -5,6 +5,7 @@
 
 import { OutputChannel } from "vscode";
 import { AzureTreeDataProvider, IAzureUserInput } from "vscode-azureextensionui";
+import TelemetryReporter from "vscode-extension-telemetry";
 import { TemplateData } from "./templates/TemplateData";
 
 /**
@@ -15,4 +16,5 @@ export namespace ext {
     export let outputChannel: OutputChannel;
     export let ui: IAzureUserInput;
     export let templateData: TemplateData;
+    export let reporter: TelemetryReporter;
 }

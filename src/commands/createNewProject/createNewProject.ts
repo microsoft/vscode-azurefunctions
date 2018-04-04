@@ -10,7 +10,7 @@ import { TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
@@ -21,7 +21,7 @@ import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-import { validateFuncCliInstalled } from './validateFuncCliInstalled';
+import { validateFuncCoreToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function createNewProject(
     telemetryProperties: TelemetryProperties,
@@ -66,10 +66,7 @@ export async function createNewProject(
     if (templateId) {
         await createFunction(telemetryProperties, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
-    const settingKey: string = 'showFuncInstallation';
-    if (getFuncExtensionSetting<boolean>(settingKey)) {
-        await validateFuncCliInstalled(ext.ui, ext.outputChannel);
-    }
+    await validateFuncCoreToolsInstalled(ext.ui, ext.outputChannel);
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
