@@ -99,6 +99,15 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
                 reject(err);
                 throw err;
             });
+
+            debugProxy.on('stop', () => {
+                // DebugProxy is stopped, while debugging, try to stop debug secssion
+                if (vscode.debug.activeDebugSession) {
+                    vscode.commands.executeCommand('workbench.action.debug.stop')
+                }
+            });
+
+
             debugProxy.on('start', resolve);
 
             debugProxy.startProxy();
