@@ -96,6 +96,7 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
             debugProxy = new DebugProxy(outputChannel, client, debugConfig.port, publishCredential);
             debugProxy.on('error', (err: Error) => {
                 debugProxy.dispose();
+                p.report({ message: 'debug proxy encourtered an error' + err });
                 reject(err);
                 throw err;
             });
