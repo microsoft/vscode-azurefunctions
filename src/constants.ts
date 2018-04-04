@@ -36,6 +36,12 @@ export enum TemplateFilter {
     Verified = 'Verified'
 }
 
+export enum Platform {
+    Windows = 'win32',
+    MacOS = 'darwin',
+    Linux = 'linux'
+}
+
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const gitignoreFileName: string = '.gitignore';
