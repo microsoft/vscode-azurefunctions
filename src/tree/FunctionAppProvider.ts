@@ -38,9 +38,14 @@ export class FunctionAppProvider implements IChildProvider {
 
         this._nextLink = webAppCollection.nextLink;
 
-        return webAppCollection
-            .filter((site: Site) => site.kind === 'functionapp')
-            .map((site: Site) => new FunctionAppTreeItem(new SiteClient(site, node), this._outputChannel));
+        const treeItems: IAzureTreeItem[] = [];
+        for (const site of webAppCollection) {
+            const siteClient: SiteClient = new SiteClient(site, node);
+            if (siteClient.isFunctionApp) {
+                treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+            }
+        }
+        return treeItems;
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
