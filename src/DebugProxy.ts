@@ -29,18 +29,18 @@ export class DebugProxy extends EventEmitter {
     public async startProxy(): Promise<void> {
 
         if (!this._server) {
-            this.emit('error', new Error('Proxy server is not started.'));
+            this.emit('error', new Error('DebugProxy is not started.'));
         } else {
             // wake up the function app before connecting to it.
             //await this.keepAlive();
 
             this._server.on('connection', (socket: Socket) => {
-                this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
+                this._outputChannel.appendLine(`[DebugProxy] client connected ${socket.remoteAddress}:${socket.remotePort}`);
                 this.createTunnelForSocket(socket);
             });
 
             this._server.on('listening', () => {
-                this._outputChannel.appendLine('[Proxy Server] start listening');
+                this._outputChannel.appendLine('[DebugProxy] start listening');
                 this.emit('start');
             });
 
@@ -53,13 +53,15 @@ export class DebugProxy extends EventEmitter {
     }
 
     public dispose(): void {
+        this._outputChannel.appendLine('[DebugProxy] dispose');
         if (this._server) {
             this._server.close();
         }
+        this.emit('stop')
     }
 
     private async createTunnelForSocket(socket: Socket): Promise<void> {
-        this._outputChannel.appendLine('[createTunnelForSocket] init');
+        this._outputChannel.appendLine('[DebugProxy.createTunnelForSocket] init');
 
         let wsConnection: websocket.connection;
         const wsClient: websocket.client = new websocket.client();
@@ -68,7 +70,7 @@ export class DebugProxy extends EventEmitter {
         socket.pause();
 
         const dispose: () => void = (): void => {
-            this._outputChannel.appendLine('[createTunnelForSocket] dispose');
+            this._outputChannel.appendLine('[DebugProxy.createTunnelForSocket] dispose');
 
             if (wsConnection) {
                 wsConnection.close();
@@ -84,21 +86,21 @@ export class DebugProxy extends EventEmitter {
         };
 
         socket.on('data', (data: Buffer) => {
-            this._outputChannel.appendLine('[Proxy Server socket data]');
+            this._outputChannel.appendLine('[DebugProxy] socket data');
             if (wsConnection) {
                 wsConnection.send(data);
             }
         });
 
         socket.on('end', () => {
-            this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
+            this._outputChannel.appendLine(`[DebugProxy] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
 
             dispose();
             this.emit('end');
         });
 
         socket.on('error', (err: Error) => {
-            this._outputChannel.appendLine(`[Proxy Server] ${err}`);
+            this._outputChannel.appendLine(`[DebugProxy] socket error ${err}`);
 
             dispose();
             this.emit('error', err);
