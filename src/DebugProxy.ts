@@ -94,16 +94,14 @@ export class DebugProxy extends EventEmitter {
 
         socket.on('end', () => {
             this._outputChannel.appendLine(`[DebugProxy] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
-
-            dispose();
             this.emit('end');
+            dispose();
         });
 
         socket.on('error', (err: Error) => {
-            this._outputChannel.appendLine(`[DebugProxy] socket error ${err}`);
-
-            dispose();
             this.emit('error', err);
+            this._outputChannel.appendLine(`[DebugProxy] socket error ${err}`);
+            dispose();
         });
 
         wsClient.on('connect', (connection: websocket.connection) => {
@@ -115,16 +113,14 @@ export class DebugProxy extends EventEmitter {
 
             connection.on('close', () => {
                 this._outputChannel.appendLine('[WebSocket] client closed');
-
-                dispose();
                 this.emit('end');
+                dispose();
             });
 
             connection.on('error', (err: Error) => {
                 this._outputChannel.appendLine(`[WebSocket error] ${err}`);
-
-                dispose();
                 this.emit('error', err);
+                dispose();
             });
 
             connection.on('message', (data: websocket.IMessage) => {
