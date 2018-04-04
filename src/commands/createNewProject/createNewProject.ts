@@ -21,7 +21,7 @@ import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-import { validateFuncCliInstalled } from './validateFuncCliInstalled';
+import { validateFuncCoreToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function createNewProject(
     telemetryProperties: TelemetryProperties,
@@ -66,7 +66,7 @@ export async function createNewProject(
     if (templateId) {
         await createFunction(telemetryProperties, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
-    await validateFuncCliInstalled(ext.ui, ext.outputChannel);
+    await validateFuncCoreToolsInstalled(ext.ui, ext.outputChannel);
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host

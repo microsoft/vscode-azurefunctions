@@ -12,12 +12,13 @@ import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 
-export async function validateFuncCliInstalled(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
-    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCliInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
-        this.suppressErrorDisplay = true;
-        const settingKey: string = 'showFuncInstallation';
-        if (getFuncExtensionSetting<boolean>(settingKey)) {
-            if (!(await funcCliInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
+export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
+    this.suppressErrorDisplay = true;
+    const settingKey: string = 'showFuncInstallation';
+    if (getFuncExtensionSetting<boolean>(settingKey)) {
+        if (!(await funcCliInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
+            // tslint:disable-next-line:no-function-expression
+            await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
                 // https://github.com/Microsoft/vscode-azurefunctions/issues/311
                 const input: MessageItem = await ui.showWarningMessage(localize('installFuncCli', 'You need Azure Functions Core Tools CLI to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
                 if (input === DialogResponses.yes) {
@@ -25,43 +26,39 @@ export async function validateFuncCliInstalled(ui: IAzureUserInput, outputChanne
                 } else if (input === DialogResponses.dontWarnAgain) {
                     await updateGlobalSetting(settingKey, false);
                 }
-            }
+            });
         }
-    });
+    }
 }
 
 async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
-    try {
-        switch (process.platform) {
-            case Platform.Windows:
-                const v1: MessageItem = { title: 'v1' };
-                const v2: MessageItem = { title: 'v2' };
-                const winput: MessageItem = await ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1, v2);
-                if (winput === v1) {
-                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
-                } else if (winput === v2) {
-                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
-                }
-                break;
-            case Platform.MacOS:
-                try {
-                    await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
-                    await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
-                } catch (error) {
-                    // if brew fails for whatever reason, fall back to npm
-                    await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
-                }
-                break;
-            default:
-                break;
-        }
-    } catch (error) {
-        throw new Error('Installation of Azure Functions Core Tools CLI failed.');
+    switch (process.platform) {
+        case Platform.Windows:
+            const v1: MessageItem = { title: 'v1' };
+            const v2: MessageItem = { title: 'v2' };
+            const winput: MessageItem = await ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1, v2);
+            if (winput === v1) {
+                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
+            } else if (winput === v2) {
+                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+            }
+            break;
+        case Platform.MacOS:
+            try {
+                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
+                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
+            } catch (error) {
+                // if brew fails for whatever reason, fall back to npm
+                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+            }
+            break;
+        default:
+            break;
     }
 
     // validate that Func CLI was installed
     if (!(await funcCliInstalled())) {
-        if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools CLI installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
             // tslint:disable-next-line:no-unsafe-any
             opn('https://aka.ms/Dqur4e');
         }
