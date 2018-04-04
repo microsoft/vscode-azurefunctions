@@ -13,21 +13,29 @@ import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSetti
 import { cpUtils } from '../../utils/cpUtils';
 
 export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
-    this.suppressErrorDisplay = true;
-    const settingKey: string = 'showFuncInstallation';
-    if (getFuncExtensionSetting<boolean>(settingKey)) {
-        if (!(await funcCliInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
-            // tslint:disable-next-line:no-function-expression
-            await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+    let input: MessageItem | undefined;
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+        this.suppressErrorDisplay = true;
+        const settingKey: string = 'showFuncInstallation';
+        if (getFuncExtensionSetting<boolean>(settingKey)) {
+            if (!(await funcToolsInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
                 // https://github.com/Microsoft/vscode-azurefunctions/issues/311
-                const input: MessageItem = await ui.showWarningMessage(localize('installFuncCli', 'You need Azure Functions Core Tools CLI to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
+                input = await ui.showWarningMessage(localize('installFuncTools', 'You need Azure Functions Core Tools to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
                 if (input === DialogResponses.yes) {
                     await attemptToInstallLatestFunctionRuntime(ui, outputChannel);
                 } else if (input === DialogResponses.dontWarnAgain) {
                     await updateGlobalSetting(settingKey, false);
                 }
-            });
+            }
         }
+    });
+    // validate that Func Tools was installed only if user confirmed
+    if (input === DialogResponses.yes && !(await funcToolsInstalled())) {
+        if (await ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+            // tslint:disable-next-line:no-unsafe-any
+            opn('https://aka.ms/Dqur4e');
+        }
+
     }
 }
 
@@ -55,15 +63,6 @@ async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, output
         default:
             break;
     }
-
-    // validate that Func CLI was installed
-    if (!(await funcCliInstalled())) {
-        if (await ui.showWarningMessage(localize('failedInstallFuncCli', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-            // tslint:disable-next-line:no-unsafe-any
-            opn('https://aka.ms/Dqur4e');
-        }
-
-    }
 }
 
 function getCommandForPlatform(): string {
@@ -75,7 +74,7 @@ function getCommandForPlatform(): string {
     }
 }
 
-async function funcCliInstalled(): Promise<boolean> {
+async function funcToolsInstalled(): Promise<boolean> {
     try {
         await cpUtils.executeCommand(undefined, undefined, 'func');
         return true;
