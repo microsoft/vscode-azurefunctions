@@ -14,7 +14,9 @@ import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, I
 import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
+import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
+import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
@@ -66,6 +68,10 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         telemetryProperties.projectLanguage = language;
         const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
         telemetryProperties.projectRuntime = runtime;
+
+        console.log(node);
+        const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, deployFsPath);
+        await localAppSettings.validateAzureWebJobsStorage(ext.ui, true);
 
         if (language === ProjectLanguage.Java) {
             deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
