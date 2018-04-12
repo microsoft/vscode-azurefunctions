@@ -14,7 +14,7 @@ import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQ
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { updateGlobalSetting } from '../ProjectSettings';
+import { updateWorkspaceSetting } from '../ProjectSettings';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
 function parseResourceId(id: string): RegExpMatchArray {
@@ -104,9 +104,9 @@ export async function promptForStorageAccount(actionContext: IActionContext): Pr
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
         } else {
-            if (saveStorageAccount) {
+            if (saveStorageAccount && fsPath) {
                 const settingKey: string = 'storageAccount';
-                await updateGlobalSetting(settingKey, { name: storageAccount.name, rg: resourceGroup });
+                await updateWorkspaceSetting(settingKey, { name: storageAccount.name, rg: resourceGroup }, fsPath);
             }
             return {
                 name: storageAccount.name,

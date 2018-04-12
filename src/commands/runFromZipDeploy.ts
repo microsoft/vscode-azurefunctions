@@ -27,19 +27,20 @@ export async function runFromZipDeploy(ui: IAzureUserInput, tree: AzureTreeDataP
     let zipFilePath: string;
     try {
         const blobName: string = azureStorage.date.secondsFromNow(0).toISOString();
-        ({ zipFilePath, createdZip } = await zipDirectory(outputChannel, fsPath, blobName));
+        outputChannel.show();
+        outputChannel.appendLine(localize('zipCreate', 'Creating zip package...'));
+        ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
         outputChannel.appendLine(localize('deployStart', 'Starting deployment...'));
-        const blobService: azureStorage.BlobService = await createBlobService(ui, tree, node);
+        const blobService: azureStorage.BlobService = await createBlobService(ui, tree, node, fsPath);
         const client: SiteClient = node.treeItem.client;
         const blobUrl: string = await createBlobFromZip(blobService, zipFilePath, blobName);
-        const WEBSITE_USE_ZIP: string = 'WEBSITE_USE_ZIP';
         const appSettings: StringDictionary = await client.listApplicationSettings();
         if (appSettings.properties) {
+            const WEBSITE_USE_ZIP: string = 'WEBSITE_USE_ZIP';
             appSettings.properties[WEBSITE_USE_ZIP] = blobUrl;
         } else {
             throw new ArgumentError(appSettings);
         }
-
         await client.updateApplicationSettings(appSettings);
     } catch (error) {
         // tslint:disable-next-line:no-unsafe-any
@@ -68,25 +69,26 @@ export async function runFromZipDeploy(ui: IAzureUserInput, tree: AzureTreeDataP
     return;
 }
 
-async function createBlobService(ui: IAzureUserInput, tree: AzureTreeDataProvider, node: IAzureParentNode): Promise<azureStorage.BlobService> {
+async function createBlobService(ui: IAzureUserInput, tree: AzureTreeDataProvider, node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
     const settingKey: string = 'storageAccount';
-    const storageAccount: { name: string, rg: string } | undefined = getFuncExtensionSetting<{ name: string, rg: string }>(settingKey);
+    const storageAccount: { name: string, rg: string } | undefined = getFuncExtensionSetting<{ name: string, rg: string }>(settingKey, fsPath);
     let name: string | undefined;
     let key: string | undefined;
-    if (!storageAccount) {
-        // prompt user for the first project deployment to get a storage account
+
+    // prompt user for the first project deployment to get a storage account
+    if (!storageAccount || !storageAccount.name || !storageAccount.rg) {
         const runFromZipDeployMessage: string = localize('azFunc.AzureDeployStorageWarning', 'An Azure Storage account is required to deploy to this Function App.', localSettingsFileName);
         const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
         const result: MessageItem | undefined = await ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
         if (result === selectStorageAccountButton) {
-            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(ui, tree);
+            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(ui, tree, true, fsPath);
             const accountKey: string = 'AccountKey=';
             name = sa.name;
             key = sa.connectionString.substring(sa.connectionString.indexOf(accountKey) + accountKey.length);
         }
     } else {
-        const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
-        const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(storageAccount.rg, storageAccount.name);
+        const sClient: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
+        const result: StorageAccountListKeysResult = await sClient.storageAccounts.listKeys(storageAccount.rg, storageAccount.name);
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
         } else {
@@ -167,7 +169,7 @@ export async function isDirectory(fsPath: string): Promise<boolean> {
     return fsStats.isDirectory();
 }
 
-async function zipDirectory(outputChannel: OutputChannel, fsPath: string, blobName: string, globPattern: string = '**/*', ignorePattern?: string | string[]): Promise<{ zipFilePath: string, createdZip: boolean }> {
+async function zipDirectory(fsPath: string, blobName: string, globPattern: string = '**/*', ignorePattern?: string | string[]): Promise<{ zipFilePath: string, createdZip: boolean }> {
     let zipFilePath: string;
     let createdZip: boolean = false;
     const zipFileName: string = blobName.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s/g, '');
@@ -176,7 +178,6 @@ async function zipDirectory(outputChannel: OutputChannel, fsPath: string, blobNa
             zipFilePath = fsPath;
         } else if (await isDirectory(fsPath)) {
             createdZip = true;
-            outputChannel.appendLine(localize('zipCreate', 'Creating zip package...'));
             if (!fsPath.endsWith(path.sep)) {
                 fsPath += path.sep;
             }

@@ -62,19 +62,16 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                 }
             }
         }
-        await runFromZipDeploy(ui, tree, node, deployFsPath, outputChannel);
-
         const client: SiteClient = node.treeItem.client;
-
         const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
         telemetryProperties.projectLanguage = language;
         const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
         telemetryProperties.projectRuntime = runtime;
 
         if (language === ProjectLanguage.Python) {
-            const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, deployFsPath);
-            await localAppSettings.validateAzureWebJobsStorage(ext.ui, true);
             await runFromZipDeploy(ui, tree, node, deployFsPath, outputChannel);
+            outputChannel.appendLine(localize('deployComplete', '>>>>>> Deployment to "{0}" completed. <<<<<<', client.fullName));
+            return;
         }
 
         if (language === ProjectLanguage.Java) {
