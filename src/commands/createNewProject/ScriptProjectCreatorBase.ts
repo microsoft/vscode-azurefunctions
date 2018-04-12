@@ -42,7 +42,7 @@ local.settings.json
  */
 export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
-    // Default template filter to 'All' since preview langauges have not been 'verified'
+    // Default template filter to 'All' since preview languages have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
 
     public async getRuntime(): Promise<ProjectRuntime> {
