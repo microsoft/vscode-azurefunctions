@@ -14,6 +14,7 @@ import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQ
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { updateGlobalSetting } from '../ProjectSettings';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
 function parseResourceId(id: string): RegExpMatchArray {
@@ -26,7 +27,7 @@ function parseResourceId(id: string): RegExpMatchArray {
     return matches;
 }
 
-function getResourceGroupFromId(id: string): string {
+export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
 
@@ -103,6 +104,10 @@ export async function promptForStorageAccount(actionContext: IActionContext): Pr
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
         } else {
+            if (saveStorageAccount) {
+                const settingKey: string = 'storageAccount';
+                await updateGlobalSetting(settingKey, { name: storageAccount.name, rg: resourceGroup });
+            }
             return {
                 name: storageAccount.name,
                 connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`

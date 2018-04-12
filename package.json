@@ -570,6 +570,11 @@
                         "type": "boolean",
                         "description": "%azFunc.showFuncInstallationDescription%",
                         "default": true
+                    },
+                    "azureFunctions.storageAccount": {
+                        "scope": "resource",
+                        "type": "object",
+                        "description": "%azFunc.storageAccountDescription%"
                     }
                 }
             }

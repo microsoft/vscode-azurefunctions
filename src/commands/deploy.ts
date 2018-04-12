@@ -25,6 +25,7 @@ import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
+import { runFromZipDeploy } from './runFromZipDeploy';
 
 // tslint:disable-next-line:max-func-body-length
 export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
@@ -61,6 +62,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                 }
             }
         }
+        await runFromZipDeploy(ui, tree, node, deployFsPath, outputChannel);
 
         const client: SiteClient = node.treeItem.client;
 
@@ -69,9 +71,11 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
         telemetryProperties.projectRuntime = runtime;
 
-        console.log(node);
-        const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, deployFsPath);
-        await localAppSettings.validateAzureWebJobsStorage(ext.ui, true);
+        if (language === ProjectLanguage.Python) {
+            const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, deployFsPath);
+            await localAppSettings.validateAzureWebJobsStorage(ext.ui, true);
+            await runFromZipDeploy(ui, tree, node, deployFsPath, outputChannel);
+        }
 
         if (language === ProjectLanguage.Java) {
             deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
