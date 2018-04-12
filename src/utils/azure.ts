@@ -27,7 +27,7 @@ function parseResourceId(id: string): RegExpMatchArray {
     return matches;
 }
 
-export function getResourceGroupFromId(id: string): string {
+function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
 
