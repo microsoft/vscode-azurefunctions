@@ -30,7 +30,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     telemetryProperties.projectLanguage = language;
 
     outputChannel.show();
-    outputChannel.appendLine(localize('usingLanguage', 'Using "{0}" as the project langauge...', language));
+    outputChannel.appendLine(localize('usingLanguage', 'Using "{0}" as the project language...', language));
 
     if (!projectCreator) {
         projectCreator = getProjectCreator(language, functionAppPath, telemetryProperties);

@@ -64,7 +64,7 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
 }
 
 function isInitializedProject(folderPath: string): boolean {
-    const langauge: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
     const runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, folderPath);
-    return !!langauge && !!runtime;
+    return !!language && !!runtime;
 }
