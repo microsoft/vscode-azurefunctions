@@ -108,7 +108,7 @@ async function createBlobFromZip(blobService: azureStorage.BlobService, zipFileP
     const containerName: string = 'azureappservice-run-from-zip';
     await new Promise<void>((resolve: () => void, reject: (err: Error) => void): void => {
         blobService.createContainerIfNotExists(containerName, (err: Error) => {
-            if (err) {
+            if (err !== undefined) {
                 reject(err);
             } else {
                 resolve();
@@ -118,7 +118,7 @@ async function createBlobFromZip(blobService: azureStorage.BlobService, zipFileP
 
     await new Promise<void>((resolve: () => void, reject: (err: Error) => void): void => {
         blobService.createBlockBlobFromLocalFile(containerName, blobName, zipFilePath, (error: Error, _result: azureStorage.BlobService.BlobResult, _response: azureStorage.ServiceResponse) => {
-            if (!!error) {
+            if (error !== undefined) {
                 // tslint:disable-next-line:no-any
                 const errorAny: any = error;
                 // tslint:disable-next-line:no-unsafe-any
