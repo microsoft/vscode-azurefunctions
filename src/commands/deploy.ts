@@ -14,9 +14,7 @@ import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, I
 import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
-import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
-import { LocalAppSettings } from '../LocalAppSettings';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';

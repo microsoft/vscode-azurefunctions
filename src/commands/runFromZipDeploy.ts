@@ -186,15 +186,19 @@ async function zipDirectory(fsPath: string, blobName: string, globPattern: strin
             await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
                 const zipOutput: fs.WriteStream = fs.createWriteStream(zipFilePath);
                 zipOutput.on('close', resolve);
-
-                const zipper: archiver.Archiver = archiver('zip', { zlib: { level: 9 } });
+                // tslint:disable-next-line:no-unsafe-any
+                const zipper: archiver.Archiver = <archiver.Archiver>(archiver('zip', { zlib: { level: 9 } }));
+                // tslint:disable-next-line:no-unsafe-any
                 zipper.on('error', reject);
+                // tslint:disable-next-line:no-unsafe-any
                 zipper.pipe(zipOutput);
+                // tslint:disable-next-line:no-unsafe-any
                 zipper.glob(globPattern, {
                     cwd: fsPath,
                     dot: true,
                     ignore: ignorePattern
                 });
+                // tslint:disable-next-line:no-unsafe-any
                 void zipper.finalize();
             });
         } else {
