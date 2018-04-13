@@ -4,6 +4,10 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.8.1 - 2018-04-13
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.1%22+label%3Abug+is%3Aclosed)
+- Deployment fail when deploying to function app with a custom domain
+
 ## 0.8.0 - 2018-04-05
 
 ### Added
