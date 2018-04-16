@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
@@ -202,16 +203,31 @@ function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
     return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
 }
 
-async function requestFunctionPortal<T>(hostname: string, subpath: string, runtime: string, param?: string): Promise<T> {
-    const options: request.OptionsWithUri = {
+async function requestFunctionPortal<T>(version: string, subpath: string, runtime: string, param?: string): Promise<T> {
+    const funcJsonOptions: request.OptionsWithUri = {
         method: 'GET',
-        uri: `https://${hostname}/api/${subpath}?runtime=${runtime}&${param}`,
+        uri: `https://functionscdn.azureedge.net/public/cli-feed-v3.json`,
         headers: {
             'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
         }
     };
 
-    return <T>(JSON.parse(await <Thenable<string>>request(options).promise()));
+    const funcJson: T = <T>(JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise()));
+    const releaseUrl: string = funcJson.releases['2.0.1-beta.25'];
+    const templateUrl: string = releaseUrl.projectTemplates;
+
+    const templateOptions: request.OptionsWithUri = {
+        method: 'GET',
+        uri: templateUrl,
+        headers: {
+            'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
+        }
+    };
+
+    const templates: T = await <Thenable<string>>request(templateOptions).promise();
+    console.log(templates);
+
+    return <T>(JSON.parse(await <Thenable<string>>request(templateOptions).promise()));
 }
 
 function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): [Template[], Config] {

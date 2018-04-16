@@ -15,6 +15,7 @@ are grateful to these developers for their contribution to open source.
 8. semver (https://github.com/npm/node-semver)
 9. portfinder (https://github.com/indexzero/node-portfinder)
 10. websocket (https://github.com/theturtle32/WebSocket-Node)
+11. extract-zip (https://github.com/maxogden/extract-zip)
 
 fs-extra NOTICES BEGIN HERE
 =============================
@@ -408,4 +409,3 @@ END OF TERMS AND CONDITIONS
 
 END OF websocket NOTICES AND INFORMATION
 ==================================
-
