@@ -5,6 +5,7 @@
 
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
+import * as os from 'os';
 import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
@@ -158,9 +159,10 @@ export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReport
 
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const rawResources: object = await requestFunctionPortal<object>(hostname, 'resources', runtime);
-                const rawTemplates: object[] = await requestFunctionPortal<object[]>(hostname, 'templates', runtime);
-                const rawConfig: object = await requestFunctionPortal<object>(hostname, 'bindingconfig', runtime);
+                await requestFunctionPortal('a', 'b', 'c');
+                const rawResources: object = await getFunctionTemplateBySubpath<object>('resources');
+                const rawTemplates: object[] = await getFunctionTemplateBySubpath<object[]>('templates');
+                const rawConfig: object = await getFunctionTemplateBySubpath<object>('bindings');
 
                 [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
 
@@ -203,7 +205,7 @@ function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
     return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
 }
 
-async function requestFunctionPortal<T>(version: string, subpath: string, runtime: string, param?: string): Promise<T> {
+async function requestFunctionPortal(version: string, subpath: string, runtime: string, param?: string): Promise<void> {
     const funcJsonOptions: request.OptionsWithUri = {
         method: 'GET',
         uri: `https://functionscdn.azureedge.net/public/cli-feed-v3.json`,
@@ -214,20 +216,14 @@ async function requestFunctionPortal<T>(version: string, subpath: string, runtim
 
     const funcJson: T = <T>(JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise()));
     const releaseUrl: string = funcJson.releases['2.0.1-beta.25'];
-    const templateUrl: string = releaseUrl.projectTemplates;
+    // const templateUrl: string = releaseUrl.templateApiZip;
+    const templateUrl: string = 'https://functionscdn.azureedge.net/public/TemplatesApi/2.0.0-beta-10180.zip';
+    await downloadAndExtractZip(templateUrl);
+}
 
-    const templateOptions: request.OptionsWithUri = {
-        method: 'GET',
-        uri: templateUrl,
-        headers: {
-            'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
-        }
-    };
-
-    const templates: T = await <Thenable<string>>request(templateOptions).promise();
-    console.log(templates);
-
-    return <T>(JSON.parse(await <Thenable<string>>request(templateOptions).promise()));
+function getFunctionTemplateBySubpath<T>(subpath: string): T {
+    const tempPath: string = path.join(os.tmpdir(), 'templates');
+    return fse.readJSON(path.join(tempPath, subpath, `${subpath}.json`));
 }
 
 function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): [Template[], Config] {
@@ -245,4 +241,32 @@ function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig:
 
 export function removeLanguageFromId(id: string): string {
     return id.split('-')[0];
+}
+
+async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
+    return new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
+        const templateOptions: request.OptionsWithUri = {
+            method: 'GET',
+            uri: templateUrl,
+            headers: {
+                'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
+            }
+        };
+        const tempPath: string = path.join(os.tmpdir(), 'templates');
+        request(templateOptions, (err: Error) => {
+            if (err) {
+                reject(err);
+            }
+        }).pipe(fse.createWriteStream(path.join(tempPath, 'templates.zip')).on('finish', () => {
+            console.log('Zip file downloaded.');
+            extract(path.join(tempPath, 'templates.zip'), { dir: tempPath }, (err: Error) => {
+                console.log('Zip file extracted.');
+                if (err) {
+                    reject(err);
+                }
+                resolve();
+
+            });
+        }));
+    });
 }
