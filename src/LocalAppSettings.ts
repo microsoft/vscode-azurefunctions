@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
 import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { localize } from './localize';
@@ -31,7 +31,7 @@ export class LocalAppSettings {
         this._localAppSettingsPath = path.join(functionAppPath, localSettingsFileName);
     }
 
-    public async promptForAppSetting(resourceType: ResourceType): Promise<string> {
+    public async promptForAppSetting(resourceType: ResourceType, actionContext: IActionContext): Promise<string> {
         const settings: ILocalAppSettings = await this.getSettings();
         const resourceTypeLabel: string = getResourceTypeLabel(resourceType);
 
@@ -55,7 +55,7 @@ export class LocalAppSettings {
                     resourceResult = await azUtil.promptForCosmosDBAccount(this._ui, this._tree);
                     break;
                 case ResourceType.Storage:
-                    resourceResult = await azUtil.promptForStorageAccount(this._ui, this._tree);
+                    resourceResult = await azUtil.promptForStorageAccount(this._ui, this._tree, actionContext);
                     break;
                 default:
             }
@@ -92,7 +92,7 @@ export class LocalAppSettings {
         return appSettingKey;
     }
 
-    public async validateAzureWebJobsStorage(ui: IAzureUserInput): Promise<void> {
+    public async validateAzureWebJobsStorage(actionContext: IActionContext, ui: IAzureUserInput): Promise<void> {
         const settings: ILocalAppSettings = await this.getSettings();
         if (settings.Values && settings.Values[this._azureWebJobsStorageKey]) {
             return;
@@ -105,7 +105,7 @@ export class LocalAppSettings {
             let connectionString: string;
 
             try {
-                const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(this._ui, this._tree);
+                const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(this._ui, this._tree, actionContext);
                 connectionString = resourceResult.connectionString;
             } catch (error) {
                 if (error instanceof NoSubscriptionError) {

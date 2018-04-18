@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
 import * as vscode from 'vscode';
-import { DialogResponses, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { LocalAppSettings } from '../../LocalAppSettings';
@@ -24,19 +24,19 @@ import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
-async function validateIsFunctionApp(telemetryProperties: TelemetryProperties, functionAppPath: string): Promise<void> {
+async function validateIsFunctionApp(actionContext: IActionContext, functionAppPath: string): Promise<void> {
     if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(telemetryProperties, functionAppPath, undefined, undefined, false);
+            await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
         }
     }
 }
 
-async function promptForSetting(localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(actionContext: IActionContext, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
-        return await localAppSettings.promptForAppSetting(setting.resourceType);
+        return await localAppSettings.promptForAppSetting(setting.resourceType, actionContext);
     } else {
         switch (setting.valueType) {
             case ValueType.boolean:
@@ -76,7 +76,7 @@ async function promptForStringSetting(setting: ConfigSetting, defaultValue?: str
 }
 
 export async function createFunction(
-    telemetryProperties: TelemetryProperties,
+    actionContext: IActionContext,
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
@@ -94,7 +94,7 @@ export async function createFunction(
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 
-    await validateIsFunctionApp(telemetryProperties, functionAppPath);
+    await validateIsFunctionApp(actionContext, functionAppPath);
 
     const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, functionAppPath);
 
@@ -122,15 +122,11 @@ export async function createFunction(
         }
     }
 
-    telemetryProperties.projectLanguage = language;
-    telemetryProperties.projectRuntime = runtime;
-    telemetryProperties.templateFilter = templateFilter;
+    actionContext.properties.projectLanguage = language;
+    actionContext.properties.projectRuntime = runtime;
+    actionContext.properties.templateFilter = templateFilter;
 
-    telemetryProperties.templateId = template.id;
-
-    if (!template.functionConfig.isHttpTrigger) {
-        await localAppSettings.validateAzureWebJobsStorage(ext.ui);
-    }
+    actionContext.properties.templateId = template.id;
 
     let functionCreator: FunctionCreatorBase;
     switch (language) {
@@ -156,7 +152,7 @@ export async function createFunction(
                 settingValue = functionSettings[settingName.toLowerCase()];
             } else {
                 const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
-                settingValue = await promptForSetting(localAppSettings, setting, defaultValue);
+                settingValue = await promptForSetting(actionContext, localAppSettings, setting, defaultValue);
             }
 
             userSettings[settingName] = settingValue ? settingValue : '';
@@ -167,6 +163,10 @@ export async function createFunction(
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+    }
+
+    if (!template.functionConfig.isHttpTrigger) {
+        await localAppSettings.validateAzureWebJobsStorage(actionContext, ext.ui);
     }
 }
 
