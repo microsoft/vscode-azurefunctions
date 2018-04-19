@@ -9,7 +9,7 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestUserInput } from 'vscode-azureextensionui';
+import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createFunction } from '../../src/commands/createFunction/createFunction';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
@@ -116,7 +116,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
 
         ext.ui = new TestUserInput(inputs);
         ext.templateData = templateData;
-        await createFunction({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' });
+        await createFunction(<IActionContext>{ properties: {}, measurements: {} });
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);

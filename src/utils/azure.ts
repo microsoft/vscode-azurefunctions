@@ -10,8 +10,9 @@ import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { AzureTreeDataProvider, IAzureNode, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
@@ -73,12 +74,26 @@ export async function promptForCosmosDBAccount(ui: IAzureUserInput, tree: AzureT
     }
 }
 
-export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider): Promise<IResourceResult> {
-    const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.Storage);
+export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider, actionContext: IActionContext): Promise<IResourceResult> {
     const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
+    const wizardContext: IStorageAccountWizardContext = {
+        credentials: node.credentials,
+        subscriptionId: node.subscriptionId,
+        subscriptionDisplayName: node.subscriptionDisplayName
+    };
+    const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(
+        [new StorageAccountListStep(StorageAccountKind.Storage, StorageAccountPerformance.Standard, StorageAccountReplication.LRS)],
+        [],
+        wizardContext
+    );
+
+    await wizard.prompt(actionContext, ui);
+    await wizard.execute(actionContext, ext.outputChannel);
+
     const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
-    const storageAccount: StorageAccount = await promptForResource<StorageAccount>(ui, resourceTypeLabel, client.storageAccounts.list());
+    // tslint:disable-next-line:no-non-null-assertion
+    const storageAccount: StorageAccount = wizardContext.storageAccount!;
 
     if (!storageAccount.id || !storageAccount.name) {
         throw new ArgumentError(storageAccount);

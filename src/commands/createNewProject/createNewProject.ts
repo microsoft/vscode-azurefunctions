@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { QuickPickItem, QuickPickOptions } from 'vscode';
 import * as vscode from 'vscode';
-import { TelemetryProperties } from 'vscode-azureextensionui';
+import { QuickPickItem, QuickPickOptions } from 'vscode';
+import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -24,7 +24,7 @@ import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 import { validateFuncCoreToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function createNewProject(
-    telemetryProperties: TelemetryProperties,
+    actionContext: IActionContext,
     functionAppPath?: string,
     language?: string,
     runtime?: string,
@@ -52,19 +52,19 @@ export async function createNewProject(
             language = (await ext.ui.showQuickPick(languagePicks, options)).label;
         }
     }
-    telemetryProperties.projectLanguage = language;
+    actionContext.properties.projectLanguage = language;
 
-    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, telemetryProperties);
+    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext.properties);
     await projectCreator.addNonVSCodeFiles();
 
-    await initProjectForVSCode(telemetryProperties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
+    await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
     if (await gitUtils.isGitInstalled(functionAppPath)) {
         await gitUtils.gitInit(ext.outputChannel, functionAppPath);
     }
 
     if (templateId) {
-        await createFunction(telemetryProperties, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
+        await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
     await validateFuncCoreToolsInstalled(ext.ui, ext.outputChannel);
 

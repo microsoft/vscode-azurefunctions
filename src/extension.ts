@@ -91,11 +91,11 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         actionHandler.registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
             await templateDataTask;
-            await createFunction(this.properties, functionAppPath, templateId, functionName, functionSettings);
+            await createFunction(this, functionAppPath, templateId, functionName, functionSettings);
         });
         actionHandler.registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
             await templateDataTask;
-            await createNewProject(this.properties, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
+            await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         actionHandler.registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
         actionHandler.registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, tree, arg); });

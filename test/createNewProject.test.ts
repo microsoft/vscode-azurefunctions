@@ -9,7 +9,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestUserInput } from 'vscode-azureextensionui';
+import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
@@ -146,7 +146,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
         const ui: TestUserInput = new TestUserInput(inputs);
         ext.ui = ui;
-        await createNewProject({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '' }, undefined, previewLanguage ? language : undefined, undefined, false);
+        await createNewProject(<IActionContext>{ properties: {}, measurements: {} }, undefined, previewLanguage ? language : undefined, undefined, false);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
