@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { ILocalAppSettings } from './commands/appSettings/ILocalAppSettings';
 import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
@@ -15,6 +14,12 @@ import { getResourceTypeLabel, ResourceType } from './templates/ConfigSetting';
 import * as azUtil from './utils/azure';
 import { IResourceResult } from './utils/azure';
 import * as fsUtil from './utils/fs';
+
+export interface ILocalAppSettings {
+    IsEncrypted?: boolean;
+    Values?: { [key: string]: string };
+    ConnectionStrings?: { [key: string]: string };
+}
 
 const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 

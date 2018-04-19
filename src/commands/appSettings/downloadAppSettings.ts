@@ -10,14 +10,13 @@ import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
 import { IAzureNode } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { getLocalSettings } from "../../LocalAppSettings";
+import { getLocalSettings, ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
 import { FunctionAppTreeItem } from "../../tree/FunctionAppTreeItem";
 import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
-import { ILocalAppSettings } from "./ILocalAppSettings";
 
 export async function downloadAppSettings(node?: IAzureNode): Promise<void> {
     if (!node) {
