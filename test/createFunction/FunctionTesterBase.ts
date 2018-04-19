@@ -27,7 +27,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     // Ensure template data is initialized before any 'Create Function' test is run
     backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..', '..'));
     funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined, 'functions-staging.azure.com');
+    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined);
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {

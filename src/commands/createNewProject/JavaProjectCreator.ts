@@ -16,7 +16,7 @@ import { mavenUtils } from '../../utils/mavenUtils';
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
 
 export class JavaProjectCreator extends ProjectCreatorBase {
-    public static defaultRuntime: ProjectRuntime = ProjectRuntime.beta;
+    public static defaultRuntime: ProjectRuntime = ProjectRuntime.two;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _javaTargetPath: string;

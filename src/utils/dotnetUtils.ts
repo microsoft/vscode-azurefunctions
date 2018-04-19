@@ -74,7 +74,7 @@ export namespace dotnetUtils {
 
         if (isWindows) {
             const picks: QuickPickItem[] = [
-                { label: ProjectRuntime.beta, description: '(.NET Core)' },
+                { label: ProjectRuntime.two, description: '(.NET Core)' },
                 { label: ProjectRuntime.one, description: '(.NET Framework)' }
             ];
             const options: QuickPickOptions = { placeHolder: localize('pickTemplateVersion', 'Select the template version to install') };

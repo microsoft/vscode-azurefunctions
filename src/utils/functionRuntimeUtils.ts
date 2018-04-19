@@ -59,14 +59,14 @@ export namespace functionRuntimeUtils {
 
     export async function tryGetLocalRuntimeVersion(): Promise<ProjectRuntime | undefined> {
         if (!isWindows) {
-            return ProjectRuntime.beta;
+            return ProjectRuntime.two;
         } else {
             try {
                 const version: string | null = await getLocalFunctionRuntimeVersion();
                 if (version !== null) {
                     switch (semver.major(version)) {
                         case 2:
-                            return ProjectRuntime.beta;
+                            return ProjectRuntime.two;
                         case 1:
                             return ProjectRuntime.one;
                         default:

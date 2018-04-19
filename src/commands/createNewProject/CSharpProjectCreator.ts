@@ -55,7 +55,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             const targetFramework: string = matches[1];
             this.telemetryProperties.cSharpTargetFramework = targetFramework;
             if (targetFramework.startsWith('netstandard')) {
-                this._runtime = ProjectRuntime.beta;
+                this._runtime = ProjectRuntime.two;
             } else {
                 this._runtime = ProjectRuntime.one;
                 const settingKey: string = 'show64BitWarning';
@@ -135,7 +135,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this._runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
+                    type: this._runtime === ProjectRuntime.two ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }

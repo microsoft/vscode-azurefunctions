@@ -38,7 +38,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath);
         await validateVSCodeProjectFiles(projectPath);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.two);
     });
 
     const csharpProject: string = 'AutoDetectCSharpProject';
@@ -51,7 +51,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateVSCodeProjectFiles(projectPath, true);
         await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.two);
     });
 
     const javaProject: string = 'AutoDetectJavaProject';
@@ -62,7 +62,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateVSCodeProjectFiles(projectPath, true);
         await validateExtensionRecommendation(projectPath, 'vscjava.vscode-java-debug');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.Java);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.two);
     });
 
     const multiLanguageProject: string = 'MultiLanguageProject';
@@ -77,7 +77,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
         await validateVSCodeProjectFiles(projectPath, false);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.two);
     });
 
     const goodExtensionFile: string = 'Existing Extensions File';

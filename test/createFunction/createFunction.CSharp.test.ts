@@ -15,7 +15,7 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
     protected _language: ProjectLanguage = ProjectLanguage.CSharp;
-    protected _runtime: ProjectRuntime = ProjectRuntime.beta;
+    protected _runtime: ProjectRuntime = ProjectRuntime.two;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         assert.equal(await fse.pathExists(path.join(testFolder, `${funcName}.cs`)), true, 'cs file does not exist');

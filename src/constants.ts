@@ -26,8 +26,8 @@ export enum ProjectLanguage {
 }
 
 export enum ProjectRuntime {
-    one = '~1',
-    beta = 'beta'
+    one = 'v1',
+    two = 'v2'
 }
 
 export enum TemplateFilter {

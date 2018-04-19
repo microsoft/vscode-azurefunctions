@@ -16,6 +16,7 @@ are grateful to these developers for their contribution to open source.
 9. portfinder (https://github.com/indexzero/node-portfinder)
 10. websocket (https://github.com/theturtle32/WebSocket-Node)
 11. extract-zip (https://github.com/maxogden/extract-zip)
+12. del (https://github.com/sindresorhus/del)
 
 fs-extra NOTICES BEGIN HERE
 =============================
