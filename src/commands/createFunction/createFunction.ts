@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as path from 'path';
 import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
+import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { LocalAppSettings } from '../../LocalAppSettings';
+import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
 import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
@@ -34,9 +35,9 @@ async function validateIsFunctionApp(actionContext: IActionContext, functionAppP
     }
 }
 
-async function promptForSetting(actionContext: IActionContext, localAppSettings: LocalAppSettings, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
-        return await localAppSettings.promptForAppSetting(setting.resourceType, actionContext);
+        return await promptForAppSetting(actionContext, localSettingsPath, setting.resourceType);
     } else {
         switch (setting.valueType) {
             case ValueType.boolean:
@@ -96,7 +97,7 @@ export async function createFunction(
 
     await validateIsFunctionApp(actionContext, functionAppPath);
 
-    const localAppSettings: LocalAppSettings = new LocalAppSettings(ext.ui, ext.tree, functionAppPath);
+    const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
 
     if (language === undefined) {
         language = await getProjectLanguage(functionAppPath, ext.ui);
@@ -152,7 +153,7 @@ export async function createFunction(
                 settingValue = functionSettings[settingName.toLowerCase()];
             } else {
                 const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
-                settingValue = await promptForSetting(actionContext, localAppSettings, setting, defaultValue);
+                settingValue = await promptForSetting(actionContext, localSettingsPath, setting, defaultValue);
             }
 
             userSettings[settingName] = settingValue ? settingValue : '';
@@ -166,7 +167,7 @@ export async function createFunction(
     }
 
     if (!template.functionConfig.isHttpTrigger) {
-        await localAppSettings.validateAzureWebJobsStorage(actionContext, ext.ui);
+        await validateAzureWebJobsStorage(actionContext, localSettingsPath);
     }
 }
 
