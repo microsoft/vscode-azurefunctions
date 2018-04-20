@@ -10,10 +10,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
+import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
@@ -26,7 +27,7 @@ import * as workspaceUtil from '../utils/workspace';
 import { runFromZipDeploy } from './runFromZipDeploy';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+export async function deploy(actionContext: IActionContext, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let confirmDeployment: boolean = true;
@@ -34,13 +35,13 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
 
     const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
     if (!target) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
     } else if (target instanceof vscode.Uri) {
         deployFsPath = target.fsPath;
     } else if (typeof target === 'string') {
         deployFsPath = target;
     } else {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
         node = target;
     }
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
@@ -61,16 +62,16 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
             }
         }
         const client: SiteClient = node.treeItem.client;
-        const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+        const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ext.ui);
         telemetryProperties.projectLanguage = language;
-        const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+        const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ext.ui);
         telemetryProperties.projectRuntime = runtime;
 
         if (language === ProjectLanguage.Java) {
-            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
+            deployFsPath = await getJavaFolderPath(ext.outputChannel, deployFsPath, ext.ui);
         }
 
-        await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+        await verifyRuntimeIsCompatible(runtime, ext.ui, ext.outputChannel, client, telemetryProperties);
 
         await node.runWithTemporaryDescription(
             localize('deploying', 'Deploying...'),
@@ -79,7 +80,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                     // Stop function app here to avoid *.jar file in use on server side.
                     // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
                     if (language === ProjectLanguage.Java) {
-                        outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                        ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                         await client.stop();
                     }
                     if (newNodes.length > 0) {
@@ -92,15 +93,15 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                     }
                     // Python for Linux will only run on a consumption plan which can only be deployed by Run-from-Zip
                     if (language === ProjectLanguage.Python && node) {
-                        await runFromZipDeploy(node, deployFsPath);
-                        outputChannel.appendLine(localize('deployComplete', '>>>>>> Deployment to "{0}" completed. <<<<<<', client.fullName));
+                        await runFromZipDeploy(actionContext, node, deployFsPath);
+                        ext.outputChannel.appendLine(localize('deployComplete', '>>>>>> Deployment to "{0}" completed. <<<<<<', client.fullName));
                         return;
                     } else {
-                        await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                        await appservice.deploy(client, deployFsPath, ext.outputChannel, ext.ui, extensionPrefix, confirmDeployment, telemetryProperties);
                     }
                 } finally {
                     if (language === ProjectLanguage.Java) {
-                        outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                        ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
                         await client.start();
                     }
                 }
@@ -116,14 +117,14 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
     const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
-        outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+        ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
         for (const func of anonFunctions) {
-            outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+            ext.outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
         }
     }
 
     if (functions.find((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
-        outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+        ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
     }
 }
 

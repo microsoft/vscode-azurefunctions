@@ -15,7 +15,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { MessageItem } from "vscode";
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IAzureParentNode } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -25,7 +25,7 @@ import { updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import * as  azUtil from '../utils/azure';
 
-export async function runFromZipDeploy(node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
+export async function runFromZipDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
     let createdZip: boolean = false;
     let zipFilePath: string;
     try {
@@ -34,7 +34,7 @@ export async function runFromZipDeploy(node: IAzureParentNode<FunctionAppTreeIte
         ext.outputChannel.appendLine(localize('zipCreate', 'Creating zip package...'));
         ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
         ext.outputChannel.appendLine(localize('deployStart', 'Starting deployment...'));
-        const blobService: azureStorage.BlobService = await createBlobService(node, fsPath);
+        const blobService: azureStorage.BlobService = await createBlobService(actionContext, node, fsPath);
         const client: SiteClient = node.treeItem.client;
         const blobUrl: string = await createBlobFromZip(blobService, zipFilePath, blobName);
         const appSettings: StringDictionary = await client.listApplicationSettings();
@@ -72,7 +72,7 @@ export async function runFromZipDeploy(node: IAzureParentNode<FunctionAppTreeIte
     return;
 }
 
-async function createBlobService(node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
+async function createBlobService(actionContext: IActionContext, node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
     const settingKey: string = 'deployStorageAccount';
     const storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
     let name: string | undefined;
@@ -84,7 +84,7 @@ async function createBlobService(node: IAzureParentNode, fsPath: string): Promis
         const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
         const result: MessageItem | undefined = await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
         if (result === selectStorageAccountButton) {
-            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(ext.ui, ext.tree);
+            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext);
             if (sa.id) {
                 await updateWorkspaceSetting(settingKey, sa.id, fsPath);
             }
