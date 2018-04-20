@@ -55,12 +55,12 @@ export interface IResourceResult {
     connectionString: string;
 }
 
-export async function promptForCosmosDBAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider): Promise<IResourceResult> {
+export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.DocumentDB);
-    const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId);
-    const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ui, resourceTypeLabel, client.databaseAccounts.list());
+    const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
         throw new ArgumentError(dbAccount);
@@ -74,8 +74,8 @@ export async function promptForCosmosDBAccount(ui: IAzureUserInput, tree: AzureT
     }
 }
 
-export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTreeDataProvider, actionContext: IActionContext): Promise<IResourceResult> {
-    const node: IAzureNode = await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+export async function promptForStorageAccount(actionContext: IActionContext): Promise<IResourceResult> {
+    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const wizardContext: IStorageAccountWizardContext = {
         credentials: node.credentials,
@@ -88,7 +88,7 @@ export async function promptForStorageAccount(ui: IAzureUserInput, tree: AzureTr
         wizardContext
     );
 
-    await wizard.prompt(actionContext, ui);
+    await wizard.prompt(actionContext, ext.ui);
     await wizard.execute(actionContext, ext.outputChannel);
 
     const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);

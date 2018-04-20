@@ -10,13 +10,13 @@ import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
 import { IAzureNode } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
+import { getLocalSettings, ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
 import { FunctionAppTreeItem } from "../../tree/FunctionAppTreeItem";
 import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
-import { ILocalAppSettings } from "./ILocalAppSettings";
 
 export async function downloadAppSettings(node?: IAzureNode): Promise<void> {
     if (!node) {
@@ -33,7 +33,7 @@ export async function downloadAppSettings(node?: IAzureNode): Promise<void> {
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLine(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
-        let localSettings: ILocalAppSettings = <ILocalAppSettings>await fse.readJson(localSettingsPath);
+        let localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
         if (localSettings.IsEncrypted) {
@@ -51,6 +51,7 @@ export async function downloadAppSettings(node?: IAzureNode): Promise<void> {
                 await confirmOverwriteSettings(remoteSettings.properties, localSettings.Values, localSettingsFileName);
             }
 
+            await fse.ensureFile(localSettingsPath);
             await fse.writeJson(localSettingsPath, localSettings, { spaces: 2 });
         } finally {
             if (isEncrypted) {
