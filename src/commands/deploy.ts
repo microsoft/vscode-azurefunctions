@@ -66,12 +66,6 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
         telemetryProperties.projectRuntime = runtime;
 
-        if (language === ProjectLanguage.Python) {
-            await runFromZipDeploy(ui, tree, node, deployFsPath, outputChannel);
-            outputChannel.appendLine(localize('deployComplete', '>>>>>> Deployment to "{0}" completed. <<<<<<', client.fullName));
-            return;
-        }
-
         if (language === ProjectLanguage.Java) {
             deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
         }
@@ -96,7 +90,14 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                             }
                         }
                     }
-                    await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                    // Python for Linux will only run on a consumption plan which can only be deployed by Run-from-Zip
+                    if (language === ProjectLanguage.Python && node) {
+                        await runFromZipDeploy(node, deployFsPath);
+                        outputChannel.appendLine(localize('deployComplete', '>>>>>> Deployment to "{0}" completed. <<<<<<', client.fullName));
+                        return;
+                    } else {
+                        await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                    }
                 } finally {
                     if (language === ProjectLanguage.Java) {
                         outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));

@@ -571,10 +571,10 @@
                         "description": "%azFunc.showFuncInstallationDescription%",
                         "default": true
                     },
-                    "azureFunctions.storageAccount": {
+                    "azureFunctions.deployStorageAccount": {
                         "scope": "resource",
-                        "type": "object",
-                        "description": "%azFunc.storageAccountDescription%"
+                        "type": "string",
+                        "description": "%azFunc.deployStorageAccountDescription%"
                     }
                 }
             }

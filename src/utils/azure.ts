@@ -14,7 +14,6 @@ import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQ
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { updateWorkspaceSetting } from '../ProjectSettings';
 import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
 
 function parseResourceId(id: string): RegExpMatchArray {
@@ -27,12 +26,16 @@ function parseResourceId(id: string): RegExpMatchArray {
     return matches;
 }
 
-function getResourceGroupFromId(id: string): string {
+export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
 
 export function getSubscriptionFromId(id: string): string {
     return parseResourceId(id)[1];
+}
+
+export function getNameFromId(id: string): string {
+    return parseResourceId(id)[4];
 }
 
 interface IBaseResourceWithName extends BaseResource {
@@ -54,6 +57,7 @@ async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUser
 export interface IResourceResult {
     name: string;
     connectionString: string;
+    id?: string;
 }
 
 export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
@@ -103,15 +107,11 @@ export async function promptForStorageAccount(actionContext: IActionContext): Pr
         const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, storageAccount.name);
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
-        } else {
-            if (saveStorageAccount && fsPath) {
-                const settingKey: string = 'storageAccount';
-                await updateWorkspaceSetting(settingKey, { name: storageAccount.name, rg: resourceGroup }, fsPath);
-            }
-            return {
-                name: storageAccount.name,
-                connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`
-            };
         }
+        return {
+            name: storageAccount.name,
+            connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`,
+            id: storageAccount.id
+        };
     }
 }
