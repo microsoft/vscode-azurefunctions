@@ -28,7 +28,7 @@ import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 async function validateIsFunctionApp(actionContext: IActionContext, functionAppPath: string): Promise<void> {
     if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
         }

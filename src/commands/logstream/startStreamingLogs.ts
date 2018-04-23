@@ -26,7 +26,7 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, repor
         const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
             const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', treeItem.client.fullName);
-            await node.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
+            await node.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             // tslint:disable-next-line:strict-boolean-expressions
             logsConfig.applicationLogs = logsConfig.applicationLogs || {};
             // tslint:disable-next-line:strict-boolean-expressions

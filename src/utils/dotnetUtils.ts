@@ -49,7 +49,7 @@ export namespace dotnetUtils {
         const listOutput: string = await cpUtils.executeCommand(undefined, undefined, 'dotnet', 'new', '--list');
         if (!listOutput.includes(funcProjectId) || !listOutput.includes('HttpTrigger')) {
             const installTemplates: MessageItem = { title: localize('installTemplates', 'Install Templates') };
-            await ui.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), installTemplates, DialogResponses.cancel);
+            await ui.showWarningMessage(localize('noDotnetFuncTemplates', 'You must have the Azure Functions templates installed for the .NET CLI.'), { modal: true }, installTemplates, DialogResponses.cancel);
             await installDotnetTemplates(ui, outputChannel);
         }
     }

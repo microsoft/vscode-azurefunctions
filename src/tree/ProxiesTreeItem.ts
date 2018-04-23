@@ -66,7 +66,7 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
 
     public async deleteProxy(ui: IAzureUserInput, name: string): Promise<void> {
         const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await ui.showWarningMessage(message, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {

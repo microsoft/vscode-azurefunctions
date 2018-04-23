@@ -185,7 +185,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         }
 
         if (existingFiles.length > 0) {
-            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), DialogResponses.yes, DialogResponses.cancel);
+            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             return true;
         } else {
             return false;
