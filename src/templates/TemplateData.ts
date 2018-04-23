@@ -27,18 +27,18 @@ const templatesKey: string = 'FunctionTemplates';
 const configKey: string = 'FunctionTemplateConfig';
 const resourcesKey: string = 'FunctionTemplateResources';
 const funcCliFeedUrl: string = 'https://functionscdn.azureedge.net/public/cli-feed-v3.json';
-const tempPath: string = path.join(os.tmpdir(), 'templates');
+const tempPath: string = path.join(os.tmpdir(), 'azurefunctions-templates');
 
 type cliFeedJsonResponse = {
     tags: {
-        tag: {
+        [tag: string]: {
             release: string,
             displayName: string,
             hidden: boolean
         }
     },
     releases: {
-        release: {
+        [release: string]: {
             templateApiZip: string
         }
     }
@@ -171,9 +171,9 @@ export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | 
 export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
     try {
         return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromFuncPortal', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
-            if (await cachedTemplatesAreCurrent(globalState)) {
-                throw new Error('Cached templates are current-- no need');
-            }
+            // if (await cachedTemplatesAreCurrent(globalState)) {
+            //     throw new Error('Cached templates are current-- no need');
+            // }
 
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
@@ -197,7 +197,7 @@ export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReport
                 }
                 // force required to delete directories outside of cwd
                 // tslint:disable-next-line:no-unsafe-any
-                await del([path.join(tempPath, '**')], { force: true });
+                await fse.remove(path.join(tempPath, '**'));
             }
             return new TemplateData(templatesMap, configMap);
         });
@@ -278,7 +278,7 @@ async function getCurrentReleaseTemplates(runtime: string): Promise<string> {
     const currentRelease: string = <string>cliFeedJson.tags[runtime].release;
     const urlWithPythonTemplates: string = 'https://functionscdn.azureedge.net/public/TemplatesApi/2.0.0-beta-10180.zip';
     // temp ternary for dev purposes
-    const templateUrl: string = runtime === ProjectRuntime.two ? urlWithPythonTemplates : <string>cliFeedJson[currentRelease].templateApiZip;
+    const templateUrl: string = runtime === ProjectRuntime.two ? urlWithPythonTemplates : cliFeedJson.releases[currentRelease].templateApiZip;
     await downloadAndExtractZip(templateUrl);
     return currentRelease;
 }
@@ -310,11 +310,16 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
                 'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
             }
         };
+
+        if (!(await fse.pathExists(tempPath))) {
+            await fse.mkdirp(tempPath);
+        }
         request(templateOptions, (err: Error) => {
             if (err !== undefined) {
                 reject(err);
             }
         }).pipe(fse.createWriteStream(path.join(tempPath, 'templates.zip')).on('finish', () => {
+            ext.outputChannel.show();
             ext.outputChannel.appendLine('Downloading templates zip file. . .');
             // tslint:disable-next-line:no-unsafe-any
             extract(path.join(tempPath, 'templates.zip'), { dir: tempPath }, (err: Error) => {
