@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as del from 'del';
+import * as compareVersions from 'compare-versions';
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
@@ -27,7 +27,7 @@ const templatesKey: string = 'FunctionTemplates';
 const configKey: string = 'FunctionTemplateConfig';
 const resourcesKey: string = 'FunctionTemplateResources';
 const funcCliFeedUrl: string = 'https://functionscdn.azureedge.net/public/cli-feed-v3.json';
-const tempPath: string = path.join(os.tmpdir(), 'azurefunctions-templates');
+const tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
 
 type cliFeedJsonResponse = {
     tags: {
@@ -85,7 +85,7 @@ export class TemplateData {
         }
 
         for (const verifiedTemplateId of this._cSharpTemplates) {
-            if (!templatesMap[ProjectRuntime.one].some((t: Template) => t.id === verifiedTemplateId) || !templatesMap[ProjectRuntime.two].some((t: Template) => t.id === verifiedTemplateId)) {
+            if (!templatesMap[ProjectRuntime.one].some((t: Template) => t.id === verifiedTemplateId) || !templatesMap[ProjectRuntime.beta].some((t: Template) => t.id === verifiedTemplateId)) {
                 throw new Error(localize('failedToFindCSharpTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
             }
         }
@@ -168,12 +168,13 @@ export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | 
     }
 }
 
-export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
+export async function tryGetLatestTemplateData(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
     try {
-        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromFuncPortal', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
-            // if (await cachedTemplatesAreCurrent(globalState)) {
-            //     throw new Error('Cached templates are current-- no need');
-            // }
+        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetLatestTemplateData', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
+            const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
+            if (await cachedTemplatesAreCurrent(cliFeedJson, globalState)) {
+                throw new Error('Cached templates are current-- no need');
+            }
 
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
@@ -182,7 +183,13 @@ export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReport
 
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const currentRelease: string = await getCurrentReleaseTemplates(runtime);
+                const feedRuntime: string = getFeedRuntime(runtime);
+                const currentRelease: string = <string>cliFeedJson.tags[feedRuntime].release;
+                const urlWithPythonTemplates: string = 'https://functionscdn.azureedge.net/public/TemplatesApi/2.0.0-beta-10180.zip';
+                // temp ternary for dev purposes
+                const templateUrl: string = runtime === ProjectRuntime.beta ? urlWithPythonTemplates : cliFeedJson.releases[currentRelease].templateApiZip;
+                await downloadAndExtractZip(templateUrl);
+
                 const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'resources.json'));
                 const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
                 const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
@@ -197,12 +204,15 @@ export async function tryGetTemplateDataFromFuncPortal(reporter: TelemetryReport
                 }
                 // force required to delete directories outside of cwd
                 // tslint:disable-next-line:no-unsafe-any
-                await fse.remove(path.join(tempPath, '**'));
             }
             return new TemplateData(templatesMap, configMap);
         });
     } catch (error) {
         return undefined;
+    } finally {
+        if (await fse.pathExists(tempPath)) {
+            await fse.remove(tempPath);
+        }
     }
 }
 
@@ -231,22 +241,16 @@ function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
     return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
 }
 
-async function cachedTemplatesAreCurrent(globalState?: vscode.Memento): Promise<boolean> {
+async function cachedTemplatesAreCurrent(cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<boolean> {
     if (globalState) {
         for (const key of Object.keys(ProjectRuntime)) {
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-            const funcJsonOptions: request.OptionsWithUri = {
-                method: 'GET',
-                uri: funcCliFeedUrl,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
-                }
-            };
-
-            const cliFeedJson: cliFeedJsonResponse = <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
-            const currentRelease: string = <string>cliFeedJson.tags[runtime].release;
+            const feedRuntime: string = getFeedRuntime(runtime);
+            const currentRelease: string = cliFeedJson.tags[feedRuntime].release;
             const cachedRelease: string | undefined = globalState.get(`${runtime}-release`);
-            if (!cachedRelease || parseInt(cachedRelease, 10) < parseInt(currentRelease, 10)) {
+            // returns 1 if currentRelease is newer than cachedRelease, 0 if the same, -1 if older
+            // tslint:disable-next-line:no-unsafe-any
+            if (!cachedRelease || compareVersions(currentRelease, cachedRelease) > 0) {
                 // templates are not up-to-date and need to be downloaded/extracted
                 return false;
             }
@@ -263,24 +267,6 @@ async function cachedTemplatesAreCurrent(globalState?: vscode.Memento): Promise<
         return true;
     }
     return false;
-}
-
-async function getCurrentReleaseTemplates(runtime: string): Promise<string> {
-    const funcJsonOptions: request.OptionsWithUri = {
-        method: 'GET',
-        uri: funcCliFeedUrl,
-        headers: {
-            'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
-        }
-    };
-
-    const cliFeedJson: cliFeedJsonResponse = <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
-    const currentRelease: string = <string>cliFeedJson.tags[runtime].release;
-    const urlWithPythonTemplates: string = 'https://functionscdn.azureedge.net/public/TemplatesApi/2.0.0-beta-10180.zip';
-    // temp ternary for dev purposes
-    const templateUrl: string = runtime === ProjectRuntime.two ? urlWithPythonTemplates : cliFeedJson.releases[currentRelease].templateApiZip;
-    await downloadAndExtractZip(templateUrl);
-    return currentRelease;
 }
 
 function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): [Template[], Config] {
@@ -302,28 +288,28 @@ export function removeLanguageFromId(id: string): string {
 
 // tslint:disable-next-line:no-unsafe-any
 async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
+    const zipFile: string = 'templates.zip';
     return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
         const templateOptions: request.OptionsWithUri = {
             method: 'GET',
-            uri: templateUrl,
-            headers: {
-                'User-Agent': 'Mozilla/5.0' // Required otherwise we get Unauthorized
-            }
+            uri: templateUrl
         };
 
         if (!(await fse.pathExists(tempPath))) {
-            await fse.mkdirp(tempPath);
+            await fse.mkdirs(tempPath);
         }
         request(templateOptions, (err: Error) => {
-            if (err !== undefined) {
+            // tslint:disable-next-line:strict-boolean-expressions
+            if (err) {
                 reject(err);
             }
-        }).pipe(fse.createWriteStream(path.join(tempPath, 'templates.zip')).on('finish', () => {
+        }).pipe(fse.createWriteStream(path.join(tempPath, zipFile)).on('finish', () => {
             ext.outputChannel.show();
             ext.outputChannel.appendLine('Downloading templates zip file. . .');
             // tslint:disable-next-line:no-unsafe-any
-            extract(path.join(tempPath, 'templates.zip'), { dir: tempPath }, (err: Error) => {
-                if (err !== undefined) {
+            extract(path.join(tempPath, zipFile), { dir: tempPath }, (err: Error) => {
+                // tslint:disable-next-line:strict-boolean-expressions
+                if (err) {
                     reject(err);
                 }
                 ext.outputChannel.appendLine('Template files extracted.');
@@ -332,4 +318,23 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
             });
         }));
     });
+}
+
+async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
+    const funcJsonOptions: request.OptionsWithUri = {
+        method: 'GET',
+        uri: funcCliFeedUrl
+    };
+    return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+}
+
+function getFeedRuntime(runtime: ProjectRuntime): string {
+    switch (runtime) {
+        case ProjectRuntime.beta:
+            return 'v2';
+        case ProjectRuntime.one:
+            return 'v1';
+        default:
+            throw new RangeError();
+    }
 }

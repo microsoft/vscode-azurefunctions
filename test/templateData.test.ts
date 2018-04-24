@@ -10,7 +10,7 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
-import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../src/templates/TemplateData';
+import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../src/templates/TemplateData';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
@@ -20,8 +20,8 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..'));
-    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined);
+    funcPortalTemplateData = await tryGetLatestTemplateData(undefined);
+    funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, undefined);
 });
 
 suite('Template Data Tests', async () => {
@@ -52,6 +52,6 @@ async function validateTemplateData(templateData: TemplateData): Promise<void> {
     const cSharpTemplates: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.one, TemplateFilter.Verified);
     assert.equal(cSharpTemplates.length, 4, 'Unexpected CSharp (.NET Framework) templates count.');
 
-    const cSharpTemplatesv2: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.two, TemplateFilter.Verified);
+    const cSharpTemplatesv2: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
     assert.equal(cSharpTemplatesv2.length, 4, 'Unexpected CSharp (.NET Core) templates count.');
 }

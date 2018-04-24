@@ -14,7 +14,7 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../../src/templates/TemplateData';
+import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
 
 let backupTemplateData: TemplateData;
@@ -26,8 +26,8 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
     backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..', '..'));
-    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined);
+    funcPortalTemplateData = await tryGetLatestTemplateData(undefined);
+    funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, undefined);
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {

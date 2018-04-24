@@ -45,7 +45,7 @@ export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<Pro
 export async function promptForProjectRuntime(ui: IAzureUserInput): Promise<ProjectRuntime> {
     const picks: QuickPickItem[] = [
         { label: ProjectRuntime.one, description: localize('productionUseDescription', '(Approved for production use)') },
-        { label: ProjectRuntime.two, description: previewDescription }
+        { label: ProjectRuntime.beta, description: previewDescription }
     ];
 
     const options: QuickPickOptions = { placeHolder: localize('selectRuntime', 'Select a runtime') };
@@ -97,7 +97,7 @@ export async function getProjectLanguage(projectPath: string, ui: IAzureUserInpu
 export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IAzureUserInput): Promise<ProjectRuntime> {
     if (language === ProjectLanguage.Java) {
         // Java only supports beta
-        return ProjectRuntime.two;
+        return ProjectRuntime.beta;
     }
 
     let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting, projectPath));
@@ -120,7 +120,7 @@ export async function getTemplateFilter(projectPath: string): Promise<TemplateFi
 export function convertStringToRuntime(rawRuntime?: string): ProjectRuntime | undefined {
     switch (String(rawRuntime).toLowerCase()) {
         case 'beta':
-            return ProjectRuntime.two;
+            return ProjectRuntime.beta;
         case '~1':
         case 'latest':
             return ProjectRuntime.one;
