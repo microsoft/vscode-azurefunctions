@@ -154,7 +154,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
             const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
-            const result: vscode.MessageItem = await ui.showWarningMessage(message, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
+            const result: vscode.MessageItem = await ui.showWarningMessage(message, { modal: true }, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
             if (result === DialogResponses.learnMore) {
                 // tslint:disable-next-line:no-unsafe-any
                 opn('https://aka.ms/azFuncRuntime');

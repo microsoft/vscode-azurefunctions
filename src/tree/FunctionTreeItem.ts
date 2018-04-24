@@ -66,7 +66,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
 
     public async deleteTreeItem(node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
-        await node.ui.showWarningMessage(message, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await node.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         this._outputChannel.show(true);
         this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
         const kuduClient: KuduClient = await getKuduClient(this.client);

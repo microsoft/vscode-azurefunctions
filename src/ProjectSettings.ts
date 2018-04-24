@@ -85,7 +85,7 @@ export async function getProjectLanguage(projectPath: string, ui: IAzureUserInpu
         if (!language) {
             const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
             const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
-            await ui.showWarningMessage(message, selectLanguage, DialogResponses.cancel);
+            await ui.showWarningMessage(message, { modal: true }, selectLanguage, DialogResponses.cancel);
             language = await promptForProjectLanguage(ui);
             await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
         }
@@ -104,7 +104,7 @@ export async function getProjectRuntime(language: ProjectLanguage, projectPath: 
     if (!runtime) {
         const message: string = localize('noRuntime', 'You must have a project runtime set to perform this operation.');
         const selectRuntime: MessageItem = { title: localize('selectRuntimeButton', 'Select Runtime') };
-        await ui.showWarningMessage(message, selectRuntime, DialogResponses.cancel);
+        await ui.showWarningMessage(message, { modal: true }, selectRuntime, DialogResponses.cancel);
         runtime = await promptForProjectRuntime(ui);
         await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
     }
