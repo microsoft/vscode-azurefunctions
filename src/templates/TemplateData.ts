@@ -202,8 +202,6 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                     globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
                     globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
                 }
-                // force required to delete directories outside of cwd
-                // tslint:disable-next-line:no-unsafe-any
             }
             return new TemplateData(templatesMap, configMap);
         });
