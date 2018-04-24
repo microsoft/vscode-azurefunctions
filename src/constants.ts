@@ -26,7 +26,7 @@ export enum ProjectLanguage {
 }
 
 export enum ProjectRuntime {
-    one = '~v1',
+    one = '~1',
     beta = 'beta'
 }
 

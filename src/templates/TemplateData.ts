@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as compareVersions from 'compare-versions';
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
+import { gt } from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
@@ -29,7 +29,7 @@ const resourcesKey: string = 'FunctionTemplateResources';
 const funcCliFeedUrl: string = 'https://functionscdn.azureedge.net/public/cli-feed-v3.json';
 const tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
 
-type cliFeedJsonResponse = {
+export type cliFeedJsonResponse = {
     tags: {
         [tag: string]: {
             release: string,
@@ -140,16 +140,23 @@ export class TemplateData {
     }
 }
 
-export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | undefined, globalState: vscode.Memento): Promise<TemplateData | undefined> {
+export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | undefined, globalState: vscode.Memento, cliFeedJson: cliFeedJsonResponse): Promise<TemplateData | undefined> {
     try {
         return <TemplateData | undefined>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromCache', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
-
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
+                const feedRuntime: string = getFeedRuntime(runtime);
+                const currentRelease: string = cliFeedJson.tags[feedRuntime].release;
+                const cachedRelease: string | undefined = globalState.get(`${runtime}-release`);
+                if (!cachedRelease || gt(currentRelease, cachedRelease)) {
+                    // templates are not up-to-date and need to be downloaded/extracted
+                    return undefined;
+                }
+
                 const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
                 const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
                 const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
@@ -168,14 +175,9 @@ export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | 
     }
 }
 
-export async function tryGetLatestTemplateData(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
+export async function tryGetLatestTemplateData(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
     try {
         return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetLatestTemplateData', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
-            const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-            if (await cachedTemplatesAreCurrent(cliFeedJson, globalState)) {
-                throw new Error('Cached templates are current-- no need');
-            }
-
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
@@ -185,9 +187,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const feedRuntime: string = getFeedRuntime(runtime);
                 const currentRelease: string = <string>cliFeedJson.tags[feedRuntime].release;
-                const urlWithPythonTemplates: string = 'https://functionscdn.azureedge.net/public/TemplatesApi/2.0.0-beta-10180.zip';
-                // temp ternary for dev purposes
-                const templateUrl: string = runtime === ProjectRuntime.beta ? urlWithPythonTemplates : cliFeedJson.releases[currentRelease].templateApiZip;
+                const templateUrl: string = cliFeedJson.releases[currentRelease].templateApiZip;
                 await downloadAndExtractZip(templateUrl);
 
                 const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'resources.json'));
@@ -239,34 +239,6 @@ function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
     return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
 }
 
-async function cachedTemplatesAreCurrent(cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<boolean> {
-    if (globalState) {
-        for (const key of Object.keys(ProjectRuntime)) {
-            const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-            const feedRuntime: string = getFeedRuntime(runtime);
-            const currentRelease: string = cliFeedJson.tags[feedRuntime].release;
-            const cachedRelease: string | undefined = globalState.get(`${runtime}-release`);
-            // returns 1 if currentRelease is newer than cachedRelease, 0 if the same, -1 if older
-            // tslint:disable-next-line:no-unsafe-any
-            if (!cachedRelease || compareVersions(currentRelease, cachedRelease) > 0) {
-                // templates are not up-to-date and need to be downloaded/extracted
-                return false;
-            }
-
-            // make sure templates were cached
-            const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
-            const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
-            const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
-            if (!cachedResources || !cachedTemplates || !cachedConfig) {
-                return false;
-            }
-        }
-        // only return true if ALL runtimes are current
-        return true;
-    }
-    return false;
-}
-
 function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): [Template[], Config] {
     const resources: Resources = new Resources(rawResources);
     const templates: Template[] = [];
@@ -293,9 +265,7 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
             uri: templateUrl
         };
 
-        if (!(await fse.pathExists(tempPath))) {
-            await fse.mkdirs(tempPath);
-        }
+        await fse.ensureDir(tempPath);
         request(templateOptions, (err: Error) => {
             // tslint:disable-next-line:strict-boolean-expressions
             if (err) {
@@ -318,7 +288,7 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
     });
 }
 
-async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
+export async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
     const funcJsonOptions: request.OptionsWithUri = {
         method: 'GET',
         uri: funcCliFeedUrl
