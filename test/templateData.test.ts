@@ -10,7 +10,7 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
-import { getTemplateDataFromBackup, TemplateData, tryGetTemplateDataFromFuncPortal } from '../src/templates/TemplateData';
+import { cliFeedJsonResponse, getCliFeedJson, getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../src/templates/TemplateData';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
@@ -19,9 +19,11 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
+    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
     backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..'));
-    funcPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined);
-    funcStagingPortalTemplateData = await tryGetTemplateDataFromFuncPortal(undefined, undefined, 'functions-staging.azure.com');
+    funcPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
+    // https://github.com/Microsoft/vscode-azurefunctions/issues/334
+    funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
 });
 
 suite('Template Data Tests', async () => {
