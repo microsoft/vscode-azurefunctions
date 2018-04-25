@@ -179,6 +179,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
     try {
         return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetLatestTemplateData', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
             this.suppressErrorDisplay = true;
+            this.rethrowError = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
