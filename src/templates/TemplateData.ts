@@ -191,7 +191,8 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                 const templateUrl: string = cliFeedJson.releases[currentRelease].templateApiZip;
                 await downloadAndExtractZip(templateUrl);
 
-                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'resources.json'));
+                // only Resources.json has a capital letter
+                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
                 const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
                 const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
 
