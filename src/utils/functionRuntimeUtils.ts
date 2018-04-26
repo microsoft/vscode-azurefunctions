@@ -16,6 +16,10 @@ import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {
     const runtimePackage: string = 'azure-functions-core-tools';
+    enum FunctionRuntimeTag {
+        latest = 1,
+        core = 2
+    }
 
     export async function validateFunctionRuntime(): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureFunctions.validateFunctionRuntime', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
@@ -101,15 +105,10 @@ export namespace functionRuntimeUtils {
         const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'func');
         const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)Azure Functions Core Tools (.*)/);
         if (matchResult !== null) {
-            const localVersion: string = matchResult[1].substring(1, matchResult[1].length - 1).trim();
+            const localVersion: string = matchResult[1].replace(/[()]/g, '').trim(); // remove () and whitespace
             return semver.valid(localVersion);
         }
         return null;
-    }
-
-    enum FunctionRuntimeTag {
-        latest = 1,
-        core = 2
     }
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
