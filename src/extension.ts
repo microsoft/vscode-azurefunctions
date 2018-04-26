@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext): void {
         ext.ui = ui;
 
         // tslint:disable-next-line:no-floating-promises
-        functionRuntimeUtils.validateFunctionRuntime(reporter, ui, outputChannel);
+        functionRuntimeUtils.validateFunctionRuntime();
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.loadMore', ui, reporter);
         ext.tree = tree;

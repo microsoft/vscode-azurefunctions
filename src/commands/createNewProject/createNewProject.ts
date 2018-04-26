@@ -66,7 +66,7 @@ export async function createNewProject(
     if (templateId) {
         await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
-    await validateFuncCoreToolsInstalled(ext.ui, ext.outputChannel);
+    await validateFuncCoreToolsInstalled();
 
     if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
         // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host

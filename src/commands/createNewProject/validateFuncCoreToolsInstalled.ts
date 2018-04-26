@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as opn from 'opn';
-import { MessageItem, OutputChannel } from 'vscode';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { MessageItem } from 'vscode';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { Platform } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { cpUtils } from '../../utils/cpUtils';
 
-export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
+export async function validateFuncCoreToolsInstalled(): Promise<void> {
     let input: MessageItem | undefined;
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
         this.suppressErrorDisplay = true;
@@ -20,9 +20,9 @@ export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, output
         if (getFuncExtensionSetting<boolean>(settingKey)) {
             if (!(await funcToolsInstalled()) && (await brewOrNpmInstalled()) && process.platform !== Platform.Linux) {
                 // https://github.com/Microsoft/vscode-azurefunctions/issues/311
-                input = await ui.showWarningMessage(localize('installFuncTools', 'You need Azure Functions Core Tools to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
+                input = await ext.ui.showWarningMessage(localize('installFuncTools', 'You need Azure Functions Core Tools to locally debug your functions.  Run {0} now?', getCommandForPlatform()), DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.skipForNow);
                 if (input === DialogResponses.yes) {
-                    await attemptToInstallLatestFunctionRuntime(ui, outputChannel);
+                    await attemptToInstallLatestFunctionRuntime();
                 } else if (input === DialogResponses.dontWarnAgain) {
                     await updateGlobalSetting(settingKey, false);
                 }
@@ -31,7 +31,7 @@ export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, output
     });
     // validate that Func Tools was installed only if user confirmed
     if (input === DialogResponses.yes && !(await funcToolsInstalled())) {
-        if (await ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
             // tslint:disable-next-line:no-unsafe-any
             opn('https://aka.ms/Dqur4e');
         }
@@ -39,25 +39,33 @@ export async function validateFuncCoreToolsInstalled(ui: IAzureUserInput, output
     }
 }
 
-async function attemptToInstallLatestFunctionRuntime(ui: IAzureUserInput, outputChannel: OutputChannel): Promise<void> {
+export async function attemptToInstallLatestFunctionRuntime(runtimeVersion?: string): Promise<void> {
     switch (process.platform) {
         case Platform.Windows:
-            const v1: MessageItem = { title: 'v1' };
-            const v2: MessageItem = { title: 'v2' };
-            const winput: MessageItem = await ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1, v2);
+            let winput: string;
+            const v1: string = 'v1';
+            const v2: string = 'v2';
+            if (!runtimeVersion) {
+                const v1MsgItm: MessageItem = { title: v1 };
+                const v2MsgItm: MessageItem = { title: v2 };
+                winput = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm)).title;
+            } else {
+                winput = runtimeVersion;
+            }
+
             if (winput === v1) {
-                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
             } else if (winput === v2) {
-                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
             }
             break;
         case Platform.MacOS:
             try {
-                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'tap', 'azure/functions');
-                await cpUtils.executeCommand(outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'tap', 'azure/functions');
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'install', 'azure-functions-core-tools');
             } catch (error) {
                 // if brew fails for whatever reason, fall back to npm
-                await cpUtils.executeCommand(outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
             }
             break;
         default:
@@ -83,7 +91,7 @@ async function funcToolsInstalled(): Promise<boolean> {
     }
 }
 
-async function brewOrNpmInstalled(): Promise<boolean> {
+export async function brewOrNpmInstalled(): Promise<boolean> {
     switch (process.platform) {
         case Platform.MacOS:
             try {

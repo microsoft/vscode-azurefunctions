@@ -6,9 +6,10 @@
 import * as opn from 'opn';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, parseError } from 'vscode-azureextensionui';
-import TelemetryReporter from 'vscode-extension-telemetry';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
+import { attemptToInstallLatestFunctionRuntime, brewOrNpmInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { isWindows, ProjectRuntime } from '../constants';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
@@ -16,8 +17,8 @@ import { cpUtils } from './cpUtils';
 export namespace functionRuntimeUtils {
     const runtimePackage: string = 'azure-functions-core-tools';
 
-    export async function validateFunctionRuntime(reporter: TelemetryReporter | undefined, ui: IAzureUserInput, outputChannel: vscode.OutputChannel): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureFunctions.validateFunctionRuntime', reporter, undefined, async function (this: IActionContext): Promise<void> {
+    export async function validateFunctionRuntime(): Promise<void> {
+        await callWithTelemetryAndErrorHandling('azureFunctions.validateFunctionRuntime', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
 
@@ -29,28 +30,43 @@ export namespace functionRuntimeUtils {
                         return;
                     }
                     this.properties.localVersion = localVersion;
-                    const newestVersion: string | null = await getNewestFunctionRuntimeVersion(semver.major(localVersion));
+                    const major: number = semver.major(localVersion);
+                    const newestVersion: string | null = await getNewestFunctionRuntimeVersion(major);
                     if (newestVersion === null) {
                         return;
                     }
                     if (semver.gt(newestVersion, localVersion)) {
-                        const message: string = localize(
-                            'azFunc.outdatedFunctionRuntime',
-                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
+                        const canUpdate: boolean = await brewOrNpmInstalled();
+                        const message: string = canUpdate ? localize(
+                            'azFunc.outdatedFunctionRuntimeUpdate',
+                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
                             localVersion,
                             newestVersion
-                        );
+                        ) : localize(
+                            'azFunc.outdatedFunctionRuntimeSeeMore',
+                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
+                            localVersion,
+                            newestVersion);
 
-                        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
                             // tslint:disable-next-line:no-unsafe-any
                             opn('https://aka.ms/azFuncOutdated');
+                        } else if (result === DialogResponses.yes) {
+                            switch (major) {
+                                case FunctionRuntimeTag.latest:
+                                    await attemptToInstallLatestFunctionRuntime('v1');
+                                case FunctionRuntimeTag.core:
+                                    await attemptToInstallLatestFunctionRuntime('v2');
+                                default:
+                                    break;
+                            }
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(settingKey, false);
                         }
                     }
                 } catch (error) {
-                    outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
+                    ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
                     throw error;
                 }
             }
@@ -82,10 +98,10 @@ export namespace functionRuntimeUtils {
     }
 
     async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
-        const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', runtimePackage, '-g');
-        const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)azure-functions-core-tools@(.*)/);
+        const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'func');
+        const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)Azure Functions Core Tools (.*)/);
         if (matchResult !== null) {
-            const localVersion: string = matchResult[1].trim();
+            const localVersion: string = matchResult[1].substring(1, matchResult[1].length - 1).trim();
             return semver.valid(localVersion);
         }
         return null;
@@ -101,7 +117,14 @@ export namespace functionRuntimeUtils {
             case FunctionRuntimeTag.latest:
                 return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.latest')).trim());
             case FunctionRuntimeTag.core:
-                return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.core')).trim());
+                try {
+                    // since Mac OS and Windows may have installed through npm, try that first
+                    return semver.valid((await cpUtils.executeCommand(undefined, undefined, 'npm', 'view', runtimePackage, 'dist-tags.core')).trim());
+                } catch (error) {
+                    // Currently there is no way to check if `brew outdated` works because there are no old versions available of azure-function-core-tools
+                    return null;
+                }
+
             default:
                 return null;
         }
