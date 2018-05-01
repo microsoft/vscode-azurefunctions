@@ -10,7 +10,8 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
-import { cliFeedJsonResponse, getCliFeedJson, getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../src/templates/TemplateData';
+import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../src/templates/TemplateData';
+import { cliFeedJsonResponse, getCliFeedJson } from '../src/utils/getCliFeedJson';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;

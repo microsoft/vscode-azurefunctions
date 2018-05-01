@@ -17,6 +17,7 @@ import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptPro
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
@@ -26,23 +27,7 @@ import { Template, TemplateCategory } from './Template';
 const templatesKey: string = 'FunctionTemplates';
 const configKey: string = 'FunctionTemplateConfig';
 const resourcesKey: string = 'FunctionTemplateResources';
-const funcCliFeedUrl: string = 'https://functionscdn.azureedge.net/public/cli-feed-v3.json';
 const tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
-
-export type cliFeedJsonResponse = {
-    tags: {
-        [tag: string]: {
-            release: string,
-            displayName: string,
-            hidden: boolean
-        }
-    },
-    releases: {
-        [release: string]: {
-            templateApiZip: string
-        }
-    }
-};
 
 /**
  * Main container for all template data retrieved from the Azure Functions Portal. See README.md for more info and example of the schema.
@@ -287,14 +272,6 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
             });
         }));
     });
-}
-
-export async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
-    const funcJsonOptions: request.OptionsWithUri = {
-        method: 'GET',
-        uri: funcCliFeedUrl
-    };
-    return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
 }
 
 function getFeedRuntime(runtime: ProjectRuntime): string {
