@@ -14,8 +14,9 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { cliFeedJsonResponse, getCliFeedJson, getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../../src/templates/TemplateData';
+import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
+import { cliFeedJsonResponse, getCliFeedJson } from '../../src/utils/getCliFeedJson';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;

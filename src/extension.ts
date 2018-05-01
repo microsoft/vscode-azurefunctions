@@ -36,13 +36,14 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
-import { cliFeedJsonResponse, getCliFeedJson, getTemplateDataFromBackup, tryGetLatestTemplateData, tryGetTemplateDataFromCache } from './templates/TemplateData';
+import { getTemplateDataFromBackup, tryGetLatestTemplateData, tryGetTemplateDataFromCache } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
 import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
+import { cliFeedJsonResponse, getCliFeedJson } from './utils/getCliFeedJson';
 
 export function activate(context: vscode.ExtensionContext): void {
     let reporter: TelemetryReporter | undefined;
