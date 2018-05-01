@@ -39,7 +39,7 @@ export namespace functionRuntimeUtils {
                     if (newestVersion === null) {
                         return;
                     }
-                                                             
+
                     // https://github.com/Microsoft/vscode-azurefunctions/issues/344
                     // Code disabled untiled we can verify a consistent way to determine when a new release is available
                     const enabled: boolean = false;
