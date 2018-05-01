@@ -7,7 +7,7 @@
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "engines": {
-        "vscode": "^1.20.0"
+        "vscode": "^1.23.0"
     },
     "repository": {
         "type": "git",
@@ -241,11 +241,20 @@
                 "category": "Azure Functions"
             }
         ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "azure",
+                    "title": "Azure",
+                    "icon": "resources/azure.svg"
+                }
+            ]
+        },
         "views": {
-            "explorer": [
+            "azure": [
                 {
                     "id": "azureFunctionsExplorer",
-                    "name": "Azure Functions",
+                    "name": "Functions",
                     "when": "config.azureFunctions.showExplorer == true"
                 }
             ]
