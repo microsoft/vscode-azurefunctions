@@ -108,6 +108,7 @@ export namespace functionRuntimeUtils {
     }
 
     async function getLocalFunctionRuntimeVersion(): Promise<string | null> {
+        // https://github.com/Microsoft/vscode-azurefunctions/issues/343
         const versionInfo: string = await cpUtils.executeCommand(undefined, undefined, 'func');
         const matchResult: RegExpMatchArray | null = versionInfo.match(/(?:.*)Azure Functions Core Tools (.*)/);
         if (matchResult !== null) {
