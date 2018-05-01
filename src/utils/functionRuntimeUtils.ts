@@ -16,7 +16,6 @@ import { cliFeedJsonResponse, getCliFeedJson } from '../utils/getCliFeedJson';
 import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {
-    const runtimePackage: string = 'azure-functions-core-tools';
     enum FunctionRuntimeTag {
         latest = 1,
         core = 2
