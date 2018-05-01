@@ -3,19 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// import * as opn from 'opn';
+import * as opn from 'opn';
 import * as semver from 'semver';
-// import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
-// import { attemptToInstallLatestFunctionRuntime, brewOrNpmInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
+import * as vscode from 'vscode';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
+import { attemptToInstallLatestFunctionRuntime, brewOrNpmInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { isWindows, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-// import { localize } from '../localize';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { localize } from '../localize';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cliFeedJsonResponse, getCliFeedJson } from '../utils/getCliFeedJson';
 import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {
+    const runtimePackage: string = 'azure-functions-core-tools';
     enum FunctionRuntimeTag {
         latest = 1,
         core = 2
@@ -40,38 +41,41 @@ export namespace functionRuntimeUtils {
                         return;
                     }
 
-                    /* Code disabled untiled we can verify a consistent way to determine when a new release is available
-                    * if (semver.gt(newestVersion, localVersion)) {
-                    *     const canUpdate: boolean = await brewOrNpmInstalled();
-                    *     const message: string = canUpdate ? localize(
-                    *         'azFunc.outdatedFunctionRuntimeUpdate',
-                    *         'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
-                    *         localVersion,
-                    *         newestVersion
-                    *     ) : localize(
-                    *         'azFunc.outdatedFunctionRuntimeSeeMore',
-                    *         'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
-                    *         localVersion,
-                    *         newestVersion);
+                    // Code disabled untiled we can verify a consistent way to determine when a new release is available
+                    const enabled: boolean = false;
+                    if (enabled) {
+                        if (semver.gt(newestVersion, localVersion)) {
+                            const canUpdate: boolean = await brewOrNpmInstalled();
+                            const message: string = canUpdate ? localize(
+                                'azFunc.outdatedFunctionRuntimeUpdate',
+                                'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
+                                localVersion,
+                                newestVersion
+                            ) : localize(
+                                'azFunc.outdatedFunctionRuntimeSeeMore',
+                                'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
+                                localVersion,
+                                newestVersion);
 
-                    *     const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                    *     if (result === DialogResponses.learnMore) {
-                    *         // tslint:disable-next-line:no-unsafe-any
-                    *         opn('https://aka.ms/azFuncOutdated');
-                    *     } else if (result === DialogResponses.yes) {
-                    *         switch (major) {
-                    *             case FunctionRuntimeTag.latest:
-                    *                 await attemptToInstallLatestFunctionRuntime('v1');
-                    *             case FunctionRuntimeTag.core:
-                    *                 await attemptToInstallLatestFunctionRuntime('v2');
-                    *             default:
-                    *                 break;
-                    *         }
-                    *     } else if (result === DialogResponses.dontWarnAgain) {
-                    *         await updateGlobalSetting(settingKey, false);
-                    *     }
-                    * }
-                    */
+                            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                            if (result === DialogResponses.learnMore) {
+                                // tslint:disable-next-line:no-unsafe-any
+                                opn('https://aka.ms/azFuncOutdated');
+                            } else if (result === DialogResponses.yes) {
+                                switch (major) {
+                                    case FunctionRuntimeTag.latest:
+                                        await attemptToInstallLatestFunctionRuntime('v1');
+                                    case FunctionRuntimeTag.core:
+                                        await attemptToInstallLatestFunctionRuntime('v2');
+                                    default:
+                                        break;
+                                }
+                            } else if (result === DialogResponses.dontWarnAgain) {
+                                await updateGlobalSetting(settingKey, false);
+                            }
+                        }
+
+                    }
                 } catch (error) {
                     ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
                     throw error;
