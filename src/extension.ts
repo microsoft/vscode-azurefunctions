@@ -36,7 +36,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
-import { getTemplateDataFromBackup, tryGetTemplateDataFromCache, tryGetTemplateDataFromFuncPortal } from './templates/TemplateData';
+import { cliFeedJsonResponse, getCliFeedJson, getTemplateDataFromBackup, tryGetLatestTemplateData, tryGetTemplateDataFromCache } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
@@ -125,8 +125,9 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<void> {
+    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
     // tslint:disable-next-line:strict-boolean-expressions
-    ext.templateData = await tryGetTemplateDataFromFuncPortal(reporter, context.globalState) || await tryGetTemplateDataFromCache(reporter, context.globalState) || await getTemplateDataFromBackup(reporter, context.extensionPath);
+    ext.templateData = await tryGetTemplateDataFromCache(reporter, context.globalState, cliFeedJson) || await tryGetLatestTemplateData(reporter, cliFeedJson, context.globalState) || await getTemplateDataFromBackup(reporter, context.extensionPath);
 }
 
 // tslint:disable-next-line:no-empty
