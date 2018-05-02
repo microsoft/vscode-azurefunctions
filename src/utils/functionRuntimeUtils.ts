@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import request = require('request-promise');
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
@@ -12,7 +14,6 @@ import { isWindows, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
-import { cliFeedJsonResponse, getCliFeedJson } from '../utils/getCliFeedJson';
 import { cpUtils } from './cpUtils';
 
 export namespace functionRuntimeUtils {
@@ -25,7 +26,6 @@ export namespace functionRuntimeUtils {
         await callWithTelemetryAndErrorHandling('azureFunctions.validateFunctionRuntime', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
-
             const settingKey: string = 'showCoreToolsWarning';
             if (getFuncExtensionSetting<boolean>(settingKey)) {
                 try {
@@ -40,41 +40,35 @@ export namespace functionRuntimeUtils {
                         return;
                     }
 
-                    // https://github.com/Microsoft/vscode-azurefunctions/issues/344
-                    // Code disabled untiled we can verify a consistent way to determine when a new release is available
-                    const enabled: boolean = false;
-                    if (enabled) {
-                        if (semver.gt(newestVersion, localVersion)) {
-                            const canUpdate: boolean = await brewOrNpmInstalled();
-                            const message: string = canUpdate ? localize(
-                                'azFunc.outdatedFunctionRuntimeUpdate',
-                                'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
-                                localVersion,
-                                newestVersion
-                            ) : localize(
-                                'azFunc.outdatedFunctionRuntimeSeeMore',
-                                'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
-                                localVersion,
-                                newestVersion);
+                    if (semver.gt(newestVersion, localVersion)) {
+                        const canUpdate: boolean = await brewOrNpmInstalled();
+                        const message: string = canUpdate ? localize(
+                            'azFunc.outdatedFunctionRuntimeUpdate',
+                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
+                            localVersion,
+                            newestVersion
+                        ) : localize(
+                            'azFunc.outdatedFunctionRuntimeSeeMore',
+                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
+                            localVersion,
+                            newestVersion);
 
-                            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                            if (result === DialogResponses.learnMore) {
-                                // tslint:disable-next-line:no-unsafe-any
-                                opn('https://aka.ms/azFuncOutdated');
-                            } else if (result === DialogResponses.yes) {
-                                switch (major) {
-                                    case FunctionRuntimeTag.latest:
-                                        await attemptToInstallLatestFunctionRuntime('v1');
-                                    case FunctionRuntimeTag.core:
-                                        await attemptToInstallLatestFunctionRuntime('v2');
-                                    default:
-                                        break;
-                                }
-                            } else if (result === DialogResponses.dontWarnAgain) {
-                                await updateGlobalSetting(settingKey, false);
+                        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        if (result === DialogResponses.learnMore) {
+                            // tslint:disable-next-line:no-unsafe-any
+                            opn('https://aka.ms/azFuncOutdated');
+                        } else if (result === DialogResponses.yes) {
+                            switch (major) {
+                                case FunctionRuntimeTag.latest:
+                                    await attemptToInstallLatestFunctionRuntime('v1');
+                                case FunctionRuntimeTag.core:
+                                    await attemptToInstallLatestFunctionRuntime('v2');
+                                default:
+                                    break;
                             }
+                        } else if (result === DialogResponses.dontWarnAgain) {
+                            await updateGlobalSetting(settingKey, false);
                         }
-
                     }
                 } catch (error) {
                     ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
@@ -124,12 +118,15 @@ export namespace functionRuntimeUtils {
     }
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
-        const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
+        // tslint:disable-next-line:no-http-string
+        const npmRegistryUri: string = 'http://registry.npmjs.org/-/package/azure-functions-core-tools/dist-tags';
+        type distTags = { core: string, docker: string, latest: string };
+        const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
         switch (major) {
             case FunctionRuntimeTag.latest:
-                return cliFeedJson.tags.v1.release;
+                return distTags.latest;
             case FunctionRuntimeTag.core:
-                return cliFeedJson.tags.v2.release;
+                return distTags.core;
             default:
                 return null;
         }

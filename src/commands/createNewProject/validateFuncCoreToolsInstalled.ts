@@ -42,20 +42,17 @@ export async function validateFuncCoreToolsInstalled(): Promise<void> {
 export async function attemptToInstallLatestFunctionRuntime(runtimeVersion?: string): Promise<void> {
     switch (process.platform) {
         case Platform.Windows:
-            let winput: string;
             const v1: string = 'v1';
             const v2: string = 'v2';
             if (!runtimeVersion) {
                 const v1MsgItm: MessageItem = { title: v1 };
                 const v2MsgItm: MessageItem = { title: v2 };
-                winput = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm)).title;
-            } else {
-                winput = runtimeVersion;
+                runtimeVersion = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm)).title;
             }
 
-            if (winput === v1) {
+            if (runtimeVersion === v1) {
                 await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools');
-            } else if (winput === v2) {
+            } else if (runtimeVersion === v2) {
                 await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', 'azure-functions-core-tools@core', '--unsafe-perm', 'true');
             }
             break;
