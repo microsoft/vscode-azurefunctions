@@ -121,7 +121,7 @@ export namespace functionRuntimeUtils {
         // tslint:disable-next-line:no-http-string
         const npmRegistryUri: string = 'http://registry.npmjs.org/-/package/azure-functions-core-tools/dist-tags';
         type distTags = { core: string, docker: string, latest: string };
-        const distTags: distTags = JSON.parse(await request(npmRegistryUri).promise());
+        const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
         switch (major) {
             case FunctionRuntimeTag.latest:
                 return distTags.latest;
