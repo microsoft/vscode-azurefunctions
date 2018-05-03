@@ -173,7 +173,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                 const feedRuntime: string = getFeedRuntime(runtime);
                 const currentRelease: string = <string>cliFeedJson.tags[feedRuntime].release;
                 const templateUrl: string = cliFeedJson.releases[currentRelease].templateApiZip;
-                await downloadAndExtractZip(templateUrl);
+                await downloadAndExtractZip(templateUrl, currentRelease);
 
                 // only Resources.json has a capital letter
                 const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
@@ -243,7 +243,7 @@ export function removeLanguageFromId(id: string): string {
 }
 
 // tslint:disable-next-line:no-unsafe-any
-async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
+async function downloadAndExtractZip(templateUrl: string, release: string): Promise<{}> {
     const zipFile: string = 'templates.zip';
     return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
         const templateOptions: request.OptionsWithUri = {
@@ -258,8 +258,7 @@ async function downloadAndExtractZip(templateUrl: string): Promise<{}> {
                 reject(err);
             }
         }).pipe(fse.createWriteStream(path.join(tempPath, zipFile)).on('finish', () => {
-            ext.outputChannel.show();
-            ext.outputChannel.appendLine('Downloading templates zip file. . .');
+            ext.outputChannel.appendLine(`Downloading v${release} templates zip file. . .`);
             // tslint:disable-next-line:no-unsafe-any
             extract(path.join(tempPath, zipFile), { dir: tempPath }, (err: Error) => {
                 // tslint:disable-next-line:strict-boolean-expressions
