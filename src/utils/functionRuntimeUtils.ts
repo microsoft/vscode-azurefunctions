@@ -42,17 +42,13 @@ export namespace functionRuntimeUtils {
 
                     if (semver.gt(newestVersion, localVersion)) {
                         const canUpdate: boolean = await brewOrNpmInstalled();
-                        let message: string = canUpdate ? localize(
-                            'azFunc.outdatedFunctionRuntimeUpdate',
-                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
+                        let message: string = localize(
+                            'azFunc.outdatedFunctionRuntime',
+                            'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
                             localVersion,
                             newestVersion
-                        ) : localize(
-                            'azFunc.outdatedFunctionRuntimeSeeMore',
-                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
-                            localVersion,
-                            newestVersion);
-                        const v2: string = localize('v2BreakingChanges', 'Caution: As v2 is still in preview, updating could result in breaking changes.');
+                        );
+                        const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
                         if (major === FunctionRuntimeTag.core) {
                             message += ` ${v2}`;
                         }
