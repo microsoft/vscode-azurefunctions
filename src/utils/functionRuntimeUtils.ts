@@ -42,7 +42,7 @@ export namespace functionRuntimeUtils {
 
                     if (semver.gt(newestVersion, localVersion)) {
                         const canUpdate: boolean = await brewOrNpmInstalled();
-                        const message: string = canUpdate ? localize(
+                        let message: string = canUpdate ? localize(
                             'azFunc.outdatedFunctionRuntimeUpdate',
                             'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
                             localVersion,
@@ -52,23 +52,33 @@ export namespace functionRuntimeUtils {
                             'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
                             localVersion,
                             newestVersion);
-
-                        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                        if (result === DialogResponses.learnMore) {
-                            // tslint:disable-next-line:no-unsafe-any
-                            opn('https://aka.ms/azFuncOutdated');
-                        } else if (result === DialogResponses.yes) {
-                            switch (major) {
-                                case FunctionRuntimeTag.latest:
-                                    await attemptToInstallLatestFunctionRuntime('v1');
-                                case FunctionRuntimeTag.core:
-                                    await attemptToInstallLatestFunctionRuntime('v2');
-                                default:
-                                    break;
-                            }
-                        } else if (result === DialogResponses.dontWarnAgain) {
-                            await updateGlobalSetting(settingKey, false);
+                        const v2: string = localize('v2BreakingChanges', 'Caution: As v2 is still in preview, updating could result in breaking changes.');
+                        if (major === FunctionRuntimeTag.core) {
+                            message += ` ${v2}`;
                         }
+                        const update: vscode.MessageItem = { title: 'Update' };
+                        let result: vscode.MessageItem;
+
+                        do {
+                            result = canUpdate ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
+                                await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                            if (result === DialogResponses.learnMore) {
+                                // tslint:disable-next-line:no-unsafe-any
+                                opn('https://aka.ms/azFuncOutdated');
+                            } else if (result === update) {
+                                switch (major) {
+                                    case FunctionRuntimeTag.latest:
+                                        await attemptToInstallLatestFunctionRuntime('v1');
+                                    case FunctionRuntimeTag.core:
+                                        await attemptToInstallLatestFunctionRuntime('v2');
+                                    default:
+                                        break;
+                                }
+                            } else if (result === DialogResponses.dontWarnAgain) {
+                                await updateGlobalSetting(settingKey, false);
+                            }
+                        }
+                        while (result === DialogResponses.learnMore);
                     }
                 } catch (error) {
                     ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
