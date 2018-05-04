@@ -10,7 +10,7 @@ import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilterOptions, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -74,7 +74,7 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     }
 }
 
-export async function promptForStorageAccount(actionContext: IActionContext, filterOptions: IStorageAccountFilterOptions): Promise<IResourceResult> {
+export async function promptForStorageAccount(actionContext: IActionContext, filterOptions: IStorageAccountFilters): Promise<IResourceResult> {
     const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const wizardContext: IStorageAccountWizardContext = {

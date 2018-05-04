@@ -51,8 +51,7 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
                     actionContext,
                     {
                         kind: [
-                            StorageAccountKind.Storage,
-                            StorageAccountKind.StorageV2
+                            StorageAccountKind.BlobStorage
                         ],
                         learnMoreLink: 'https://aka.ms/T5o0nf'
                     }
@@ -110,16 +109,13 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
                 actionContext,
                 {
                     kind: [
-                        StorageAccountKind.Storage,
-                        StorageAccountKind.StorageV2
+                        StorageAccountKind.BlobStorage
                     ],
                     performance: [
-                        StorageAccountPerformance.Standard
+                        StorageAccountPerformance.Premium
                     ],
                     replication: [
-                        StorageAccountReplication.LRS,
-                        StorageAccountReplication.GRS,
-                        StorageAccountReplication.RAGRS
+                        StorageAccountReplication.ZRS
                     ],
                     learnMoreLink: 'https://aka.ms/Cfqnrc'
                 }
