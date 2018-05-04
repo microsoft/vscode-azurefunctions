@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureQuickPickItem, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
@@ -47,7 +47,15 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
                 resourceResult = await azUtil.promptForCosmosDBAccount();
                 break;
             case ResourceType.Storage:
-                resourceResult = await azUtil.promptForStorageAccount(actionContext);
+                resourceResult = await azUtil.promptForStorageAccount(
+                    actionContext,
+                    {
+                        kind: [
+                            StorageAccountKind.BlobStorage
+                        ],
+                        learnMoreLink: 'https://aka.ms/T5o0nf'
+                    }
+                );
                 break;
             default:
         }
@@ -97,7 +105,21 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
         let connectionString: string;
 
         try {
-            const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(actionContext);
+            const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(
+                actionContext,
+                {
+                    kind: [
+                        StorageAccountKind.BlobStorage
+                    ],
+                    performance: [
+                        StorageAccountPerformance.Premium
+                    ],
+                    replication: [
+                        StorageAccountReplication.ZRS
+                    ],
+                    learnMoreLink: 'https://aka.ms/Cfqnrc'
+                }
+            );
             connectionString = resourceResult.connectionString;
         } catch (error) {
             if (error instanceof NoSubscriptionError) {
