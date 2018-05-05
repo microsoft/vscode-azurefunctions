@@ -577,12 +577,12 @@
                     },
                     "azureFunctions.backupTemplateRuntime-~1": {
                         "type": "string",
-                        "description": "%azFunc.backupTemplateRuntime.~1%",
+                        "description": "%azFunc.backupTemplateRuntime-~1%",
                         "default": "1.0.12.1"
                     },
                     "azureFunctions.backupTemplateRuntime-beta": {
                         "type": "string",
-                        "description": "%azFunc.backupTemplateRuntime.beta%",
+                        "description": "%azFunc.backupTemplateRuntime-beta%",
                         "default": "2.0.1-beta.26"
                     }
                 }
