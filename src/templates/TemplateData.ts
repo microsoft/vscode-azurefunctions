@@ -17,6 +17,7 @@ import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptPro
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { getFuncExtensionSetting } from '../ProjectSettings';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
@@ -172,8 +173,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const feedRuntime: string = getFeedRuntime(runtime);
                 const currentRelease: string = <string>cliFeedJson.tags[feedRuntime].release;
-                const templateUrl: string = cliFeedJson.releases[currentRelease].templateApiZip;
-                await downloadAndExtractZip(templateUrl, currentRelease);
+                await downloadAndExtractZip(cliFeedJson, currentRelease);
 
                 // only Resources.json has a capital letter
                 const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
@@ -200,25 +200,37 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
     }
 }
 
-export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, extensionPath: string): Promise<TemplateData> {
-    return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
-        this.suppressErrorDisplay = true;
-        this.properties.isActivationEvent = 'true';
-        const templatesMap: { [runtime: string]: Template[] } = {};
-        const configMap: { [runtime: string]: Config } = {};
+export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse): Promise<TemplateData> {
+    try {
+        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+            this.suppressErrorDisplay = true;
+            this.properties.isActivationEvent = 'true';
+            const templatesMap: { [runtime: string]: Template[] } = {};
+            const configMap: { [runtime: string]: Config } = {};
 
-        for (const key of Object.keys(ProjectRuntime)) {
-            const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-            const templatePath: string = path.join(extensionPath, 'resources', 'templates', runtime);
-            const rawResources: object = <object>await fse.readJSON(path.join(templatePath, 'resources.json'));
-            const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(templatePath, 'templates.json'));
-            const rawConfig: object = <object>await fse.readJSON(path.join(templatePath, 'bindingconfig.json'));
+            for (const key of Object.keys(ProjectRuntime)) {
+                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
+                const backupTemplateRuntime: string = `backupTemplateRuntime-${runtime}`;
+                const releaseVersion: string | undefined = getFuncExtensionSetting(backupTemplateRuntime);
+                if (releaseVersion) {
+                    await downloadAndExtractZip(cliFeedJson, releaseVersion);
+                }
+                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
+                const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
+                const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
 
-            [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
+                [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
+            }
+
+            return new TemplateData(templatesMap, configMap);
+        });
+    } catch (error) {
+        throw error;
+    } finally {
+        if (await fse.pathExists(tempPath)) {
+            await fse.remove(tempPath);
         }
-
-        return new TemplateData(templatesMap, configMap);
-    });
+    }
 }
 
 function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
@@ -243,8 +255,9 @@ export function removeLanguageFromId(id: string): string {
 }
 
 // tslint:disable-next-line:no-unsafe-any
-async function downloadAndExtractZip(templateUrl: string, release: string): Promise<{}> {
+async function downloadAndExtractZip(cliFeedJson: cliFeedJsonResponse, release: string): Promise<{}> {
     const zipFile: string = 'templates.zip';
+    const templateUrl: string = cliFeedJson.releases[release].templateApiZip;
     return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
         const templateOptions: request.OptionsWithUri = {
             method: 'GET',

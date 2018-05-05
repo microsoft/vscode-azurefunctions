@@ -40,5 +40,7 @@
     "azFunc.enableRemoteDebugging": "Enable remote debugging, an experimental feature that only supports Java-based Functions Apps.",
     "azFunc.deleteProxy": "Delete Proxy",
     "azFunc.pickProcessTimeoutDescription": "The timeout (in seconds) to be used when searching for the Azure Functions host process. Since a build is required every time you F5, you may need to adjust this based on how long your build takes.",
-    "azFunc.showFuncInstallationDescription": "Show a warning to install Azure Functions Core Tools CLI when you create a new project if the CLI is not installed."
+    "azFunc.showFuncInstallationDescription": "Show a warning to install Azure Functions Core Tools CLI when you create a new project if the CLI is not installed.",
+    "azFunc.backupTemplateRuntime-~1": "The v1 runtime template release to use if retrieving templates from cache and latest both result in failure.",
+    "azFunc.backupTemplateRuntime-beta": "The v2 runtime template release to use if retrieving templates from cache and latest both result in failure."
 }
