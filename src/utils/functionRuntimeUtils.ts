@@ -42,37 +42,45 @@ export namespace functionRuntimeUtils {
 
                     if (semver.gt(newestVersion, localVersion)) {
                         const canUpdate: boolean = await brewOrNpmInstalled();
-                        const message: string = canUpdate ? localize(
-                            'azFunc.outdatedFunctionRuntimeUpdate',
-                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Would you like to update now?',
+                        let message: string = localize(
+                            'azFunc.outdatedFunctionRuntime',
+                            'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
                             localVersion,
                             newestVersion
-                        ) : localize(
-                            'azFunc.outdatedFunctionRuntimeSeeMore',
-                            'Your version of the Azure Functions Core Tools ({0}) does not match the latest ({1}). Please update for the best experience.',
-                            localVersion,
-                            newestVersion);
-
-                        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, canUpdate ? DialogResponses.yes : DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                        if (result === DialogResponses.learnMore) {
-                            // tslint:disable-next-line:no-unsafe-any
-                            opn('https://aka.ms/azFuncOutdated');
-                        } else if (result === DialogResponses.yes) {
-                            switch (major) {
-                                case FunctionRuntimeTag.latest:
-                                    await attemptToInstallLatestFunctionRuntime('v1');
-                                case FunctionRuntimeTag.core:
-                                    await attemptToInstallLatestFunctionRuntime('v2');
-                                default:
-                                    break;
-                            }
-                        } else if (result === DialogResponses.dontWarnAgain) {
-                            await updateGlobalSetting(settingKey, false);
+                        );
+                        const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
+                        if (major === FunctionRuntimeTag.core) {
+                            message += ` ${v2}`;
                         }
+                        const update: vscode.MessageItem = { title: 'Update' };
+                        let result: vscode.MessageItem;
+
+                        do {
+                            result = canUpdate ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
+                                await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                            if (result === DialogResponses.learnMore) {
+                                // tslint:disable-next-line:no-unsafe-any
+                                opn('https://aka.ms/azFuncOutdated');
+                            } else if (result === update) {
+                                switch (major) {
+                                    case FunctionRuntimeTag.latest:
+                                        await attemptToInstallLatestFunctionRuntime('v1');
+                                    case FunctionRuntimeTag.core:
+                                        await attemptToInstallLatestFunctionRuntime('v2');
+                                    default:
+                                        break;
+                                }
+                            } else if (result === DialogResponses.dontWarnAgain) {
+                                await updateGlobalSetting(settingKey, false);
+                            }
+                        }
+                        while (result === DialogResponses.learnMore);
                     }
                 } catch (error) {
-                    ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
-                    throw error;
+                    if (!parseError(error).isUserCancelledError) {
+                        ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
+                        throw error;
+                    }
                 }
             }
         });
