@@ -9,7 +9,7 @@ import request = require('request-promise');
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
-import { attemptToInstallLatestFunctionRuntime, brewOrNpmInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
+import { attemptToInstallLatestFunctionRuntime, canInstallFuncCoreTools } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { isWindows, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -41,7 +41,7 @@ export namespace functionRuntimeUtils {
                     }
 
                     if (semver.gt(newestVersion, localVersion)) {
-                        const canUpdate: boolean = await brewOrNpmInstalled();
+                        const canUpdate: boolean = await canInstallFuncCoreTools();
                         let message: string = localize(
                             'azFunc.outdatedFunctionRuntime',
                             'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
