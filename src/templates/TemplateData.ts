@@ -200,7 +200,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
     }
 }
 
-export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse): Promise<TemplateData> {
+export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData> {
     try {
         return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
             this.suppressErrorDisplay = true;
@@ -212,6 +212,9 @@ export async function getTemplateDataFromBackup(reporter: TelemetryReporter | un
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const backupTemplateRuntime: string = `backupTemplateRuntime-${runtime}`;
                 const releaseVersion: string | undefined = getFuncExtensionSetting(backupTemplateRuntime);
+                if (globalState && globalState.get() === releaseVersion) {
+
+                }
                 if (releaseVersion) {
                     await downloadAndExtractZip(cliFeedJson, releaseVersion);
                 }
@@ -220,12 +223,16 @@ export async function getTemplateDataFromBackup(reporter: TelemetryReporter | un
                 const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
 
                 [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
-            }
 
+                if (globalState) {
+                    globalState.update(`${runtime}-backup`, releaseVersion);
+                    globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
+                    globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
+                    globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
+                }
+            }
             return new TemplateData(templatesMap, configMap);
         });
-    } catch (error) {
-        throw error;
     } finally {
         if (await fse.pathExists(tempPath)) {
             await fse.remove(tempPath);
