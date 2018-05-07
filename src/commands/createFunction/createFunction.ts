@@ -25,16 +25,6 @@ import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
-async function validateIsFunctionApp(actionContext: IActionContext, functionAppPath: string): Promise<void> {
-    if (!await isFunctionProject(functionAppPath)) {
-        const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
-        if (result === DialogResponses.yes) {
-            await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
-        }
-    }
-}
-
 async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: ConfigSetting, defaultValue?: string): Promise<string> {
     if (setting.resourceType !== undefined) {
         return await promptForAppSetting(actionContext, localSettingsPath, setting.resourceType);
@@ -95,7 +85,18 @@ export async function createFunction(
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 
-    await validateIsFunctionApp(actionContext, functionAppPath);
+    let templateFilter: TemplateFilter;
+    if (!await isFunctionProject(functionAppPath)) {
+        const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        if (result === DialogResponses.yes) {
+            await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
+            // Get the settings used to create the project
+            language = <ProjectLanguage>actionContext.properties.projectLanguage;
+            runtime = <ProjectRuntime>actionContext.properties.projectRuntime;
+            templateFilter = <TemplateFilter>actionContext.properties.templateFilter;
+        }
+    }
 
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
 
@@ -107,7 +108,6 @@ export async function createFunction(
         runtime = await getProjectRuntime(language, functionAppPath, ext.ui);
     }
 
-    let templateFilter: TemplateFilter;
     let template: Template;
     if (!templateId) {
         templateFilter = await getTemplateFilter(functionAppPath);
