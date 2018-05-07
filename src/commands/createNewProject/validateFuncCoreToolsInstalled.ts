@@ -5,7 +5,7 @@
 
 import * as opn from 'opn';
 import { MessageItem } from 'vscode';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { Platform } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
