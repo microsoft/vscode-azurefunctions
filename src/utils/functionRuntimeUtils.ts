@@ -77,8 +77,10 @@ export namespace functionRuntimeUtils {
                         while (result === DialogResponses.learnMore);
                     }
                 } catch (error) {
-                    ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
-                    throw error;
+                    if (!parseError(error).isUserCancelledError) {
+                        ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
+                        throw error;
+                    }
                 }
             }
         });
