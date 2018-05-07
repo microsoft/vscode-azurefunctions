@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptProjectCreatorBase';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
+import { backupTemplateVersionSetting, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
@@ -173,7 +173,7 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const feedRuntime: string = getFeedRuntime(runtime);
                 const currentRelease: string = <string>cliFeedJson.tags[feedRuntime].release;
-                await downloadAndExtractZip(cliFeedJson, currentRelease);
+                await downloadAndExtractTemplates(cliFeedJson, currentRelease);
 
                 // only Resources.json has a capital letter
                 const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
@@ -200,39 +200,52 @@ export async function tryGetLatestTemplateData(reporter: TelemetryReporter | und
     }
 }
 
-export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData> {
+export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
+    const releaseVersion: string | undefined = getFuncExtensionSetting(backupTemplateVersionSetting);
+    if (!releaseVersion) {
+        // the setting isn't set, just exit out
+        return undefined;
+    }
+
     try {
         return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
-
+            const backupTemplateVersion: string = 'backupTemplateVersion';
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const backupTemplateRuntime: string = `backupTemplateRuntime-${runtime}`;
-                const releaseVersion: string | undefined = getFuncExtensionSetting(backupTemplateRuntime);
-                if (globalState && globalState.get() === releaseVersion) {
+                // if the version cached is the same as the current setting, then get the cached templates
+                if (globalState && globalState.get(backupTemplateVersion) === releaseVersion) {
+                    const backupResources: object | undefined = globalState.get<object>(`${resourcesKey}-backupTemplate`);
+                    const backupTemplates: object[] | undefined = globalState.get<object[]>(`${templatesKey}-backupTemplate`);
+                    const backupConfig: object | undefined = globalState.get<object>(`${configKey}-backupTemplate`);
+                    if (backupResources && backupTemplates && backupConfig) {
+                        [templatesMap[runtime], configMap[runtime]] = parseTemplates(backupResources, backupTemplates, backupConfig);
+                    } else {
+                        return undefined;
+                    }
+                } else {
+                    await downloadAndExtractTemplates(cliFeedJson, releaseVersion);
+                    const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
+                    const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
+                    const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
 
-                }
-                if (releaseVersion) {
-                    await downloadAndExtractZip(cliFeedJson, releaseVersion);
-                }
-                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
-                const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
-                const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
+                    [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
 
-                [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
-
-                if (globalState) {
-                    globalState.update(`${runtime}-backup`, releaseVersion);
-                    globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
-                    globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
-                    globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
+                    if (globalState) {
+                        globalState.update(backupTemplateVersion, releaseVersion);
+                        globalState.update(`${templatesKey}-backupTemplate`, rawTemplates);
+                        globalState.update(`${configKey}-backupTemplate`, rawConfig);
+                        globalState.update(`${resourcesKey}-backupTemplate`, rawResources);
+                    }
                 }
             }
             return new TemplateData(templatesMap, configMap);
         });
+    } catch (error) {
+        return undefined;
     } finally {
         if (await fse.pathExists(tempPath)) {
             await fse.remove(tempPath);
@@ -262,8 +275,13 @@ export function removeLanguageFromId(id: string): string {
 }
 
 // tslint:disable-next-line:no-unsafe-any
-async function downloadAndExtractZip(cliFeedJson: cliFeedJsonResponse, release: string): Promise<{}> {
+async function downloadAndExtractTemplates(cliFeedJson: cliFeedJsonResponse, release: string): Promise<{}> {
     const zipFile: string = 'templates.zip';
+    // tslint:disable-next-line:strict-boolean-expressions
+    if (!cliFeedJson.releases[release]) {
+        ext.outputChannel.appendLine(`v${release} is not a valid release version.`);
+        throw new Error(`v${release} is not a valid release version.`);
+    }
     const templateUrl: string = cliFeedJson.releases[release].templateApiZip;
     return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
         const templateOptions: request.OptionsWithUri = {
