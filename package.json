@@ -575,9 +575,23 @@
                         "description": "%azFunc.pickProcessTimeoutDescription%",
                         "default": 60
                     },
+                    "azureFunctions.showFuncInstallation": {
+                        "type": "boolean",
+                        "description": "%azFunc.showFuncInstallationDescription%",
+                        "default": true
+                    },
                     "azureFunctions.templateVersion": {
                         "type": "string",
                         "description": "%azFunc.templateVersion"
+                    },
+                    "azureFunctions.projectOpenBehavior": {
+                        "type": "string",
+                        "enum": [
+                            "AddToWorkspace",
+                            "OpenInNewWindow",
+                            "OpenInCurrentWindow"
+                        ],
+                        "description": "%azFunc.projectOpenBehaviorDescription%"
                     }
                 }
             }
