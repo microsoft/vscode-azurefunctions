@@ -145,9 +145,9 @@ export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | 
                 const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const feedRuntime: string = getFeedRuntime(runtime);
-                const currentRelease: string = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
+                const releaseVersion: string = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
                 const cachedRelease: string | undefined = globalState.get(`${runtime}-release`);
-                if (!cachedRelease || currentRelease !== cachedRelease) {
+                if (!cachedRelease || releaseVersion !== cachedRelease) {
                     // templates are not up-to-date and need to be downloaded/extracted
                     return undefined;
                 }
@@ -292,10 +292,6 @@ async function downloadAndExtractTemplates(cliFeedJson: cliFeedJsonResponse, rel
             });
         }
         const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
-        // tslint:disable-next-line:strict-boolean-expressions
-        if (!input) {
-            throw new UserCancelledError();
-        }
         release = input.label;
         await updateGlobalSetting(templateVersionSetting, release);
     }
