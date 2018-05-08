@@ -26,8 +26,8 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..', '..'));
     const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
+    backupTemplateData = await getTemplateDataFromBackup(undefined, cliFeedJson);
     funcPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
     funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);

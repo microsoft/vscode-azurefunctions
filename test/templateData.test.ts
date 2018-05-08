@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import { IHookCallbackContext } from 'mocha';
-import * as path from 'path';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
@@ -21,7 +20,7 @@ let funcStagingPortalTemplateData: TemplateData | undefined;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-    backupTemplateData = await getTemplateDataFromBackup(undefined, path.join(__dirname, '..', '..'));
+    backupTemplateData = await getTemplateDataFromBackup(undefined, cliFeedJson);
     funcPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
     funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);

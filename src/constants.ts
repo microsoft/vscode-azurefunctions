@@ -10,6 +10,7 @@ export const projectLanguageSetting: string = 'projectLanguage';
 export const projectRuntimeSetting: string = 'projectRuntime';
 export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
+export const templateVersionSetting: string = 'templateVersion';
 
 export enum ProjectLanguage {
     Bash = 'Bash',

@@ -128,7 +128,7 @@ export function activate(context: vscode.ExtensionContext): void {
 async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<void> {
     const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
     // tslint:disable-next-line:strict-boolean-expressions
-    ext.templateData = await tryGetTemplateDataFromCache(reporter, context.globalState, cliFeedJson) || await tryGetLatestTemplateData(reporter, cliFeedJson, context.globalState) || await getTemplateDataFromBackup(reporter, context.extensionPath);
+    ext.templateData = await tryGetTemplateDataFromCache(reporter, context.globalState, cliFeedJson) || await tryGetLatestTemplateData(reporter, cliFeedJson, context.globalState) || await getTemplateDataFromBackup(reporter, cliFeedJson);
 }
 
 // tslint:disable-next-line:no-empty

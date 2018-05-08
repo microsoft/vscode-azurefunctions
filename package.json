@@ -580,6 +580,10 @@
                         "description": "%azFunc.showFuncInstallationDescription%",
                         "default": true
                     },
+                    "azureFunctions.templateVersion": {
+                        "type": "string",
+                        "description": "%azFunc.templateVersion"
+                    },
                     "azureFunctions.projectOpenBehavior": {
                         "type": "string",
                         "enum": [

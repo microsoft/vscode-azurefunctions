@@ -6,7 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 
-const funcCliFeedUrl: string = 'https://functionscdn.azureedge.net/public/cli-feed-v3.json';
+const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 
 export type cliFeedJsonResponse = {
     tags: {
