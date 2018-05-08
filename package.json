@@ -575,9 +575,9 @@
                         "description": "%azFunc.pickProcessTimeoutDescription%",
                         "default": 60
                     },
-                    "azureFunctions.backupTemplateVersion": {
+                    "azureFunctions.templateVersion": {
                         "type": "string",
-                        "description": "%azFunc.backupTemplateVersion"
+                        "description": "%azFunc.templateVersion"
                     }
                 }
             }
