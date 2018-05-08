@@ -66,6 +66,7 @@ async function promptForStringSetting(setting: ConfigSetting, defaultValue?: str
     return await ext.ui.showInputBox(options);
 }
 
+// tslint:disable-next-line:max-func-body-length
 export async function createFunction(
     actionContext: IActionContext,
     functionAppPath?: string,
@@ -85,12 +86,14 @@ export async function createFunction(
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 
+    let isNewProject: boolean = false;
     let templateFilter: TemplateFilter;
     if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
+            isNewProject = true;
             // Get the settings used to create the project
             language = <ProjectLanguage>actionContext.properties.projectLanguage;
             runtime = <ProjectRuntime>actionContext.properties.projectRuntime;
@@ -168,6 +171,10 @@ export async function createFunction(
 
     if (!template.functionConfig.isHttpTrigger) {
         await validateAzureWebJobsStorage(actionContext, localSettingsPath);
+    }
+
+    if (isNewProject) {
+        await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
 }
 
