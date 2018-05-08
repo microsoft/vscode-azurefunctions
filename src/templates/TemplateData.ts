@@ -10,7 +10,7 @@ import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptProjectCreatorBase';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
@@ -221,6 +221,7 @@ export async function getTemplateDataFromBackup(reporter: TelemetryReporter | un
             this.properties.isActivationEvent = 'true';
             const templatesMap: { [runtime: string]: Template[] } = {};
             const configMap: { [runtime: string]: Config } = {};
+
             for (const key of Object.keys(ProjectRuntime)) {
                 const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
                 const releaseVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
