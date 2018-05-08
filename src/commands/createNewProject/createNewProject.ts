@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as vscode from 'vscode';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
@@ -68,9 +67,8 @@ export async function createNewProject(
     }
     await validateFuncCoreToolsInstalled();
 
-    if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
-        // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
-        await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
+    if (openFolder) {
+        await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
 }
 
