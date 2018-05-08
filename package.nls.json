@@ -40,5 +40,6 @@
     "azFunc.enableRemoteDebugging": "Enable remote debugging, an experimental feature that only supports Java-based Functions Apps.",
     "azFunc.deleteProxy": "Delete Proxy",
     "azFunc.pickProcessTimeoutDescription": "The timeout (in seconds) to be used when searching for the Azure Functions host process. Since a build is required every time you F5, you may need to adjust this based on how long your build takes.",
-    "azFunc.showFuncInstallationDescription": "Show a warning to install Azure Functions Core Tools CLI when you create a new project if the CLI is not installed."
+    "azFunc.showFuncInstallationDescription": "Show a warning to install Azure Functions Core Tools CLI when you create a new project if the CLI is not installed.",
+    "azFunc.deployStorageAccountDescription": "Default Azure Storage Account to host zip files deployed to Linux Python Function Apps."
 }
