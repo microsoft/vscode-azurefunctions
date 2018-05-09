@@ -46,3 +46,10 @@ export enum Platform {
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const gitignoreFileName: string = '.gitignore';
+
+export enum PackageManager {
+    npm,
+    brew
+}
+
+export const funcPackageName: string = 'azure-functions-core-tools';
