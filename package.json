@@ -582,7 +582,7 @@
                     },
                     "azureFunctions.templateVersion": {
                         "type": "string",
-                        "description": "%azFunc.templateVersion"
+                        "description": "%azFunc.templateVersion%"
                     },
                     "azureFunctions.projectOpenBehavior": {
                         "type": "string",
