@@ -12,7 +12,6 @@ All notable changes to the "azurefunctions" extension will be documented in this
   - In some cases, an 'Update' option is provided that will automatically run the necessary commmands
   - Warning now displays for all users, regardless of how they installed the func cli
 - Function templates are now versioned and can be controlled with the "azureFunctions.templateVersion" setting
-- Load more repositories when configuring deployment source to GitHub
 - Select open behavior after creating a new project ("Add to workspace", "Open in current window", or "Open in new window")
 
 ### Changed
