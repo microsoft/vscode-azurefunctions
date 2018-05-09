@@ -9,8 +9,8 @@ import request = require('request-promise');
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
-import { attemptToInstallLatestFunctionRuntime, canInstallFuncCoreTools } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
-import { isWindows, ProjectRuntime } from '../constants';
+import { attemptToInstallLatestFunctionRuntime, getFuncPackageManager } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
+import { funcPackageName, isWindows, PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -41,7 +41,7 @@ export namespace functionRuntimeUtils {
                     }
 
                     if (semver.gt(newestVersion, localVersion)) {
-                        const canUpdate: boolean = await canInstallFuncCoreTools();
+                        const packageManager: PackageManager | undefined = await getFuncPackageManager(true /* isFuncInstalled */);
                         let message: string = localize(
                             'azFunc.outdatedFunctionRuntime',
                             'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
@@ -56,7 +56,7 @@ export namespace functionRuntimeUtils {
                         let result: vscode.MessageItem;
 
                         do {
-                            result = canUpdate ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
+                            result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
                                 await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                             if (result === DialogResponses.learnMore) {
                                 // tslint:disable-next-line:no-unsafe-any
@@ -64,9 +64,11 @@ export namespace functionRuntimeUtils {
                             } else if (result === update) {
                                 switch (major) {
                                     case FunctionRuntimeTag.latest:
-                                        await attemptToInstallLatestFunctionRuntime('v1');
+                                        // tslint:disable-next-line:no-non-null-assertion
+                                        await attemptToInstallLatestFunctionRuntime(packageManager!, 'v1');
                                     case FunctionRuntimeTag.core:
-                                        await attemptToInstallLatestFunctionRuntime('v2');
+                                        // tslint:disable-next-line:no-non-null-assertion
+                                        await attemptToInstallLatestFunctionRuntime(packageManager!, 'v2');
                                     default:
                                         break;
                                 }
@@ -127,7 +129,7 @@ export namespace functionRuntimeUtils {
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
         // tslint:disable-next-line:no-http-string
-        const npmRegistryUri: string = 'http://registry.npmjs.org/-/package/azure-functions-core-tools/dist-tags';
+        const npmRegistryUri: string = `http://registry.npmjs.org/-/package/${funcPackageName}/dist-tags`;
         type distTags = { core: string, docker: string, latest: string };
         const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
         switch (major) {
