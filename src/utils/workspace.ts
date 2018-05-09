@@ -20,7 +20,7 @@ export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: st
             canSelectFiles: false,
             canSelectFolders: true,
             canSelectMany: false,
-            defaultUri: vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri : undefined,
+            defaultUri: vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 ? vscode.workspace.workspaceFolders[0].uri : undefined,
             openLabel: localize('select', 'Select')
         },
         getSubPath);
@@ -28,7 +28,7 @@ export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: st
 
 export async function selectWorkspaceFile(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined): Promise<string> {
     let defaultUri: vscode.Uri | undefined;
-    if (vscode.workspace.workspaceFolders && getSubPath) {
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 && getSubPath) {
         const firstFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];
         const subPath: string | undefined = getSubPath(firstFolder);
         if (subPath) {
