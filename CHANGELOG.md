@@ -4,6 +4,24 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.9.0 - 2018-05-09
+
+### Added
+
+- Improved warning when Azure Functions Core Tools is out of date
+  - In some cases, an 'Update' option is provided that will automatically run the necessary commmands
+  - Warning now displays for all users, regardless of how they installed the func cli
+- Function templates are now versioned and can be controlled with the "azureFunctions.templateVersion" setting
+- Select open behavior after creating a new project ("Add to workspace", "Open in current window", or "Open in new window")
+
+### Changed
+
+- Moved Azure Functions Explorer to new Azure view container instead of file explorer
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.8.1 - 2018-04-13
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.1%22+label%3Abug+is%3Aclosed)
 - Deployment fail when deploying to function app with a custom domain
