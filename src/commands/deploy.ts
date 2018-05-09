@@ -137,7 +137,7 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
             canSelectFiles: false,
             canSelectFolders: true,
             canSelectMany: false,
-            defaultUri: vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0].uri : undefined,
+            defaultUri: vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 ? vscode.workspace.workspaceFolders[0].uri : undefined,
             openLabel: localize('select', 'Select')
         }))[0].fsPath;
     }
