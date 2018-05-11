@@ -16,21 +16,17 @@ import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { TemplateData, tryGetTemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
-import { cliFeedJsonResponse, getCliFeedJson } from '../../src/utils/getCliFeedJson';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
-let funcStagingPortalTemplateData: TemplateData | undefined;
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-    backupTemplateData = <TemplateData>(await tryGetTemplateData(undefined, cliFeedJson, undefined, true /* backup enabled*/));
-    funcPortalTemplateData = await tryGetTemplateData(undefined, cliFeedJson, undefined);
+    backupTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
+    funcPortalTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
-    funcStagingPortalTemplateData = await tryGetTemplateData(undefined, cliFeedJson, undefined);
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
@@ -84,12 +80,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
             await this.testCreateFunctionInternal(funcPortalTemplateData, this.funcPortalTestFolder, templateName, inputs.slice());
         } else {
             assert.fail('Failed to find templates from functions portal.');
-        }
-
-        if (funcStagingPortalTemplateData) {
-            await this.testCreateFunctionInternal(funcStagingPortalTemplateData, this.funcStagingPortalTestFolder, templateName, inputs.slice());
-        } else {
-            assert.fail('Failed to find templates from functions staging portal.');
         }
 
         await this.testCreateFunctionInternal(backupTemplateData, this.backupTestFolder, templateName, inputs.slice());

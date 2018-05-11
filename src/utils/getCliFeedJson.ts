@@ -23,10 +23,14 @@ export type cliFeedJsonResponse = {
     }
 };
 
-export async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
-    const funcJsonOptions: request.OptionsWithUri = {
-        method: 'GET',
-        uri: funcCliFeedUrl
-    };
-    return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
+    try {
+        const funcJsonOptions: request.OptionsWithUri = {
+            method: 'GET',
+            uri: funcCliFeedUrl
+        };
+        return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+    } catch (error) {
+        return undefined;
+    }
 }

@@ -43,7 +43,6 @@ import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
 import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
-import { cliFeedJsonResponse, getCliFeedJson } from './utils/getCliFeedJson';
 
 export function activate(context: vscode.ExtensionContext): void {
     let reporter: TelemetryReporter | undefined;
@@ -126,9 +125,8 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<void> {
-    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
     // tslint:disable-next-line:strict-boolean-expressions
-    ext.templateData = await tryGetTemplateData(reporter, cliFeedJson, context.globalState) || <TemplateData>(await tryGetTemplateData(reporter, cliFeedJson, context.globalState, true /* forces back-up versions that are stable */));
+    ext.templateData = await tryGetTemplateData(reporter, context.globalState);
 }
 
 // tslint:disable-next-line:no-empty
