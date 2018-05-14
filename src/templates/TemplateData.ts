@@ -150,6 +150,8 @@ export async function getTemplateData(globalState?: vscode.Memento): Promise<Tem
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
     return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetParsedTemplateDataFromCliFeed', ext.reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
         for (const key of Object.keys(ProjectRuntime)) {
+            this.suppressErrorDisplay = true;
+            this.properties.isActivationEvent = 'true';
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
             const templateVersion: string | undefined = await tryGetTemplateVersionSetting(cliFeedJson, runtime);
             let parsedTemplatesByRuntime: parsedTemplates | undefined;
@@ -207,11 +209,8 @@ async function tryGetParsedTemplateDataFromCache(context: IActionContext, runtim
 
 async function tryGetParsedTemplateDataFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, globalState?: vscode.Memento): Promise<parsedTemplates | undefined> {
     try {
-        context.suppressErrorDisplay = true;
-        context.properties.isActivationEvent = 'true';
         context.properties.templateVersion = templateVersion;
         context.properties.runtime = runtime;
-
         await downloadAndExtractTemplates(cliFeedJson.releases[templateVersion].templateApiZip, templateVersion);
         // only Resources.json has a capital letter
         const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
