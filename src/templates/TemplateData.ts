@@ -10,8 +10,7 @@ import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import TelemetryReporter from 'vscode-extension-telemetry';
+import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
 import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -29,7 +28,6 @@ const configKey: string = 'FunctionTemplateConfig';
 const resourcesKey: string = 'FunctionTemplateResources';
 const templateVersionKey: string = 'templateVersion';
 const tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
-const noInternet: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
 
 const verifiedTemplates: string[] = [
     'BlobTrigger-JavaScript',
@@ -60,23 +58,30 @@ const verifiedJavaTemplates: string[] = [
  * We cache the template data retrieved from the portal so that the user can create functions offline.
  */
 export class TemplateData {
-    private readonly _templatesMap: { [runtime: string]: Template[] } = {};
-    private readonly _configMap: { [runtime: string]: Config } = {};
-    constructor(templatesMap: { [runtime: string]: Template[] }, configMap: { [runtime: string]: Config }) {
+    private readonly _templatesMap: { [runtime: string]: Template[] | undefined } = {};
+    private readonly _configMap: { [runtime: string]: Config | undefined } = {};
+    // if there are no templates, then there is likely no internet or a problem with the clifeed url
+    private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
+    constructor(templatesMap: { [runtime: string]: Template[] | undefined }, configMap: { [runtime: string]: Config | undefined }) {
         this._templatesMap = templatesMap;
         this._configMap = configMap;
     }
 
     public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<Template[]> {
+        const templates: Template[] | undefined = this._templatesMap[runtime];
+        if (!templates) {
+            throw new Error(this._noInternetErrMsg);
+        }
+
         if (language === ProjectLanguage.Java) {
             // Currently we leverage JS templates to get the function metadata of Java Functions.
             // Will refactor the code here when templates HTTP API is ready.
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
-            const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
+            const javaTemplates: Template[] = templates.filter((t: Template) => t.language === ProjectLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => verifiedJavaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
         } else if (language === ProjectLanguage.CSharp) {
             // https://github.com/Microsoft/vscode-azurefunctions/issues/179
-            return this._templatesMap[runtime].filter((t: Template) => verifiedCSharpTemplates.some((id: string) => id === t.id));
+            return templates.filter((t: Template) => verifiedCSharpTemplates.some((id: string) => id === t.id));
         } else {
             switch (language) {
                 case ProjectLanguage.CSharpScript:
@@ -87,24 +92,28 @@ export class TemplateData {
                 default:
             }
 
-            let templates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
+            let filterTemplates: Template[] = templates.filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
                 case TemplateFilter.All:
                     break;
                 case TemplateFilter.Core:
-                    templates = templates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
+                    filterTemplates = filterTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
                     break;
                 case TemplateFilter.Verified:
                 default:
-                    templates = templates.filter((t: Template) => verifiedTemplates.find((vt: string) => vt === t.id));
+                    filterTemplates = filterTemplates.filter((t: Template) => verifiedTemplates.find((vt: string) => vt === t.id));
             }
 
-            return templates;
+            return filterTemplates;
         }
     }
 
     public async getSetting(runtime: ProjectRuntime, bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
-        const binding: ConfigBinding | undefined = this._configMap[runtime].bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
+        const config: Config | undefined = this._configMap[runtime];
+        if (!config) {
+            throw new Error(this._noInternetErrMsg);
+        }
+        const binding: ConfigBinding | undefined = config.bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
         if (binding) {
             return binding.settings.find((bs: ConfigSetting) => bs.name === settingName);
         } else {
@@ -135,71 +144,92 @@ function verifyTemplatesByRuntime(templates: Template[], runtime: ProjectRuntime
     }
 }
 
-export async function tryGetTemplateData(reporter: TelemetryReporter | undefined, globalState?: vscode.Memento): Promise<TemplateData> {
-    const templatesMap: { [runtime: string]: Template[] } = {};
-    const configMap: { [runtime: string]: Config } = {};
+export async function getTemplateData(globalState?: vscode.Memento): Promise<TemplateData> {
+    const templatesMap: { [runtime: string]: Template[] | undefined } = {};
+    const configMap: { [runtime: string]: Config | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
-    for (const key of Object.keys(ProjectRuntime)) {
-        const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-        const templateVersion: string = await getTemplateVersionSetting(cliFeedJson, runtime, globalState);
-        let parsedTemplatesByRuntime: parsedTemplates | undefined = await tryGetParsedTemplateDataByRuntime(reporter, cliFeedJson, globalState, templateVersion, runtime);
-        if (!parsedTemplatesByRuntime) {
-            // try to get the backups
-            const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
-            parsedTemplatesByRuntime = await tryGetParsedTemplateDataByRuntime(reporter, cliFeedJson, globalState, backupVersion, runtime);
+    return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetParsedTemplateDataFromCliFeed', ext.reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
+        for (const key of Object.keys(ProjectRuntime)) {
+            const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
+            const templateVersion: string | undefined = await tryGetTemplateVersionSetting(cliFeedJson, runtime);
+            let parsedTemplatesByRuntime: parsedTemplates | undefined;
+
+            // 1. Use the cached templates if they match templateVersion
+            if (globalState && globalState.get(`${templateVersionKey}-${runtime}`) === templateVersion) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCache(this, runtime, globalState);
+                this.properties.templateSource = 'matchingCache';
+            }
+
+            // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
+            if (!parsedTemplatesByRuntime && cliFeedJson && templateVersion) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCliFeed(this, cliFeedJson, templateVersion, runtime, globalState);
+                this.properties.templateSource = 'cliFeed';
+            }
+
+            // 3. Use the cached templates, even if they don't match templateVersion
+            if (!parsedTemplatesByRuntime && globalState) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCache(this, runtime, globalState);
+                this.properties.templateSource = 'mismatchCache';
+            }
+
+            // 4. Download templates from the cli-feed using the backupVersion
+            if (!parsedTemplatesByRuntime && cliFeedJson) {
+                const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCliFeed(this, cliFeedJson, backupVersion, runtime, globalState);
+                this.properties.templateSource = 'backupCliFeed';
+            }
+
+            if (parsedTemplatesByRuntime) {
+                [templatesMap[runtime], configMap[runtime]] = parsedTemplatesByRuntime;
+            } else {
+                // Failed to get templates for this runtime
+            }
         }
 
-        if (!parsedTemplatesByRuntime) {
-            throw new Error(noInternet);
-        }
-
-        [templatesMap[runtime], configMap[runtime]] = [parsedTemplatesByRuntime[0], parsedTemplatesByRuntime[1]];
-    }
-
-    return new TemplateData(templatesMap, configMap);
+        return new TemplateData(templatesMap, configMap);
+    });
 
 }
 
-async function tryGetParsedTemplateDataByRuntime(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse | undefined, globalState?: vscode.Memento, templateVersion: string, runtime: ProjectRuntime): Promise<parsedTemplates | undefined> {
+async function tryGetParsedTemplateDataFromCache(context: IActionContext, runtime: ProjectRuntime, globalState: vscode.Memento): Promise<parsedTemplates | undefined> {
     try {
-        return <parsedTemplates>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetParsedTemplateDataByRuntime', reporter, undefined, async function (this: IActionContext): Promise<parsedTemplates> {
-            this.suppressErrorDisplay = true;
-            this.properties.isActivationEvent = 'true';
-            let parsedTemplatesByRuntime: parsedTemplates;
-
-            if (globalState && globalState.get(`${templateVersionKey}-${runtime}`) === templateVersion) {
-                const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
-                const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
-                const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
-                if (cachedResources && cachedTemplates && cachedConfig) {
-                    parsedTemplatesByRuntime = parseTemplates(cachedResources, cachedTemplates, cachedConfig);
-                    return parsedTemplatesByRuntime;
-                }
-            }
-
-            if (cliFeedJson) {
-                await downloadAndExtractTemplates(cliFeedJson.releases[templateVersion].templateApiZip, templateVersion);
-                // only Resources.json has a capital letter
-                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
-                const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
-                const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
-
-                parsedTemplatesByRuntime = parseTemplates(rawResources, rawTemplates, rawConfig);
-                verifyTemplatesByRuntime(parsedTemplatesByRuntime[0], runtime);
-                if (globalState) {
-                    globalState.update(`${templateVersionKey}-${runtime}`, templateVersion);
-                    globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
-                    globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
-                    globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
-                }
-            } else {
-                // if there is no cliFeedJson and no cached templates, there's nothing we can do
-                throw new Error();
-            }
-
-            return parsedTemplatesByRuntime;
-        });
+        const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
+        const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
+        const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
+        if (cachedResources && cachedTemplates && cachedConfig) {
+            return parseTemplates(cachedResources, cachedTemplates, cachedConfig);
+        }
     } catch (error) {
+        context.properties.cacheError = parseError(error).message;
+    }
+    return undefined;
+}
+
+async function tryGetParsedTemplateDataFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, globalState?: vscode.Memento): Promise<parsedTemplates | undefined> {
+    try {
+        context.suppressErrorDisplay = true;
+        context.properties.isActivationEvent = 'true';
+        context.properties.templateVersion = templateVersion;
+        context.properties.runtime = runtime;
+
+        await downloadAndExtractTemplates(cliFeedJson.releases[templateVersion].templateApiZip, templateVersion);
+        // only Resources.json has a capital letter
+        const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
+        const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
+        const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
+
+        const parsedTemplatesByRuntime: parsedTemplates = parseTemplates(rawResources, rawTemplates, rawConfig);
+        verifyTemplatesByRuntime(parsedTemplatesByRuntime[0], runtime);
+        if (globalState) {
+            globalState.update(`${templateVersionKey}-${runtime}`, templateVersion);
+            globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
+            globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
+            globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
+        }
+        return parsedTemplatesByRuntime;
+
+    } catch (error) {
+        context.properties.cliFeedError = parseError(error).message;
         return undefined;
     } finally {
         if (await fse.pathExists(tempPath)) {
@@ -271,7 +301,7 @@ function getFeedRuntime(runtime: ProjectRuntime): string {
     }
 }
 
-async function getTemplateVersionSetting(cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime, globalState?: vscode.Memento): Promise<string> {
+async function tryGetTemplateVersionSetting(cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
     let templateVersion: string;
@@ -302,16 +332,7 @@ async function getTemplateVersionSetting(cliFeedJson: cliFeedJsonResponse | unde
             }
         }
     } else {
-        // if there was no cliJsonFeed, then there is likely no internet or a problem with the feed url
-        // fallback to the cache if there is one, if not, use the backup
-        if (!globalState) {
-            throw new Error(noInternet);
-        }
-        const cacheVersion: string | undefined = globalState.get(`${templateVersionKey}-${runtime}`);
-        if (!cacheVersion) {
-            throw new Error(noInternet);
-        }
-        templateVersion = cacheVersion;
+        return undefined;
     }
 
     return templateVersion;

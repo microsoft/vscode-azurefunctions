@@ -14,7 +14,7 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { TemplateData, tryGetTemplateData } from '../../src/templates/TemplateData';
+import { getTemplateData, TemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
 
 let backupTemplateData: TemplateData;
@@ -24,8 +24,8 @@ let funcPortalTemplateData: TemplateData | undefined;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    backupTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
-    funcPortalTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
+    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
+    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
 });
 

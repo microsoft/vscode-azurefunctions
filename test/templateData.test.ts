@@ -9,7 +9,7 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
-import { TemplateData, tryGetTemplateData } from '../src/templates/TemplateData';
+import { getTemplateData, TemplateData } from '../src/templates/TemplateData';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
@@ -17,8 +17,8 @@ let funcPortalTemplateData: TemplateData | undefined;
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    backupTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
-    funcPortalTemplateData = <TemplateData>(await tryGetTemplateData(undefined, undefined));
+    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
+    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
 });
 
