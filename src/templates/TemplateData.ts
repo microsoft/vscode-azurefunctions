@@ -148,12 +148,13 @@ export async function getTemplateData(globalState?: vscode.Memento): Promise<Tem
     const templatesMap: { [runtime: string]: Template[] | undefined } = {};
     const configMap: { [runtime: string]: Config | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
-    return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetParsedTemplateDataFromCliFeed', ext.reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
-        for (const key of Object.keys(ProjectRuntime)) {
+    for (const key of Object.keys(ProjectRuntime)) {
+        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-            const templateVersion: string | undefined = await tryGetTemplateVersionSetting(cliFeedJson, runtime);
+            this.properties.runtime = runtime;
+            const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime);
             let parsedTemplatesByRuntime: parsedTemplates | undefined;
 
             // 1. Use the cached templates if they match templateVersion
@@ -185,12 +186,11 @@ export async function getTemplateData(globalState?: vscode.Memento): Promise<Tem
                 [templatesMap[runtime], configMap[runtime]] = parsedTemplatesByRuntime;
             } else {
                 // Failed to get templates for this runtime
+                this.properties.templateSource = 'None';
             }
-        }
-
-        return new TemplateData(templatesMap, configMap);
-    });
-
+        });
+    }
+    return new TemplateData(templatesMap, configMap);
 }
 
 async function tryGetParsedTemplateDataFromCache(context: IActionContext, runtime: ProjectRuntime, globalState: vscode.Memento): Promise<parsedTemplates | undefined> {
@@ -210,7 +210,6 @@ async function tryGetParsedTemplateDataFromCache(context: IActionContext, runtim
 async function tryGetParsedTemplateDataFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, globalState?: vscode.Memento): Promise<parsedTemplates | undefined> {
     try {
         context.properties.templateVersion = templateVersion;
-        context.properties.runtime = runtime;
         await downloadAndExtractTemplates(cliFeedJson.releases[templateVersion].templateApiZip, templateVersion);
         // only Resources.json has a capital letter
         const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
@@ -300,9 +299,12 @@ function getFeedRuntime(runtime: ProjectRuntime): string {
     }
 }
 
-async function tryGetTemplateVersionSetting(cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
+async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
+    if (userTemplateVersion) {
+        context.properties.userTemplateVersion = userTemplateVersion;
+    }
     let templateVersion: string;
     if (cliFeedJson) {
         templateVersion = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;

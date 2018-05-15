@@ -26,19 +26,14 @@ export type cliFeedJsonResponse = {
 };
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
-    try {
-        // tslint:disable-next-line:no-unsafe-any
-        return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', ext.reporter, undefined, async function (this: IActionContext): Promise<cliFeedJsonResponse> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            const funcJsonOptions: request.OptionsWithUri = {
-                method: 'GET',
-                uri: funcCliFeedUrl
-            };
-            return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
-        });
-
-    } catch (error) {
-        return undefined;
-    }
+    // tslint:disable-next-line:no-unsafe-any
+    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', ext.reporter, undefined, async function (this: IActionContext): Promise<cliFeedJsonResponse> {
+        this.properties.isActivationEvent = 'true';
+        this.suppressErrorDisplay = true;
+        const funcJsonOptions: request.OptionsWithUri = {
+            method: 'GET',
+            uri: funcCliFeedUrl
+        };
+        return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+    });
 }
