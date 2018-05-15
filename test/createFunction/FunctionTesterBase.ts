@@ -14,23 +14,19 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../../src/templates/TemplateData';
+import { getTemplateData, TemplateData } from '../../src/templates/TemplateData';
 import * as fsUtil from '../../src/utils/fs';
-import { cliFeedJsonResponse, getCliFeedJson } from '../../src/utils/getCliFeedJson';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
-let funcStagingPortalTemplateData: TemplateData | undefined;
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     // Ensure template data is initialized before any 'Create Function' test is run
-    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-    backupTemplateData = await getTemplateDataFromBackup(undefined, cliFeedJson);
-    funcPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
+    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
+    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
-    funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
 });
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
@@ -84,12 +80,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
             await this.testCreateFunctionInternal(funcPortalTemplateData, this.funcPortalTestFolder, templateName, inputs.slice());
         } else {
             assert.fail('Failed to find templates from functions portal.');
-        }
-
-        if (funcStagingPortalTemplateData) {
-            await this.testCreateFunctionInternal(funcStagingPortalTemplateData, this.funcStagingPortalTestFolder, templateName, inputs.slice());
-        } else {
-            assert.fail('Failed to find templates from functions staging portal.');
         }
 
         await this.testCreateFunctionInternal(backupTemplateData, this.backupTestFolder, templateName, inputs.slice());

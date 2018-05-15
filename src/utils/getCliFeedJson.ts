@@ -5,6 +5,8 @@
 
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 
@@ -23,10 +25,15 @@ export type cliFeedJsonResponse = {
     }
 };
 
-export async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
-    const funcJsonOptions: request.OptionsWithUri = {
-        method: 'GET',
-        uri: funcCliFeedUrl
-    };
-    return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
+    // tslint:disable-next-line:no-unsafe-any
+    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', ext.reporter, undefined, async function (this: IActionContext): Promise<cliFeedJsonResponse> {
+        this.properties.isActivationEvent = 'true';
+        this.suppressErrorDisplay = true;
+        const funcJsonOptions: request.OptionsWithUri = {
+            method: 'GET',
+            uri: funcCliFeedUrl
+        };
+        return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+    });
 }

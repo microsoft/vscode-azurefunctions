@@ -36,14 +36,13 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
-import { getTemplateDataFromBackup, tryGetLatestTemplateData, tryGetTemplateDataFromCache } from './templates/TemplateData';
+import { getTemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
 import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
-import { cliFeedJsonResponse, getCliFeedJson } from './utils/getCliFeedJson';
 
 export function activate(context: vscode.ExtensionContext): void {
     let reporter: TelemetryReporter | undefined;
@@ -83,7 +82,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await validateFunctionProjects(this, ui, outputChannel, event.added);
         });
 
-        const templateDataTask: Promise<void> = getTemplateData(reporter, context);
+        const templateDataTask: Promise<void> = getTemplateDataTask(context);
 
         actionHandler.registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
         actionHandler.registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
@@ -125,10 +124,8 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 }
 
-async function getTemplateData(reporter: TelemetryReporter | undefined, context: vscode.ExtensionContext): Promise<void> {
-    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-    // tslint:disable-next-line:strict-boolean-expressions
-    ext.templateData = await tryGetTemplateDataFromCache(reporter, context.globalState, cliFeedJson) || await tryGetLatestTemplateData(reporter, cliFeedJson, context.globalState) || await getTemplateDataFromBackup(reporter, cliFeedJson);
+async function getTemplateDataTask(context: vscode.ExtensionContext): Promise<void> {
+    ext.templateData = await getTemplateData(context.globalState);
 }
 
 // tslint:disable-next-line:no-empty

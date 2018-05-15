@@ -9,21 +9,17 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { Template } from '../src/templates/Template';
-import { getTemplateDataFromBackup, TemplateData, tryGetLatestTemplateData } from '../src/templates/TemplateData';
-import { cliFeedJsonResponse, getCliFeedJson } from '../src/utils/getCliFeedJson';
+import { getTemplateData, TemplateData } from '../src/templates/TemplateData';
 
 let backupTemplateData: TemplateData;
 let funcPortalTemplateData: TemplateData | undefined;
-let funcStagingPortalTemplateData: TemplateData | undefined;
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-    backupTemplateData = await getTemplateDataFromBackup(undefined, cliFeedJson);
-    funcPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
+    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
+    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
-    funcStagingPortalTemplateData = await tryGetLatestTemplateData(undefined, cliFeedJson, undefined);
 });
 
 suite('Template Data Tests', async () => {
@@ -32,12 +28,6 @@ suite('Template Data Tests', async () => {
             await validateTemplateData(funcPortalTemplateData);
         } else {
             assert.fail('Failed to find templates from functions portal.');
-        }
-
-        if (funcStagingPortalTemplateData) {
-            await validateTemplateData(funcStagingPortalTemplateData);
-        } else {
-            assert.fail('Failed to find templates from functions staging portal.');
         }
 
         await validateTemplateData(backupTemplateData);

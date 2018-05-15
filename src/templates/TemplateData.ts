@@ -10,23 +10,23 @@ import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import TelemetryReporter from 'vscode-extension-telemetry';
-import { ScriptProjectCreatorBase } from '../commands/createNewProject/ScriptProjectCreatorBase';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
+import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
+import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
-import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
+import { cliFeedJsonResponse, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
 import { Resources } from './Resources';
 import { Template, TemplateCategory } from './Template';
 
+export type parsedTemplates = [Template[], Config];
 const templatesKey: string = 'FunctionTemplates';
 const configKey: string = 'FunctionTemplateConfig';
 const resourcesKey: string = 'FunctionTemplateResources';
+const templateVersionKey: string = 'templateVersion';
 const tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
 
 const verifiedTemplates: string[] = [
@@ -58,23 +58,30 @@ const verifiedJavaTemplates: string[] = [
  * We cache the template data retrieved from the portal so that the user can create functions offline.
  */
 export class TemplateData {
-    private readonly _templatesMap: { [runtime: string]: Template[] } = {};
-    private readonly _configMap: { [runtime: string]: Config } = {};
-    constructor(templatesMap: { [runtime: string]: Template[] }, configMap: { [runtime: string]: Config }) {
+    private readonly _templatesMap: { [runtime: string]: Template[] | undefined } = {};
+    private readonly _configMap: { [runtime: string]: Config | undefined } = {};
+    // if there are no templates, then there is likely no internet or a problem with the clifeed url
+    private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
+    constructor(templatesMap: { [runtime: string]: Template[] | undefined }, configMap: { [runtime: string]: Config | undefined }) {
         this._templatesMap = templatesMap;
         this._configMap = configMap;
     }
 
     public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<Template[]> {
+        const templates: Template[] | undefined = this._templatesMap[runtime];
+        if (!templates) {
+            throw new Error(this._noInternetErrMsg);
+        }
+
         if (language === ProjectLanguage.Java) {
             // Currently we leverage JS templates to get the function metadata of Java Functions.
             // Will refactor the code here when templates HTTP API is ready.
             // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
-            const javaTemplates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language === ProjectLanguage.JavaScript);
+            const javaTemplates: Template[] = templates.filter((t: Template) => t.language === ProjectLanguage.JavaScript);
             return javaTemplates.filter((t: Template) => verifiedJavaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
         } else if (language === ProjectLanguage.CSharp) {
             // https://github.com/Microsoft/vscode-azurefunctions/issues/179
-            return this._templatesMap[runtime].filter((t: Template) => verifiedCSharpTemplates.some((id: string) => id === t.id));
+            return templates.filter((t: Template) => verifiedCSharpTemplates.some((id: string) => id === t.id));
         } else {
             switch (language) {
                 case ProjectLanguage.CSharpScript:
@@ -85,24 +92,28 @@ export class TemplateData {
                 default:
             }
 
-            let templates: Template[] = this._templatesMap[runtime].filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
+            let filterTemplates: Template[] = templates.filter((t: Template) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
                 case TemplateFilter.All:
                     break;
                 case TemplateFilter.Core:
-                    templates = templates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
+                    filterTemplates = filterTemplates.filter((t: Template) => t.isCategory(TemplateCategory.Core));
                     break;
                 case TemplateFilter.Verified:
                 default:
-                    templates = templates.filter((t: Template) => verifiedTemplates.find((vt: string) => vt === t.id));
+                    filterTemplates = filterTemplates.filter((t: Template) => verifiedTemplates.find((vt: string) => vt === t.id));
             }
 
-            return templates;
+            return filterTemplates;
         }
     }
 
     public async getSetting(runtime: ProjectRuntime, bindingType: string, settingName: string): Promise<ConfigSetting | undefined> {
-        const binding: ConfigBinding | undefined = this._configMap[runtime].bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
+        const config: Config | undefined = this._configMap[runtime];
+        if (!config) {
+            throw new Error(this._noInternetErrMsg);
+        }
+        const binding: ConfigBinding | undefined = config.bindings.find((b: ConfigBinding) => b.bindingType === bindingType);
         if (binding) {
             return binding.settings.find((bs: ConfigSetting) => bs.name === settingName);
         } else {
@@ -111,146 +122,113 @@ export class TemplateData {
     }
 }
 
-function verifyTemplatesByRuntime(templatesMap: { [runtime: string]: Template[] }, runtime: ProjectRuntime): void {
+function verifyTemplatesByRuntime(templates: Template[], runtime: ProjectRuntime): void {
     if (runtime === ProjectRuntime.one) {
         for (const verifiedTemplateId of verifiedTemplates) {
-            if (!templatesMap[ScriptProjectCreatorBase.defaultRuntime].some((t: Template) => t.id === verifiedTemplateId)) {
+            if (!templates.some((t: Template) => t.id === verifiedTemplateId)) {
                 throw new Error(localize('failedToFindJavaScriptTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
             }
         }
 
         for (const verifiedTemplateId of verifiedCSharpTemplates) {
-            if (!templatesMap[ProjectRuntime.one].some((t: Template) => t.id === verifiedTemplateId)) {
+            if (!templates.some((t: Template) => t.id === verifiedTemplateId)) {
                 throw new Error(localize('failedToFindCSharpTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
             }
         }
     } else if (runtime === ProjectRuntime.beta) {
         for (const verifiedTemplateId of verifiedCSharpTemplates) {
-            if (!templatesMap[ProjectRuntime.beta].some((t: Template) => t.id === verifiedTemplateId)) {
+            if (!templates.some((t: Template) => t.id === verifiedTemplateId)) {
                 throw new Error(localize('failedToFindCSharpTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
             }
         }
     }
 }
 
-export async function tryGetTemplateDataFromCache(reporter: TelemetryReporter | undefined, globalState: vscode.Memento, cliFeedJson: cliFeedJsonResponse): Promise<TemplateData | undefined> {
-    try {
-        return <TemplateData | undefined>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetTemplateDataFromCache', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
+export async function getTemplateData(globalState?: vscode.Memento): Promise<TemplateData> {
+    const templatesMap: { [runtime: string]: Template[] | undefined } = {};
+    const configMap: { [runtime: string]: Config | undefined } = {};
+    const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
+    for (const key of Object.keys(ProjectRuntime)) {
+        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
-            const templatesMap: { [runtime: string]: Template[] } = {};
-            const configMap: { [runtime: string]: Config } = {};
-            for (const key of Object.keys(ProjectRuntime)) {
-                // called within loop in case setting has changed between runtimes
-                const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
-                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const feedRuntime: string = getFeedRuntime(runtime);
-                const releaseVersion: string = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
-                const cachedRelease: string | undefined = globalState.get(`${runtime}-release`);
-                if (!cachedRelease || releaseVersion !== cachedRelease) {
-                    // templates are not up-to-date and need to be downloaded/extracted
-                    return undefined;
-                }
+            const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
+            this.properties.runtime = runtime;
+            const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime);
+            let parsedTemplatesByRuntime: parsedTemplates | undefined;
 
-                const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
-                const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
-                const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
-
-                if (cachedResources && cachedTemplates && cachedConfig) {
-                    [templatesMap[runtime], configMap[runtime]] = parseTemplates(cachedResources, cachedTemplates, cachedConfig);
-                    verifyTemplatesByRuntime(templatesMap, runtime);
-                } else {
-                    return undefined;
-                }
+            // 1. Use the cached templates if they match templateVersion
+            if (globalState && globalState.get(`${templateVersionKey}-${runtime}`) === templateVersion) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCache(this, runtime, globalState);
+                this.properties.templateSource = 'matchingCache';
             }
 
-            return new TemplateData(templatesMap, configMap);
+            // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
+            if (!parsedTemplatesByRuntime && cliFeedJson && templateVersion) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCliFeed(this, cliFeedJson, templateVersion, runtime, globalState);
+                this.properties.templateSource = 'cliFeed';
+            }
+
+            // 3. Use the cached templates, even if they don't match templateVersion
+            if (!parsedTemplatesByRuntime && globalState) {
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCache(this, runtime, globalState);
+                this.properties.templateSource = 'mismatchCache';
+            }
+
+            // 4. Download templates from the cli-feed using the backupVersion
+            if (!parsedTemplatesByRuntime && cliFeedJson) {
+                const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
+                parsedTemplatesByRuntime = await tryGetParsedTemplateDataFromCliFeed(this, cliFeedJson, backupVersion, runtime, globalState);
+                this.properties.templateSource = 'backupCliFeed';
+            }
+
+            if (parsedTemplatesByRuntime) {
+                [templatesMap[runtime], configMap[runtime]] = parsedTemplatesByRuntime;
+            } else {
+                // Failed to get templates for this runtime
+                this.properties.templateSource = 'None';
+            }
         });
-    } catch (error) {
-        return undefined;
     }
+    return new TemplateData(templatesMap, configMap);
 }
 
-export async function tryGetLatestTemplateData(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData | undefined> {
+async function tryGetParsedTemplateDataFromCache(context: IActionContext, runtime: ProjectRuntime, globalState: vscode.Memento): Promise<parsedTemplates | undefined> {
     try {
-        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.tryGetLatestTemplateData', reporter, undefined, async function (this: IActionContext): Promise<TemplateData> {
-            this.suppressErrorDisplay = true;
-            this.properties.isActivationEvent = 'true';
-            const templatesMap: { [runtime: string]: Template[] } = {};
-            const configMap: { [runtime: string]: Config } = {};
-            for (const key of Object.keys(ProjectRuntime)) {
-                // called within loop in case setting has changed between runtimes
-                const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
-                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const feedRuntime: string = getFeedRuntime(runtime);
-                const releaseVersion: string = userTemplateVersion ? userTemplateVersion : <string>cliFeedJson.tags[feedRuntime].release;
-                await downloadAndExtractTemplates(cliFeedJson, releaseVersion);
-
-                // only Resources.json has a capital letter
-                const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
-                const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
-                const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
-
-                [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
-                verifyTemplatesByRuntime(templatesMap, runtime);
-                if (globalState) {
-                    globalState.update(`${runtime}-release`, releaseVersion);
-                    globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
-                    globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
-                    globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
-                }
-            }
-            return new TemplateData(templatesMap, configMap);
-        });
-    } catch (error) {
-        return undefined;
-    } finally {
-        if (await fse.pathExists(tempPath)) {
-            await fse.remove(tempPath);
+        const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(resourcesKey, runtime));
+        const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(templatesKey, runtime));
+        const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(configKey, runtime));
+        if (cachedResources && cachedTemplates && cachedConfig) {
+            return parseTemplates(cachedResources, cachedTemplates, cachedConfig);
         }
+    } catch (error) {
+        context.properties.cacheError = parseError(error).message;
     }
+    return undefined;
 }
 
-export async function getTemplateDataFromBackup(reporter: TelemetryReporter | undefined, cliFeedJson: cliFeedJsonResponse, globalState?: vscode.Memento): Promise<TemplateData> {
-    const v1ReleaseVersion: string = '1.0.12'; // known stable version
-    const betaReleaseVersion: string = '2.0.1-beta.25'; // known stable version
-
+async function tryGetParsedTemplateDataFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, globalState?: vscode.Memento): Promise<parsedTemplates | undefined> {
     try {
-        return <TemplateData>await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateDataFromBackup', reporter, undefined, async function (this: IActionContext): Promise<TemplateData | undefined> {
-            this.suppressErrorDisplay = true;
-            this.properties.isActivationEvent = 'true';
-            const templatesMap: { [runtime: string]: Template[] } = {};
-            const configMap: { [runtime: string]: Config } = {};
+        context.properties.templateVersion = templateVersion;
+        await downloadAndExtractTemplates(cliFeedJson.releases[templateVersion].templateApiZip, templateVersion);
+        // only Resources.json has a capital letter
+        const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
+        const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
+        const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
 
-            for (const key of Object.keys(ProjectRuntime)) {
-                const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-                const releaseVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
-                if (globalState && globalState.get(`${runtime}-backup`) === releaseVersion) {
-                    const cachedResources: object | undefined = globalState.get<object>(getRuntimeKey(`${resourcesKey}-backup`, runtime));
-                    const cachedTemplates: object[] | undefined = globalState.get<object[]>(getRuntimeKey(`${templatesKey}-backup`, runtime));
-                    const cachedConfig: object | undefined = globalState.get<object>(getRuntimeKey(`${configKey}-backup`, runtime));
-                    if (cachedResources && cachedTemplates && cachedConfig) {
-                        [templatesMap[runtime], configMap[runtime]] = parseTemplates(cachedResources, cachedTemplates, cachedConfig);
-                    }
-                } else {
-                    await downloadAndExtractTemplates(cliFeedJson, releaseVersion);
-                    // only Resources.json has a capital letter
-                    const rawResources: object = <object>await fse.readJSON(path.join(tempPath, 'resources', 'Resources.json'));
-                    const rawTemplates: object[] = <object[]>await fse.readJSON(path.join(tempPath, 'templates', 'templates.json'));
-                    const rawConfig: object = <object>await fse.readJSON(path.join(tempPath, 'bindings', 'bindings.json'));
+        const parsedTemplatesByRuntime: parsedTemplates = parseTemplates(rawResources, rawTemplates, rawConfig);
+        verifyTemplatesByRuntime(parsedTemplatesByRuntime[0], runtime);
+        if (globalState) {
+            globalState.update(`${templateVersionKey}-${runtime}`, templateVersion);
+            globalState.update(getRuntimeKey(templatesKey, runtime), rawTemplates);
+            globalState.update(getRuntimeKey(configKey, runtime), rawConfig);
+            globalState.update(getRuntimeKey(resourcesKey, runtime), rawResources);
+        }
+        return parsedTemplatesByRuntime;
 
-                    [templatesMap[runtime], configMap[runtime]] = parseTemplates(rawResources, rawTemplates, rawConfig);
-                    verifyTemplatesByRuntime(templatesMap, runtime);
-                    if (globalState) {
-                        globalState.update(`${runtime}-backup`, releaseVersion);
-                        globalState.update(getRuntimeKey(`${templatesKey}-backup`, runtime), rawTemplates);
-                        globalState.update(getRuntimeKey(`${configKey}-backup`, runtime), rawConfig);
-                        globalState.update(getRuntimeKey(`${resourcesKey}-backup`, runtime), rawResources);
-                    }
-                }
-            }
-            return new TemplateData(templatesMap, configMap);
-        });
+    } catch (error) {
+        context.properties.cliFeedError = parseError(error).message;
+        return undefined;
     } finally {
         if (await fse.pathExists(tempPath)) {
             await fse.remove(tempPath);
@@ -262,7 +240,7 @@ function getRuntimeKey(baseKey: string, runtime: ProjectRuntime): string {
     return runtime === ProjectRuntime.one ? baseKey : `${baseKey}.${runtime}`;
 }
 
-function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): [Template[], Config] {
+function parseTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): parsedTemplates {
     const resources: Resources = new Resources(rawResources);
     const templates: Template[] = [];
     for (const rawTemplate of rawTemplates) {
@@ -280,23 +258,8 @@ export function removeLanguageFromId(id: string): string {
 }
 
 // tslint:disable-next-line:no-unsafe-any
-async function downloadAndExtractTemplates(cliFeedJson: cliFeedJsonResponse, release: string): Promise<{}> {
-    const zipFile: string = 'templates.zip';
-    // tslint:disable-next-line:strict-boolean-expressions
-    if (!cliFeedJson.releases[release]) {
-        const invalidVersion: string = `v${release} is not a valid release version.  Pick a valid version.`;
-        const releaseQuickPicks: vscode.QuickPickItem[] = [];
-        for (const rel of Object.keys(cliFeedJson.releases)) {
-            releaseQuickPicks.push({
-                label: rel,
-                description: ''
-            });
-        }
-        const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
-        release = input.label;
-        await updateGlobalSetting(templateVersionSetting, release);
-    }
-    const templateUrl: string = cliFeedJson.releases[release].templateApiZip;
+async function downloadAndExtractTemplates(templateUrl: string, release: string): Promise<{}> {
+    const zipFile: string = `templates-${release}.zip`;
     return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
         const templateOptions: request.OptionsWithUri = {
             method: 'GET',
@@ -310,14 +273,14 @@ async function downloadAndExtractTemplates(cliFeedJson: cliFeedJsonResponse, rel
                 reject(err);
             }
         }).pipe(fse.createWriteStream(path.join(tempPath, zipFile)).on('finish', () => {
-            ext.outputChannel.appendLine(`Downloading v${release} templates zip file. . .`);
+            ext.outputChannel.appendLine(localize('downloadTemplates', 'Downloading "v{0}" templates zip file. . .', release));
             // tslint:disable-next-line:no-unsafe-any
             extract(path.join(tempPath, zipFile), { dir: tempPath }, (err: Error) => {
                 // tslint:disable-next-line:strict-boolean-expressions
                 if (err) {
                     reject(err);
                 }
-                ext.outputChannel.appendLine('Template files extracted.');
+                ext.outputChannel.appendLine(localize('templatesExtracted', 'Template files extracted.'));
                 resolve();
 
             });
@@ -334,4 +297,44 @@ function getFeedRuntime(runtime: ProjectRuntime): string {
         default:
             throw new RangeError();
     }
+}
+
+async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
+    const feedRuntime: string = getFeedRuntime(runtime);
+    const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
+    if (userTemplateVersion) {
+        context.properties.userTemplateVersion = userTemplateVersion;
+    }
+    let templateVersion: string;
+    if (cliFeedJson) {
+        templateVersion = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
+        // tslint:disable-next-line:strict-boolean-expressions
+        if (!cliFeedJson.releases[templateVersion]) {
+            const invalidVersion: string = localize('invalidTemplateVersion', 'Failed to retrieve Azure Functions templates for version "{0}".', templateVersion);
+            const selectVersion: vscode.MessageItem = { title: localize('selectVersion', 'Select version') };
+            const useLatest: vscode.MessageItem = { title: localize('useLatest', 'Use latest') };
+            const warningInput: vscode.MessageItem = await ext.ui.showWarningMessage(invalidVersion, selectVersion, useLatest);
+            if (warningInput === selectVersion) {
+                const releaseQuickPicks: vscode.QuickPickItem[] = [];
+                for (const rel of Object.keys(cliFeedJson.releases)) {
+                    releaseQuickPicks.push({
+                        label: rel,
+                        description: ''
+                    });
+                }
+                const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
+                templateVersion = input.label;
+                await updateGlobalSetting(templateVersionSetting, input.label);
+            } else {
+                templateVersion = cliFeedJson.tags[feedRuntime].release;
+                // reset user setting so that it always gets latest
+                await updateGlobalSetting(templateVersionSetting, '');
+
+            }
+        }
+    } else {
+        return undefined;
+    }
+
+    return templateVersion;
 }
