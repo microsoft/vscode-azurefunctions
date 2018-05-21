@@ -340,6 +340,7 @@ async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson
         return templateVersion;
     } catch (error) {
         // if cliJson does not have the template version being searched for, it will throw an error
+        context.properties.userTemplateVersion = parseError(error).message;
         return undefined;
     }
 
