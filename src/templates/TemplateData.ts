@@ -302,39 +302,46 @@ function getFeedRuntime(runtime: ProjectRuntime): string {
 async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
-    if (userTemplateVersion) {
-        context.properties.userTemplateVersion = userTemplateVersion;
-    }
-    let templateVersion: string;
-    if (cliFeedJson) {
-        templateVersion = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
-        // tslint:disable-next-line:strict-boolean-expressions
-        if (!cliFeedJson.releases[templateVersion]) {
-            const invalidVersion: string = localize('invalidTemplateVersion', 'Failed to retrieve Azure Functions templates for version "{0}".', templateVersion);
-            const selectVersion: vscode.MessageItem = { title: localize('selectVersion', 'Select version') };
-            const useLatest: vscode.MessageItem = { title: localize('useLatest', 'Use latest') };
-            const warningInput: vscode.MessageItem = await ext.ui.showWarningMessage(invalidVersion, selectVersion, useLatest);
-            if (warningInput === selectVersion) {
-                const releaseQuickPicks: vscode.QuickPickItem[] = [];
-                for (const rel of Object.keys(cliFeedJson.releases)) {
-                    releaseQuickPicks.push({
-                        label: rel,
-                        description: ''
-                    });
-                }
-                const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
-                templateVersion = input.label;
-                await updateGlobalSetting(templateVersionSetting, input.label);
-            } else {
-                templateVersion = cliFeedJson.tags[feedRuntime].release;
-                // reset user setting so that it always gets latest
-                await updateGlobalSetting(templateVersionSetting, '');
-
-            }
+    try {
+        if (userTemplateVersion) {
+            context.properties.userTemplateVersion = userTemplateVersion;
         }
-    } else {
+        let templateVersion: string;
+        if (cliFeedJson) {
+            templateVersion = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
+            // tslint:disable-next-line:strict-boolean-expressions
+            if (!cliFeedJson.releases[templateVersion]) {
+                const invalidVersion: string = localize('invalidTemplateVersion', 'Failed to retrieve Azure Functions templates for version "{0}".', templateVersion);
+                const selectVersion: vscode.MessageItem = { title: localize('selectVersion', 'Select version') };
+                const useLatest: vscode.MessageItem = { title: localize('useLatest', 'Use latest') };
+                const warningInput: vscode.MessageItem = await ext.ui.showWarningMessage(invalidVersion, selectVersion, useLatest);
+                if (warningInput === selectVersion) {
+                    const releaseQuickPicks: vscode.QuickPickItem[] = [];
+                    for (const rel of Object.keys(cliFeedJson.releases)) {
+                        releaseQuickPicks.push({
+                            label: rel,
+                            description: ''
+                        });
+                    }
+                    const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
+                    templateVersion = input.label;
+                    await updateGlobalSetting(templateVersionSetting, input.label);
+                } else {
+                    templateVersion = cliFeedJson.tags[feedRuntime].release;
+                    // reset user setting so that it always gets latest
+                    await updateGlobalSetting(templateVersionSetting, '');
+
+                }
+            }
+        } else {
+            return undefined;
+        }
+
+        return templateVersion;
+    } catch (error) {
+        // if cliJson does not have the template version being searched for, it will throw an error
+        context.properties.userTemplateVersion = parseError(error).message;
         return undefined;
     }
 
-    return templateVersion;
 }
