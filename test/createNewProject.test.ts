@@ -138,7 +138,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
         if (!(await funcToolsInstalled())) {
-            inputs.unshift(DialogResponses.skipForNow.title);
+            inputs.push(DialogResponses.skipForNow.title);
         }
 
         if (!previewLanguage) {
