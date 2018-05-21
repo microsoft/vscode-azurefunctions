@@ -137,6 +137,10 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
+        if (!(await funcToolsInstalled())) {
+            inputs.unshift(DialogResponses.skipForNow.title);
+        }
+
         if (!previewLanguage) {
             inputs.unshift(language); // Specify the function name
         }
@@ -144,10 +148,6 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         inputs.unshift(projectPath); // Select the test func app folder
         if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
-        }
-
-        if (!(await funcToolsInstalled())) {
-            inputs.unshift(DialogResponses.skipForNow.title);
         }
 
         const ui: TestUserInput = new TestUserInput(inputs);
