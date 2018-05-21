@@ -9,13 +9,15 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
+import { funcToolsInstalled } from '../src/commands/createNewProject/validateFuncCoreToolsInstalled';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
+}
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -142,6 +144,10 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         inputs.unshift(projectPath); // Select the test func app folder
         if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
+        }
+
+        if (!(await funcToolsInstalled())) {
+            inputs.unshift(DialogResponses.skipForNow.title);
         }
 
         const ui: TestUserInput = new TestUserInput(inputs);
