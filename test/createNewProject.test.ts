@@ -9,8 +9,9 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
+import { funcToolsInstalled } from '../src/commands/createNewProject/validateFuncCoreToolsInstalled';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
@@ -135,6 +136,10 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
+        if (!(await funcToolsInstalled())) {
+            inputs.push(DialogResponses.skipForNow.title);
+        }
+
         if (!previewLanguage) {
             inputs.unshift(language); // Specify the function name
         }
