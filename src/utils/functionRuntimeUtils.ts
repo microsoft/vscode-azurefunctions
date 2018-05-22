@@ -10,7 +10,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { attemptToInstallLatestFunctionRuntime, getFuncPackageManager } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
-import { funcPackageName, isWindows, PackageManager, ProjectRuntime } from '../constants';
+import { isWindows, PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
