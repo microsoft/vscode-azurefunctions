@@ -10,7 +10,7 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { attemptToInstallLatestFunctionRuntime, getFuncPackageManager } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
-import { funcPackageName, isWindows, PackageManager, ProjectRuntime } from '../constants';
+import { isWindows, PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -128,8 +128,7 @@ export namespace functionRuntimeUtils {
     }
 
     async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
-        // tslint:disable-next-line:no-http-string
-        const npmRegistryUri: string = `http://registry.npmjs.org/-/package/${funcPackageName}/dist-tags`;
+        const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
         type distTags = { core: string, docker: string, latest: string };
         const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
         switch (major) {
