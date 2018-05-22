@@ -17,7 +17,6 @@ import { ext } from '../src/extensionVariables';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
-}
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
