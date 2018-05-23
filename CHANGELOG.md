@@ -4,6 +4,13 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.9.1 - 2018-05-23
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.1%22+label%3Abug+is%3Aclosed)
+
+- Users will not be prompted to install the latest version of the func cli if high priority issues are discovered
+  - For example, the latest version of the func cli (2.0.1-beta.26) [breaks JavaScript debugging](https://github.com/Microsoft/vscode-azurefunctions/issues/387)
+
 ## 0.9.0 - 2018-05-09
 
 ### Added
