@@ -28,61 +28,54 @@ export namespace functionRuntimeUtils {
             this.properties.isActivationEvent = 'true';
             const settingKey: string = 'showCoreToolsWarning';
             if (getFuncExtensionSetting<boolean>(settingKey)) {
-                try {
-                    const localVersion: string | null = await getLocalFunctionRuntimeVersion();
-                    if (localVersion === null) {
-                        return;
-                    }
-                    this.properties.localVersion = localVersion;
-                    const major: number = semver.major(localVersion);
-                    const newestVersion: string | null = await getNewestFunctionRuntimeVersion(major);
-                    if (newestVersion === null) {
-                        return;
-                    }
+                const localVersion: string | null = await getLocalFunctionRuntimeVersion();
+                if (localVersion === null) {
+                    return;
+                }
+                this.properties.localVersion = localVersion;
+                const major: number = semver.major(localVersion);
+                const newestVersion: string | null = await getNewestFunctionRuntimeVersion(major, this);
+                if (newestVersion === null) {
+                    return;
+                }
 
-                    if (semver.gt(newestVersion, localVersion)) {
-                        const packageManager: PackageManager | undefined = await getFuncPackageManager(true /* isFuncInstalled */);
-                        let message: string = localize(
-                            'azFunc.outdatedFunctionRuntime',
-                            'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
-                            localVersion,
-                            newestVersion
-                        );
-                        const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
-                        if (major === FunctionRuntimeTag.core) {
-                            message += ` ${v2}`;
-                        }
-                        const update: vscode.MessageItem = { title: 'Update' };
-                        let result: vscode.MessageItem;
+                if (semver.gt(newestVersion, localVersion)) {
+                    const packageManager: PackageManager | undefined = await getFuncPackageManager(true /* isFuncInstalled */);
+                    let message: string = localize(
+                        'azFunc.outdatedFunctionRuntime',
+                        'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
+                        localVersion,
+                        newestVersion
+                    );
+                    const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
+                    if (major === FunctionRuntimeTag.core) {
+                        message += ` ${v2}`;
+                    }
+                    const update: vscode.MessageItem = { title: 'Update' };
+                    let result: vscode.MessageItem;
 
-                        do {
-                            result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
-                                await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                            if (result === DialogResponses.learnMore) {
-                                // tslint:disable-next-line:no-unsafe-any
-                                opn('https://aka.ms/azFuncOutdated');
-                            } else if (result === update) {
-                                switch (major) {
-                                    case FunctionRuntimeTag.latest:
-                                        // tslint:disable-next-line:no-non-null-assertion
-                                        await attemptToInstallLatestFunctionRuntime(packageManager!, 'v1');
-                                    case FunctionRuntimeTag.core:
-                                        // tslint:disable-next-line:no-non-null-assertion
-                                        await attemptToInstallLatestFunctionRuntime(packageManager!, 'v2');
-                                    default:
-                                        break;
-                                }
-                            } else if (result === DialogResponses.dontWarnAgain) {
-                                await updateGlobalSetting(settingKey, false);
+                    do {
+                        result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
+                            await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        if (result === DialogResponses.learnMore) {
+                            // tslint:disable-next-line:no-unsafe-any
+                            opn('https://aka.ms/azFuncOutdated');
+                        } else if (result === update) {
+                            switch (major) {
+                                case FunctionRuntimeTag.latest:
+                                    // tslint:disable-next-line:no-non-null-assertion
+                                    await attemptToInstallLatestFunctionRuntime(packageManager!, 'v1');
+                                case FunctionRuntimeTag.core:
+                                    // tslint:disable-next-line:no-non-null-assertion
+                                    await attemptToInstallLatestFunctionRuntime(packageManager!, 'v2');
+                                default:
+                                    break;
                             }
+                        } else if (result === DialogResponses.dontWarnAgain) {
+                            await updateGlobalSetting(settingKey, false);
                         }
-                        while (result === DialogResponses.learnMore);
                     }
-                } catch (error) {
-                    if (!parseError(error).isUserCancelledError) {
-                        ext.outputChannel.appendLine(`Error occurred when checking the version of 'Azure Functions Core Tools': ${parseError(error).message}`);
-                        throw error;
-                    }
+                    while (result === DialogResponses.learnMore);
                 }
             }
         });
@@ -127,17 +120,22 @@ export namespace functionRuntimeUtils {
         return null;
     }
 
-    async function getNewestFunctionRuntimeVersion(major: number): Promise<string | null> {
-        const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
-        type distTags = { core: string, docker: string, latest: string };
-        const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
-        switch (major) {
-            case FunctionRuntimeTag.latest:
-                return distTags.latest;
-            case FunctionRuntimeTag.core:
-                return distTags.core;
-            default:
-                return null;
+    async function getNewestFunctionRuntimeVersion(major: number, actionContext: IActionContext): Promise<string | null> {
+        try {
+            const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
+            type distTags = { core: string, docker: string, latest: string };
+            const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
+            switch (major) {
+                case FunctionRuntimeTag.latest:
+                    return distTags.latest;
+                case FunctionRuntimeTag.core:
+                    return distTags.core;
+                default:
+            }
+        } catch (error) {
+            actionContext.properties.latestRuntimeError = parseError(error).message;
         }
+
+        return null;
     }
 }
