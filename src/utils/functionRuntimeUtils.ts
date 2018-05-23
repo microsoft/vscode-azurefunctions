@@ -34,8 +34,8 @@ export namespace functionRuntimeUtils {
                 }
                 this.properties.localVersion = localVersion;
                 const major: number = semver.major(localVersion);
-                const newestVersion: string | null = await getNewestFunctionRuntimeVersion(major, this);
-                if (newestVersion === null) {
+                const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(major, this);
+                if (!newestVersion) {
                     return;
                 }
 
@@ -120,7 +120,7 @@ export namespace functionRuntimeUtils {
         return null;
     }
 
-    async function getNewestFunctionRuntimeVersion(major: number, actionContext: IActionContext): Promise<string | null> {
+    async function getNewestFunctionRuntimeVersion(major: number, actionContext: IActionContext): Promise<string | undefined> {
         try {
             const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
             type distTags = { core: string, docker: string, latest: string };
@@ -136,6 +136,6 @@ export namespace functionRuntimeUtils {
             actionContext.properties.latestRuntimeError = parseError(error).message;
         }
 
-        return null;
+        return undefined;
     }
 }
