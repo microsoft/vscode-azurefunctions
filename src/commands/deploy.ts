@@ -11,7 +11,6 @@ import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import * as xml2js from 'xml2js';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -126,7 +125,7 @@ async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: 
     outputChannel.show();
     await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
-    const functionAppName: string | undefined = await getFunctionAppNameInPom(pomLocation);
+    const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomLocation);
     const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
     if (functionAppName && await fse.pathExists(targetFolder)) {
         return targetFolder;
@@ -167,22 +166,4 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
             }
         }
     }
-}
-
-async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
-    const pomString: string = await fse.readFile(pomLocation, 'utf-8');
-    return await new Promise((resolve: (ret: string | undefined) => void): void => {
-        // tslint:disable-next-line:no-any
-        xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
-            if (result && !err) {
-                // tslint:disable-next-line:no-string-literal no-unsafe-any
-                if (result['project'] && result['project']['properties']) {
-                    // tslint:disable-next-line:no-string-literal no-unsafe-any
-                    resolve(result['project']['properties']['functionAppName']);
-                    return;
-                }
-            }
-            resolve(undefined);
-        });
-    });
 }
