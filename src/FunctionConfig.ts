@@ -38,10 +38,12 @@ enum BindingDirection {
 export class FunctionConfig {
     public readonly functionJson: IFunctionJson;
     public readonly disabled: boolean;
-    public readonly inBinding: IFunctionBinding;
-    public readonly inBindingType: string;
     public readonly isHttpTrigger: boolean = false;
     public readonly authLevel: HttpAuthLevel = HttpAuthLevel.function;
+
+    private readonly _inBinding: IFunctionBinding | undefined;
+    private readonly _inBindingType: string | undefined;
+    private readonly _noInBindingError: Error = new Error(localize('noInBinding', 'Failed to find binding with direction "in" for this function.'));
 
     // tslint:disable-next-line:no-any
     public constructor(data: any) {
@@ -61,25 +63,27 @@ export class FunctionConfig {
                     this.functionJson = <IFunctionJson>data;
 
                     const inBinding: IFunctionBinding | undefined = this.functionJson.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
-                    if (inBinding === undefined) {
+                    if (inBinding === undefined && this.functionJson.bindings.length > 0) {
                         // The generated 'function.json' file for C# class libraries doesn't have direction information (by design), so just use the first
-                        this.inBinding = this.functionJson.bindings[0];
+                        this._inBinding = this.functionJson.bindings[0];
                     } else {
-                        this.inBinding = inBinding;
+                        this._inBinding = inBinding;
                     }
 
-                    if (!this.inBinding.type) {
-                        errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
-                    } else {
-                        this.inBindingType = this.inBinding.type;
-                        if (this.inBinding.type.toLowerCase() === 'httptrigger') {
-                            this.isHttpTrigger = true;
-                            if (this.inBinding.authLevel) {
-                                const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.inBinding.authLevel.toLowerCase()];
-                                if (authLevel === undefined) {
-                                    errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.inBinding.authLevel);
-                                } else {
-                                    this.authLevel = authLevel;
+                    if (this._inBinding) {
+                        if (!this._inBinding.type) {
+                            errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
+                        } else {
+                            this._inBindingType = this._inBinding.type;
+                            if (this._inBinding.type.toLowerCase() === 'httptrigger') {
+                                this.isHttpTrigger = true;
+                                if (this._inBinding.authLevel) {
+                                    const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this._inBinding.authLevel.toLowerCase()];
+                                    if (authLevel === undefined) {
+                                        errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this._inBinding.authLevel);
+                                    } else {
+                                        this.authLevel = authLevel;
+                                    }
                                 }
                             }
                         }
@@ -92,6 +96,22 @@ export class FunctionConfig {
 
         if (errMessage !== undefined) {
             throw new Error(localize('functionJsonParseError', 'Failed to parse function.json: {0}', errMessage));
+        }
+    }
+
+    public get inBinding(): IFunctionBinding {
+        if (!this._inBinding) {
+            throw this._noInBindingError;
+        } else {
+            return this._inBinding;
+        }
+    }
+
+    public get inBindingType(): string {
+        if (!this._inBindingType) {
+            throw this._noInBindingError;
+        } else {
+            return this._inBindingType;
         }
     }
 }
