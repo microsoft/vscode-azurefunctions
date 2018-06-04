@@ -40,7 +40,7 @@ export abstract class ProjectCreatorBase {
      * Add all project files not included in the '.vscode' folder
      */
     public abstract addNonVSCodeFiles(): Promise<void>;
-    public abstract getTasksJson(): {};
+    public abstract getTasksJson(): {} | Promise<{}>;
     public getRecommendedExtensions(): string[] {
         return ['ms-azuretools.vscode-azurefunctions'];
     }

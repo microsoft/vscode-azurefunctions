@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
@@ -92,7 +93,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         this._javaTargetPath = `target/azure-functions/${appName}/`;
     }
 
-    public getTasksJson(): {} {
+    public async getTasksJson(): Promise<{}> {
         let tasksJson: {} = {
             version: '2.0.0',
             tasks: [
@@ -120,6 +121,19 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             ]
         };
         let tasksJsonString: string = JSON.stringify(tasksJson);
+        if (!this._javaTargetPath) {
+            const pomFilePath: string = path.join(this.functionAppPath, 'pom.xml');
+            if (!await fse.pathExists(pomFilePath)) {
+                throw new Error(localize('pomNotFound', 'Cannot find pom file in current project, please make sure the language setting is correct.'));
+            }
+            const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomFilePath);
+            if (!functionAppName) {
+                this._javaTargetPath = '<function_build_path>';
+                vscode.window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
+            } else {
+                this._javaTargetPath = `target/azure-functions/${functionAppName}/`;
+            }
+        }
         tasksJsonString = tasksJsonString.replace(/%path%/g, this._javaTargetPath);
         // tslint:disable-next-line:no-string-literal no-unsafe-any
         tasksJson = JSON.parse(tasksJsonString);
