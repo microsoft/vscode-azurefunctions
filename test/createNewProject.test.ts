@@ -9,22 +9,52 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+<<<<<<< Updated upstream
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
+=======
+import { IActionContext, TestAzureTreeDataProvider, TestUserInput } from 'vscode-azureextensionui';
+>>>>>>> Stashed changes
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { funcToolsInstalled } from '../src/commands/createNewProject/validateFuncCoreToolsInstalled';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
+import { FunctionAppProvider } from '../src/tree/FunctionAppProvider';
 import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
+import { testFolderPath } from './constants';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
+
+// tslint:disable-next-line:export-name
+export async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
+    // Setup common inputs
+    if (!previewLanguage) {
+        inputs.unshift(language); // Specify the function name
+    }
+
+    inputs.unshift(projectPath); // Select the test func app folder
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
+    }
+
+    const ui: TestUserInput = new TestUserInput(inputs);
+    ext.ui = ui;
+    await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, previewLanguage ? language : undefined, undefined, false);
+    // assert.equal(inputs.length, 0, 'Not all inputs were used.');
+
+    assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
+    assert.equal(await fse.pathExists(path.join(projectPath, 'host.json')), true, 'host.json does not exist');
+    assert.equal(await fse.pathExists(path.join(projectPath, 'local.settings.json')), true, 'function.json does not exist');
+    assert.equal(await fse.pathExists(path.join(projectPath, '.git')), true, '.git folder does not exist');
+}
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
 
-    const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
     ext.outputChannel = outputChannel;
+    const testTree: TestAzureTreeDataProvider = new TestAzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.testLoadMore', ext.ui, undefined);
+    ext.tree = testTree;
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
@@ -133,6 +163,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~1', false /* openFolder */);
         await validateVSCodeProjectFiles(projectPath);
     });
+<<<<<<< Updated upstream
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
@@ -159,4 +190,6 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         assert.equal(await fse.pathExists(path.join(projectPath, 'local.settings.json')), true, 'function.json does not exist');
         assert.equal(await fse.pathExists(path.join(projectPath, '.git')), true, '.git folder does not exist');
     }
+=======
+>>>>>>> Stashed changes
 });

@@ -85,6 +85,16 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         await this.testCreateFunctionInternal(backupTemplateData, this.backupTestFolder, templateName, inputs.slice());
     }
 
+    public async testCreateFunctionWithFolderPath(templateName: string, folderPath: string, ...inputs: (string | undefined)[]): Promise<void> {
+        if (funcPortalTemplateData) {
+            await this.testCreateFunctionInternal(funcPortalTemplateData, folderPath, templateName, inputs.slice());
+        } else {
+            assert.fail('Failed to find templates from functions portal.');
+        }
+
+        // await this.testCreateFunctionInternal(backupTemplateData, folderPath, templateName, inputs.slice());
+    }
+
     public abstract async validateFunction(testFolder: string, funcName: string): Promise<void>;
 
     private async initializeTestFolder(testFolder: string): Promise<void> {
@@ -109,7 +119,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
 
         ext.ui = new TestUserInput(inputs);
         ext.templateData = templateData;
-        await createFunction(<IActionContext>{ properties: {}, measurements: {} });
+        await vscode.commands.executeCommand('azureFunctions.createFunction');
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);
