@@ -58,7 +58,7 @@ export async function createNewProject(
 
     await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
-    if (await gitUtils.isGitInstalled(functionAppPath)) {
+    if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
         await gitUtils.gitInit(ext.outputChannel, functionAppPath);
     }
 
