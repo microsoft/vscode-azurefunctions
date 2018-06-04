@@ -55,7 +55,7 @@ export class FunctionConfig {
                 this.disabled = data.disabled === true;
 
                 // tslint:disable-next-line:no-unsafe-any
-                if (!data.bindings || !(data.bindings instanceof Array) || data.bindings.length === 0) {
+                if (!data.bindings || !(data.bindings instanceof Array)) {
                     errMessage = localize('expectedBindings', 'Expected "bindings" element of type "Array".');
                 } else {
                     this.functionJson = <IFunctionJson>data;
