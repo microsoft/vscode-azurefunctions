@@ -21,7 +21,7 @@ export async function detectProjectLanguage(functionAppPath: string): Promise<Pr
         return scriptProjectLanguage;
     } else if (isJava && !isCSharp) {
         return ProjectLanguage.Java;
-    } else if (isCSharp) {
+    } else if (isCSharp && !isJava) {
         return ProjectLanguage.CSharp;
     } else {
         return undefined;
