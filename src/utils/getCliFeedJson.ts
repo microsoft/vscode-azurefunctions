@@ -6,6 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
@@ -20,7 +21,9 @@ export type cliFeedJsonResponse = {
     },
     releases: {
         [release: string]: {
-            templateApiZip: string
+            templateApiZip: string,
+            itemTemplates: string,
+            projectTemplates: string
         }
     }
 };
@@ -36,4 +39,15 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
         };
         return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
     });
+}
+
+export function getFeedRuntime(runtime: ProjectRuntime): string {
+    switch (runtime) {
+        case ProjectRuntime.beta:
+            return 'v2';
+        case ProjectRuntime.one:
+            return 'v1';
+        default:
+            throw new RangeError();
+    }
 }

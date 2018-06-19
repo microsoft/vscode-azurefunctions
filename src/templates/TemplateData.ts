@@ -15,7 +15,7 @@ import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, te
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
-import { cliFeedJsonResponse, tryGetCliFeedJson } from '../utils/getCliFeedJson';
+import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
@@ -288,18 +288,7 @@ async function downloadAndExtractTemplates(templateUrl: string, release: string)
     });
 }
 
-function getFeedRuntime(runtime: ProjectRuntime): string {
-    switch (runtime) {
-        case ProjectRuntime.beta:
-            return 'v2';
-        case ProjectRuntime.one:
-            return 'v1';
-        default:
-            throw new RangeError();
-    }
-}
-
-async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
+export async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
     try {

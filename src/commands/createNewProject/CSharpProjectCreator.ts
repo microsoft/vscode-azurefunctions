@@ -8,7 +8,7 @@ import * as opn from 'opn';
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
-import { DialogResponses, parseError } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
@@ -22,8 +22,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
 
     private _runtime: ProjectRuntime;
 
-    public async addNonVSCodeFiles(): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this.outputChannel, this.ui);
+    public async addNonVSCodeFiles(actionContext: IActionContext): Promise<void> {
+        await dotnetUtils.validateTemplatesInstalled(actionContext);
 
         const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
         const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);

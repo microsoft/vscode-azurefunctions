@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IAzureUserInput } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
 import XRegExp = require('xregexp');
 import { localize } from "../../localize";
@@ -21,12 +21,10 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _functionName: string;
     private _namespace: string;
-    private _ui: IAzureUserInput;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel, ui: IAzureUserInput) {
+    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
-        this._ui = ui;
     }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
@@ -54,8 +52,8 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         }
     }
 
-    public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
-        await dotnetUtils.validateTemplatesInstalled(this._outputChannel, this._ui);
+    public async createFunction(userSettings: { [propertyName: string]: string }, actionContext: IActionContext): Promise<string | undefined> {
+        await dotnetUtils.validateTemplatesInstalled(actionContext);
 
         const args: string[] = [];
         for (const key of Object.keys(userSettings)) {
@@ -63,8 +61,6 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
             // the parameters for dotnet templates are not consistent. Hence, we have to special-case a few of them:
             if (parameter.toLowerCase() === 'authlevel') {
                 parameter = 'AccessRights';
-            } else if (parameter.toLowerCase() === 'queuename') {
-                parameter = 'Path';
             }
 
             // https://github.com/Microsoft/vscode-azurefunctions/issues/166

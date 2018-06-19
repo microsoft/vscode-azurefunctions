@@ -54,7 +54,7 @@ export async function createNewProject(
     actionContext.properties.projectLanguage = language;
 
     const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext.properties);
-    await projectCreator.addNonVSCodeFiles();
+    await projectCreator.addNonVSCodeFiles(actionContext);
 
     await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 

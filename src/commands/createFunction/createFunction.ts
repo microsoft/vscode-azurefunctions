@@ -138,7 +138,7 @@ export async function createFunction(
             functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel);
             break;
         case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel, ext.ui);
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);
@@ -163,7 +163,7 @@ export async function createFunction(
         }
     }
 
-    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings);
+    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, actionContext);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));

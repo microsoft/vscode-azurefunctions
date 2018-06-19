@@ -12,6 +12,8 @@
 
 // tslint:disable-next-line:no-require-imports
 import testRunner = require('vscode/lib/testrunner');
+import { ext } from '../src/extensionVariables';
+import { TestExtensionContext } from './TestExtensionContext';
 
 // You can directly control Mocha options by uncommenting the following lines
 // See https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically#set-options for more info
@@ -22,3 +24,5 @@ testRunner.configure({
 });
 
 module.exports = testRunner;
+
+ext.context = new TestExtensionContext();
