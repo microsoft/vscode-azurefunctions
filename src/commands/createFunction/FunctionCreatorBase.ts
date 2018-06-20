@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
+import { IAzureUserInput } from "vscode-azureextensionui";
 import { Template } from "../../templates/Template";
 
 export abstract class FunctionCreatorBase {
@@ -21,5 +21,5 @@ export abstract class FunctionCreatorBase {
      * This includes the function name (Since the name could have different restrictions for different languages)
      */
     public abstract async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void>;
-    public abstract async createFunction(userSettings: { [propertyName: string]: string }, actionContext: IActionContext): Promise<string | undefined>;
+    public abstract async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined>;
 }

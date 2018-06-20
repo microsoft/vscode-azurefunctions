@@ -163,7 +163,7 @@ export async function createFunction(
         }
     }
 
-    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, actionContext);
+    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));

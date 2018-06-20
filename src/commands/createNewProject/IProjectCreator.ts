@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OutputChannel } from "vscode";
-import { IActionContext, IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
+import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
 import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
 import { promptForProjectRuntime } from "../../ProjectSettings";
@@ -39,7 +39,7 @@ export abstract class ProjectCreatorBase {
     /**
      * Add all project files not included in the '.vscode' folder
      */
-    public abstract addNonVSCodeFiles(actionContext: IActionContext): Promise<void>;
+    public abstract addNonVSCodeFiles(): Promise<void>;
     public abstract getTasksJson(): {} | Promise<{}>;
     public getRecommendedExtensions(): string[] {
         return ['ms-azuretools.vscode-azurefunctions'];

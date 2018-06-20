@@ -8,7 +8,6 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
 import { dotnetUtils } from '../../src/utils/dotnetUtils';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -32,7 +31,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await csTester.initAsync();
-        await dotnetUtils.validateTemplatesInstalled(<IActionContext>{ properties: {} });
+        await dotnetUtils.validateTemplatesInstalled();
     });
 
     // tslint:disable-next-line:no-function-expression

@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { IAzureUserInput } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
 import XRegExp = require('xregexp');
 import { localize } from "../../localize";
@@ -52,8 +52,8 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         }
     }
 
-    public async createFunction(userSettings: { [propertyName: string]: string }, actionContext: IActionContext): Promise<string | undefined> {
-        await dotnetUtils.validateTemplatesInstalled(actionContext);
+    public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
+        await dotnetUtils.validateTemplatesInstalled();
 
         const args: string[] = [];
         for (const key of Object.keys(userSettings)) {
