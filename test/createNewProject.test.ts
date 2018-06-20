@@ -30,7 +30,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await fse.ensureDir(testFolderPath);
-        await dotnetUtils.installDotnetTemplates(new TestUserInput([]), outputChannel);
+        await dotnetUtils.validateTemplatesInstalled();
     });
 
     suiteTeardown(async () => {

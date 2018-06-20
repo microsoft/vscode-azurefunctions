@@ -23,7 +23,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     private _runtime: ProjectRuntime;
 
     public async addNonVSCodeFiles(): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this.outputChannel, this.ui);
+        await dotnetUtils.validateTemplatesInstalled();
 
         const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
         const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
