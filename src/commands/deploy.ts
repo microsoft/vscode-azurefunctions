@@ -5,7 +5,8 @@
 
 import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
@@ -155,8 +156,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
             const result: vscode.MessageItem = await ui.showWarningMessage(message, { modal: true }, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
             if (result === DialogResponses.learnMore) {
-                // tslint:disable-next-line:no-unsafe-any
-                opn('https://aka.ms/azFuncRuntime');
+                await opn('https://aka.ms/azFuncRuntime');
                 telemetryProperties.cancelStep = 'learnMoreRuntime';
                 throw new UserCancelledError();
             } else {

@@ -6,9 +6,9 @@
 import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
 import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
+import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
 import { localize } from "../../localize";
 import { promptForProjectRuntime } from "../../ProjectSettings";
-import { functionRuntimeUtils } from "../../utils/functionRuntimeUtils";
 
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
@@ -28,7 +28,7 @@ export abstract class ProjectCreatorBase {
 
     public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
-        return await functionRuntimeUtils.tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
+        return await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
     }
 
     public getLaunchJson(): {} | undefined {

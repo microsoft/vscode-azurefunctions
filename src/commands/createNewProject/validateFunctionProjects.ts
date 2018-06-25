@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
@@ -42,8 +43,7 @@ async function promptToInitializeProject(ui: IAzureUserInput, folderPath: string
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
         } else if (result === DialogResponses.learnMore) {
-            // tslint:disable-next-line:no-unsafe-any
-            opn('https://aka.ms/azFuncProject');
+            await opn('https://aka.ms/azFuncProject');
             return await promptToInitializeProject(ui, folderPath);
         } else {
             return true;
