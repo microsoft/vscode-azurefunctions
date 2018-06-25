@@ -6,9 +6,9 @@
 import * as fse from 'fs-extra';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
-import { validateFuncCoreToolsInstalled } from '../../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';

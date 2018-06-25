@@ -19,8 +19,6 @@ import { updateFuncCoreTools } from '../funcCoreTools/updateFuncCoreTools';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 
-// Leaving this here for the purposes of review. I will move this to src/funcCoreTools/validateFuncCoreToolsIsLatest.ts before merging
-// tslint:disable-next-line:export-name
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
         this.suppressErrorDisplay = true;

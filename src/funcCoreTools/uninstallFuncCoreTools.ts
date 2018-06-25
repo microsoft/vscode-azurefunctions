@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { funcToolsInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getFuncPackageManager } from './getFuncPackageManager';
+import { funcToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function uninstallFuncCoreTools(): Promise<void> {
     ext.outputChannel.show();

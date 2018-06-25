@@ -37,13 +37,13 @@ import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
+import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getTemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
-import { validateFuncCoreToolsIsLatest } from './utils/functionRuntimeUtils';
 
 export function activate(context: vscode.ExtensionContext): void {
     ext.context = context;

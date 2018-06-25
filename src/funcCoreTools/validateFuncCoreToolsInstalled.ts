@@ -7,15 +7,14 @@
 import opn = require("opn");
 import { MessageItem } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { PackageManager } from '../../constants';
-import { ext } from '../../extensionVariables';
-import { getFuncPackageManager } from '../../funcCoreTools/getFuncPackageManager';
-import { installFuncCoreTools } from '../../funcCoreTools/installFuncCoreTools';
-import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
-import { cpUtils } from '../../utils/cpUtils';
+import { PackageManager } from '../constants';
+import { ext } from '../extensionVariables';
+import { localize } from '../localize';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { cpUtils } from '../utils/cpUtils';
+import { getFuncPackageManager } from './getFuncPackageManager';
+import { installFuncCoreTools } from './installFuncCoreTools';
 
-// Leaving this here for the purposes of review. I will move this to src/funcCoreTools/validateFuncCoreToolsInstalled.ts before merging
 export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = false): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
