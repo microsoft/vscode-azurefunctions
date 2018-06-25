@@ -8,12 +8,12 @@ import ps = require('ps-node');
 import { isNullOrUndefined } from 'util';
 import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { validateFuncCoreToolsInstalled } from '../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { extensionPrefix, isWindows } from '../constants';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
-import { validateFuncCoreToolsInstalled } from './createNewProject/validateFuncCoreToolsInstalled';
 
 export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {

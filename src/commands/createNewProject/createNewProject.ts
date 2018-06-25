@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
+import { validateFuncCoreToolsInstalled } from '../../commands/createNewProject/validateFuncCoreToolsInstalled';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -20,7 +21,6 @@ import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-import { validateFuncCoreToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function createNewProject(
     actionContext: IActionContext,

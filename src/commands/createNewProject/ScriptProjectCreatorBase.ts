@@ -6,9 +6,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
-import { functionRuntimeUtils } from '../../utils/functionRuntimeUtils';
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
@@ -47,7 +47,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
 
     public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
-        return await functionRuntimeUtils.tryGetLocalRuntimeVersion() || ScriptProjectCreatorBase.defaultRuntime;
+        return await tryGetLocalRuntimeVersion() || ScriptProjectCreatorBase.defaultRuntime;
     }
 
     public getTasksJson(): {} {

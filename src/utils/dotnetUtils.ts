@@ -10,9 +10,9 @@ import { QuickPickOptions } from "vscode";
 import { callWithTelemetryAndErrorHandling, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
+import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { tryGetTemplateVersionSetting } from '../templates/TemplateData';
-import { functionRuntimeUtils } from '../utils/functionRuntimeUtils';
 import { cpUtils } from "./cpUtils";
 import * as fsUtil from './fs';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from './getCliFeedJson';
@@ -51,7 +51,7 @@ export namespace dotnetUtils {
                     throw new Error(localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.'));
                 }
 
-                let runtime: ProjectRuntime | undefined = await functionRuntimeUtils.tryGetLocalRuntimeVersion();
+                let runtime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
                 if (runtime === undefined) {
                     const picks: IAzureQuickPickItem<ProjectRuntime>[] = Object.keys(ProjectRuntime).map((key: string) => {
                         const val: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];

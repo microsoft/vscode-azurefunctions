@@ -36,13 +36,14 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
+import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { getTemplateData } from './templates/TemplateData';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { dotnetUtils } from './utils/dotnetUtils';
-import { functionRuntimeUtils } from './utils/functionRuntimeUtils';
+import { validateFuncCoreToolsIsLatest } from './utils/functionRuntimeUtils';
 
 export function activate(context: vscode.ExtensionContext): void {
     ext.context = context;
@@ -66,7 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
         ext.ui = ui;
 
         // tslint:disable-next-line:no-floating-promises
-        functionRuntimeUtils.validateFunctionRuntime();
+        validateFuncCoreToolsIsLatest();
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.loadMore', ui, reporter);
         ext.tree = tree;
@@ -122,6 +123,7 @@ export function activate(context: vscode.ExtensionContext): void {
         actionHandler.registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallTemplates());
         actionHandler.registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, ui, tree, node));
         actionHandler.registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
+        actionHandler.registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
     });
 }
 
