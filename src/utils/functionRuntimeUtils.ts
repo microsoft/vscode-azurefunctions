@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import * as semver from 'semver';
@@ -27,7 +28,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
         const settingKey: string = 'showCoreToolsWarning';
         if (getFuncExtensionSetting<boolean>(settingKey)) {
             const localVersion: string | null = await getLocalFuncCoreToolsVersion();
-            if (localVersion === null) {
+            if (!localVersion) {
                 return;
             }
             this.properties.localVersion = localVersion;
@@ -61,8 +62,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                     result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
                         await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                     if (result === DialogResponses.learnMore) {
-                        // tslint:disable-next-line:no-unsafe-any
-                        opn('https://aka.ms/azFuncOutdated');
+                        await opn('https://aka.ms/azFuncOutdated');
                     } else if (result === update) {
                         // tslint:disable-next-line:no-non-null-assertion
                         await updateFuncCoreTools(packageManager!, projectRuntime);

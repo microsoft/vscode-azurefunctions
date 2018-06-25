@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import { MessageItem } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { PackageManager } from '../../constants';
@@ -62,8 +63,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
                 } else if (input === DialogResponses.dontWarnAgain) {
                     await updateGlobalSetting(settingKey, false);
                 } else if (input === DialogResponses.learnMore) {
-                    // tslint:disable-next-line:no-unsafe-any
-                    opn('https://aka.ms/Dqur4e');
+                    await opn('https://aka.ms/Dqur4e');
                 }
             }
         }
@@ -72,8 +72,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
         if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-            // tslint:disable-next-line:no-unsafe-any
-            opn('https://aka.ms/Dqur4e');
+            await opn('https://aka.ms/Dqur4e');
         }
     }
 

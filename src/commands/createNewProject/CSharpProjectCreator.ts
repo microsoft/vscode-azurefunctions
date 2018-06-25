@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
@@ -64,8 +65,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     try {
                         const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            // tslint:disable-next-line:no-unsafe-any
-                            opn('https://aka.ms/azFunc64bit');
+                            await opn('https://aka.ms/azFunc64bit');
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(settingKey, false);
                         }

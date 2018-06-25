@@ -13,7 +13,7 @@ export async function tryGetLocalRuntimeVersion(): Promise<ProjectRuntime | unde
     } else {
         try {
             const version: string | null = await getLocalFuncCoreToolsVersion();
-            if (version !== null) {
+            if (version) {
                 return getProjectRuntimeFromVersion(version);
             }
         } catch (err) {

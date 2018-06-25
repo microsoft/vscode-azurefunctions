@@ -23,10 +23,15 @@ export async function installFuncCoreTools(packageManager: PackageManager, runti
     ext.outputChannel.show();
     switch (packageManager) {
         case PackageManager.npm:
-            if (runtimeVersion === v1) {
-                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', funcPackageName);
-            } else if (runtimeVersion === v2) {
-                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@core`, '--unsafe-perm', 'true');
+            switch (runtimeVersion) {
+                case v1:
+                    await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', funcPackageName);
+                    break;
+                case v2:
+                    await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@core`, '--unsafe-perm', 'true');
+                    break;
+                default:
+                    throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtimeVersion));
             }
             break;
         case PackageManager.brew:
@@ -34,6 +39,7 @@ export async function installFuncCoreTools(packageManager: PackageManager, runti
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'install', funcPackageName);
             break;
         default:
+            throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManager));
             break;
     }
 }
