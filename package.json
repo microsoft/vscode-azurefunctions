@@ -433,7 +433,7 @@
                 {
                     "command": "azureFunctions.deploy",
                     "when": "explorerResourceIsFolder == true",
-                    "group": "zzz_@1"
+                    "group": "zzz_@deploy"
                 },
                 {
                     "command": "azureFunctions.appSettings.decrypt",
