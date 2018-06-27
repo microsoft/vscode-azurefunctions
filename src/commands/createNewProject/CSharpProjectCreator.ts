@@ -21,6 +21,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
+    private _debugSubpath: string;
     private _runtime: ProjectRuntime;
 
     public async addNonVSCodeFiles(): Promise<void> {
@@ -77,7 +78,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     }
                 }
             }
-            this.deploySubpath = `bin/Debug/${targetFramework}`;
+            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
+            this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
 
         return this._runtime;
@@ -111,12 +113,31 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
+                    label: 'clean release',
+                    command: 'dotnet clean --configuration Release',
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
+                    label: 'publish',
+                    command: 'dotnet publish --configuration Release',
+                    type: 'shell',
+                    dependsOn: 'clean release',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
-                        cwd: `\${workspaceFolder}/${this.deploySubpath}`
+                        cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
                     command: 'func host start',
                     isBackground: true,

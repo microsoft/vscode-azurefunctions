@@ -21,6 +21,7 @@ import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
+import { isSubpath } from '../utils/fs';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 
@@ -72,6 +73,10 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         }
 
         await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+
+        if (language === ProjectLanguage.CSharp) {
+            await tryPublishCSharpProject(deployFsPath, outputChannel, telemetryProperties);
+        }
 
         await node.runWithTemporaryDescription(
             localize('deploying', 'Deploying...'),
@@ -165,5 +170,42 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
                 await client.updateApplicationSettings(appSettings);
             }
         }
+    }
+}
+
+async function tryPublishCSharpProject(deployFsPath: string, outputChannel: vscode.OutputChannel, telemetryProperties: TelemetryProperties): Promise<void> {
+    const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
+    let publishTask: vscode.Task | undefined;
+    for (const task of tasks) {
+        if (task.name.toLowerCase() === 'publish' && task.scope !== undefined) {
+            const workspaceFolder: vscode.WorkspaceFolder = <vscode.WorkspaceFolder>task.scope;
+            if (<vscode.Uri | undefined>workspaceFolder.uri && isSubpath(workspaceFolder.uri.fsPath, deployFsPath)) {
+                publishTask = task;
+                break;
+            }
+        }
+    }
+
+    if (publishTask) {
+        telemetryProperties.hasPublishTask = 'true';
+        await vscode.tasks.executeTask(publishTask);
+        await new Promise((resolve: () => void): void => {
+            const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
+                if (e.execution.task === publishTask) {
+                    resolve();
+                    listener.dispose();
+                }
+            });
+        });
+    } else {
+        telemetryProperties.hasPublishTask = 'false';
+        outputChannel.show(true);
+        outputChannel.appendLine('');
+        outputChannel.appendLine(localize('noPublishTask', 'WARNING: Did not find "publish" task. The deployment will continue, but the selected folder may not reflect your latest changes.'));
+        outputChannel.appendLine(localize('howToAddPublish', 'In order to ensure that you always deploy your latest changes, add the "publish" task with the following steps:'));
+        outputChannel.appendLine(localize('howToAddPublish1', '1. Open Command Palette (View -> Command Palette...)'));
+        outputChannel.appendLine(localize('howToAddPublish2', '2. Search for "Azure Functions" and run command "Initialize project for use with VS Code"'));
+        outputChannel.appendLine(localize('howToAddPublish3', '3. Select "Yes" to overwrite your tasks.json file when prompted'));
+        outputChannel.appendLine('');
     }
 }
