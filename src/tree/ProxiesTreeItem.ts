@@ -5,7 +5,8 @@
 
 import * as vscode from 'vscode';
 import { getFile, IFileResult, putFile, SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IAzureParentTreeItem, IAzureTreeItem, IAzureUserInput, parseError } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureParentTreeItem, IAzureTreeItem, parseError } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
@@ -64,9 +65,9 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         }
     }
 
-    public async deleteProxy(ui: IAzureUserInput, name: string): Promise<void> {
+    public async deleteProxy(name: string): Promise<void> {
         const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {

@@ -148,7 +148,7 @@ export async function getTemplateData(globalState?: vscode.Memento): Promise<Tem
     const configMap: { [runtime: string]: Config | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
     for (const key of Object.keys(ProjectRuntime)) {
-        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];

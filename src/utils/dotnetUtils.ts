@@ -39,7 +39,7 @@ export namespace dotnetUtils {
         const templatesInstalled: boolean = listOutput.includes(funcProjectId) && listOutput.includes('HttpTrigger');
 
         try {
-            await callWithTelemetryAndErrorHandling('azureFunctions.validateDotnetTemplatesInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+            await callWithTelemetryAndErrorHandling('azureFunctions.validateDotnetTemplatesInstalled', async function (this: IActionContext): Promise<void> {
                 this.rethrowError = true;
                 this.suppressErrorDisplay = true;
                 this.properties.templatesInstalled = String(templatesInstalled);

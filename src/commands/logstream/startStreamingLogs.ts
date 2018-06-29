@@ -7,12 +7,12 @@ import { SiteLogsConfig } from 'azure-arm-website/lib/models';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IAzureNode } from 'vscode-azureextensionui';
-import TelemetryReporter from 'vscode-extension-telemetry';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { ILogStreamTreeItem } from './ILogStreamTreeItem';
 
-export async function startStreamingLogs(context: vscode.ExtensionContext, reporter: TelemetryReporter | undefined, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
+export async function startStreamingLogs(context: vscode.ExtensionContext, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
     if (!node) {
         node = <IAzureNode<ILogStreamTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
@@ -21,12 +21,12 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, repor
     if (treeItem.logStream && treeItem.logStream.isConnected) {
         // tslint:disable-next-line:no-non-null-assertion
         treeItem.logStreamOutputChannel!.show();
-        await node.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
+        await ext.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
     } else {
         const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
             const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', treeItem.client.fullName);
-            await node.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
+            await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             // tslint:disable-next-line:strict-boolean-expressions
             logsConfig.applicationLogs = logsConfig.applicationLogs || {};
             // tslint:disable-next-line:strict-boolean-expressions
@@ -43,7 +43,7 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, repor
             context.subscriptions.push(outputChannel);
             treeItem.logStreamOutputChannel = outputChannel;
         }
-        treeItem.logStream = await appservice.startStreamingLogs(treeItem.client, reporter, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
+        treeItem.logStream = await appservice.startStreamingLogs(treeItem.client, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
     }
 }
 

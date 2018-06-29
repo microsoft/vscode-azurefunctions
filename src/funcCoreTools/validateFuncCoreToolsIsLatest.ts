@@ -20,7 +20,7 @@ import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
-    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', async function (this: IActionContext): Promise<void> {
         this.suppressErrorDisplay = true;
         this.properties.isActivationEvent = 'true';
         const settingKey: string = 'showCoreToolsWarning';
