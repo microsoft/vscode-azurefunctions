@@ -88,6 +88,13 @@ brew install azure-functions-core-tools
     ```
 
 1. Set up package feed
+    * Ubuntu 18.04
+
+        ```bash
+        sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-bionic-prod bionic main" > /etc/apt/sources.list.d/dotnetdev.list'
+        sudo apt-get update
+        ```
+
     * Ubuntu 17.10
 
         ```bash
