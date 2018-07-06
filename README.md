@@ -6,10 +6,6 @@ Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
 out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
 to get started with the Azure Functions extension.
 
-## We've Moved!
-
-You will now find us by clicking in the new Azure view container instead of the file explorer.
-
 ## Prerequisites
 
 Follow the OS-specific instructions to install the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local):
