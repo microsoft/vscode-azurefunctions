@@ -96,7 +96,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                             }
                         }
                     }
-                    await appservice.deploy(client, deployFsPath, outputChannel, ui, extensionPrefix, confirmDeployment, telemetryProperties);
+                    await appservice.deploy(client, deployFsPath, extensionPrefix, confirmDeployment, telemetryProperties);
                 } finally {
                     if (language === ProjectLanguage.Java) {
                         outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));

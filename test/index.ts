@@ -10,6 +10,8 @@
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
 
+import { registerAppServiceExtensionVariables } from 'vscode-azureappservice';
+import { registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
 import testRunner = require('vscode/lib/testrunner');
 import { ext } from '../src/extensionVariables';
@@ -26,3 +28,5 @@ testRunner.configure({
 module.exports = testRunner;
 
 ext.context = new TestExtensionContext();
+registerAppServiceExtensionVariables(ext);
+registerUIExtensionVariables(ext);

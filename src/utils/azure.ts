@@ -88,8 +88,8 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
         wizardContext
     );
 
-    await wizard.prompt(actionContext, ext.ui);
-    await wizard.execute(actionContext, ext.outputChannel);
+    await wizard.prompt(actionContext);
+    await wizard.execute(actionContext);
 
     const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
     // tslint:disable-next-line:no-non-null-assertion

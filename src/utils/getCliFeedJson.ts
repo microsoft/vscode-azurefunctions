@@ -7,7 +7,6 @@
 import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
-import { ext } from '../extensionVariables';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 
@@ -30,7 +29,7 @@ export type cliFeedJsonResponse = {
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
     // tslint:disable-next-line:no-unsafe-any
-    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', ext.reporter, undefined, async function (this: IActionContext): Promise<cliFeedJsonResponse> {
+    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async function (this: IActionContext): Promise<cliFeedJsonResponse> {
         this.properties.isActivationEvent = 'true';
         this.suppressErrorDisplay = true;
         const funcJsonOptions: request.OptionsWithUri = {

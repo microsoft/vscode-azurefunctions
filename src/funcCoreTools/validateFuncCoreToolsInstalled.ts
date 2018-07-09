@@ -20,7 +20,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
 
-    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async function (this: IActionContext): Promise<void> {
         this.suppressErrorDisplay = true;
         this.properties.forcePrompt = String(forcePrompt);
 
