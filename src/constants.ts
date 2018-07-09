@@ -47,6 +47,7 @@ export enum Platform {
 
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
+export const proxiesFileName: string = 'proxies.json';
 export const gitignoreFileName: string = '.gitignore';
 
 export enum PackageManager {
