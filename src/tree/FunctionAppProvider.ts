@@ -9,7 +9,11 @@ import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
 import { IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
+import { ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
+import { getFuncExtensionSetting } from '../ProjectSettings';
+import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
 
 export class FunctionAppProvider implements IChildProvider {
@@ -49,7 +53,26 @@ export class FunctionAppProvider implements IChildProvider {
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
-        const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode);
+        const runtime: ProjectRuntime = await getDefaultRuntime();
+        const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
+        const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode, appSettings);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
+}
+
+async function getDefaultRuntime(): Promise<ProjectRuntime> {
+    // Try to get VS Code setting for runtime (aka if they have a project open)
+    let runtime: ProjectRuntime | undefined = getFuncExtensionSetting(projectRuntimeSetting);
+
+    if (runtime === undefined) {
+        // Try to get the runtime that matches their local func cli version
+        runtime = await tryGetLocalRuntimeVersion();
+    }
+
+    if (runtime === undefined) {
+        // Default to v1 if all else fails
+        runtime = ProjectRuntime.one;
+    }
+
+    return runtime;
 }
