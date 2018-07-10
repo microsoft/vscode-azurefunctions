@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
@@ -87,6 +87,16 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                 }
             };
             await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
+        }
+
+        const proxiesJsonPath: string = path.join(this.functionAppPath, proxiesFileName);
+        if (await confirmOverwriteFile(proxiesJsonPath, this.ui)) {
+            const proxiesJson: {} = {
+                // tslint:disable-next-line:no-http-string
+                $schema: 'http://json.schemastore.org/proxies',
+                proxies: {}
+            };
+            await fsUtil.writeFormattedJson(proxiesJsonPath, proxiesJson);
         }
 
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
