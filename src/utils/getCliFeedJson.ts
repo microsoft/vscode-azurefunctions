@@ -9,6 +9,8 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azuree
 import { ProjectRuntime } from '../constants';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
+const v1DefaultNodeVersion: string = '6.5.0';
+const v2DefaultNodeVersion: string = '8.11.1';
 
 export type cliFeedJsonResponse = {
     tags: {
@@ -59,7 +61,7 @@ export function getFeedRuntime(runtime: ProjectRuntime): string {
 export async function getCliFeedAppSettings(projectRuntime: ProjectRuntime): Promise<{ [key: string]: string }> {
     // Use these defaults in case we can't get the cli-feed
     let funcVersion: string = projectRuntime;
-    let nodeVersion: string = projectRuntime === ProjectRuntime.one ? '6.5.0' : '8.11.1';
+    let nodeVersion: string = projectRuntime === ProjectRuntime.one ? v1DefaultNodeVersion : v2DefaultNodeVersion;
 
     const cliFeed: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
     if (cliFeed) {

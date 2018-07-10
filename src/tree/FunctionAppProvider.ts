@@ -53,26 +53,36 @@ export class FunctionAppProvider implements IChildProvider {
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
-        const runtime: ProjectRuntime = await getDefaultRuntime();
+        // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
+        // https://github.com/Microsoft/vscode-azuretools/issues/120
+        // tslint:disable-next-line:strict-boolean-expressions
+        actionContext = actionContext || <IActionContext>{ properties: {}, measurements: {} };
+
+        const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
         const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode, appSettings);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }
 
-async function getDefaultRuntime(): Promise<ProjectRuntime> {
+async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
     let runtime: ProjectRuntime | undefined = getFuncExtensionSetting(projectRuntimeSetting);
+    actionContext.properties.runtimeSource = 'VSCodeSetting';
 
     if (runtime === undefined) {
         // Try to get the runtime that matches their local func cli version
         runtime = await tryGetLocalRuntimeVersion();
+        actionContext.properties.runtimeSource = 'LocalFuncCli';
     }
 
     if (runtime === undefined) {
         // Default to v1 if all else fails
         runtime = ProjectRuntime.one;
+        actionContext.properties.runtimeSource = 'Backup';
     }
+
+    actionContext.properties.projectRuntime = runtime;
 
     return runtime;
 }
