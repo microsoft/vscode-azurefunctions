@@ -21,12 +21,6 @@ suite('Function Config Tests', () => {
             (error: Error) => error.message.includes('bindings')
         );
 
-        // there's no binding
-        assert.throws(
-            () => new FunctionConfig({ bindings: [] }),
-            (error: Error) => error.message.includes('bindings')
-        );
-
         // in binding does not have type
         assert.throws(
             () => new FunctionConfig({
@@ -72,6 +66,22 @@ suite('Function Config Tests', () => {
         assert.equal(config.disabled, true);
         assert.equal(config.isHttpTrigger, false);
         assert.equal(config.inBinding.testSetting, 'testValue');
+
+        // no bindings (we can still get 'isHttpTrigger' and 'disabled', just not 'inBinding' information)
+        config = new FunctionConfig({
+            disabled: true,
+            bindings: []
+        });
+        assert.equal(config.disabled, true);
+        assert.equal(config.isHttpTrigger, false);
+        assert.throws(
+            () => config.inBinding,
+            (error: Error) => error.message.includes('binding')
+        );
+        assert.throws(
+            () => config.inBindingType,
+            (error: Error) => error.message.includes('binding')
+        );
     });
 
     test('Http trigger', () => {

@@ -49,7 +49,7 @@ export class FunctionAppProvider implements IChildProvider {
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
-        const site: Site = await createFunctionApp(this._outputChannel, parent.ui, actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode);
+        const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }

@@ -7,15 +7,14 @@ import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-// tslint:disable-next-line:no-require-imports
-import request = require('request-promise');
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
 import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
-import { cliFeedJsonResponse, tryGetCliFeedJson } from '../utils/getCliFeedJson';
+import { downloadFile } from '../utils/fs';
+import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { Config } from './Config';
 import { ConfigBinding } from './ConfigBinding';
 import { ConfigSetting } from './ConfigSetting';
@@ -149,7 +148,7 @@ export async function getTemplateData(globalState?: vscode.Memento): Promise<Tem
     const configMap: { [runtime: string]: Config | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
     for (const key of Object.keys(ProjectRuntime)) {
-        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', ext.reporter, undefined, async function (this: IActionContext): Promise<void> {
+        await callWithTelemetryAndErrorHandling('azureFunctions.getTemplateData', async function (this: IActionContext): Promise<void> {
             this.suppressErrorDisplay = true;
             this.properties.isActivationEvent = 'true';
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
@@ -257,49 +256,26 @@ export function removeLanguageFromId(id: string): string {
     return id.split('-')[0];
 }
 
-// tslint:disable-next-line:no-unsafe-any
 async function downloadAndExtractTemplates(templateUrl: string, release: string): Promise<{}> {
-    const zipFile: string = `templates-${release}.zip`;
-    return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
-        const templateOptions: request.OptionsWithUri = {
-            method: 'GET',
-            uri: templateUrl
-        };
+    const filePath: string = path.join(tempPath, `templates-${release}.zip`);
+    ext.outputChannel.appendLine(localize('downloadTemplates', 'Downloading "v{0}" templates zip file. . .', release));
+    await fse.ensureDir(tempPath);
+    await downloadFile(templateUrl, filePath);
 
-        await fse.ensureDir(tempPath);
-        request(templateOptions, (err: Error) => {
+    return new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
+        // tslint:disable-next-line:no-unsafe-any
+        extract(filePath, { dir: tempPath }, (err: Error) => {
             // tslint:disable-next-line:strict-boolean-expressions
             if (err) {
                 reject(err);
             }
-        }).pipe(fse.createWriteStream(path.join(tempPath, zipFile)).on('finish', () => {
-            ext.outputChannel.appendLine(localize('downloadTemplates', 'Downloading "v{0}" templates zip file. . .', release));
-            // tslint:disable-next-line:no-unsafe-any
-            extract(path.join(tempPath, zipFile), { dir: tempPath }, (err: Error) => {
-                // tslint:disable-next-line:strict-boolean-expressions
-                if (err) {
-                    reject(err);
-                }
-                ext.outputChannel.appendLine(localize('templatesExtracted', 'Template files extracted.'));
-                resolve();
-
-            });
-        }));
+            ext.outputChannel.appendLine(localize('templatesExtracted', 'Template files extracted.'));
+            resolve();
+        });
     });
 }
 
-function getFeedRuntime(runtime: ProjectRuntime): string {
-    switch (runtime) {
-        case ProjectRuntime.beta:
-            return 'v2';
-        case ProjectRuntime.one:
-            return 'v1';
-        default:
-            throw new RangeError();
-    }
-}
-
-async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
+export async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
     try {

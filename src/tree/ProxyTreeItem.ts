@@ -25,6 +25,6 @@ export class ProxyTreeItem implements IAzureTreeItem {
     }
 
     public async deleteTreeItem(node: IAzureNode<ProxyTreeItem>): Promise<void> {
-        await (<IAzureParentNode<ProxiesTreeItem>>node.parent).treeItem.deleteProxy(node.ui, this._name);
+        await (<IAzureParentNode<ProxiesTreeItem>>node.parent).treeItem.deleteProxy(this._name);
     }
 }

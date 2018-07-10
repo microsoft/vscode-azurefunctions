@@ -92,7 +92,8 @@
             true,
             "allow-string", // changed
             "allow-undefined-union", // changed
-            "allow-mix" // changed
+            "allow-mix", // changed,
+            "allow-null-union" // changed
         ],
         "switch-default": true,
         "triple-equals": [

@@ -138,7 +138,7 @@ export async function createFunction(
             functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel);
             break;
         case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel, ext.ui);
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);

@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URL } from 'url';
-import { OutputChannel } from 'vscode';
 import * as vscode from 'vscode';
+import { OutputChannel } from 'vscode';
 import { getKuduClient, ILogStream, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
 import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
+import { ext } from '../extensionVariables';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -64,9 +65,9 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
         return `application/functions/function/${encodeURIComponent(this._name)}`;
     }
 
-    public async deleteTreeItem(node: IAzureNode): Promise<void> {
+    public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
-        await node.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         this._outputChannel.show(true);
         this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
         const kuduClient: KuduClient = await getKuduClient(this.client);

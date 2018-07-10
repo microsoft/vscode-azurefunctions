@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
@@ -20,10 +21,11 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
+    private _debugSubpath: string;
     private _runtime: ProjectRuntime;
 
     public async addNonVSCodeFiles(): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this.outputChannel, this.ui);
+        await dotnetUtils.validateTemplatesInstalled();
 
         const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
         const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
@@ -64,8 +66,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     try {
                         const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            // tslint:disable-next-line:no-unsafe-any
-                            opn('https://aka.ms/azFunc64bit');
+                            await opn('https://aka.ms/azFunc64bit');
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(settingKey, false);
                         }
@@ -77,7 +78,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     }
                 }
             }
-            this.deploySubpath = `bin/Debug/${targetFramework}`;
+            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
+            this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
 
         return this._runtime;
@@ -111,12 +113,31 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
+                    label: 'clean release',
+                    command: 'dotnet clean --configuration Release',
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
+                    label: 'publish',
+                    command: 'dotnet publish --configuration Release',
+                    type: 'shell',
+                    dependsOn: 'clean release',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
-                        cwd: `\${workspaceFolder}/${this.deploySubpath}`
+                        cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
                     command: 'func host start',
                     isBackground: true,

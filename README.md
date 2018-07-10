@@ -6,10 +6,6 @@ Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
 out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
 to get started with the Azure Functions extension.
 
-## We've Moved!
-
-You will now find us by clicking in the new Azure view container instead of the file explorer.
-
 ## Prerequisites
 
 Follow the OS-specific instructions to install the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local):
@@ -88,6 +84,13 @@ brew install azure-functions-core-tools
     ```
 
 1. Set up package feed
+    * Ubuntu 18.04
+
+        ```bash
+        sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-bionic-prod bionic main" > /etc/apt/sources.list.d/dotnetdev.list'
+        sudo apt-get update
+        ```
+
     * Ubuntu 17.10
 
         ```bash

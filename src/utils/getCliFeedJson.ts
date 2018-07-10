@@ -6,7 +6,7 @@
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
+import { ProjectRuntime } from '../constants';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 
@@ -20,14 +20,16 @@ export type cliFeedJsonResponse = {
     },
     releases: {
         [release: string]: {
-            templateApiZip: string
+            templateApiZip: string,
+            itemTemplates: string,
+            projectTemplates: string
         }
     }
 };
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
     // tslint:disable-next-line:no-unsafe-any
-    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', ext.reporter, undefined, async function (this: IActionContext): Promise<cliFeedJsonResponse> {
+    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async function (this: IActionContext): Promise<cliFeedJsonResponse> {
         this.properties.isActivationEvent = 'true';
         this.suppressErrorDisplay = true;
         const funcJsonOptions: request.OptionsWithUri = {
@@ -36,4 +38,15 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
         };
         return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
     });
+}
+
+export function getFeedRuntime(runtime: ProjectRuntime): string {
+    switch (runtime) {
+        case ProjectRuntime.beta:
+            return 'v2';
+        case ProjectRuntime.one:
+            return 'v1';
+        default:
+            throw new RangeError();
+    }
 }
