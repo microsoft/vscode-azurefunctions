@@ -22,6 +22,7 @@ import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { cpUtils } from '../utils/cpUtils';
 import { isSubpath } from '../utils/fs';
+import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 
@@ -165,8 +166,12 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
                 telemetryProperties.cancelStep = 'learnMoreRuntime';
                 throw new UserCancelledError();
             } else {
-                outputChannel.appendLine(localize('azFunc.updateFunctionRuntime', 'Updating FUNCTIONS_EXTENSION_VERSION to "{0}"...', localRuntime));
-                appSettings.properties.FUNCTIONS_EXTENSION_VERSION = localRuntime;
+                const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localRuntime);
+                for (const key of Object.keys(newAppSettings)) {
+                    const value: string = newAppSettings[key];
+                    outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
+                    appSettings.properties[key] = value;
+                }
                 await client.updateApplicationSettings(appSettings);
             }
         }

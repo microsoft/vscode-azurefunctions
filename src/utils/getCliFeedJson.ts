@@ -9,6 +9,8 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azuree
 import { ProjectRuntime } from '../constants';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
+const v1DefaultNodeVersion: string = '6.5.0';
+const v2DefaultNodeVersion: string = '8.11.1';
 
 export type cliFeedJsonResponse = {
     tags: {
@@ -22,7 +24,9 @@ export type cliFeedJsonResponse = {
         [release: string]: {
             templateApiZip: string,
             itemTemplates: string,
-            projectTemplates: string
+            projectTemplates: string,
+            FUNCTIONS_EXTENSION_VERSION: string,
+            nodeVersion: string
         }
     }
 };
@@ -49,4 +53,25 @@ export function getFeedRuntime(runtime: ProjectRuntime): string {
         default:
             throw new RangeError();
     }
+}
+
+/**
+ * Returns the app settings that should be used when creating or deploying to a Function App, based on runtime
+ */
+export async function getCliFeedAppSettings(projectRuntime: ProjectRuntime): Promise<{ [key: string]: string }> {
+    // Use these defaults in case we can't get the cli-feed
+    let funcVersion: string = projectRuntime;
+    let nodeVersion: string = projectRuntime === ProjectRuntime.one ? v1DefaultNodeVersion : v2DefaultNodeVersion;
+
+    const cliFeed: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
+    if (cliFeed) {
+        const release: string = cliFeed.tags[getFeedRuntime(projectRuntime)].release;
+        funcVersion = cliFeed.releases[release].FUNCTIONS_EXTENSION_VERSION;
+        nodeVersion = cliFeed.releases[release].nodeVersion;
+    }
+
+    return {
+        FUNCTIONS_EXTENSION_VERSION: funcVersion,
+        WEBSITE_NODE_DEFAULT_VERSION: nodeVersion
+    };
 }
