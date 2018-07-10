@@ -10,7 +10,7 @@ import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -60,6 +60,7 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId);
+    addExtensionUserAgent(client);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
@@ -92,6 +93,7 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     await wizard.execute(actionContext);
 
     const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
+    addExtensionUserAgent(client);
     // tslint:disable-next-line:no-non-null-assertion
     const storageAccount: StorageAccount = wizardContext.storageAccount!;
 

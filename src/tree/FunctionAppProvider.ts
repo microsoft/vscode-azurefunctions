@@ -8,7 +8,7 @@ import WebSiteManagementClient = require('azure-arm-website');
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
-import { IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
 import { ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
@@ -36,6 +36,7 @@ export class FunctionAppProvider implements IChildProvider {
         }
 
         const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId);
+        addExtensionUserAgent(client);
         const webAppCollection: WebAppCollection = this._nextLink === undefined ?
             await client.webApps.list() :
             await client.webApps.listNext(this._nextLink);
