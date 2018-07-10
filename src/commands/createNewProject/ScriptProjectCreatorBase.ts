@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
+import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
@@ -44,6 +45,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.one;
     // Default template filter to 'All' since preview languages have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
+    public readonly functionsWorkerRuntime: string | undefined;
 
     public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
@@ -80,12 +82,18 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
 
         const localSettingsJsonPath: string = path.join(this.functionAppPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath, this.ui)) {
-            const localSettingsJson: {} = {
+            const localSettingsJson: ILocalAppSettings = {
                 IsEncrypted: false,
                 Values: {
                     AzureWebJobsStorage: ''
                 }
             };
+
+            if (this.functionsWorkerRuntime) {
+                // tslint:disable-next-line:no-non-null-assertion
+                localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = this.functionsWorkerRuntime;
+            }
+
             await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
