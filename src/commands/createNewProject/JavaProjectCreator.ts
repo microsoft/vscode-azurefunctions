@@ -72,10 +72,9 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         try {
             // Use maven command to init Java function project.
             this.outputChannel.show();
-            await cpUtils.executeCommand(
+            await mavenUtils.executeMvnCommand(
                 this.outputChannel,
                 tempFolder,
-                'mvn',
                 'archetype:generate',
                 '-DarchetypeGroupId="com.microsoft.azure"',
                 '-DarchetypeArtifactId="azure-functions-archetype"',

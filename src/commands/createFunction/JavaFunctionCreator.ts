@@ -59,10 +59,9 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
 
         await mavenUtils.validateMavenInstalled(this._functionAppPath);
         this._outputChannel.show();
-        await cpUtils.executeCommand(
+        await mavenUtils.executeMvnCommand(
             this._outputChannel,
             this._functionAppPath,
-            'mvn',
             'azure-functions:add',
             '-B',
             `"-Dfunctions.package=${this._packageName}"`,

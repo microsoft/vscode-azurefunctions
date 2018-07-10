@@ -130,7 +130,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput): Promise<string> {
     await mavenUtils.validateMavenInstalled(basePath);
     outputChannel.show();
-    await cpUtils.executeCommand(outputChannel, basePath, 'mvn', 'clean', 'package', '-B');
+    await mavenUtils.executeMvnCommand(outputChannel, basePath, 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
     const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomLocation);
     const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
