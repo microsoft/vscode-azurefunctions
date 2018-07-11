@@ -36,13 +36,13 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 return;
             }
 
-            const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(projectRuntime, this);
+            const packageManager: PackageManager | undefined = await getFuncPackageManager(true /* isFuncInstalled */);
+            const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(packageManager, projectRuntime, this);
             if (!newestVersion) {
                 return;
             }
 
             if (semver.gt(newestVersion, localVersion)) {
-                const packageManager: PackageManager | undefined = await getFuncPackageManager(true /* isFuncInstalled */);
                 let message: string = localize(
                     'azFunc.outdatedFunctionRuntime',
                     'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
@@ -74,17 +74,26 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     });
 }
 
-async function getNewestFunctionRuntimeVersion(projectRuntime: ProjectRuntime, actionContext: IActionContext): Promise<string | undefined> {
+async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, projectRuntime: ProjectRuntime, actionContext: IActionContext): Promise<string | undefined> {
     try {
-        const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
-        type distTags = { core: string, docker: string, latest: string };
-        const distTags: distTags = <distTags>JSON.parse((await <Thenable<string>>request(npmRegistryUri).promise()));
-        switch (projectRuntime) {
-            case ProjectRuntime.one:
-                return distTags.latest;
-            case ProjectRuntime.beta:
-                return distTags.core;
-            default:
+        if (packageManager === PackageManager.brew) {
+            const brewRegistryUri: string = 'https://aka.ms/AA1t7go';
+            const brewInfo: string = await <Thenable<string>>request(brewRegistryUri);
+            const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
+            if (matches && matches.length > 1) {
+                return matches[1];
+            }
+        } else {
+            const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
+            type distTags = { core: string, docker: string, latest: string };
+            const distTags: distTags = <distTags>JSON.parse(await <Thenable<string>>request(npmRegistryUri));
+            switch (projectRuntime) {
+                case ProjectRuntime.one:
+                    return distTags.latest;
+                case ProjectRuntime.beta:
+                    return distTags.core;
+                default:
+            }
         }
     } catch (error) {
         actionContext.properties.latestRuntimeError = parseError(error).message;
