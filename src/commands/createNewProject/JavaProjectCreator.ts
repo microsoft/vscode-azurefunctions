@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
-import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';

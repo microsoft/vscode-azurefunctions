@@ -10,7 +10,6 @@ import { IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
 import { Template } from "../../templates/Template";
 import { removeLanguageFromId } from "../../templates/TemplateData";
-import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
 import { mavenUtils } from "../../utils/mavenUtils";

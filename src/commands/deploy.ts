@@ -20,7 +20,6 @@ import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, ge
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
-import { cpUtils } from '../utils/cpUtils';
 import { isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
