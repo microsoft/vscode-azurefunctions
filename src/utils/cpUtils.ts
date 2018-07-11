@@ -9,11 +9,6 @@ import * as vscode from 'vscode';
 import { localize } from '../localize';
 
 export namespace cpUtils {
-    export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
-        const childProcessExecutor: ChildProcessExecutor = new ChildProcessExecutor(outputChannel, workingDirectory, command, args);
-        return await childProcessExecutor.execute();
-    }
-
     export class ChildProcessExecutor {
         protected outputChannel: vscode.OutputChannel | undefined;
         protected workingDirectory: string | undefined;
@@ -96,5 +91,10 @@ export namespace cpUtils {
         protected onErrorCallback(err: Error, reject: (e: Error) => void): void {
             reject(err);
         }
+    }
+
+    export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
+        const childProcessExecutor: ChildProcessExecutor = new ChildProcessExecutor(outputChannel, workingDirectory, command, args);
+        return await childProcessExecutor.execute();
     }
 }

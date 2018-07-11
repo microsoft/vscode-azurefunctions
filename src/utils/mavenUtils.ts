@@ -38,11 +38,6 @@ export namespace mavenUtils {
         });
     }
 
-    export async function executeMvnCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
-        const mavenExecutor: MavenCommandExecutor = new MavenCommandExecutor(outputChannel, workingDirectory, mvnCommand, args);
-        return await mavenExecutor.execute();
-    }
-
     class MavenCommandExecutor extends cpUtils.ChildProcessExecutor {
         protected onCloseCallback(code: number, resolve: () => void, reject: (e: Error) => void): void {
             if (code !== 0) {
@@ -63,5 +58,10 @@ export namespace mavenUtils {
                 resolve();
             }
         }
+    }
+
+    export async function executeMvnCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
+        const mavenExecutor: MavenCommandExecutor = new MavenCommandExecutor(outputChannel, workingDirectory, mvnCommand, args);
+        return await mavenExecutor.execute();
     }
 }
