@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import * as xml2js from 'xml2js';
+import { MavenExecutionError } from '../errors';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
 
@@ -50,7 +51,7 @@ export namespace mavenUtils {
                 }
             }
             errorOutput = errorOutput.replace(/^\[ERROR\]/gm, '');
-            throw new Error(localize('azFunc.mavenCommandError', 'Error occurs when executing "mvn".{0}{1}', os.EOL, errorOutput));
+            throw new MavenExecutionError(localize('azFunc.mavenCommandError', 'Error occurs when executing "mvn".{0}{1}', os.EOL, errorOutput));
         } else {
             if (outputChannel) {
                 outputChannel.appendLine(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', mvnCommand, result.formattedArgs));
