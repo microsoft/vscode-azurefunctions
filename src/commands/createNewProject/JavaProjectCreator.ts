@@ -101,13 +101,13 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     label: funcHostTaskLabel,
                     identifier: funcHostTaskId,
                     linux: {
-                        command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
+                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     osx: {
-                        command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
+                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     windows: {
-                        command: 'powershell -command "mvn clean package -B; func host start --script-root \\\"%path%\\\""'
+                        command: 'powershell -command "mvn clean package -B; func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     type: 'shell',
                     isBackground: true,
