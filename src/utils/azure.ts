@@ -14,7 +14,7 @@ import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, IActionConte
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
+import { getResourceTypeLabel, ResourceType } from '../templates/IFunctionSetting';
 
 function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);

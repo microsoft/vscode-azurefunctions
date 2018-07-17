@@ -19,6 +19,7 @@ export enum ProjectLanguage {
     Batch = 'Batch',
     CSharp = 'C#',
     CSharpScript = 'C#Script',
+    FSharp = 'F#',
     FSharpScript = 'F#Script',
     Java = 'Java',
     JavaScript = 'JavaScript',

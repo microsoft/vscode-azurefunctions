@@ -14,18 +14,18 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { getTemplateData, TemplateData } from '../../src/templates/TemplateData';
+import { FunctionTemplates, getFunctionTemplates } from '../../src/templates/FunctionTemplates';
 import * as fsUtil from '../../src/utils/fs';
 
-let backupTemplateData: TemplateData;
-let funcPortalTemplateData: TemplateData | undefined;
+let backupTemplates: FunctionTemplates;
+let latestTemplates: FunctionTemplates | undefined;
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    // Ensure template data is initialized before any 'Create Function' test is run
-    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
-    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
+    // Ensure templates are initialized before any 'Create Function' test is run
+    backupTemplates = <FunctionTemplates>(await getFunctionTemplates());
+    latestTemplates = <FunctionTemplates>(await getFunctionTemplates());
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
 });
 
@@ -76,13 +76,13 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
-        if (funcPortalTemplateData) {
-            await this.testCreateFunctionInternal(funcPortalTemplateData, this.funcPortalTestFolder, templateName, inputs.slice());
+        if (latestTemplates) {
+            await this.testCreateFunctionInternal(latestTemplates, this.funcPortalTestFolder, templateName, inputs.slice());
         } else {
             assert.fail('Failed to find templates from functions portal.');
         }
 
-        await this.testCreateFunctionInternal(backupTemplateData, this.backupTestFolder, templateName, inputs.slice());
+        await this.testCreateFunctionInternal(backupTemplates, this.backupTestFolder, templateName, inputs.slice());
     }
 
     public abstract async validateFunction(testFolder: string, funcName: string): Promise<void>;
@@ -97,7 +97,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         ]);
     }
 
-    private async testCreateFunctionInternal(templateData: TemplateData, testFolder: string, templateName: string, inputs: (string | undefined)[]): Promise<void> {
+    private async testCreateFunctionInternal(templates: FunctionTemplates, testFolder: string, templateName: string, inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
         const funcName: string = templateName.replace(/ /g, '');
         inputs.unshift(funcName); // Specify the function name
@@ -108,7 +108,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         }
 
         ext.ui = new TestUserInput(inputs);
-        ext.templateData = templateData;
+        ext.functionTemplates = templates;
         await createFunction(<IActionContext>{ properties: {}, measurements: {} });
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
