@@ -61,7 +61,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
 
         for (const key of Object.keys(userSettings)) {
             args.push(`--arg:${key}`);
-            args.push(userSettings[key]);
+            args.push(`"${userSettings[key]}"`);
         }
 
         await executeDotnetTemplateCommand(runtime, this._functionAppPath, 'create', '--identity', this._template.id, ...args);
