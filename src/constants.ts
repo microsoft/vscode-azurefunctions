@@ -56,3 +56,9 @@ export enum PackageManager {
 }
 
 export const funcPackageName: string = 'azure-functions-core-tools';
+
+export enum ScmType {
+    None = 'None', // default scmType
+    LocalGit = 'LocalGit',
+    GitHub = 'GitHub'
+}
