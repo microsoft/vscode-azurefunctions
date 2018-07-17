@@ -3,8 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { pathExists } from 'fs-extra';
+import { join } from 'path';
 import { gt } from 'semver';
 import { TemplateFilter } from "../../constants";
+import { ext } from '../../extensionVariables';
 import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
 import { funcHostTaskId } from "./IProjectCreator";
@@ -29,17 +32,42 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
-    private async validatePythonVersion3(): Promise<boolean> {
+    public async addNonVSCodeFiles(): Promise<void> {
+        if (await this.validatePythonVersion()) {
+            await this.createVirtualEnviornment();
+        } else {
+            throw new Error('Cannot create Python projects without a Python version that is < 3.6.0.');
+        }
+    }
+
+    public getTasksJson(): {} {
+        return {
+            version: '2.0.0',
+            tasks: [
+                {
+                    label: 'create',
+                    command: `${join('.', 'func_env', 'Scripts', 'activate')} | func init ./ --worker-runtime python`,
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                }
+            ]
+        };
+    }
+
+    private async validatePythonVersion(): Promise<boolean> {
         const minReqVersion: string = '3.6.0';
-        const pyVersion: string = await cpUtils.executeCommand(this.outputChannel, undefined /*default to cwd*/, 'py --version');
+        const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python --version')).substring('Python '.length);
         return gt(pyVersion, minReqVersion);
     }
 
-    private async activeVirtualEnvironment(): Promise<boolean> {
-
-    }
-
     private async createVirtualEnviornment(): Promise<void> {
-
+        const funcEnv: string = 'func_env';
+        if (!(await pathExists(join(this.functionAppPath, funcEnv)))) {
+            // if there is no func_env, create one as it's required for Python functions
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, 'python', '-m', 'venv', 'func_env');
+        }
     }
 }
