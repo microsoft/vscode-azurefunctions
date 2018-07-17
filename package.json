@@ -54,7 +54,6 @@
         "onCommand:azureFunctions.appSettings.encrypt",
         "onCommand:azureFunctions.appSettings.decrypt",
         "onCommand:azureFunctions.pickProcess",
-        "onCommand:azureFunctions.uninstallDotnetTemplates",
         "onCommand:azureFunctions.startStreamingLogs",
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
@@ -213,11 +212,6 @@
             {
                 "command": "azureFunctions.pickProcess",
                 "title": "%azFunc.pickProcess%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.uninstallDotnetTemplates",
-                "title": "%azFunc.uninstallDotnetTemplates%",
                 "category": "Azure Functions"
             },
             {

@@ -5,31 +5,28 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { OutputChannel } from "vscode";
 import { IAzureUserInput } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
 import XRegExp = require('xregexp');
+import { ProjectRuntime } from '../../constants';
 import { localize } from "../../localize";
-import { Template } from "../../templates/Template";
-import { removeLanguageFromId } from "../../templates/TemplateData";
-import { cpUtils } from "../../utils/cpUtils";
+import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
+import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import * as fsUtil from '../../utils/fs';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 
 export class CSharpFunctionCreator extends FunctionCreatorBase {
-    private _outputChannel: OutputChannel;
     private _functionName: string;
     private _namespace: string;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
+    constructor(functionAppPath: string, template: IFunctionTemplate) {
         super(functionAppPath, template);
-        this._outputChannel = outputChannel;
     }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
         if (!functionName) {
-            const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, removeLanguageFromId(this._template.id), '.cs');
+            const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, this._template.defaultFunctionName, '.cs');
             this._functionName = await ui.showInputBox({
                 placeHolder: localize('azFunc.funcNamePlaceholder', 'Function name'),
                 prompt: localize('azFunc.funcNamePrompt', 'Provide a function name'),
@@ -52,36 +49,22 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         }
     }
 
-    public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
-        await dotnetUtils.validateTemplatesInstalled();
+    public async createFunction(userSettings: { [propertyName: string]: string }, runtime: ProjectRuntime): Promise<string | undefined> {
+        await dotnetUtils.validateDotnetInstalled();
 
         const args: string[] = [];
+        args.push('--arg:name');
+        args.push(this._functionName);
+
+        args.push('--arg:namespace');
+        args.push(this._namespace);
+
         for (const key of Object.keys(userSettings)) {
-            let parameter: string = key.charAt(0).toUpperCase() + key.slice(1);
-            // the parameters for dotnet templates are not consistent. Hence, we have to special-case a few of them:
-            if (parameter.toLowerCase() === 'authlevel') {
-                parameter = 'AccessRights';
-            }
-
-            // https://github.com/Microsoft/vscode-azurefunctions/issues/166
-            const nameSuffix: string = '/{name}';
-            if (userSettings[key].endsWith(nameSuffix)) {
-                userSettings[key] = userSettings[key].slice(0, -1 * nameSuffix.length);
-            }
-
-            args.push(`--${parameter}="${userSettings[key]}"`);
+            args.push(`--arg:${key}`);
+            args.push(`"${userSettings[key]}"`);
         }
 
-        await cpUtils.executeCommand(
-            this._outputChannel,
-            this._functionAppPath,
-            'dotnet',
-            'new',
-            removeLanguageFromId(this._template.id),
-            `--name="${this._functionName}"`,
-            `--namespace="${this._namespace}"`,
-            ...args
-        );
+        await executeDotnetTemplateCommand(runtime, this._functionAppPath, 'create', '--identity', this._template.id, ...args);
 
         return path.join(this._functionAppPath, `${this._functionName}.cs`);
     }

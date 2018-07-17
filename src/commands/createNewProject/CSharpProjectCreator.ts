@@ -11,9 +11,10 @@ import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
-import { cpUtils } from '../../utils/cpUtils';
+import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
+import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 
@@ -25,18 +26,16 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     private _runtime: ProjectRuntime;
 
     public async addNonVSCodeFiles(): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled();
+        await dotnetUtils.validateDotnetInstalled();
 
-        const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
-        const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
-        await cpUtils.executeCommand(
-            this.outputChannel,
-            this.functionAppPath,
-            'dotnet',
-            'new',
-            dotnetUtils.funcProjectId,
-            overwriteExisting ? '--force' : ''
-        );
+        const projectName: string = path.basename(this.functionAppPath);
+        const csProjName: string = `${projectName}.csproj`;
+        await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
+
+        // tslint:disable-next-line:strict-boolean-expressions
+        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
     }
 
     public async getRuntime(): Promise<ProjectRuntime> {

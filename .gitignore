@@ -64,3 +64,6 @@ package-lock.json
 out
 *.vsix
 .vscode-test
+
+# debugging artifacts
+resources/dotnetTemplates

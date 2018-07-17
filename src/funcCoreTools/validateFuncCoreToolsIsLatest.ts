@@ -12,12 +12,12 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-import { getFuncPackageManager } from '../funcCoreTools/getFuncPackageManager';
-import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { getProjectRuntimeFromVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
-import { updateFuncCoreTools } from '../funcCoreTools/updateFuncCoreTools';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { getFuncPackageManager } from './getFuncPackageManager';
+import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
+import { getProjectRuntimeFromVersion } from './tryGetLocalRuntimeVersion';
+import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', async function (this: IActionContext): Promise<void> {

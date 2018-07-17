@@ -6,44 +6,46 @@
 import * as assert from 'assert';
 import { IHookCallbackContext } from 'mocha';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
-import { JavaScriptProjectCreator } from '../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
-import { Template } from '../src/templates/Template';
-import { getTemplateData, TemplateData } from '../src/templates/TemplateData';
+import { FunctionTemplates, getFunctionTemplates } from '../src/templates/FunctionTemplates';
+import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
 
-let backupTemplateData: TemplateData;
-let funcPortalTemplateData: TemplateData | undefined;
+let backupTemplates: FunctionTemplates;
+let latestTemplates: FunctionTemplates | undefined;
 
 // tslint:disable-next-line:no-function-expression
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    backupTemplateData = <TemplateData>(await getTemplateData(undefined));
-    funcPortalTemplateData = <TemplateData>(await getTemplateData(undefined));
+    backupTemplates = <FunctionTemplates>(await getFunctionTemplates());
+    latestTemplates = <FunctionTemplates>(await getFunctionTemplates());
     // https://github.com/Microsoft/vscode-azurefunctions/issues/334
 });
 
-suite('Template Data Tests', async () => {
+suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
-        if (funcPortalTemplateData) {
-            await validateTemplateData(funcPortalTemplateData);
+        if (latestTemplates) {
+            await validateTemplateCounts(latestTemplates);
         } else {
             assert.fail('Failed to find templates from functions portal.');
         }
 
-        await validateTemplateData(backupTemplateData);
+        await validateTemplateCounts(backupTemplates);
     });
 });
 
-async function validateTemplateData(templateData: TemplateData): Promise<void> {
-    const jsTemplates: Template[] = await templateData.getTemplates(ProjectLanguage.JavaScript, JavaScriptProjectCreator.defaultRuntime, TemplateFilter.Verified);
-    assert.equal(jsTemplates.length, 8, 'Unexpected JavaScript templates count.');
+async function validateTemplateCounts(templates: FunctionTemplates): Promise<void> {
+    const jsTemplatesv1: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.one, TemplateFilter.Verified);
+    assert.equal(jsTemplatesv1.length, 8, 'Unexpected JavaScript v1 templates count.');
 
-    const javaTemplates: Template[] = await templateData.getTemplates(ProjectLanguage.Java, JavaProjectCreator.defaultRuntime, TemplateFilter.Verified);
+    const jsTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.beta, TemplateFilter.Verified);
+    assert.equal(jsTemplatesv2.length, 4, 'Unexpected JavaScript v2 templates count.');
+
+    const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, JavaProjectCreator.defaultRuntime, TemplateFilter.Verified);
     assert.equal(javaTemplates.length, 4, 'Unexpected Java templates count.');
 
-    const cSharpTemplates: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.one, TemplateFilter.Verified);
+    const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.one, TemplateFilter.Verified);
     assert.equal(cSharpTemplates.length, 4, 'Unexpected CSharp (.NET Framework) templates count.');
 
-    const cSharpTemplatesv2: Template[] = await templateData.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
+    const cSharpTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.beta, TemplateFilter.Verified);
     assert.equal(cSharpTemplatesv2.length, 4, 'Unexpected CSharp (.NET Core) templates count.');
 }

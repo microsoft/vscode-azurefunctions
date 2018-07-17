@@ -14,7 +14,6 @@ import { createNewProject } from '../src/commands/createNewProject/createNewProj
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
-import { dotnetUtils } from '../src/utils/dotnetUtils';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
@@ -30,7 +29,6 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await fse.ensureDir(testFolderPath);
-        await dotnetUtils.validateTemplatesInstalled();
     });
 
     suiteTeardown(async () => {

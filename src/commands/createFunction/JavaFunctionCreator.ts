@@ -8,8 +8,8 @@ import * as path from 'path';
 import { OutputChannel } from "vscode";
 import { IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
-import { Template } from "../../templates/Template";
-import { removeLanguageFromId } from "../../templates/TemplateData";
+import { removeLanguageFromId } from "../../templates/FunctionTemplates";
+import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
@@ -25,7 +25,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _packageName: string;
     private _functionName: string;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
     }
