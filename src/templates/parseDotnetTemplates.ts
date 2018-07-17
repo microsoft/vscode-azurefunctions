@@ -37,6 +37,7 @@ function parseDotnetSetting(rawSetting: IRawSetting): IFunctionSetting {
         valueType: rawSetting.DataType === 'choice' ? ValueType.enum : ValueType.string,
         defaultValue: rawSetting.DefaultValue,
         label: rawSetting.Name,
+        description: rawSetting.Documentation,
         enums: rawSetting.Choices ? Object.keys(rawSetting.Choices).map((key: string) => { return { value: key, displayName: key }; }) : [],
         validateSetting: (): undefined => { return undefined; } // Dotnet templates do not give us validation information
     };

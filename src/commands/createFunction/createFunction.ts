@@ -59,7 +59,7 @@ async function promptForBooleanSetting(setting: IFunctionSetting): Promise<strin
 async function promptForStringSetting(setting: IFunctionSetting): Promise<string> {
     const options: vscode.InputBoxOptions = {
         placeHolder: setting.label,
-        prompt: localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
+        prompt: setting.description || localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
         validateInput: (s: string): string | undefined => setting.validateSetting(s),
         value: setting.defaultValue
     };

@@ -11,6 +11,7 @@ import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
+import { IFunctionSetting } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
 import { TemplateRetriever } from './TemplateRetriever';
@@ -28,6 +29,7 @@ export class FunctionTemplates {
     private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
     constructor(templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined }) {
         this._templatesMap = templatesMap;
+        this.copyCSharpSettingsFromJS();
     }
 
     public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<IFunctionTemplate[]> {
@@ -59,6 +61,36 @@ export class FunctionTemplates {
             return filterTemplates;
         }
     }
+
+    /**
+     * The dotnet templates do not provide the validation and resourceType information that we desire
+     * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
+     */
+    private copyCSharpSettingsFromJS(): void {
+        for (const key of Object.keys(this._templatesMap)) {
+            const templates: IFunctionTemplate[] | undefined = this._templatesMap[key];
+            if (templates) {
+                const jsTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.JavaScript.toLowerCase());
+                const csharpTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.CSharp.toLowerCase());
+                for (const csharpTemplate of csharpTemplates) {
+                    const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeName(t.name) === normalizeName(csharpTemplate.name));
+                    if (jsTemplate) {
+                        for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
+                            const jsSetting: IFunctionSetting | undefined = jsTemplate.userPromptedSettings.find((t: IFunctionSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
+                            if (jsSetting) {
+                                cSharpSetting.resourceType = jsSetting.resourceType;
+                                cSharpSetting.validateSetting = jsSetting.validateSetting;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+function normalizeName(name: string): string {
+    return name.toLowerCase().replace(/\s/g, '');
 }
 
 export async function getFunctionTemplates(): Promise<FunctionTemplates> {
