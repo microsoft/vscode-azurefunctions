@@ -135,7 +135,7 @@ export async function createFunction(
     let functionCreator: FunctionCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel);
+            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel, actionContext.properties);
             break;
         case ProjectLanguage.CSharp:
             functionCreator = new CSharpFunctionCreator(functionAppPath, template);
