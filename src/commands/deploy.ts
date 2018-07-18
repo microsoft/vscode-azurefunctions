@@ -35,9 +35,9 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     if (!target) {
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
     } else if (target instanceof vscode.Uri) {
-        deployFsPath = target.fsPath;
+        deployFsPath = appendDeploySubpathSetting(target.fsPath);
     } else if (typeof target === 'string') {
-        deployFsPath = target;
+        deployFsPath = appendDeploySubpathSetting(target);
     } else {
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
         node = target;
@@ -130,6 +130,21 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     if (functions.find((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
         outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
     }
+}
+
+/**
+ * Appends the deploySubpath setting if the target path matches the root of a workspace folder
+ * If the targetPath is a sub folder instead of the root, leave the targetPath as-is and assume they want that exact folder used
+ */
+function appendDeploySubpathSetting(targetPath: string): string {
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.some((folder: vscode.WorkspaceFolder) => isPathEqual(folder.uri.fsPath, targetPath))) {
+        const deploySubPath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, targetPath);
+        if (deploySubPath) {
+            return path.join(targetPath, deploySubPath);
+        }
+    }
+
+    return targetPath;
 }
 
 async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
