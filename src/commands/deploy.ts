@@ -20,7 +20,7 @@ import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, ge
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
-import { isSubpath } from '../utils/fs';
+import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
@@ -189,7 +189,7 @@ async function tryPublishCSharpProject(deployFsPath: string, outputChannel: vsco
     for (const task of tasks) {
         if (task.name.toLowerCase() === 'publish' && task.scope !== undefined) {
             const workspaceFolder: vscode.WorkspaceFolder = <vscode.WorkspaceFolder>task.scope;
-            if (<vscode.Uri | undefined>workspaceFolder.uri && isSubpath(workspaceFolder.uri.fsPath, deployFsPath)) {
+            if (<vscode.Uri | undefined>workspaceFolder.uri && (isPathEqual(workspaceFolder.uri.fsPath, deployFsPath) || isSubpath(workspaceFolder.uri.fsPath, deployFsPath))) {
                 publishTask = task;
                 break;
             }
