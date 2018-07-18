@@ -4,6 +4,25 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.10.0 - 2018-07-19
+
+### Added
+
+- Improved C# templates
+  - More templates are available
+  - Templates will be automatically updated going forward
+  - Templates are installed only with the scope of VS Code and no longer affect machine-wide .NET CLI templates
+- Add support for deploying to App Service Environments
+
+### Changed
+
+- New C# projects will deploy the result of a 'dotnet publish' rather than deploying the build output
+- Azure Function Apps created through VS Code will automatically match the runtime from your local machine rather than always using v1
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.9.1 - 2018-05-23
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.1%22+label%3Abug+is%3Aclosed)
