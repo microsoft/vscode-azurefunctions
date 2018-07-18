@@ -50,14 +50,23 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
 }
 
 export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
-    const verifiedTemplateIds: string[] = [
-        'Azure.Function.CSharp.HttpTrigger',
-        'Azure.Function.CSharp.BlobTrigger',
-        'Azure.Function.CSharp.QueueTrigger',
-        'Azure.Function.CSharp.TimerTrigger'
+    let verifiedTemplateIds: string[] = [
+        'HttpTrigger',
+        'BlobTrigger',
+        'QueueTrigger',
+        'TimerTrigger'
     ];
 
+    if (runtime === ProjectRuntime.one) {
+        verifiedTemplateIds = verifiedTemplateIds.concat([
+            'GenericWebHook',
+            'GitHubWebHook',
+            'HttpTriggerWithParameters'
+        ]);
+    }
+
     return verifiedTemplateIds.map((id: string) => {
+        id = `Azure.Function.CSharp.${id}`;
         switch (runtime) {
             case ProjectRuntime.one:
                 return `${id}.1.x`;
