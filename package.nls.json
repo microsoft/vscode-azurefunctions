@@ -30,8 +30,6 @@
     "azFunc.appSettings.encrypt": "Encrypt Settings",
     "azFunc.pickProcess": "Pick Process",
     "azFunc.deploySubpathDescription": "The default subpath of a workspace folder to use when deploying.",
-    "azFunc.installDotnetTemplates": "Install templates for the .NET CLI",
-    "azFunc.uninstallDotnetTemplates": "Uninstall templates for the .NET CLI",
     "azFunc.showCoreToolsWarningDescription": "Show a warning if your installed version of Azure Functions Core Tools is out-of-date.",
     "azFunc.show64BitWarningDescription": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
     "azFunc.showProjectWarningDescription": "Show a warning when an Azure Functions project was detected that has not been initialized for use in VS Code.",

@@ -14,9 +14,9 @@ import { ext } from '../../extensionVariables';
 import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
-import { ConfigSetting, ValueType } from '../../templates/ConfigSetting';
-import { EnumValue } from '../../templates/EnumValue';
-import { Template } from '../../templates/Template';
+import { IEnumValue, IFunctionSetting, ValueType } from '../../templates/IFunctionSetting';
+import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { isFunctionProject } from '../createNewProject/validateFunctionProjects';
@@ -25,7 +25,7 @@ import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
 
-async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: IFunctionSetting): Promise<string> {
     if (setting.resourceType !== undefined) {
         return await promptForAppSetting(actionContext, localSettingsPath, setting.resourceType);
     } else {
@@ -36,18 +36,18 @@ async function promptForSetting(actionContext: IActionContext, localSettingsPath
                 return await promptForEnumSetting(setting);
             default:
                 // Default to 'string' type for any setting that isn't supported
-                return await promptForStringSetting(setting, defaultValue);
+                return await promptForStringSetting(setting);
         }
     }
 }
 
-async function promptForEnumSetting(setting: ConfigSetting): Promise<string> {
-    const picks: IAzureQuickPickItem<string>[] = setting.enums.map((ev: EnumValue) => { return { data: ev.value, label: ev.displayName, description: '' }; });
+async function promptForEnumSetting(setting: IFunctionSetting): Promise<string> {
+    const picks: IAzureQuickPickItem<string>[] = setting.enums.map((ev: IEnumValue) => { return { data: ev.value, label: ev.displayName, description: '' }; });
 
     return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).data;
 }
 
-async function promptForBooleanSetting(setting: ConfigSetting): Promise<string> {
+async function promptForBooleanSetting(setting: IFunctionSetting): Promise<string> {
     const picks: QuickPickItem[] = [
         { label: 'true', description: '' },
         { label: 'false', description: '' }
@@ -56,12 +56,12 @@ async function promptForBooleanSetting(setting: ConfigSetting): Promise<string> 
     return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).label;
 }
 
-async function promptForStringSetting(setting: ConfigSetting, defaultValue?: string): Promise<string> {
+async function promptForStringSetting(setting: IFunctionSetting): Promise<string> {
     const options: vscode.InputBoxOptions = {
         placeHolder: setting.label,
         prompt: localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
         validateInput: (s: string): string | undefined => setting.validateSetting(s),
-        value: defaultValue ? defaultValue : setting.defaultValue
+        value: setting.defaultValue
     };
     return await ext.ui.showInputBox(options);
 }
@@ -111,14 +111,14 @@ export async function createFunction(
         runtime = await getProjectRuntime(language, functionAppPath, ext.ui);
     }
 
-    let template: Template;
+    let template: IFunctionTemplate;
     if (!templateId) {
         templateFilter = await getTemplateFilter(functionAppPath);
         [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter);
     } else {
         templateFilter = TemplateFilter.All;
-        const templates: Template[] = await ext.templateData.getTemplates(language, runtime, TemplateFilter.All);
-        const foundTemplate: Template | undefined = templates.find((t: Template) => t.id === templateId);
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, TemplateFilter.All);
+        const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
         } else {
@@ -138,38 +138,34 @@ export async function createFunction(
             functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel, actionContext.properties);
             break;
         case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template, ext.outputChannel);
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template);
             break;
         default:
-            functionCreator = new ScriptFunctionCreator(functionAppPath, template, language);
+            functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, language);
             break;
     }
 
     await functionCreator.promptForSettings(ext.ui, functionName, functionSettings);
 
     const userSettings: { [propertyName: string]: string } = {};
-    for (const settingName of template.userPromptedSettings) {
-        const setting: ConfigSetting | undefined = await ext.templateData.getSetting(runtime, template.functionConfig.inBindingType, settingName);
-        if (setting) {
-            let settingValue: string | undefined;
-            if (functionSettings[settingName.toLowerCase()] !== undefined) {
-                settingValue = functionSettings[settingName.toLowerCase()];
-            } else {
-                const defaultValue: string | undefined = template.functionConfig.inBinding[settingName];
-                settingValue = await promptForSetting(actionContext, localSettingsPath, setting, defaultValue);
-            }
-
-            userSettings[settingName] = settingValue ? settingValue : '';
+    for (const setting of template.userPromptedSettings) {
+        let settingValue: string | undefined;
+        if (functionSettings[setting.name.toLowerCase()] !== undefined) {
+            settingValue = functionSettings[setting.name.toLowerCase()];
+        } else {
+            settingValue = await promptForSetting(actionContext, localSettingsPath, setting);
         }
+
+        userSettings[setting.name] = settingValue ? settingValue : '';
     }
 
-    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings);
+    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, runtime);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
         const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
         vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
     }
 
-    if (!template.functionConfig.isHttpTrigger) {
+    if (!template.isHttpTrigger) {
         await validateAzureWebJobsStorage(actionContext, localSettingsPath);
     }
 
@@ -178,15 +174,15 @@ export async function createFunction(
     }
 }
 
-async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[Template, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
+async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
     const runtimePickId: string = 'runtime';
     const languagePickId: string = 'language';
     const filterPickId: string = 'filter';
 
-    let template: Template | undefined;
+    let template: IFunctionTemplate | undefined;
     while (!template) {
-        const templates: Template[] = await ext.templateData.getTemplates(language, runtime, templateFilter);
-        let picks: IAzureQuickPickItem<Template | string>[] = templates.map((t: Template) => { return { data: t, label: t.name, description: '' }; });
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, templateFilter);
+        let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
         picks = picks.concat([
             { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
             { label: localize('selectLanguage', '$(gear) Change project language'), description: localize('currentLanguage', 'Current: {0}', language), data: languagePickId, suppressPersistence: true },
@@ -194,7 +190,7 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
         ]);
 
         const placeHolder: string = templates.length > 0 ? localize('azFunc.selectFuncTemplate', 'Select a function template') : localize('azFunc.noTemplatesFound', 'No templates found. Change your settings to view more templates');
-        const result: Template | string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        const result: IFunctionTemplate | string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
         if (isString(result)) {
             switch (result) {
                 case runtimePickId:

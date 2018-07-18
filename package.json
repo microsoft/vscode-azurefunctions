@@ -54,7 +54,6 @@
         "onCommand:azureFunctions.appSettings.encrypt",
         "onCommand:azureFunctions.appSettings.decrypt",
         "onCommand:azureFunctions.pickProcess",
-        "onCommand:azureFunctions.uninstallDotnetTemplates",
         "onCommand:azureFunctions.startStreamingLogs",
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
@@ -213,11 +212,6 @@
             {
                 "command": "azureFunctions.pickProcess",
                 "title": "%azFunc.pickProcess%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.uninstallDotnetTemplates",
-                "title": "%azFunc.uninstallDotnetTemplates%",
                 "category": "Azure Functions"
             },
             {
@@ -641,7 +635,7 @@
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "~0.18.0",
+        "vscode-azureappservice": "~0.19.0",
         "vscode-azureextensionui": "~0.16.0",
         "vscode-azurekudu": "~0.1.8",
         "vscode-extension-telemetry": "^0.0.15",

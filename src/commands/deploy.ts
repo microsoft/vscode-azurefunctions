@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from 'azure-arm-website/lib/models';
+import { SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
+import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
@@ -29,7 +29,6 @@ import * as workspaceUtil from '../utils/workspace';
 export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
-    let confirmDeployment: boolean = true;
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
 
     const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
@@ -60,54 +59,61 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                 }
             }
         }
-
-        const client: SiteClient = node.treeItem.client;
-
-        const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
-        telemetryProperties.projectLanguage = language;
-        const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
-        telemetryProperties.projectRuntime = runtime;
-
-        if (language === ProjectLanguage.Java) {
-            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui, telemetryProperties);
-        }
-
-        await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
-
-        if (language === ProjectLanguage.CSharp) {
-            await tryPublishCSharpProject(deployFsPath, outputChannel, telemetryProperties);
-        }
-
-        await node.runWithTemporaryDescription(
-            localize('deploying', 'Deploying...'),
-            async () => {
-                try {
-                    // Stop function app here to avoid *.jar file in use on server side.
-                    // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-                    if (language === ProjectLanguage.Java) {
-                        outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
-                        await client.stop();
-                    }
-                    if (newNodes.length > 0) {
-                        for (const newFunctionApp of newNodes) {
-                            if (node && newFunctionApp.id === node.id) {
-                                // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
-                                confirmDeployment = false;
-                            }
-                        }
-                    }
-                    await appservice.deploy(client, deployFsPath, extensionPrefix, confirmDeployment, telemetryProperties);
-                } finally {
-                    if (language === ProjectLanguage.Java) {
-                        outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
-                        await client.start();
-                    }
-                }
-            }
-        );
     } finally {
         onNodeCreatedFromQuickPickDisposable.dispose();
     }
+
+    // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
+    const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
+
+    const client: SiteClient = node.treeItem.client;
+
+    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+    telemetryProperties.projectLanguage = language;
+    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+    telemetryProperties.projectRuntime = runtime;
+
+    if (language === ProjectLanguage.Java) {
+        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui, telemetryProperties);
+    }
+
+    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+
+    if (confirmDeployment) {
+        const siteConfig: SiteConfigResource = await client.getSiteConfig();
+        if (siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub) {
+            const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
+            telemetryProperties.cancelStep = 'confirmDestructiveDeployment';
+            const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
+            await ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
+            telemetryProperties.cancelStep = '';
+        }
+    }
+
+    if (language === ProjectLanguage.CSharp) {
+        await tryPublishCSharpProject(deployFsPath, outputChannel, telemetryProperties);
+    }
+
+    await node.runWithTemporaryDescription(
+        localize('deploying', 'Deploying...'),
+        async () => {
+            try {
+                // Stop function app here to avoid *.jar file in use on server side.
+                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+                if (language === ProjectLanguage.Java) {
+                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                    await client.stop();
+                }
+
+                await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+            } finally {
+                if (language === ProjectLanguage.Java) {
+                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                    await client.start();
+                }
+            }
+        }
+    );
 
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);

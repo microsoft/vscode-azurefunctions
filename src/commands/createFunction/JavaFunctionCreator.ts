@@ -8,8 +8,8 @@ import * as path from 'path';
 import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
-import { Template } from "../../templates/Template";
-import { removeLanguageFromId } from "../../templates/TemplateData";
+import { removeLanguageFromId } from "../../templates/FunctionTemplates";
+import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
 import { mavenUtils } from "../../utils/mavenUtils";
@@ -25,7 +25,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _functionName: string;
     private _telemetryProperties: TelemetryProperties;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, telemetryProperties: TelemetryProperties) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
         this._telemetryProperties = telemetryProperties;

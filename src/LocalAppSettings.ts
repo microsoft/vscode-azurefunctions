@@ -10,7 +10,7 @@ import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
 import { localize } from './localize';
-import { getResourceTypeLabel, ResourceType } from './templates/ConfigSetting';
+import { getResourceTypeLabel, ResourceType } from './templates/IFunctionSetting';
 import * as azUtil from './utils/azure';
 import { IResourceResult } from './utils/azure';
 import * as fsUtil from './utils/fs';
