@@ -12,7 +12,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
   - More templates are available
   - Templates will be automatically updated going forward
   - Templates are installed only with the scope of VS Code and no longer affect machine-wide .NET CLI templates
-- Add support for deploying to App Service Environments
+- Added support for deploying to App Service Environments
 
 ### Changed
 
