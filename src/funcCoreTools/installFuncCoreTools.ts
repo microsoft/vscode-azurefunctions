@@ -25,7 +25,7 @@ export async function installFuncCoreTools(packageManager: PackageManager, runti
         do {
             runtimeVersion = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm, DialogResponses.learnMore)).title;
             if (runtimeVersion === DialogResponses.learnMore.title) {
-                opn(learnMoreLink);
+                await opn(learnMoreLink);
             }
         }
         while (runtimeVersion === DialogResponses.learnMore.title);
