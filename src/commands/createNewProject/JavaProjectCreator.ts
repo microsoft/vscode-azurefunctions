@@ -72,6 +72,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             // Use maven command to init Java function project.
             this.outputChannel.show();
             await mavenUtils.executeMvnCommand(
+                this.telemetryProperties,
                 this.outputChannel,
                 tempFolder,
                 'archetype:generate',

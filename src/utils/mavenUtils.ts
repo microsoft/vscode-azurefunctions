@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as os from 'os';
 import * as vscode from 'vscode';
+import { TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
-import { MavenExecutionError } from '../errors';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
 
@@ -39,7 +38,7 @@ export namespace mavenUtils {
         });
     }
 
-    export async function executeMvnCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
+    export async function executeMvnCommand(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
@@ -51,7 +50,11 @@ export namespace mavenUtils {
                 }
             }
             errorOutput = errorOutput.replace(/^\[ERROR\]/gm, '');
-            throw new MavenExecutionError(localize('azFunc.mavenCommandError', 'Error occurs when executing "mvn".{0}{1}', os.EOL, errorOutput));
+            telemetryProperties.mavenErrors = errorOutput;
+            if (outputChannel) {
+                outputChannel.show();
+                throw new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', mvnCommand));
+            }
         } else {
             if (outputChannel) {
                 outputChannel.appendLine(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', mvnCommand, result.formattedArgs));

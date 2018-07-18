@@ -69,7 +69,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         telemetryProperties.projectRuntime = runtime;
 
         if (language === ProjectLanguage.Java) {
-            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui);
+            deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui, telemetryProperties);
         }
 
         await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
@@ -126,10 +126,10 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     }
 }
 
-async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput): Promise<string> {
+async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
     await mavenUtils.validateMavenInstalled(basePath);
     outputChannel.show();
-    await mavenUtils.executeMvnCommand(outputChannel, basePath, 'clean', 'package', '-B');
+    await mavenUtils.executeMvnCommand(telemetryProperties, outputChannel, basePath, 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
     const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomLocation);
     const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
