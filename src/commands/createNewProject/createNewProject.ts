@@ -67,12 +67,15 @@ export async function createNewProject(
     if (templateId) {
         await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
+
+    if (projectCreator instanceof PythonProjectCreator) {
+        await commands.executeCommand('workbench.action.tasks.runTask', 'create');
+    }
     await validateFuncCoreToolsInstalled();
 
     if (openFolder) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
-    await commands.executeCommand('workbench.action.tasks.runTask', 'create');
 }
 
 export function getProjectCreator(language: string, functionAppPath: string, telemetryProperties: TelemetryProperties): ProjectCreatorBase {

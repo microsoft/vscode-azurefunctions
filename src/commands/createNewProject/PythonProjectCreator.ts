@@ -15,7 +15,7 @@ import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-
+    private readonly cliActivateVenv: string = join('.', 'func_env', 'Scripts', 'activate');
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
@@ -34,7 +34,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     public async addNonVSCodeFiles(): Promise<void> {
         if (await this.validatePythonVersion()) {
-            await this.createVirtualEnviornment();
+            await this.ensureVirtualEnviornment();
         } else {
             throw new Error('Cannot create Python projects without a Python version that is < 3.6.0.');
         }
@@ -46,12 +46,24 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             tasks: [
                 {
                     label: 'create',
-                    command: `${join('.', 'func_env', 'Scripts', 'activate')} | func init ./ --worker-runtime python`,
+                    command: `${this.cliActivateVenv} | func init ./ --worker-runtime python`,
                     type: 'shell',
                     presentation: {
                         reveal: 'always'
                     },
                     problemMatcher: '$msCompile'
+                },
+                {
+                    label: localize('azFunc.runFuncHost', 'Run Functions Host'),
+                    identifier: funcHostTaskId,
+                    type: 'shell',
+                    dependsOn: 'build',
+                    command: `${this.cliActivateVenv} | func host start`,
+                    isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: []
                 }
             ]
         };
@@ -63,7 +75,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         return gt(pyVersion, minReqVersion);
     }
 
-    private async createVirtualEnviornment(): Promise<void> {
+    private async ensureVirtualEnviornment(): Promise<void> {
         const funcEnv: string = 'func_env';
         if (!(await pathExists(join(this.functionAppPath, funcEnv)))) {
             // if there is no func_env, create one as it's required for Python functions
