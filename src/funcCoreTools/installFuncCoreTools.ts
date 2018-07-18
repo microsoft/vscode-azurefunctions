@@ -3,21 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import { MessageItem } from 'vscode';
+import { DialogResponses } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager, Platform } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 
 export async function installFuncCoreTools(packageManager: PackageManager, runtimeVersion?: string): Promise<void> {
-    const v1: string = 'v1';
-    const v2: string = 'v2';
+    const v1: string = 'v1 (.NET Framework)';
+    const v2: string = 'v2 Preview (.NET Standard)';
+    const learnMoreLink: string = 'https://aka.ms/AA1tpij';
+
     if (process.platform !== Platform.Windows) {
         runtimeVersion = v2;
     } else if (!runtimeVersion) {
         const v1MsgItm: MessageItem = { title: v1 };
         const v2MsgItm: MessageItem = { title: v2 };
-        runtimeVersion = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm)).title;
+        do {
+            runtimeVersion = (await ext.ui.showWarningMessage(localize('windowsVersion', 'Which version of the runtime do you want to install?'), v1MsgItm, v2MsgItm, DialogResponses.learnMore)).title;
+            if (runtimeVersion === DialogResponses.learnMore.title) {
+                opn(learnMoreLink);
+            }
+        }
+        while (runtimeVersion === DialogResponses.learnMore.title);
     }
 
     ext.outputChannel.show();
