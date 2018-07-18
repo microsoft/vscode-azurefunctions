@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { dotnetUtils } from '../utils/dotnetUtils';
@@ -23,6 +24,12 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
     }
 
     protected async getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
+        const projectFilePath: string = getDotnetProjectTemplatePath(runtime);
+        const itemFilePath: string = getDotnetItemTemplatePath(runtime);
+        if (!await fse.pathExists(projectFilePath) || !await fse.pathExists(itemFilePath)) {
+            return undefined;
+        }
+
         const cachedDotnetTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._dotnetTemplatesKey, runtime));
         if (cachedDotnetTemplates) {
             return parseDotnetTemplates(cachedDotnetTemplates, runtime);
