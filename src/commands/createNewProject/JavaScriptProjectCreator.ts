@@ -11,6 +11,8 @@ import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
+    public readonly functionsWorkerRuntime: string | undefined = 'node';
+
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
