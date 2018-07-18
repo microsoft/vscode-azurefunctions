@@ -46,6 +46,7 @@ export interface IFunctionSetting {
     defaultValue: string | undefined;
     enums: IEnumValue[];
     label: string;
+    description?: string;
     name: string;
     validateSetting(value: string | undefined): string | undefined;
 }
