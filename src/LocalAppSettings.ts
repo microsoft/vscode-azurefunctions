@@ -154,10 +154,15 @@ async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: str
 }
 
 export async function getLocalSettings(localSettingsPath: string): Promise<ILocalAppSettings> {
-    return await fse.pathExists(localSettingsPath) ?
-        <ILocalAppSettings>(await fse.readJSON(localSettingsPath)) :
-        {
-            IsEncrypted: false,
-            Values: {}
-        };
+    if (await fse.pathExists(localSettingsPath)) {
+        const data: string = (await fse.readFile(localSettingsPath)).toString();
+        if (/[^\s]/.test(data)) {
+            return <ILocalAppSettings>JSON.parse(data);
+        }
+    }
+
+    return {
+        IsEncrypted: false,
+        Values: {}
+    };
 }
