@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
@@ -97,6 +97,8 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
             await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
+        // Temporarily disabling due to https://github.com/Azure/azure-functions-core-tools/issues/562
+        /*
         const proxiesJsonPath: string = path.join(this.functionAppPath, proxiesFileName);
         if (await confirmOverwriteFile(proxiesJsonPath, this.ui)) {
             const proxiesJson: {} = {
@@ -106,6 +108,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
             };
             await fsUtil.writeFormattedJson(proxiesJsonPath, proxiesJson);
         }
+        */
 
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await confirmOverwriteFile(gitignorePath, this.ui)) {
