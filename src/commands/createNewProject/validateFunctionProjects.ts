@@ -76,6 +76,10 @@ function isInitializedProject(folderPath: string): boolean {
     return !!language && !!runtime;
 }
 
+/**
+ * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30. This verifies users are up-to-date with the latest working debug config.
+ * See https://aka.ms/AA1vrxa for more info
+ */
 async function verifyDebugConfigIsValid(folderPath: string, actionContext: IActionContext): Promise<void> {
     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
     if (language === ProjectLanguage.JavaScript) {
