@@ -4,7 +4,7 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
-## 0.10.0 - 2018-07-19
+## 0.10.0 - 2018-07-24
 
 ### Added
 
@@ -16,6 +16,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 ### Changed
 
+- Debug config for JavaScript functions has changed. See https://aka.ms/AA1vrxa for more info
 - New C# projects will deploy the result of a 'dotnet publish' rather than deploying the build output
 - Azure Function Apps created through VS Code will automatically match the runtime from your local machine rather than always using v1
 
