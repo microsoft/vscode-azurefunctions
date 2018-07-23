@@ -30,6 +30,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
 
                 if (isInitializedProject(folderPath)) {
                     actionContext.properties.isInitialized = 'true';
+                    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
                     await verifyDebugConfigIsValid(folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
