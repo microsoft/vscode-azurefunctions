@@ -124,6 +124,8 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
             if (result === DialogResponses.dontWarnAgain) {
                 await updateWorkspaceSetting(settingKey, false, fsPath);
             } else if (result === DialogResponses.learnMore) {
+                // don't wait to re-show dialog
+                // tslint:disable-next-line:no-floating-promises
                 opn('https://aka.ms/AA1vrxa');
             } else {
                 return true;
