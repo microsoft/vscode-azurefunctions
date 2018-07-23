@@ -9,10 +9,16 @@ import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, localSettingsFileName, projectLanguageSetting, projectRuntimeSetting } from '../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
+import { ext } from '../../extensionVariables';
+import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
+import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
+import { funcHostTaskId } from './IProjectCreator';
+import { ITask, ITasksJson } from './ITasksJson';
+import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -24,6 +30,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
 
                 if (isInitializedProject(folderPath)) {
                     actionContext.properties.isInitialized = 'true';
+                    await verifyDebugConfigIsValid(folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
@@ -67,4 +74,62 @@ function isInitializedProject(folderPath: string): boolean {
     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
     const runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, folderPath);
     return !!language && !!runtime;
+}
+
+async function verifyDebugConfigIsValid(folderPath: string, actionContext: IActionContext): Promise<void> {
+    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+    if (language === ProjectLanguage.JavaScript) {
+        const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
+        if (localProjectRuntime === ProjectRuntime.beta) {
+            const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
+            const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
+
+            if (!rawTasksData.includes(funcNodeDebugEnvVar)) {
+                const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
+
+                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => t.identifier === funcHostTaskId);
+                if (funcTask) {
+                    actionContext.properties.debugConfigValid = 'false';
+
+                    if (await promptToUpdateDebugConfiguration(folderPath)) {
+                        // tslint:disable-next-line:strict-boolean-expressions
+                        funcTask.options = funcTask.options || {};
+                        // tslint:disable-next-line:strict-boolean-expressions
+                        funcTask.options.env = funcTask.options.env || {};
+                        funcTask.options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;
+                        await fsUtil.writeFormattedJson(tasksJsonPath, tasksContent);
+
+                        actionContext.properties.updatedDebugConfig = 'true';
+
+                        const viewFile: vscode.MessageItem = { title: 'View file' };
+                        const result: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(localize('tasksUpdated', 'Your "tasks.json" file has been updated.'), viewFile);
+                        if (result === viewFile) {
+                            await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(tasksJsonPath)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean> {
+    const settingKey: string = 'showDebugConfigWarning';
+    if (getFuncExtensionSetting<boolean>(settingKey)) {
+        const updateConfig: vscode.MessageItem = { title: localize('updateTasks', 'Update tasks.json') };
+        const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
+        let result: vscode.MessageItem;
+        do {
+            result = await ext.ui.showWarningMessage(message, updateConfig, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
+            if (result === DialogResponses.dontWarnAgain) {
+                await updateWorkspaceSetting(settingKey, false, fsPath);
+            } else if (result === DialogResponses.learnMore) {
+                opn('https://aka.ms/AA1vrxa');
+            } else {
+                return true;
+            }
+        } while (result === DialogResponses.learnMore);
+    }
+
+    return false;
 }

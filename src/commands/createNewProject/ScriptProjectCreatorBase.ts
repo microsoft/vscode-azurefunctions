@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
-import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
@@ -47,12 +46,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
     public readonly functionsWorkerRuntime: string | undefined;
 
-    public async getRuntime(): Promise<ProjectRuntime> {
-        // tslint:disable-next-line:strict-boolean-expressions
-        return await tryGetLocalRuntimeVersion() || ScriptProjectCreatorBase.defaultRuntime;
-    }
-
-    public getTasksJson(): {} {
+    public getTasksJson(_runtime: string): {} {
         return {
             version: '2.0.0',
             tasks: [

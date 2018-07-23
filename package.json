@@ -564,6 +564,11 @@
                         "description": "%azFunc.showProjectWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showDebugConfigWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showDebugConfigWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",

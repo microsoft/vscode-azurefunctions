@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TemplateFilter } from "../../constants";
+import { ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
-import { funcHostTaskId } from "./IProjectCreator";
+import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
+import { ITaskOptions } from "./ITasksJson";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
+
+export const funcNodeDebugArgs: string = '--inspect=5858';
+export const funcNodeDebugEnvVar: string = 'languageWorkers:node:arguments';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
@@ -24,6 +28,35 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     port: 5858,
                     protocol: 'inspector',
                     preLaunchTask: funcHostTaskId
+                }
+            ]
+        };
+    }
+
+    public getTasksJson(runtime: string): {} {
+        let options: ITaskOptions | undefined;
+        if (runtime !== ProjectRuntime.one) {
+            options = {};
+            options.env = {};
+            options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;
+        }
+
+        return {
+            version: '2.0.0',
+            tasks: [
+                {
+                    label: funcHostTaskLabel,
+                    identifier: funcHostTaskId,
+                    type: 'shell',
+                    command: 'func host start',
+                    options: options,
+                    isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: [
+                        funcHostProblemMatcher
+                    ]
                 }
             ]
         };
