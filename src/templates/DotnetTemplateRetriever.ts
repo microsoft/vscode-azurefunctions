@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { downloadFile } from '../utils/fs';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
@@ -80,7 +81,7 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
             case ProjectRuntime.beta:
                 return `${id}.2.x`;
             default:
-                throw new RangeError();
+                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
         }
     });
 }
