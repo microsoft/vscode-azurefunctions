@@ -23,10 +23,15 @@ import * as fsUtil from '../src/utils/fs';
 
 // tslint:disable-next-line:max-func-body-length
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
-    this.timeout(120 * 1000);
+    this.timeout(1200 * 1000);
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
     ext.outputChannel = outputChannel;
+    ext.tree = new AzureTreeDataProvider(new FunctionAppProvider(ext.outputChannel), 'azureFunctions.startTesting', undefined, true);
+    let rootNode: IAzureNode<IAzureTreeItem>[] = await ext.tree.getChildren();
+    while (rootNode[0].treeItem.label === 'Waiting for Azure sign-in...') {
+        rootNode = await ext.tree.getChildren();
+    }
     const appName: string = 'travisCTIApp';
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
