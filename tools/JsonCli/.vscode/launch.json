@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+   "configurations": [
+        {
+            "name": ".NET Core Launch (create template)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp2.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "args": [
+                "--require",
+                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-beta.nupkg",
+                "--require",
+                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-beta.nupkg",
+                "--operation",
+                "create",
+                "--identity",
+                "Azure.Function.CSharp.HttpTrigger.2.x",
+                "--arg:name HttpTriggerCSharp2",
+                "--arg:namespace Company.Function",
+                "--arg:AccessRights \"Anonymous\""
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": ".NET Core Launch (list templates)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp2.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "args": [
+                "--require",
+                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-beta.nupkg",
+                "--require",
+                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-beta.nupkg",
+                "--operation",
+                "list"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

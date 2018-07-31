@@ -62,6 +62,8 @@ package-lock.json
 
 # Output
 out
+bin
+obj
 *.vsix
 .vscode-test
 
