@@ -20,19 +20,17 @@ import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
-
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
-    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-    ext.outputChannel = outputChannel;
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
+        const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
+        ext.outputChannel = outputChannel;
         await fse.ensureDir(testFolderPath);
     });
 
     suiteTeardown(async () => {
-        outputChannel.dispose();
         await fse.remove(testFolderPath);
     });
 

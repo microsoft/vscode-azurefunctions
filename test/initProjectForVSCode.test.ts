@@ -12,21 +12,22 @@ import * as vscode from 'vscode';
 import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
+import { ext } from '../src/extensionVariables';
 import * as fsUtil from '../src/utils/fs';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${fsUtil.getRandomHexString()}`);
-    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async () => {
+        ext.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
         await fse.ensureDir(testFolderPath);
     });
 
     suiteTeardown(async () => {
-        outputChannel.dispose();
+        ext.outputChannel.dispose();
         await fse.remove(testFolderPath);
     });
 
