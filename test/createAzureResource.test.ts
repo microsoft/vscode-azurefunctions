@@ -17,7 +17,7 @@ import { FunctionAppTreeItem } from '../src/tree/FunctionAppTreeItem';
 import * as fsUtil from '../src/utils/fs';
 
 // This ensures that this will only run on nightly cron builds
-if (true || process.env.TRAVIS_EVENT_TYPE === 'cron') {
+if (process.env.TRAVIS_EVENT_TYPE === 'cron') {
     suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
         this.timeout(1200 * 1000);
         const appName: string = 'msftazurefunctionscti';
