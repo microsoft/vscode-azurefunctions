@@ -145,7 +145,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         }
 
         const ui: TestUserInput = new TestUserInput(inputs);
-        await initProjectForVSCode({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, ui, outputChannel);
+        await initProjectForVSCode({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, ui, ext.outputChannel);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });
