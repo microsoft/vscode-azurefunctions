@@ -186,7 +186,7 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
                 const regExp: RegExp = /(?:>> templates begin <<$)([\S\s]+)(?:^\[INFO\] >> templates end <<)/gm;
                 const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
                 if (regExpResult && regExpResult.length > 1) {
-                    embeddedTemplates = JSON.parse(regExpResult[1]);
+                    embeddedTemplates = <object[]>JSON.parse(regExpResult[1]);
                 }
             } catch (error) {
                 if (telemetryProperties) {
@@ -203,7 +203,7 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
                     // Ignore errors so that a single poorly formed template does not affect other templates
                 }
             }
-            return templates.length ? templates : basicJavaTemplates;
+            return templates.length > 0 ? templates : basicJavaTemplates;
         }
     }
 }
