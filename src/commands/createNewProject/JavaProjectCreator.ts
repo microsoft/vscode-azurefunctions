@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
-import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
@@ -72,10 +71,10 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         try {
             // Use maven command to init Java function project.
             this.outputChannel.show();
-            await cpUtils.executeCommand(
+            await mavenUtils.executeMvnCommand(
+                this.telemetryProperties,
                 this.outputChannel,
                 tempFolder,
-                'mvn',
                 'archetype:generate',
                 '-DarchetypeGroupId="com.microsoft.azure"',
                 '-DarchetypeArtifactId="azure-functions-archetype"',

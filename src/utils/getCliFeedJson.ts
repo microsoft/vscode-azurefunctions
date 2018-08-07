@@ -7,6 +7,7 @@
 import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
+import { localize } from '../localize';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 const v1DefaultNodeVersion: string = '6.5.0';
@@ -51,7 +52,7 @@ export function getFeedRuntime(runtime: ProjectRuntime): string {
         case ProjectRuntime.one:
             return 'v1';
         default:
-            throw new RangeError();
+            throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
     }
 }
 

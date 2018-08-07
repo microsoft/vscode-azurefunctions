@@ -49,7 +49,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     const vscodePath: string = path.join(functionAppPath, '.vscode');
     await fse.ensureDir(vscodePath);
     outputChannel.appendLine(localize('writingDebugConfig', 'Writing project debug configuration...'));
-    await writeDebugConfiguration(projectCreator, vscodePath, ui);
+    await writeDebugConfiguration(projectCreator, vscodePath, ui, runtime);
     outputChannel.appendLine(localize('writingSettings', 'Writing project settings...'));
     await writeVSCodeSettings(projectCreator, vscodePath, runtime, language, templateFilter, ui);
     outputChannel.appendLine(localize('writingRecommendations', 'Writing extension recommendations...'));
@@ -68,10 +68,10 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     return projectCreator;
 }
 
-async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IAzureUserInput): Promise<void> {
+async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, ui: IAzureUserInput, runtime: string): Promise<void> {
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath, ui)) {
-        await fsUtil.writeFormattedJson(tasksJsonPath, await projectCreator.getTasksJson());
+        await fsUtil.writeFormattedJson(tasksJsonPath, await projectCreator.getTasksJson(runtime));
     }
 
     const launchJson: {} | undefined = projectCreator.getLaunchJson();

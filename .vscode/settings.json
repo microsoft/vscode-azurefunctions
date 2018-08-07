@@ -10,5 +10,8 @@
         ".vscode-test": true
     },
     "tslint.autoFixOnSave": true,
-    "tslint.ignoreDefinitionFiles": true
+    "tslint.ignoreDefinitionFiles": true,
+    "files.exclude": {
+        "tools/JsonCli/src/**": true
+    }
 }

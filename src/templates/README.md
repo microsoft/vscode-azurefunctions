@@ -1,9 +1,16 @@
 # Azure Function Templates
 
-The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions portal](https://functions.azure.com/signin). The portal provides template data in three parts: templates.json, bindingconfig.json, and resources.json. See below for an example of the schema for the TimerTrigger template
+The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions CLI Feed](https://aka.ms/V00v5v). The Functions CLI Feed provides a central location to get the latest version of all templates used for functions. Currently, this repo leverages the following templates:
 
-## Templates.json
-[https://functions.azure.com/api/templates?runtime=~2](https://functions.azure.com/api/templates?runtime=~2)
+* [Script Templates](#script-templates) (i.e. JavaScript, C#Script, and Python)
+* [.NET Templates](#.net-templates) (i.e. C#)
+
+## Script Templates
+
+Script templates are retrieved from the 'templateApiZip' property in the CLI Feed. The zip contains data in three parts: templates.json, bindingconfig.json, and resources.json. See below for an example of the schema for the TimerTrigger template:
+
+### Templates.json
+
 ```json
 [
     {
@@ -43,8 +50,8 @@ The code in this folder is used to parse and model the [function templates](http
 ]
 ```
 
-## BindingConfig.json
-[https://functions.azure.com/api/bindingconfig?runtime=~2](https://functions.azure.com/api/bindingconfig?runtime=~2)
+### BindingConfig.json
+
 ```json
 {
     "$schema": "<TBD>",
@@ -94,8 +101,8 @@ The code in this folder is used to parse and model the [function templates](http
 }
 ```
 
-## Resources.json
-[https://functions.azure.com/api/resources?runtime=~2&name=en-us](https://functions.azure.com/api/resources?runtime=~2&name=en-us)
+### Resources.json
+
 ```json
 {
     "lang": {},
@@ -112,4 +119,48 @@ The code in this folder is used to parse and model the [function templates](http
         "variables_parameterName": "The parameter name must be an alphanumeric string of any number of characters and cannot start with a number."
     }
 }
+```
+
+## .NET Templates
+
+.NET templates are retrieved from the 'itemTemplates' and 'projectTemplates' properties in the CLI Feed. These properties reference two nuget packages. We then leverage the 'Microsoft.TemplateEngine.JsonCli' dll which provides a JSON-based way to interact with .NET templates.
+
+The following is an example command used to list templates:
+
+```
+dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-~1.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-~1.nupkg --operation list
+```
+
+Example format for the Timer Trigger:
+
+```json
+{
+    "Author": "Microsoft",
+    "Classifications": [
+        "Azure Function"
+    ],
+    "DefaultName": "TimerTriggerCSharp",
+    "Identity": "Azure.Function.CSharp.TimerTrigger.1.x",
+    "GroupIdentity": "Azure.Function.TimerTrigger",
+    "Name": "TimerTrigger",
+    "ShortName": "Timer",
+    "Parameters": [
+        {
+            "Documentation": "Enter a cron expression of the format '{second} {minute} {hour} {day} {month} {day of week}' to specify the schedule.",
+            "Name": "Schedule",
+            "Priority": 0,
+            "Type": null,
+            "IsName": false,
+            "DefaultValue": "0 */5 * * * *",
+            "DataType": null,
+            "Choices": null
+        }
+    ]
+}
+```
+
+And the following is an example command for creating a template:
+
+```
+dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-beta.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-beta.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.2.x --arg:Schedule 0 */5 * * * * --arg:name TimerTriggerCSharp --arg:namespace Company.Function
 ```

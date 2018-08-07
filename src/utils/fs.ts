@@ -108,6 +108,7 @@ export async function downloadFile(url: string, filePath: string): Promise<void>
             uri: url
         };
 
+        await fse.ensureDir(path.dirname(filePath));
         request(templateOptions, (err: Error) => {
             // tslint:disable-next-line:strict-boolean-expressions
             if (err) {

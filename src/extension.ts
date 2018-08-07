@@ -38,12 +38,11 @@ import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { getTemplateData } from './templates/TemplateData';
+import { FunctionTemplates, getFunctionTemplates } from './templates/FunctionTemplates';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
-import { dotnetUtils } from './utils/dotnetUtils';
 
 export function activate(context: vscode.ExtensionContext): void {
     registerUIExtensionVariables(ext);
@@ -85,7 +84,9 @@ export function activate(context: vscode.ExtensionContext): void {
             await validateFunctionProjects(this, ui, outputChannel, event.added);
         });
 
-        const templateDataTask: Promise<void> = getTemplateDataTask(context);
+        const templatesTask: Promise<void> = getFunctionTemplates().then((templates: FunctionTemplates) => {
+            ext.functionTemplates = templates;
+        });
 
         registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
         registerCommand('azureFunctions.refresh', async (node?: IAzureNode) => await tree.refresh(node));
@@ -93,11 +94,11 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.loadMore', async (node: IAzureNode) => await tree.loadMore(node));
         registerCommand('azureFunctions.openInPortal', async (node?: IAzureNode<FunctionAppTreeItem>) => await openInPortal(tree, node));
         registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await templateDataTask;
+            await templatesTask;
             await createFunction(this, functionAppPath, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await templateDataTask;
+            await templatesTask;
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
@@ -120,15 +121,10 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.appSettings.decrypt', async (uri?: vscode.Uri) => await decryptLocalSettings(uri));
         registerCommand('azureFunctions.appSettings.encrypt', async (uri?: vscode.Uri) => await encryptLocalSettings(uri));
         registerCommand('azureFunctions.appSettings.delete', async (node?: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
-        registerCommand('azureFunctions.uninstallDotnetTemplates', async () => await dotnetUtils.uninstallTemplates());
         registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, ui, tree, node));
         registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
     });
-}
-
-async function getTemplateDataTask(context: vscode.ExtensionContext): Promise<void> {
-    ext.templateData = await getTemplateData(context.globalState);
 }
 
 // tslint:disable-next-line:no-empty

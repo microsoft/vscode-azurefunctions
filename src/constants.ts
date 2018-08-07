@@ -19,6 +19,7 @@ export enum ProjectLanguage {
     Batch = 'Batch',
     CSharp = 'C#',
     CSharpScript = 'C#Script',
+    FSharp = 'F#',
     FSharpScript = 'F#Script',
     Java = 'Java',
     JavaScript = 'JavaScript',
@@ -48,6 +49,8 @@ export enum Platform {
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const proxiesFileName: string = 'proxies.json';
+export const tasksFileName: string = 'tasks.json';
+export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 
 export enum PackageManager {
@@ -56,3 +59,9 @@ export enum PackageManager {
 }
 
 export const funcPackageName: string = 'azure-functions-core-tools';
+
+export enum ScmType {
+    None = 'None', // default scmType
+    LocalGit = 'LocalGit',
+    GitHub = 'GitHub'
+}

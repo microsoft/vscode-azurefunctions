@@ -8,7 +8,7 @@ import * as path from 'path';
 import { IAzureUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
 import { localize } from "../../localize";
-import { Template } from "../../templates/Template";
+import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import * as fsUtil from '../../utils/fs';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 
@@ -41,10 +41,11 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
  * Function creator for multiple languages that don't require compilation (JavaScript, C# Script, Bash, etc.)
  */
 export class ScriptFunctionCreator extends FunctionCreatorBase {
+    protected _template: IScriptFunctionTemplate;
     private _language: string;
     private _functionName: string;
 
-    constructor(functionAppPath: string, template: Template, language: string) {
+    constructor(functionAppPath: string, template: IScriptFunctionTemplate, language: string) {
         super(functionAppPath, template);
         this._language = language;
     }

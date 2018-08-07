@@ -9,6 +9,7 @@
 // tslint:disable:typedef
 // tslint:disable:strict-boolean-expressions
 
+import * as path from 'path';
 import { ExtensionContext, Memento } from 'vscode';
 
 class TestMemento implements Memento {
@@ -31,7 +32,7 @@ export class TestExtensionContext implements ExtensionContext {
     constructor() {
         this.globalState = new TestMemento();
     }
-    public asAbsolutePath(_relativePath: string): string {
-        throw new Error('Method not implemented.');
+    public asAbsolutePath(relativePath: string): string {
+        return path.join(__dirname, '..', '..', relativePath);
     }
 }

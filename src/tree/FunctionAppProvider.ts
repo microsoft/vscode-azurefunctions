@@ -68,16 +68,16 @@ export class FunctionAppProvider implements IChildProvider {
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: ProjectRuntime | undefined = getFuncExtensionSetting(projectRuntimeSetting);
+    let runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting);
     actionContext.properties.runtimeSource = 'VSCodeSetting';
 
-    if (runtime === undefined) {
+    if (!runtime) {
         // Try to get the runtime that matches their local func cli version
         runtime = await tryGetLocalRuntimeVersion();
         actionContext.properties.runtimeSource = 'LocalFuncCli';
     }
 
-    if (runtime === undefined) {
+    if (!runtime) {
         // Default to v1 if all else fails
         runtime = ProjectRuntime.one;
         actionContext.properties.runtimeSource = 'Backup';
@@ -85,5 +85,5 @@ async function getDefaultRuntime(actionContext: IActionContext): Promise<Project
 
     actionContext.properties.projectRuntime = runtime;
 
-    return runtime;
+    return <ProjectRuntime>runtime;
 }
