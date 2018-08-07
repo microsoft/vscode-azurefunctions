@@ -12,7 +12,7 @@ import { cpUtils } from './cpUtils';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
-    export async function validateMavenInstalled(workingDirectory: string): Promise<void> {
+    export async function validateMavenInstalled(workingDirectory: string | undefined): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
         } catch (error) {
@@ -38,7 +38,21 @@ export namespace mavenUtils {
         });
     }
 
-    export async function executeMvnCommand(telemetryProperties: TelemetryProperties, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
+    export async function getFunctionPluginVersion(telemetryProperties: TelemetryProperties | undefined, workingDirectory: string | undefined): Promise<string> {
+        try {
+            const pluginDescription: string = await executeMvnCommand(telemetryProperties, undefined, workingDirectory, '-Dplugin=com.microsoft.azure:azure-functions-maven-plugin', 'help:describe');
+            const versionRegex: RegExp = /^Version:(.*)$/gm;
+            const result: RegExpExecArray | null = versionRegex.exec(pluginDescription);
+            if (result && result.length === 2) {
+                return result[1].trim();
+            }
+        } catch (error) {
+            // swallow exceptions and return an empty string meaning failed to get plugin version.
+        }
+        return '';
+    }
+
+    export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
@@ -50,7 +64,9 @@ export namespace mavenUtils {
                 }
             }
             errorOutput = errorOutput.replace(/^\[ERROR\]/gm, '');
-            telemetryProperties.mavenErrors = errorOutput;
+            if (telemetryProperties) {
+                telemetryProperties.mavenErrors = errorOutput;
+            }
             if (outputChannel) {
                 outputChannel.show();
                 throw new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', mvnCommand));
