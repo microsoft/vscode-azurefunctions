@@ -67,14 +67,6 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
 
     const client: SiteClient = node.treeItem.client;
-
-    // if (node.treeItem.logStream && node.treeItem.logStream.isConnected) {
-
-    //     var a = '';
-    //     console.log(a);
-
-    // }
-
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
