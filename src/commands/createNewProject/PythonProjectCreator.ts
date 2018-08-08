@@ -21,12 +21,10 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             version: '0.2.0',
             configurations: [
                 {
-                    name: localize('azFunc.attachToJavaScriptFunc', 'Attach to JavaScript Functions'),
-                    type: 'node',
+                    name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
+                    type: 'python',
                     request: 'attach',
-                    port: 5858,
-                    protocol: 'inspector',
-                    preLaunchTask: funcHostTaskId
+                    processId: '\${command:azureFunctions.pickProcess}'
                 }
             ]
         };
@@ -58,7 +56,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     dependsOn: 'build',
-                    command: `${this.cliActivateVenv} | func host start`,
+                    command: `${this.cliActivateVenv} | func host start --5858`,
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
