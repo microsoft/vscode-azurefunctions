@@ -25,10 +25,9 @@ import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
-import { runFromZipDeploy } from './runFromZipDeploy';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(actionContext: IActionContext, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
