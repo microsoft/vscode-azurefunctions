@@ -60,7 +60,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
     ext.outputChannel = outputChannel;
-
     context.subscriptions.push(outputChannel);
 
     callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
