@@ -12,7 +12,7 @@ import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { ILogStreamTreeItem } from './ILogStreamTreeItem';
 
-export async function startStreamingLogs(context: vscode.ExtensionContext, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
+export async function startStreamingLogs(context: vscode.ExtensionContext, tree: AzureTreeDataProvider, logsOutputChannels: { [channelName: string]: { channelObj: vscode.OutputChannel } }, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
     if (!node) {
         node = <IAzureNode<ILogStreamTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
@@ -20,7 +20,7 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, tree:
     const treeItem: ILogStreamTreeItem = node.treeItem;
     if (treeItem.logStream && treeItem.logStream.isConnected) {
         // tslint:disable-next-line:no-non-null-assertion
-        treeItem.logStreamOutputChannel!.show();
+        logsOutputChannels[treeItem.logStreamLabel].channelObj!.show();
         await ext.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
     } else {
         const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
@@ -38,35 +38,12 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, tree:
             await treeItem.client.updateLogsConfig(logsConfig);
         }
 
-
-        var i: number;
-        var logsStreamExists: boolean = false;
-
-        for (i = (context.subscriptions.length - 1); i >= 0; i--) {
-
-            if (context.subscriptions[i]["name"] != undefined && context.subscriptions[i]["name"] == (treeItem.logStreamLabel + ' - Log Stream')) {
-                logsStreamExists = true;
-                break;
-            }
+        if (!logsOutputChannels[treeItem.logStreamLabel]) {
+            const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel(localize('logStreamLabel', '{0} - Log Stream', treeItem.logStreamLabel));
+            context.subscriptions.push(outputChannel);
+            logsOutputChannels[treeItem.logStreamLabel] = { channelObj: outputChannel };
         }
-
-        if (logsStreamExists) {
-            //console.log("Just wait a minute! It already exists!");
-            //ext.outputChannel //ui.showWarningMessage()
-            await ext.outputChannel.show();
-            await ext.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
-
-        }
-        else {
-            if (!treeItem.logStreamOutputChannel) {
-                const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel(localize('logStreamLabel', '{0} - Log Stream', treeItem.logStreamLabel));
-
-                context.subscriptions.push(outputChannel);
-                treeItem.logStreamOutputChannel = outputChannel;
-            }
-            treeItem.logStream = await appservice.startStreamingLogs(treeItem.client, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
-        }
-
+        treeItem.logStream = await appservice.startStreamingLogs(treeItem.client, logsOutputChannels[treeItem.logStreamLabel].channelObj, treeItem.logStreamPath);
     }
 }
 
