@@ -4,15 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as opn from 'opn';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
-import { cpUtils } from '../../utils/cpUtils';
+import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
+import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 
@@ -20,21 +22,20 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
+    private _debugSubpath: string;
     private _runtime: ProjectRuntime;
 
     public async addNonVSCodeFiles(): Promise<void> {
-        await dotnetUtils.validateTemplatesInstalled(this.outputChannel, this.ui);
+        await dotnetUtils.validateDotnetInstalled();
 
-        const csProjName: string = `${path.basename(this.functionAppPath)}.csproj`;
-        const overwriteExisting: boolean = await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
-        await cpUtils.executeCommand(
-            this.outputChannel,
-            this.functionAppPath,
-            'dotnet',
-            'new',
-            dotnetUtils.funcProjectId,
-            overwriteExisting ? '--force' : ''
-        );
+        const projectName: string = path.basename(this.functionAppPath);
+        const csProjName: string = `${projectName}.csproj`;
+        await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
+
+        // tslint:disable-next-line:strict-boolean-expressions
+        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
     }
 
     public async getRuntime(): Promise<ProjectRuntime> {
@@ -64,8 +65,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     try {
                         const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            // tslint:disable-next-line:no-unsafe-any
-                            opn('https://aka.ms/azFunc64bit');
+                            await opn('https://aka.ms/azFunc64bit');
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(settingKey, false);
                         }
@@ -77,7 +77,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     }
                 }
             }
-            this.deploySubpath = `bin/Debug/${targetFramework}`;
+            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
+            this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
 
         return this._runtime;
@@ -111,12 +112,31 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
+                    label: 'clean release',
+                    command: 'dotnet clean --configuration Release',
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
+                    label: 'publish',
+                    command: 'dotnet publish --configuration Release',
+                    type: 'shell',
+                    dependsOn: 'clean release',
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: '$msCompile'
+                },
+                {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
-                        cwd: `\${workspaceFolder}/${this.deploySubpath}`
+                        cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
                     command: 'func host start',
                     isBackground: true,
@@ -185,7 +205,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         }
 
         if (existingFiles.length > 0) {
-            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), DialogResponses.yes, DialogResponses.cancel);
+            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             return true;
         } else {
             return false;

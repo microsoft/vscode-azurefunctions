@@ -62,5 +62,10 @@ package-lock.json
 
 # Output
 out
+bin
+obj
 *.vsix
 .vscode-test
+
+# debugging artifacts
+resources/dotnetTemplates

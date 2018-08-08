@@ -20,4 +20,13 @@ export namespace gitUtils {
     export async function gitInit(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
         await cpUtils.executeCommand(outputChannel, workingDirectory, gitCommand, 'init');
     }
+
+    export async function isInsideRepo(workingDirectory: string): Promise<boolean> {
+        try {
+            await cpUtils.executeCommand(undefined, workingDirectory, gitCommand, 'rev-parse', '--git-dir');
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
 }

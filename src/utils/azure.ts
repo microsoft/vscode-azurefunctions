@@ -10,11 +10,11 @@ import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getResourceTypeLabel, ResourceType } from '../templates/ConfigSetting';
+import { getResourceTypeLabel, ResourceType } from '../templates/IFunctionSetting';
 
 function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
@@ -65,6 +65,7 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId);
+    addExtensionUserAgent(client);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
@@ -79,7 +80,7 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     }
 }
 
-export async function promptForStorageAccount(actionContext: IActionContext): Promise<IResourceResult> {
+export async function promptForStorageAccount(actionContext: IActionContext, filterOptions: IStorageAccountFilters): Promise<IResourceResult> {
     const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
     const wizardContext: IStorageAccountWizardContext = {
@@ -88,15 +89,16 @@ export async function promptForStorageAccount(actionContext: IActionContext): Pr
         subscriptionDisplayName: node.subscriptionDisplayName
     };
     const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(
-        [new StorageAccountListStep(StorageAccountKind.Storage, StorageAccountPerformance.Standard, StorageAccountReplication.LRS)],
+        [new StorageAccountListStep({ kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS }, filterOptions)],
         [],
         wizardContext
     );
 
-    await wizard.prompt(actionContext, ext.ui);
-    await wizard.execute(actionContext, ext.outputChannel);
+    await wizard.prompt(actionContext);
+    await wizard.execute(actionContext);
 
     const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
+    addExtensionUserAgent(client);
     // tslint:disable-next-line:no-non-null-assertion
     const storageAccount: StorageAccount = wizardContext.storageAccount!;
 

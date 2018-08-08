@@ -6,10 +6,10 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
-import { cpUtils } from '../../utils/cpUtils';
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
@@ -71,10 +71,10 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         try {
             // Use maven command to init Java function project.
             this.outputChannel.show();
-            await cpUtils.executeCommand(
+            await mavenUtils.executeMvnCommand(
+                this.telemetryProperties,
                 this.outputChannel,
                 tempFolder,
-                'mvn',
                 'archetype:generate',
                 '-DarchetypeGroupId="com.microsoft.azure"',
                 '-DarchetypeArtifactId="azure-functions-archetype"',
@@ -92,7 +92,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         this._javaTargetPath = `target/azure-functions/${appName}/`;
     }
 
-    public getTasksJson(): {} {
+    public async getTasksJson(): Promise<{}> {
         let tasksJson: {} = {
             version: '2.0.0',
             tasks: [
@@ -100,13 +100,13 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     label: funcHostTaskLabel,
                     identifier: funcHostTaskId,
                     linux: {
-                        command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
+                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     osx: {
-                        command: 'sh -c "mvn clean package -B && func host start --script-root \\\"%path%\\\""'
+                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     windows: {
-                        command: 'powershell -command "mvn clean package -B; func host start --script-root \\\"%path%\\\""'
+                        command: 'powershell -command "mvn clean package -B; func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
                     type: 'shell',
                     isBackground: true,
@@ -120,6 +120,19 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             ]
         };
         let tasksJsonString: string = JSON.stringify(tasksJson);
+        if (!this._javaTargetPath) {
+            const pomFilePath: string = path.join(this.functionAppPath, 'pom.xml');
+            if (!await fse.pathExists(pomFilePath)) {
+                throw new Error(localize('pomNotFound', 'Cannot find pom file in current project, please make sure the language setting is correct.'));
+            }
+            const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomFilePath);
+            if (!functionAppName) {
+                this._javaTargetPath = '<function_build_path>';
+                vscode.window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
+            } else {
+                this._javaTargetPath = `target/azure-functions/${functionAppName}/`;
+            }
+        }
         tasksJsonString = tasksJsonString.replace(/%path%/g, this._javaTargetPath);
         // tslint:disable-next-line:no-string-literal no-unsafe-any
         tasksJson = JSON.parse(tasksJsonString);

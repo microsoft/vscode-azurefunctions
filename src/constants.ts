@@ -10,12 +10,16 @@ export const projectLanguageSetting: string = 'projectLanguage';
 export const projectRuntimeSetting: string = 'projectRuntime';
 export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
+export const templateVersionSetting: string = 'templateVersion';
+export const v1ReleaseVersion: string = '1.0.12'; // known stable version
+export const betaReleaseVersion: string = '2.0.1-beta.25'; // known stable version
 
 export enum ProjectLanguage {
     Bash = 'Bash',
     Batch = 'Batch',
     CSharp = 'C#',
     CSharpScript = 'C#Script',
+    FSharp = 'F#',
     FSharpScript = 'F#Script',
     Java = 'Java',
     JavaScript = 'JavaScript',
@@ -44,4 +48,20 @@ export enum Platform {
 
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
+export const proxiesFileName: string = 'proxies.json';
+export const tasksFileName: string = 'tasks.json';
+export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
+
+export enum PackageManager {
+    npm,
+    brew
+}
+
+export const funcPackageName: string = 'azure-functions-core-tools';
+
+export enum ScmType {
+    None = 'None', // default scmType
+    LocalGit = 'LocalGit',
+    GitHub = 'GitHub'
+}

@@ -9,11 +9,11 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
-import { dotnetUtils } from '../src/utils/dotnetUtils';
+import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
 import * as fsUtil from '../src/utils/fs';
 import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
@@ -29,7 +29,6 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await fse.ensureDir(testFolderPath);
-        await dotnetUtils.installDotnetTemplates(new TestUserInput([]), outputChannel);
     });
 
     suiteTeardown(async () => {
@@ -135,6 +134,10 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
+        if (!(await funcToolsInstalled())) {
+            inputs.push(DialogResponses.skipForNow.title);
+        }
+
         if (!previewLanguage) {
             inputs.unshift(language); // Specify the function name
         }

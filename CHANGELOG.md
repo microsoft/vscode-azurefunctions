@@ -4,6 +4,51 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.10.0 - 2018-07-24
+
+### Added
+
+- Improved C# templates
+  - More templates are available
+  - Templates will be automatically updated going forward
+  - Templates are installed only with the scope of VS Code and no longer affect machine-wide .NET CLI templates
+- Added support for deploying to App Service Environments
+
+### Changed
+
+- Debug config for JavaScript functions has changed. See https://aka.ms/AA1vrxa for more info
+- New C# projects will deploy the result of a 'dotnet publish' rather than deploying the build output
+- Azure Function Apps created through VS Code will automatically match the runtime from your local machine rather than always using v1
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.0%22+label%3Abug+is%3Aclosed)
+
+## 0.9.1 - 2018-05-23
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.1%22+label%3Abug+is%3Aclosed)
+
+- Users will not be prompted to install the latest version of the func cli if high priority issues are discovered
+  - For example, the latest version of the func cli (2.0.1-beta.26) [breaks JavaScript debugging](https://github.com/Microsoft/vscode-azurefunctions/issues/387)
+
+## 0.9.0 - 2018-05-09
+
+### Added
+
+- Improved warning when Azure Functions Core Tools is out of date
+  - In some cases, an 'Update' option is provided that will automatically run the necessary commmands
+  - Warning now displays for all users, regardless of how they installed the func cli
+- Function templates are now versioned and can be controlled with the "azureFunctions.templateVersion" setting
+- Select open behavior after creating a new project ("Add to workspace", "Open in current window", or "Open in new window")
+
+### Changed
+
+- Moved Azure Functions Explorer to new Azure view container instead of file explorer
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.8.1 - 2018-04-13
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.1%22+label%3Abug+is%3Aclosed)
 - Deployment fail when deploying to function app with a custom domain

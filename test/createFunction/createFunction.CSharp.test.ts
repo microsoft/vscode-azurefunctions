@@ -8,9 +8,7 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
-import { dotnetUtils } from '../../src/utils/dotnetUtils';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -32,7 +30,6 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         this.timeout(120 * 1000);
         await csTester.initAsync();
-        await dotnetUtils.installDotnetTemplates(new TestUserInput([]), csTester.outputChannel);
     });
 
     // tslint:disable-next-line:no-function-expression
@@ -41,7 +38,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         await csTester.dispose();
     });
 
-    const blobTrigger: string = 'Blob trigger';
+    const blobTrigger: string = 'BlobTrigger';
     test(blobTrigger, async () => {
         await csTester.testCreateFunction(
             blobTrigger,
@@ -51,7 +48,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         );
     });
 
-    const httpTrigger: string = 'HTTP trigger';
+    const httpTrigger: string = 'HttpTrigger';
     test(httpTrigger, async () => {
         await csTester.testCreateFunction(
             httpTrigger,
@@ -60,7 +57,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         );
     });
 
-    const queueTrigger: string = 'Queue trigger';
+    const queueTrigger: string = 'QueueTrigger';
     test(queueTrigger, async () => {
         await csTester.testCreateFunction(
             queueTrigger,
@@ -70,7 +67,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         );
     });
 
-    const timerTrigger: string = 'Timer trigger';
+    const timerTrigger: string = 'TimerTrigger';
     test(timerTrigger, async () => {
         await csTester.testCreateFunction(
             timerTrigger,
@@ -80,11 +77,13 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
     });
 
     test('createFunction API', async () => {
-        const templateId: string = 'HttpTrigger-CSharp';
+        // Intentionally testing IoTHub trigger since a partner team plans to use that
+        const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
         const functionName: string = 'createFunctionApi';
         const namespace: string = 'Company.Function';
-        const authLevel: string = 'Anonymous';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, { namespace, authLevel });
+        const iotPath: string = 'messages/events';
+        const connection: string = 'IoTHub_Setting';
+        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await csTester.validateFunction(csTester.funcPortalTestFolder, functionName);
     });
 });

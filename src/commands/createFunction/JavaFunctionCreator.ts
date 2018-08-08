@@ -6,11 +6,10 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IAzureUserInput } from 'vscode-azureextensionui';
+import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
-import { Template } from "../../templates/Template";
-import { removeLanguageFromId } from "../../templates/TemplateData";
-import { cpUtils } from "../../utils/cpUtils";
+import { removeLanguageFromId } from "../../templates/FunctionTemplates";
+import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
 import { mavenUtils } from "../../utils/mavenUtils";
@@ -24,10 +23,12 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
+    private _telemetryProperties: TelemetryProperties;
 
-    constructor(functionAppPath: string, template: Template, outputChannel: OutputChannel) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, telemetryProperties: TelemetryProperties) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
+        this._telemetryProperties = telemetryProperties;
     }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined): Promise<void> {
@@ -59,10 +60,10 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
 
         await mavenUtils.validateMavenInstalled(this._functionAppPath);
         this._outputChannel.show();
-        await cpUtils.executeCommand(
+        await mavenUtils.executeMvnCommand(
+            this._telemetryProperties,
             this._outputChannel,
             this._functionAppPath,
-            'mvn',
             'azure-functions:add',
             '-B',
             `"-Dfunctions.package=${this._packageName}"`,

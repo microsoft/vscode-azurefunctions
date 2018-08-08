@@ -2,12 +2,12 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%extension.description%",
-    "version": "0.8.2-alpha",
+    "version": "0.10.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "engines": {
-        "vscode": "^1.20.0"
+        "vscode": "^1.24.0"
     },
     "repository": {
         "type": "git",
@@ -54,11 +54,10 @@
         "onCommand:azureFunctions.appSettings.encrypt",
         "onCommand:azureFunctions.appSettings.decrypt",
         "onCommand:azureFunctions.pickProcess",
-        "onCommand:azureFunctions.installDotnetTemplates",
-        "onCommand:azureFunctions.uninstallDotnetTemplates",
         "onCommand:azureFunctions.startStreamingLogs",
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
+        "onCommand:azureFunctions.uninstallFuncCoreTools",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
         "onView:azureFunctionsExplorer"
@@ -216,16 +215,6 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.installDotnetTemplates",
-                "title": "%azFunc.installDotnetTemplates%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.uninstallDotnetTemplates",
-                "title": "%azFunc.uninstallDotnetTemplates%",
-                "category": "Azure Functions"
-            },
-            {
                 "command": "azureFunctions.startStreamingLogs",
                 "title": "%azFunc.startStreamingLogs%",
                 "category": "Azure Functions"
@@ -239,13 +228,27 @@
                 "command": "azureFunctions.deleteProxy",
                 "title": "%azFunc.deleteProxy%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.uninstallFuncCoreTools",
+                "title": "%azFunc.uninstallFuncCoreTools%",
+                "category": "Azure Functions"
             }
         ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "azure",
+                    "title": "Azure",
+                    "icon": "resources/azure.svg"
+                }
+            ]
+        },
         "views": {
-            "explorer": [
+            "azure": [
                 {
                     "id": "azureFunctionsExplorer",
-                    "name": "Azure Functions",
+                    "name": "Functions",
                     "when": "config.azureFunctions.showExplorer == true"
                 }
             ]
@@ -561,6 +564,11 @@
                         "description": "%azFunc.showProjectWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showDebugConfigWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showDebugConfigWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",
@@ -575,6 +583,19 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "%azFunc.deployStorageAccountDescription%"
+                    },
+                    "azureFunctions.templateVersion": {
+                        "type": "string",
+                        "description": "%azFunc.templateVersion%"
+                    },
+                    "azureFunctions.projectOpenBehavior": {
+                        "type": "string",
+                        "enum": [
+                            "AddToWorkspace",
+                            "OpenInNewWindow",
+                            "OpenInCurrentWindow"
+                        ],
+                        "description": "%azFunc.projectOpenBehaviorDescription%"
                     }
                 }
             }
@@ -591,6 +612,7 @@
         "@types/fs-extra": "^4.0.3",
         "@types/mocha": "^2.2.32",
         "@types/node": "^8.0.28",
+        "@types/opn": "^5.1.0",
         "@types/request": "2.0.7",
         "@types/request-promise": "4.1.38",
         "@types/semver": "^5.5.0",
@@ -612,8 +634,9 @@
         "azure-arm-cosmosdb": "^1.1.2",
         "azure-arm-resource": "^3.0.0-preview",
         "azure-arm-storage": "^3.1.0",
-        "azure-arm-website": "^1.0.0-preview",
+        "azure-arm-website": "^3.0.0-preview",
         "clipboardy": "^1.2.2",
+        "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
         "ms-rest": "^2.2.2",
         "ms-rest-azure": "^2.3.1",
@@ -622,10 +645,10 @@
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "~0.15.0",
-        "vscode-azureextensionui": "~0.12.0",
-        "vscode-azurekudu": "~0.1.7",
-        "vscode-extension-telemetry": "^0.0.15",
+        "vscode-azureappservice": "^0.19.1",
+        "vscode-azureextensionui": "^0.16.5",
+        "vscode-azurekudu": "^0.1.8",
+        "vscode-extension-telemetry": "^0.0.18",
         "vscode-nls": "^2.0.2",
         "websocket": "^1.0.25",
         "xml2js": "^0.4.19",

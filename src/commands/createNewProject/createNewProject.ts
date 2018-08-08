@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as vscode from 'vscode';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
@@ -21,7 +21,6 @@ import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-import { validateFuncCoreToolsInstalled } from './validateFuncCoreToolsInstalled';
 
 export async function createNewProject(
     actionContext: IActionContext,
@@ -59,18 +58,17 @@ export async function createNewProject(
 
     await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
-    if (await gitUtils.isGitInstalled(functionAppPath)) {
+    if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
         await gitUtils.gitInit(ext.outputChannel, functionAppPath);
     }
 
     if (templateId) {
         await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
-    await validateFuncCoreToolsInstalled(ext.ui, ext.outputChannel);
+    await validateFuncCoreToolsInstalled();
 
-    if (openFolder && !workspaceUtil.isFolderOpenInWorkspace(functionAppPath)) {
-        // If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
-        await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(functionAppPath), false);
+    if (openFolder) {
+        await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
 }
 

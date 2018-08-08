@@ -5,12 +5,12 @@
 
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureQuickPickItem, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
 import { localize } from './localize';
-import { getResourceTypeLabel, ResourceType } from './templates/ConfigSetting';
+import { getResourceTypeLabel, ResourceType } from './templates/IFunctionSetting';
 import * as azUtil from './utils/azure';
 import { IResourceResult } from './utils/azure';
 import * as fsUtil from './utils/fs';
@@ -47,7 +47,15 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
                 resourceResult = await azUtil.promptForCosmosDBAccount();
                 break;
             case ResourceType.Storage:
-                resourceResult = await azUtil.promptForStorageAccount(actionContext);
+                resourceResult = await azUtil.promptForStorageAccount(
+                    actionContext,
+                    {
+                        kind: [
+                            StorageAccountKind.BlobStorage
+                        ],
+                        learnMoreLink: 'https://aka.ms/T5o0nf'
+                    }
+                );
                 break;
             default:
         }
@@ -97,7 +105,21 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
         let connectionString: string;
 
         try {
-            const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(actionContext);
+            const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(
+                actionContext,
+                {
+                    kind: [
+                        StorageAccountKind.BlobStorage
+                    ],
+                    performance: [
+                        StorageAccountPerformance.Premium
+                    ],
+                    replication: [
+                        StorageAccountReplication.ZRS
+                    ],
+                    learnMoreLink: 'https://aka.ms/Cfqnrc'
+                }
+            );
             connectionString = resourceResult.connectionString;
         } catch (error) {
             if (error instanceof NoSubscriptionError) {
@@ -122,7 +144,7 @@ async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: str
 
     if (settings.Values[key]) {
         const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-        if (await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
+        if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
             return;
         }
     }
@@ -132,10 +154,15 @@ async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: str
 }
 
 export async function getLocalSettings(localSettingsPath: string): Promise<ILocalAppSettings> {
-    return await fse.pathExists(localSettingsPath) ?
-        <ILocalAppSettings>(await fse.readJSON(localSettingsPath)) :
-        {
-            IsEncrypted: false,
-            Values: {}
-        };
+    if (await fse.pathExists(localSettingsPath)) {
+        const data: string = (await fse.readFile(localSettingsPath)).toString();
+        if (/[^\s]/.test(data)) {
+            return <ILocalAppSettings>JSON.parse(data);
+        }
+    }
+
+    return {
+        IsEncrypted: false,
+        Values: {}
+    };
 }

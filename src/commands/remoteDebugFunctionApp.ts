@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { SiteConfigResource, StringDictionary, User } from 'azure-arm-website/lib/models';
-import * as opn from "opn";
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
@@ -38,10 +39,9 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
                 const appSettings: StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
-                    const result: vscode.MessageItem = await ui.showWarningMessage(confirmMsg, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
+                    const result: vscode.MessageItem = await ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
                     if (result === DialogResponses.learnMore) {
-                        // tslint:disable-next-line:no-unsafe-any
-                        opn('https://aka.ms/azfunc-remotedebug');
+                        await opn('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
                         await updateSiteConfig(outputChannel, client, p, siteConfig);

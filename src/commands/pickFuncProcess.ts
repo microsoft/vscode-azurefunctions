@@ -7,14 +7,19 @@
 import ps = require('ps-node');
 import { isNullOrUndefined } from 'util';
 import * as vscode from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, isWindows } from '../constants';
+import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { funcHostTaskId } from './createNewProject/IProjectCreator';
 
 export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
+    if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
+        throw new UserCancelledError();
+    }
+
     let funcHostPid: string | undefined = await getFuncHostPid();
     if (funcHostPid !== undefined) {
         // Stop the functions host to prevent build errors like "Cannot access the file '...' because it is being used by another process."

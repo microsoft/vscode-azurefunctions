@@ -89,7 +89,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         }
     }
 
-    public async deleteTreeItem(node: IAzureNode): Promise<void> {
-        await deleteSite(this.client, node.ui, this._outputChannel);
+    public async deleteTreeItem(_node: IAzureNode): Promise<void> {
+        await deleteSite(this.client);
     }
 }

@@ -76,33 +76,26 @@ brew install azure-functions-core-tools
 
 ### Linux
 
-1. Register the Microsoft Product key as trusted.
-
-    ```bash
-    curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-    sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
-    ```
-
 1. Set up package feed
+    * Ubuntu 18.04
+
+        ```bash
+        wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        ```
+
     * Ubuntu 17.10
 
         ```bash
-        sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-artful-prod artful main" > /etc/apt/sources.list.d/dotnetdev.list'
-        sudo apt-get update
-        ```
-
-    * Ubuntu 17.04
-
-        ```bash
-        sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-zesty-prod zesty main" > /etc/apt/sources.list.d/dotnetdev.list'
-        sudo apt-get update
+        wget -q https://packages.microsoft.com/config/ubuntu/17.10/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
         ```
 
     * Ubuntu 16.04 / Linux Mint 18
 
         ```bash
-        sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main" > /etc/apt/sources.list.d/dotnetdev.list'
-        sudo apt-get update
+        wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
         ```
 
 1. Install
@@ -110,6 +103,8 @@ brew install azure-functions-core-tools
     ```bash
     sudo apt-get install azure-functions-core-tools
     ```
+
+See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/README.md) for more installation options and the latest instructions.
 
 ## Language-Specific Prerequisites
 
@@ -121,15 +116,6 @@ brew install azure-functions-core-tools
 
 * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
 * [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
-* .NET Templates for Azure Functions
-  * You will be automatically prompted to install these templates when you first create a project/function
-    * If you are using v2.0 of the Azure Functions runtime, you must install the beta (.NET Core) templates
-    * If you are using v1.0 of the Azure Functions runtime, you must install the v1.0 (.NET Framework) templates.
-    > **NOTE**: The VS Code Debugger for C# [only supports](https://github.com/OmniSharp/omnisharp-vscode/issues/1716) attaching to 64-bit processes. v1.0 of the Azure Functions runtime defaults to 32-bit and you must install a 64-bit version. See [here](https://aka.ms/azFunc64bit) for instructions.
-  * You may uninstall or reinstall the templates with the following steps:
-    1. Open Command Palette (View -> Command Palette...)
-    1. Search for "Azure Functions" and "install" or "uninstall"
-    1. Run the corresponding command for .NET templates
 
 > **NOTE**: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
 
