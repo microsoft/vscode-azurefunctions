@@ -43,7 +43,6 @@ import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
-import { mavenPluginVersionCache } from './utils/mavenPluginVersionCache';
 
 export function activate(context: vscode.ExtensionContext): void {
     registerUIExtensionVariables(ext);
@@ -62,12 +61,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions');
     ext.outputChannel = outputChannel;
 
-    // tslint:disable-next-line:no-floating-promises
-    mavenPluginVersionCache.init();
-    context.subscriptions.push(
-        outputChannel,
-        mavenPluginVersionCache
-    );
+    context.subscriptions.push(outputChannel);
 
     callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';

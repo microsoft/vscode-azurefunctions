@@ -117,7 +117,7 @@ export async function createFunction(
         [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter, actionContext.properties);
     } else {
         templateFilter = TemplateFilter.All;
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, TemplateFilter.All, functionAppPath, actionContext.properties);
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, TemplateFilter.All, actionContext.properties);
         const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -181,7 +181,7 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
 
     let template: IFunctionTemplate | undefined;
     while (!template) {
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, templateFilter, functionAppPath, telemetryProperties);
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
         let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
         picks = picks.concat([
             { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },

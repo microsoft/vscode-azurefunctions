@@ -3,13 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SemVer } from 'semver';
 import { isString } from 'util';
 import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-import { localize } from '../localize';
-import { mavenPluginVersionCache } from '../utils/mavenPluginVersionCache';
 import { mavenUtils } from "../utils/mavenUtils";
 import { removeLanguageFromId } from "./FunctionTemplates";
 import { IEnumValue, IFunctionSetting, ResourceType, ValueType } from './IFunctionSetting';
@@ -160,50 +157,36 @@ function getResourceValue(resources: IResources, data: string): string {
     return matches !== null ? resources.en[matches[1]] : data;
 }
 
-export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], functionAppPath?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
+export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], functionAppPath: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
     const javaScriptTemplates: IFunctionTemplate[] = allTemplates.filter((t: IFunctionTemplate) => t.language === ProjectLanguage.JavaScript);
     // Currently we leverage JS Script templates to get the function metadata of Java Functions.
     // Will refactor the code here when templates HTTP API is ready.
     // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
     const basicJavaTemplates: IFunctionTemplate[] = javaScriptTemplates.filter((t: IFunctionTemplate) => basicJavaTemplateNames.find((vt: string) => vt === removeLanguageFromId(t.id)));
-    const mavenPluginVersionString: string | null = mavenPluginVersionCache.getPluginVersion(functionAppPath);
-    if (!functionAppPath || mavenPluginVersionString === null) {
-        // MavenPluginVersionCache is still resolving the version information, return verified templates.
-        return basicJavaTemplates;
-    } else if (mavenPluginVersionString === '') {
-        throw new Error(localize('azFunc.invalidMavenFunctionPlugin', 'Failed to resolve Maven Azure Functions plugin in pom, please make sure "mvn" is in PATH and the project is a valid Java Azure Functions project'));
-    } else {
-        if (telemetryProperties) {
-            telemetryProperties.pluginVersion = mavenPluginVersionString;
+    let embeddedTemplates: object[] = [];
+    try {
+        // Try to get the templates information by calling 'mvn azure-functions:list'.
+        const commandResult: string = await mavenUtils.executeMvnCommand(telemetryProperties, undefined, functionAppPath, 'azure-functions:list');
+        const regExp: RegExp = /(?:>> templates begin <<$)([\S\s]+)(?:^\[INFO\] >> templates end <<)/gm;
+        const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
+        if (regExpResult && regExpResult.length > 1) {
+            embeddedTemplates = <object[]>JSON.parse(regExpResult[1]);
         }
-        const mavenPluginVersion: SemVer = new SemVer(mavenPluginVersionString);
-        if (mavenPluginVersion.compare(new SemVer('1.0.0-beta-4')) <= 0) {
-            return basicJavaTemplates;
-        } else {
-            let embeddedTemplates: object[] = [];
-            try {
-                const commandResult: string = await mavenUtils.executeMvnCommand(undefined, undefined, functionAppPath, 'azure-functions:list');
-                const regExp: RegExp = /(?:>> templates begin <<$)([\S\s]+)(?:^\[INFO\] >> templates end <<)/gm;
-                const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
-                if (regExpResult && regExpResult.length > 1) {
-                    embeddedTemplates = <object[]>JSON.parse(regExpResult[1]);
-                }
-            } catch (error) {
-                if (telemetryProperties) {
-                    telemetryProperties.parseJavaTemplateErrors = parseError(error).message;
-                }
-            }
-            const templates: IFunctionTemplate[] = [];
-            const cachedResources: object | undefined = ext.context.globalState.get<object>(`FunctionTemplateResources.${ProjectRuntime.beta}`);
-            const cachedConfig: object | undefined = ext.context.globalState.get<object>(`FunctionTemplateConfig.${ProjectRuntime.beta}`);
-            for (const template of embeddedTemplates) {
-                try {
-                    templates.push(parseScriptTemplate(<IRawTemplate>template, <IResources>cachedResources, <IConfig>cachedConfig));
-                } catch (error) {
-                    // Ignore errors so that a single poorly formed template does not affect other templates
-                }
-            }
-            return templates.length > 0 ? templates : basicJavaTemplates;
+    } catch (error) {
+        // Swallow the exception if the plugin do not support list templates information.
+        if (telemetryProperties) {
+            telemetryProperties.parseJavaTemplateErrors = parseError(error).message;
         }
     }
+    const templates: IFunctionTemplate[] = [];
+    const cachedResources: object | undefined = ext.context.globalState.get<object>(`FunctionTemplateResources.${ProjectRuntime.beta}`);
+    const cachedConfig: object | undefined = ext.context.globalState.get<object>(`FunctionTemplateConfig.${ProjectRuntime.beta}`);
+    for (const template of embeddedTemplates) {
+        try {
+            templates.push(parseScriptTemplate(<IRawTemplate>template, <IResources>cachedResources, <IConfig>cachedConfig));
+        } catch (error) {
+            // Ignore errors so that a single poorly formed template does not affect other templates
+        }
+    }
+    return templates.length > 0 ? templates : basicJavaTemplates;
 }
