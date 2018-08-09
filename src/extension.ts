@@ -62,8 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ext.outputChannel = outputChannel;
     context.subscriptions.push(outputChannel);
 
-    // tslint:disable-next-line:prefer-const
-    let logsOutputChannels: { [channelName: string]: { channelObj: vscode.OutputChannel } } = {};
+    const logsOutputChannels: { [channelName: string]: { channelObj: vscode.OutputChannel } } = {};
 
     callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
