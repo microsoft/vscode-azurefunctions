@@ -38,7 +38,7 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, tree:
             await treeItem.client.updateLogsConfig(logsConfig);
         }
 
-        if (!logsOutputChannels[treeItem.logStreamLabel]) {
+        if (logsOutputChannels[treeItem.logStreamLabel] == null) {
             const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel(localize('logStreamLabel', '{0} - Log Stream', treeItem.logStreamLabel));
             context.subscriptions.push(outputChannel);
             logsOutputChannels[treeItem.logStreamLabel] = { channelObj: outputChannel };
