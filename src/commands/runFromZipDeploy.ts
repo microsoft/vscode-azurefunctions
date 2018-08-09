@@ -84,7 +84,10 @@ async function createBlobService(actionContext: IActionContext, node: IAzurePare
         const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
         const result: MessageItem | undefined = await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
         if (result === selectStorageAccountButton) {
-            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext);
+            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
+                kind: [],
+                learnMoreLink: 'https://aka.ms/T5o0nf'
+            });
             if (sa.id) {
                 await updateWorkspaceSetting(settingKey, sa.id, fsPath);
             }

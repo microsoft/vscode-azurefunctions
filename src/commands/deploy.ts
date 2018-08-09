@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -25,9 +25,10 @@ import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
+import { runFromZipDeploy } from './runFromZipDeploy';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+export async function deploy(context: IActionContext, ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
@@ -105,8 +106,11 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-
-                await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+                if (language === ProjectLanguage.Python && node) {
+                    await runFromZipDeploy(context, node, deployFsPath);
+                } else {
+                    await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+                }
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
