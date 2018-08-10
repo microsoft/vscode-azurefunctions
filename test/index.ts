@@ -29,6 +29,6 @@ testRunner.configure({
 module.exports = testRunner;
 
 ext.context = new TestExtensionContext();
-commands.executeCommand('azureFunctions.refresh');
+commands.executeCommand('azureFunctions.refresh'); //activate the extension before testing begins to make sure activation doesn't change any extensionVariables
 registerAppServiceExtensionVariables(ext);
 registerUIExtensionVariables(ext);

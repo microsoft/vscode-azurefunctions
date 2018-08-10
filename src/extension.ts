@@ -72,8 +72,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const tree: AzureTreeDataProvider = new AzureTreeDataProvider(new FunctionAppProvider(outputChannel), 'azureFunctions.loadMore');
         ext.tree = tree;
-        context.subscriptions.push(tree);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', tree));
+        context.subscriptions.push(ext.tree);
+        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', ext.tree));
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
@@ -102,7 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
-        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, tree, arg); });
+        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, arg); });
         registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
@@ -112,7 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
         registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, tree, node));
         registerCommand('azureFunctions.stopStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await stopStreamingLogs(tree, node));
-        registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(FunctionTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.add', async (node?: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.download', async (node?: IAzureNode<AppSettingsTreeItem>) => await downloadAppSettings(node));
         registerCommand('azureFunctions.appSettings.upload', async (node?: IAzureNode<AppSettingsTreeItem>) => await uploadAppSettings(node));
