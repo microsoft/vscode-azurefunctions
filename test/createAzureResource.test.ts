@@ -25,8 +25,6 @@ if (process.env.TRAVIS_EVENT_TYPE === 'cron') {
 
         suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
             this.timeout(120 * 1000);
-            const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-            ext.outputChannel = outputChannel;
             await testAccount.signIn();
             ext.tree = new AzureTreeDataProvider(new FunctionAppProvider(ext.outputChannel), 'azureFunctions.startTesting', undefined, testAccount);
         });
@@ -46,7 +44,7 @@ if (process.env.TRAVIS_EVENT_TYPE === 'cron') {
             await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
             const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
             const createdApp: Site = await client.webApps.get(resourceName, resourceName);
-            assert.ok(createdApp !== undefined);
+            assert.ok(createdApp);
         });
 
         const deleteFunctionApp: string = 'Delete Function App';
@@ -55,7 +53,7 @@ if (process.env.TRAVIS_EVENT_TYPE === 'cron') {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
             const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
             const deletedApp: Site | undefined = await client.webApps.get(resourceName, resourceName);
-            assert.equal(deletedApp, undefined);
+            assert.ifError(deletedApp); // if app was deleted, get() returns null.  assert.ifError throws if the value passed is not null/undefined
         });
     });
 } else {
@@ -65,11 +63,9 @@ if (process.env.TRAVIS_EVENT_TYPE === 'cron') {
 }
 
 function getWebsiteManagementClient(testAccount: TestAzureAccount): WebSiteManagementClient {
-    // tslint:disable-next-line:no-non-null-assertion
-    return new WebSiteManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId()!);
+    return new WebSiteManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId());
 }
 
 function getResourceManagementClient(testAccount: TestAzureAccount): ResourceManagementClient {
-    // tslint:disable-next-line:no-non-null-assertion
-    return new ResourceManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId()!);
+    return new ResourceManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId());
 }

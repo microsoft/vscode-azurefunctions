@@ -10,7 +10,6 @@
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
 
-import { commands } from 'vscode';
 import { registerAppServiceExtensionVariables } from 'vscode-azureappservice';
 import { registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-require-imports
@@ -27,8 +26,6 @@ testRunner.configure({
 });
 
 module.exports = testRunner;
-
 ext.context = new TestExtensionContext();
-commands.executeCommand('azureFunctions.refresh'); //activate the extension before testing begins to make sure activation doesn't change any extensionVariables
 registerAppServiceExtensionVariables(ext);
 registerUIExtensionVariables(ext);

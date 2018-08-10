@@ -22,12 +22,10 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
 
     // tslint:disable-next-line:no-function-expression
     suiteSetup(async () => {
-        ext.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
         await fse.ensureDir(testFolderPath);
     });
 
     suiteTeardown(async () => {
-        ext.outputChannel.dispose();
         await fse.remove(testFolderPath);
     });
 
