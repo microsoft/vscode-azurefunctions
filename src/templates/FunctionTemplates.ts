@@ -13,7 +13,7 @@ import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
 import { IFunctionSetting } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
-import { parseJavaTemplates } from './parseJavaTemplates';
+import { parseJavaTemplates } from './parseScriptTemplates';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
 import { TemplateRetriever } from './TemplateRetriever';
 
