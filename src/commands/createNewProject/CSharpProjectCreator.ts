@@ -25,7 +25,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
 
-    private _detectedRuntime: boolean = false;
+    private _hasDetectedRuntime: boolean = false;
 
     public async addNonVSCodeFiles(): Promise<void> {
         await dotnetUtils.validateDotnetInstalled();
@@ -39,13 +39,13 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
         await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
 
-        if (!this._detectedRuntime) {
+        if (!this._hasDetectedRuntime) {
             await this.detectRuntime();
         }
     }
 
     public async getRuntime(): Promise<ProjectRuntime> {
-        if (!this._detectedRuntime) {
+        if (!this._hasDetectedRuntime) {
             await this.detectRuntime();
         }
 
@@ -97,7 +97,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
 
-        this._detectedRuntime = true;
+        this._hasDetectedRuntime = true;
     }
 
     public getTasksJson(): {} {
