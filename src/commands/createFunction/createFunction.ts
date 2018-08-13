@@ -8,7 +8,7 @@ import * as path from 'path';
 import { isString } from 'util';
 import { QuickPickItem } from 'vscode';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
@@ -114,10 +114,10 @@ export async function createFunction(
     let template: IFunctionTemplate;
     if (!templateId) {
         templateFilter = await getTemplateFilter(functionAppPath);
-        [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter);
+        [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter, actionContext.properties);
     } else {
         templateFilter = TemplateFilter.All;
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, TemplateFilter.All);
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, TemplateFilter.All, actionContext.properties);
         const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -174,14 +174,14 @@ export async function createFunction(
     }
 }
 
-async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter): Promise<[IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
+async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter, telemetryProperties: TelemetryProperties): Promise<[IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
     const runtimePickId: string = 'runtime';
     const languagePickId: string = 'language';
     const filterPickId: string = 'filter';
 
     let template: IFunctionTemplate | undefined;
     while (!template) {
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, templateFilter);
+        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
         let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
         picks = picks.concat([
             { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
