@@ -25,6 +25,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
 
+    private _detectedRuntime: boolean = false;
+
     public async addNonVSCodeFiles(): Promise<void> {
         await dotnetUtils.validateDotnetInstalled();
 
@@ -36,9 +38,23 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
         await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
+
+        if (!this._detectedRuntime) {
+            await this.detectRuntime();
+        }
     }
 
     public async getRuntime(): Promise<ProjectRuntime> {
+        if (!this._detectedRuntime) {
+            await this.detectRuntime();
+        }
+
+        return this._runtime;
+    }
+
+    // temporarily disabling for the sake of review. Will re-enable and move function before merging
+    // tslint:disable:member-ordering
+    private async detectRuntime(): Promise<void> {
         const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
         if (!csProjName) {
             throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
@@ -81,7 +97,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
 
-        return this._runtime;
+        this._detectedRuntime = true;
     }
 
     public getTasksJson(): {} {
@@ -213,8 +229,12 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     }
 }
 
+/**
+ * If a single csproj file is found at the root of this folder, returns the path to that file. Otherwise returns undefined
+ * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
+ */
 export async function tryGetCsprojFile(functionAppPath: string): Promise<string | undefined> {
     const files: string[] = await fse.readdir(functionAppPath);
-    const projectFiles: string[] = files.filter((f: string) => f.endsWith('.csproj'));
+    const projectFiles: string[] = files.filter((f: string) => /\.csproj$/i.test(f) && !/extensions\.csproj$/i.test(f));
     return projectFiles.length === 1 ? projectFiles[0] : undefined;
 }
