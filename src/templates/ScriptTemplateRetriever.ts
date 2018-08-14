@@ -20,7 +20,6 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
     private _templatesKey: string = 'FunctionTemplates';
     private _configKey: string = 'FunctionTemplateConfig';
     private _resourcesKey: string = 'FunctionTemplateResources';
-    private _tempPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
     private _rawResources: object;
     private _rawTemplates: object[];
     private _rawConfig: object;
@@ -41,13 +40,14 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
     }
 
     protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
+        const templatesPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
         try {
-            const filePath: string = path.join(this._tempPath, `templates-${templateVersion}.zip`);
+            const filePath: string = path.join(templatesPath, `templates-${templateVersion}.zip`);
             await downloadFile(cliFeedJson.releases[templateVersion].templateApiZip, filePath);
 
             await new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
                 // tslint:disable-next-line:no-unsafe-any
-                extract(filePath, { dir: this._tempPath }, (err: Error) => {
+                extract(filePath, { dir: templatesPath }, (err: Error) => {
                     // tslint:disable-next-line:strict-boolean-expressions
                     if (err) {
                         reject(err);
@@ -56,23 +56,32 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
                 });
             });
 
-            // only Resources.json has a capital letter
-            this._rawResources = <object>await fse.readJSON(path.join(this._tempPath, 'resources', 'Resources.json'));
-            this._rawTemplates = <object[]>await fse.readJSON(path.join(this._tempPath, 'templates', 'templates.json'));
-            this._rawConfig = <object>await fse.readJSON(path.join(this._tempPath, 'bindings', 'bindings.json'));
-
-            return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
+            return await this.parseTemplates(templatesPath);
         } finally {
-            if (await fse.pathExists(this._tempPath)) {
-                await fse.remove(this._tempPath);
+            if (await fse.pathExists(templatesPath)) {
+                await fse.remove(templatesPath);
             }
         }
     }
 
-    protected async cacheTemplatesFromCliFeed(runtime: ProjectRuntime): Promise<void> {
+    protected async getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
+        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', runtime));
+        return await this.parseTemplates(backupTemplatesPath);
+    }
+
+    protected async cacheTemplates(runtime: ProjectRuntime): Promise<void> {
         ext.context.globalState.update(this.getCacheKey(this._templatesKey, runtime), this._rawTemplates);
         ext.context.globalState.update(this.getCacheKey(this._configKey, runtime), this._rawConfig);
         ext.context.globalState.update(this.getCacheKey(this._resourcesKey, runtime), this._rawResources);
+    }
+
+    private async parseTemplates(templatesPath: string): Promise<IFunctionTemplate[]> {
+        // only Resources.json has a capital letter
+        this._rawResources = <object>await fse.readJSON(path.join(templatesPath, 'resources', 'Resources.json'));
+        this._rawTemplates = <object[]>await fse.readJSON(path.join(templatesPath, 'templates', 'templates.json'));
+        this._rawConfig = <object>await fse.readJSON(path.join(templatesPath, 'bindings', 'bindings.json'));
+
+        return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
     }
 }
 
