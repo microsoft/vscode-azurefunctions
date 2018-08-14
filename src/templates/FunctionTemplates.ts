@@ -125,6 +125,12 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
                     this.properties.templateSource = 'backupCliFeed';
                 }
 
+                // 5. Use backup templates shipped with the extension
+                if (!templates) {
+                    templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
+                    this.properties.templateSource = 'backupFromExtension';
+                }
+
                 if (templates) {
                     // tslint:disable-next-line:strict-boolean-expressions
                     templatesMap[runtime] = (templatesMap[runtime] || []).concat(templates);
