@@ -31,8 +31,6 @@ function parseJavaTemplate(rawTemplate: IRawTemplate, resources: IResources, com
 
     const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
 
-    const language: ProjectLanguage = ProjectLanguage.Java;
-
     const userPromptedSettings: IFunctionSetting[] = parseUserPromptedSettings(rawTemplate, commonSettingsMap, functionConfig);
 
     return {
@@ -42,7 +40,7 @@ function parseJavaTemplate(rawTemplate: IRawTemplate, resources: IResources, com
         functionType: functionConfig.inBindingType,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
-        language: language,
+        language: ProjectLanguage.Java,
         userPromptedSettings: userPromptedSettings,
         templateFiles: rawTemplate.files,
         categories: rawTemplate.metadata.category
