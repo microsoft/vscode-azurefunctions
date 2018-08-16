@@ -69,8 +69,6 @@ interface IVariables { [name: string]: string; }
  */
 export interface IResources { en: { [key: string]: string }; }
 
-export interface ICommonSettings { [inBindingType: string]: IFunctionSetting[] | undefined; }
-
 // tslint:disable-next-line:no-any
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
     if (!isString(data)) {
@@ -122,15 +120,30 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
     };
 }
 
-export function parseCommonSettingsMap(resources: IResources, commonSettings: IConfig): ICommonSettings {
-    const commonSettingsMap: ICommonSettings = {};
+export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
+    const commonSettingsMap: { [inBindingType: string]: IFunctionSetting[] | undefined } = {};
     for (const binding of commonSettings.bindings) {
         commonSettingsMap[binding.type] = binding.settings.map((setting: object) => parseScriptSetting(setting, resources, commonSettings.variables));
     }
-    return commonSettingsMap;
-}
 
-export function parseUserPromptedSettings(rawTemplate: IRawTemplate, commonSettingsMap: ICommonSettings, functionConfig: FunctionConfig): IFunctionSetting[] {
+    const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
+
+    let language: ProjectLanguage = rawTemplate.metadata.language;
+    // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
+    switch (language) {
+        case ProjectLanguage.CSharp:
+            language = ProjectLanguage.CSharpScript;
+            break;
+        case ProjectLanguage.FSharp:
+            language = ProjectLanguage.FSharpScript;
+            break;
+        // The schema of Java templates is the same as script languages, so put it here.
+        case ProjectLanguage.Java:
+            language = ProjectLanguage.Java;
+            break;
+        default:
+    }
+
     const userPromptedSettings: IFunctionSetting[] = [];
     if (rawTemplate.metadata.userPrompt) {
         for (const settingName of rawTemplate.metadata.userPrompt) {
@@ -148,27 +161,6 @@ export function parseUserPromptedSettings(rawTemplate: IRawTemplate, commonSetti
             }
         }
     }
-    return userPromptedSettings;
-}
-
-function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
-    const commonSettingsMap: { [inBindingType: string]: IFunctionSetting[] | undefined } = parseCommonSettingsMap(resources, commonSettings);
-
-    const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
-
-    let language: ProjectLanguage = rawTemplate.metadata.language;
-    // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
-    switch (language) {
-        case ProjectLanguage.CSharp:
-            language = ProjectLanguage.CSharpScript;
-            break;
-        case ProjectLanguage.FSharp:
-            language = ProjectLanguage.FSharpScript;
-            break;
-        default:
-    }
-
-    const userPromptedSettings: IFunctionSetting[] = parseUserPromptedSettings(rawTemplate, commonSettingsMap, functionConfig);
 
     return {
         functionConfig: functionConfig,

@@ -5,12 +5,10 @@
 
 import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
-import { FunctionConfig } from '../FunctionConfig';
 import { mavenUtils } from "../utils/mavenUtils";
 import { removeLanguageFromId } from "./FunctionTemplates";
-import { IFunctionSetting } from './IFunctionSetting';
 import { IFunctionTemplate } from './IFunctionTemplate';
-import { getResourceValue, ICommonSettings, IConfig, IRawTemplate, IResources, IScriptFunctionTemplate as IJavaFunctionTemplate, parseCommonSettingsMap, parseUserPromptedSettings } from './parseScriptTemplates';
+import { IConfig, IRawTemplate, IResources, parseScriptTemplate as parseJavaTemplate } from './parseScriptTemplates';
 
 /**
  * Describes templates output before it has been parsed
@@ -26,27 +24,6 @@ const backupJavaTemplateNames: string[] = [
     'TimerTrigger'
 ];
 
-function parseJavaTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IJavaFunctionTemplate {
-    const commonSettingsMap: ICommonSettings = parseCommonSettingsMap(resources, commonSettings);
-
-    const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
-
-    const userPromptedSettings: IFunctionSetting[] = parseUserPromptedSettings(rawTemplate, commonSettingsMap, functionConfig);
-
-    return {
-        functionConfig: functionConfig,
-        isHttpTrigger: functionConfig.isHttpTrigger,
-        id: rawTemplate.id,
-        functionType: functionConfig.inBindingType,
-        name: getResourceValue(resources, rawTemplate.metadata.name),
-        defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
-        language: ProjectLanguage.Java,
-        userPromptedSettings: userPromptedSettings,
-        templateFiles: rawTemplate.files,
-        categories: rawTemplate.metadata.category
-    };
-}
-
 /**
  * Parses templates contained in the output of 'mvn azure-functions:list'.
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
@@ -58,7 +35,7 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
     try {
         // Try to get the templates information by calling 'mvn azure-functions:list'.
         const commandResult: string = await mavenUtils.executeMvnCommand(telemetryProperties, undefined, functionAppPath, 'azure-functions:list');
-        const regExp: RegExp = />> templates begin <<([\S\s]+)\[INFO\] >> templates end <<[\S\s]+>> bindings begin <<([\S\s]+)\[INFO\] >> bindings end <<[\S\s]+>> resources begin <<([\S\s]+)\[INFO\] >> resources end <</gm;
+        const regExp: RegExp = />> templates begin <<([\S\s]+)^.+INFO.+ >> templates end <<$[\S\s]+>> bindings begin <<([\S\s]+)^.+INFO.+ >> bindings end <<$[\S\s]+>> resources begin <<([\S\s]+)^.+INFO.+ >> resources end <<$/gm;
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {
             embeddedTemplates = <IRawJavaTemplates>JSON.parse(regExpResult[1]);
