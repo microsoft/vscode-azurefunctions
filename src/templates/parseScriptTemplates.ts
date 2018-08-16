@@ -4,25 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isString } from 'util';
-import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
 import { FunctionConfig } from '../FunctionConfig';
-import { mavenUtils } from "../utils/mavenUtils";
-import { removeLanguageFromId } from "./FunctionTemplates";
 import { IEnumValue, IFunctionSetting, ResourceType, ValueType } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 
 /**
- * Describes templates output before it has been parsed
- */
-interface IRawJavaTemplates {
-    templates: IRawTemplate[];
-}
-
-/**
  * Describes a script template before it has been parsed
  */
-interface IRawTemplate {
+export interface IRawTemplate {
     id: string;
     // tslint:disable-next-line:no-reserved-keywords
     function: {};
@@ -60,7 +50,7 @@ interface IRawSetting {
 /**
  * Describes script template config to be used for parsing
  */
-interface IConfig {
+export interface IConfig {
     variables: IVariables;
     bindings: {
         // tslint:disable-next-line:no-reserved-keywords
@@ -77,14 +67,7 @@ interface IVariables { [name: string]: string; }
 /**
  * Describes script template resources to be used for parsing
  */
-interface IResources { en: { [key: string]: string }; }
-
-const backupJavaTemplateNames: string[] = [
-    'HttpTrigger',
-    'BlobTrigger',
-    'QueueTrigger',
-    'TimerTrigger'
-];
+export interface IResources { en: { [key: string]: string }; }
 
 // tslint:disable-next-line:no-any
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
@@ -99,7 +82,7 @@ function getVariableValue(resources: IResources, variables: IVariables, data: st
     return getResourceValue(resources, <string>data);
 }
 
-function getResourceValue(resources: IResources, data: string): string {
+export function getResourceValue(resources: IResources, data: string): string {
     const matches: RegExpMatchArray | null = data.match(/\$(.*)/);
     return matches !== null ? resources.en[matches[1]] : data;
 }
@@ -137,7 +120,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
     };
 }
 
-function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
+export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
     const commonSettingsMap: { [inBindingType: string]: IFunctionSetting[] | undefined } = {};
     for (const binding of commonSettings.bindings) {
         commonSettingsMap[binding.type] = binding.settings.map((setting: object) => parseScriptSetting(setting, resources, commonSettings.variables));
@@ -154,7 +137,7 @@ function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, c
         case ProjectLanguage.FSharp:
             language = ProjectLanguage.FSharpScript;
             break;
-        // put Java here for now, will refactor later
+        // The schema of Java templates is the same as script languages, so put it here.
         case ProjectLanguage.Java:
             language = ProjectLanguage.Java;
             break;
@@ -213,47 +196,4 @@ export function parseScriptTemplates(rawResources: object, rawTemplates: object[
         }
     }
     return templates;
-}
-
-/**
- * Parses templates contained in the output of 'mvn azure-functions:list'.
- * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
- */
-export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], functionAppPath: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
-    let embeddedTemplates: IRawJavaTemplates = { templates: [] };
-    let embeddedConfig: object = {};
-    let embeddedResources: object = {};
-    try {
-        // Try to get the templates information by calling 'mvn azure-functions:list'.
-        const commandResult: string = await mavenUtils.executeMvnCommand(telemetryProperties, undefined, functionAppPath, 'azure-functions:list');
-        const regExp: RegExp = />> templates begin <<([\S\s]+)\[INFO\] >> templates end <<[\S\s]+>> bindings begin <<([\S\s]+)\[INFO\] >> bindings end <<[\S\s]+>> resources begin <<([\S\s]+)\[INFO\] >> resources end <</gm;
-        const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
-        if (regExpResult && regExpResult.length > 3) {
-            embeddedTemplates = <IRawJavaTemplates>JSON.parse(regExpResult[1]);
-            embeddedConfig = <object[]>JSON.parse(regExpResult[2]);
-            embeddedResources = <object[]>JSON.parse(regExpResult[3]);
-        }
-    } catch (error) {
-        // Swallow the exception if the plugin do not support list templates information.
-        if (telemetryProperties) {
-            telemetryProperties.parseJavaTemplateErrors = parseError(error).message;
-        }
-    }
-    const templates: IFunctionTemplate[] = [];
-    for (const template of embeddedTemplates.templates) {
-        try {
-            templates.push(parseScriptTemplate(<IRawTemplate>template, <IResources>embeddedResources, <IConfig>embeddedConfig));
-        } catch (error) {
-            // Ignore errors so that a single poorly formed template does not affect other templates
-        }
-    }
-    if (templates.length > 0) {
-        return templates;
-    } else {
-        // If the templates.length is 0, this means that the user is using an older version of Maven function plugin,
-        // which do not have the functionality to provide the template information.
-        // For this kind of scenario, we will fallback to leverage the JavaScript templates.
-        const javaScriptTemplates: IFunctionTemplate[] = allTemplates.filter((t: IFunctionTemplate) => t.language === ProjectLanguage.JavaScript);
-        return javaScriptTemplates.filter((t: IFunctionTemplate) => backupJavaTemplateNames.find((vt: string) => vt === removeLanguageFromId(t.id)));
-    }
 }
