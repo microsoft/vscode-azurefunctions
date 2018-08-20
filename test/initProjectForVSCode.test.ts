@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
-import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
+import { deploySubpathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
 import * as fsUtil from '../src/utils/fs';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -41,6 +41,18 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
     });
 
+    const javaScriptProjectWithExtensions: string = 'AutoDetectJavaScriptProjectWithExtensions';
+    test(javaScriptProjectWithExtensions, async () => {
+        const projectPath: string = path.join(testFolderPath, javaScriptProjectWithExtensions);
+        const indexJsPath: string = path.join(projectPath, 'HttpTriggerJS', 'index.js');
+        await fse.ensureFile(indexJsPath);
+        await fse.ensureFile(path.join(projectPath, 'extensions.csproj'));
+        await testInitProjectForVSCode(projectPath);
+        await validateVSCodeProjectFiles(projectPath);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+    });
+
     const csharpProject: string = 'AutoDetectCSharpProject';
     test(csharpProject, async () => {
         const projectPath: string = path.join(testFolderPath, csharpProject);
@@ -52,6 +64,22 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
         await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
+    });
+
+    const csharpProjectWithExtensions: string = 'AutoDetectCSharpProjectWithExtensions';
+    test(csharpProjectWithExtensions, async () => {
+        const projectPath: string = path.join(testFolderPath, csharpProjectWithExtensions);
+        const csProjPath: string = path.join(projectPath, 'test.csproj');
+        await fse.ensureFile(csProjPath);
+        await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
+        await fse.ensureFile(path.join(projectPath, 'extensions.csproj'));
+        await testInitProjectForVSCode(projectPath);
+        await validateVSCodeProjectFiles(projectPath, true);
+        await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
+        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
     const javaProject: string = 'AutoDetectJavaProject';
@@ -149,7 +177,6 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
     }
 });
 
-// tslint:disable-next-line:export-name
 export async function validateVSCodeProjectFiles(projectPath: string, hasLaunchJson: boolean = true): Promise<void> {
     const gitignorePath: string = path.join(projectPath, '.gitignore');
     if (await fse.pathExists(gitignorePath)) {
@@ -176,12 +203,12 @@ async function validateExtensionRecommendation(projectPath: string, extensionId:
     assert.equal(extensionsContents.indexOf(extensionId) !== -1, true, `The extension ${extensionId} should be recommended.`);
 }
 
-async function validateSetting(projectPath: string, key: string, value: string): Promise<void> {
+export async function validateSetting(projectPath: string, key: string, value: string): Promise<void> {
     const vscodePath: string = path.join(projectPath, '.vscode');
     const settingsPath: string = path.join(vscodePath, 'settings.json');
     assert.equal(await fse.pathExists(settingsPath), true, 'settings.json does not exist');
     // tslint:disable-next-line:no-any
     const settings: any = await fse.readJSON(settingsPath);
     // tslint:disable-next-line:no-unsafe-any
-    assert.equal(settings[key], value, `The setting with "${key}" is not set to value "${value}".`);
+    assert.equal(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
 }
