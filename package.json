@@ -591,6 +591,10 @@
                             "OpenInCurrentWindow"
                         ],
                         "description": "%azFunc.projectOpenBehaviorDescription%"
+                    },
+                    "azureFunctions.python.venvRelativePath": {
+                        "type": "string",
+                        "description": "%azFunc.python.venvRelativePathDescription"
                     }
                 }
             }
