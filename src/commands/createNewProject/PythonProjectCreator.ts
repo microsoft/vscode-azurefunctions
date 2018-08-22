@@ -6,8 +6,8 @@
 import { pathExists } from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, OpenDialogOptions, workspace } from 'vscode';
-import { localSettingsFileName, TemplateFilter } from "../../constants";
+import { env, MessageItem, OpenDialogOptions, workspace } from 'vscode';
+import { localSettingsFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
@@ -22,12 +22,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     private readonly pythonVenvPathSetting: string = 'python.venvRelativePath';
     private pythonAlias: string;
     public getLaunchJson(): {} {
+        const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
         return {
             version: '0.2.0',
             configurations: [
                 {
                     name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
-                    type: 'python',
+                    type: launchType,
                     request: 'attach',
                     port: 9091,
                     host: 'localhost',
@@ -45,14 +46,22 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         }
     }
 
+    // tslint:disable-next-line:max-func-body-length
     public async getTasksJson(): Promise<{}> {
-        const venvActivatePath: string = await this.getVenvActivatePath();
         return {
             version: '2.0.0',
             tasks: [
                 {
                     label: 'create',
-                    command: `${venvActivatePath} | func init ./ --worker-runtime ${this.pythonAlias}`,
+                    osx: {
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func init ./ --worker-runtime python`
+                    },
+                    windows: {
+                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func init ./ --worker-runtime python`
+                    },
+                    linux: {
+                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func init ./ --worker-runtime python`
+                    },
                     type: 'shell',
                     presentation: {
                         reveal: 'always'
@@ -64,7 +73,15 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     dependsOn: 'build',
-                    command: `${venvActivatePath} | func host start`,
+                    osx: {
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                    },
+                    windows: {
+                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func start host`
+                    },
+                    linux: {
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                    },
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
@@ -86,14 +103,14 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         try {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python3 --version')).substring('Python '.length);
             this.pythonAlias = 'python3';
-            return semver.gt(pyVersion, minReqVersion);
+            return semver.gte(pyVersion, minReqVersion);
         } catch {
             // ignore and try next alias
         }
         try {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python --version')).substring('Python '.length);
             this.pythonAlias = 'python';
-            return semver.gt(pyVersion, minReqVersion);
+            return semver.gte(pyVersion, minReqVersion);
         } catch {
             return false;
         }
@@ -125,13 +142,21 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await updateWorkspaceSetting(this.pythonVenvPathSetting, pythonVenvPath, this.functionAppPath);
     }
 
-    private async getVenvActivatePath(): Promise<string> {
+    private async getVenvActivatePath(platform: Platform): Promise<string> {
         const venvPath: string | undefined = getFuncExtensionSetting(this.pythonVenvPathSetting, this.functionAppPath);
         if (venvPath) {
-            return path.join('.', venvPath, 'Scripts', 'activate');
+            switch (platform) {
+                case Platform.Windows:
+                    return path.join('.', venvPath, 'Scripts', 'activate');
+                case Platform.MacOS:
+                default:
+                    // assuming OSX and Linux use the same path
+                    return path.join('.', venvPath, 'bin', 'activate');
+            }
+
         } else {
             await this.ensureVirtualEnviornment();
-            return await this.getVenvActivatePath();
+            return await this.getVenvActivatePath(platform);
         }
     }
 }
