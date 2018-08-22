@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext, parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -13,15 +13,9 @@ import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
 import { IFunctionSetting } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { parseJavaTemplates } from './parseJavaTemplates';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
 import { TemplateRetriever } from './TemplateRetriever';
-
-const verifiedJavaTemplates: string[] = [
-    'HttpTrigger',
-    'BlobTrigger',
-    'QueueTrigger',
-    'TimerTrigger'
-];
 
 export class FunctionTemplates {
     private readonly _templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
@@ -32,18 +26,14 @@ export class FunctionTemplates {
         this.copyCSharpSettingsFromJS();
     }
 
-    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, templateFilter?: string): Promise<IFunctionTemplate[]> {
+    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
         const templates: IFunctionTemplate[] | undefined = this._templatesMap[runtime];
         if (!templates) {
             throw new Error(this._noInternetErrMsg);
         }
 
         if (language === ProjectLanguage.Java) {
-            // Currently we leverage JS templates to get the function metadata of Java Functions.
-            // Will refactor the code here when templates HTTP API is ready.
-            // See issue here: https://github.com/Microsoft/vscode-azurefunctions/issues/84
-            const javaTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language === ProjectLanguage.JavaScript);
-            return javaTemplates.filter((t: IFunctionTemplate) => verifiedJavaTemplates.find((vt: string) => vt === removeLanguageFromId(t.id)));
+            return await parseJavaTemplates(templates, functionAppPath, telemetryProperties);
         } else {
             let filterTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
@@ -133,6 +123,12 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
                     const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
                     templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, backupVersion, runtime);
                     this.properties.templateSource = 'backupCliFeed';
+                }
+
+                // 5. Use backup templates shipped with the extension
+                if (!templates) {
+                    templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
+                    this.properties.templateSource = 'backupFromExtension';
                 }
 
                 if (templates) {

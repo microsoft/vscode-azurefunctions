@@ -11,11 +11,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
-import { ProjectLanguage } from '../src/constants';
+import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
 import * as fsUtil from '../src/utils/fs';
-import { validateVSCodeProjectFiles } from './initProjectForVSCode.test';
+import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -68,6 +68,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath);
         const projectName: string = path.basename(projectPath);
         assert.equal(await fse.pathExists(path.join(projectPath, `${projectName}.csproj`)), true, 'csproj does not exist');
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
     const bashProject: string = 'BashProject';
@@ -130,6 +131,19 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~1', false /* openFolder */);
         await validateVSCodeProjectFiles(projectPath);
+    });
+
+    test('createNewProject API C#', async () => {
+        // Intentionally testing IoTHub trigger since a partner team plans to use that
+        const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
+        const functionName: string = 'createFunctionApi';
+        const namespace: string = 'Company.Function';
+        const iotPath: string = 'messages/events';
+        const connection: string = 'IoTHub_Setting';
+        const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
+        ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', 'beta', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {

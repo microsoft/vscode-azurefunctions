@@ -12,7 +12,7 @@ import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 /**
  * Describes a script template before it has been parsed
  */
-interface IRawTemplate {
+export interface IRawTemplate {
     id: string;
     // tslint:disable-next-line:no-reserved-keywords
     function: {};
@@ -50,7 +50,7 @@ interface IRawSetting {
 /**
  * Describes script template config to be used for parsing
  */
-interface IConfig {
+export interface IConfig {
     variables: IVariables;
     bindings: {
         // tslint:disable-next-line:no-reserved-keywords
@@ -67,7 +67,7 @@ interface IVariables { [name: string]: string; }
 /**
  * Describes script template resources to be used for parsing
  */
-interface IResources { en: { [key: string]: string }; }
+export interface IResources { en: { [key: string]: string }; }
 
 // tslint:disable-next-line:no-any
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
@@ -82,7 +82,7 @@ function getVariableValue(resources: IResources, variables: IVariables, data: st
     return getResourceValue(resources, <string>data);
 }
 
-function getResourceValue(resources: IResources, data: string): string {
+export function getResourceValue(resources: IResources, data: string): string {
     const matches: RegExpMatchArray | null = data.match(/\$(.*)/);
     return matches !== null ? resources.en[matches[1]] : data;
 }
@@ -120,7 +120,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
     };
 }
 
-function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
+export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
     const commonSettingsMap: { [inBindingType: string]: IFunctionSetting[] | undefined } = {};
     for (const binding of commonSettings.bindings) {
         commonSettingsMap[binding.type] = binding.settings.map((setting: object) => parseScriptSetting(setting, resources, commonSettings.variables));
@@ -136,6 +136,10 @@ function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, c
             break;
         case ProjectLanguage.FSharp:
             language = ProjectLanguage.FSharpScript;
+            break;
+        // The schema of Java templates is the same as script languages, so put it here.
+        case ProjectLanguage.Java:
+            language = ProjectLanguage.Java;
             break;
         default:
     }

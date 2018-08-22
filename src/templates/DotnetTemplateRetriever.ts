@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as path from 'path';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { downloadFile } from '../utils/fs';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
-import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath } from './executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath } from './executeDotnetTemplateCommand';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 import { TemplateRetriever, TemplateType } from './TemplateRetriever';
@@ -48,12 +49,21 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
         const itemFilePath: string = getDotnetItemTemplatePath(runtime);
         await downloadFile(cliFeedJson.releases[templateVersion].itemTemplates, itemFilePath);
 
-        this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(runtime, undefined, 'list'));
-        return parseDotnetTemplates(this._rawTemplates, runtime);
+        return await this.parseTemplates(runtime);
     }
 
-    protected async cacheTemplatesFromCliFeed(runtime: ProjectRuntime): Promise<void> {
+    protected async getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
+        await fse.copy(ext.context.asAbsolutePath(path.join('resources', 'backupDotnetTemplates')), getDotnetTemplatesPath(), { overwrite: true, recursive: false });
+        return await this.parseTemplates(runtime);
+    }
+
+    protected async cacheTemplates(runtime: ProjectRuntime): Promise<void> {
         ext.context.globalState.update(this.getCacheKey(this._dotnetTemplatesKey, runtime), this._rawTemplates);
+    }
+
+    private async parseTemplates(runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
+        this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(runtime, undefined, 'list'));
+        return parseDotnetTemplates(this._rawTemplates, runtime);
     }
 }
 
