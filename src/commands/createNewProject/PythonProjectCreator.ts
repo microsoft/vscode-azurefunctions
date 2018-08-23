@@ -86,12 +86,26 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     private async validatePythonVersion(): Promise<void> {
         const minReqVersion: string = '3.6.0';
+        let incompatiableVersion: boolean = false;
         const pythonVersionIncompatiable: string = localize('pythonVersionIncompatiable', 'Current version of Python is incompatiable with Azure Functions Core Tools. Python 3.6 is required.');
+        try {
+            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'py --version')).substring('Python '.length);
+            this.pythonAlias = 'py';
+            if (!semver.gte(pyVersion, minReqVersion)) {
+                incompatiableVersion = true;
+            } else {
+                return;
+            }
+        } catch {
+            // ignore and try next alias
+        }
         try {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python3 --version')).substring('Python '.length);
             this.pythonAlias = 'python3';
             if (!semver.gte(pyVersion, minReqVersion)) {
-                throw new Error(pythonVersionIncompatiable);
+                incompatiableVersion = true;
+            } else {
+                return;
             }
         } catch {
             // ignore and try next alias
@@ -100,9 +114,14 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python --version')).substring('Python '.length);
             this.pythonAlias = 'python';
             if (!semver.gte(pyVersion, minReqVersion)) {
-                throw new Error(pythonVersionIncompatiable);
+                incompatiableVersion = true;
+            } else {
+                return;
             }
         } catch {
+            if (incompatiableVersion) {
+                throw new Error(pythonVersionIncompatiable);
+            }
             throw new Error(localize('pythonVersionRequired', 'Python 3.6 is required to create a Python Function project.'));
         }
 
@@ -115,11 +134,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const existingButton: MessageItem = { title: 'Existing' };
         const venvRequired: string = localize('venvRequired', 'You must be running in a Python virtual environment to create a Python Function project. Create a new one or use an existing?');
         const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, createButton, existingButton);
-        if (input.title === 'Create') {
-            if (!(await pathExists(path.join(this.functionAppPath, funcEnv)))) {
-                // if there is no func_env, create one as it's required for Python functions
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', 'func_env');
-            }
+        if (input === createButton) {
+            // if there is no func_env, create one as it's required for Python functions
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', 'func_env');
             pythonVenvPath = funcEnv;
         } else {
             const options: OpenDialogOptions = {
@@ -157,7 +174,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     private async createPythonProject(): Promise<void> {
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} | func init ./ --worker-runtime python`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && func init ./ --worker-runtime python`);
                 break;
             case Platform.MacOS:
             default:
