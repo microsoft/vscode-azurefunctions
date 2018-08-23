@@ -15,6 +15,7 @@ import { localize } from "../localize";
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
+import { InvalidFunctionAppTreeItem } from './InvalidFunctionAppTreeItem';
 
 export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
@@ -45,9 +46,15 @@ export class FunctionAppProvider implements IChildProvider {
 
         const treeItems: IAzureTreeItem[] = [];
         for (const site of webAppCollection) {
-            const siteClient: SiteClient = new SiteClient(site, node);
-            if (siteClient.isFunctionApp) {
-                treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+            try {
+                const siteClient: SiteClient = new SiteClient(site, node);
+                if (siteClient.isFunctionApp) {
+                    treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+                }
+            } catch (error) {
+                if (site.name) {
+                    treeItems.push(new InvalidFunctionAppTreeItem(site.name, error));
+                }
             }
         }
         return treeItems;
