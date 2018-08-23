@@ -6,14 +6,14 @@
 import { pathExists } from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
-import { env, MessageItem, OpenDialogOptions, workspace } from 'vscode';
-import { localSettingsFileName, Platform, TemplateFilter } from "../../constants";
+import { MessageItem, OpenDialogOptions, workspace } from 'vscode';
+import { UserCancelledError } from 'vscode-azureextensionui';
+import { Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
-import { ILocalAppSettings } from '../../LocalAppSettings';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
-import * as fsUtil from '../../utils/fs';
 import { funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -22,6 +22,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     private readonly pythonVenvPathSetting: string = 'python.venvRelativePath';
     private pythonAlias: string;
     public getLaunchJson(): {} {
+        // currently the Python extension launches Windows with type: python and MacOS with type: pythonExperimental
         const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
         return {
             version: '0.2.0',
@@ -39,35 +40,20 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
-        if (await this.validatePythonVersion()) {
+        // need a custom message for warning as this is a dependency
+        if (await validateFuncCoreToolsInstalled(true)) {
+            await this.validatePythonVersion();
             await this.ensureVirtualEnviornment();
+            await this.createPythonProject();
         } else {
-            throw new Error('Python 3.6 is required to create a Python Function project.');
+            throw new UserCancelledError();
         }
     }
 
-    // tslint:disable-next-line:max-func-body-length
     public async getTasksJson(): Promise<{}> {
         return {
             version: '2.0.0',
             tasks: [
-                {
-                    label: 'create',
-                    osx: {
-                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func init ./ --worker-runtime python`
-                    },
-                    windows: {
-                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func init ./ --worker-runtime python`
-                    },
-                    linux: {
-                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func init ./ --worker-runtime python`
-                    },
-                    type: 'shell',
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: '$msCompile'
-                },
                 {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
@@ -98,21 +84,26 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
-    private async validatePythonVersion(): Promise<boolean> {
+    private async validatePythonVersion(): Promise<void> {
         const minReqVersion: string = '3.6.0';
+        const pythonVersionIncompatiable: string = localize('pythonVersionIncompatiable', 'Current version of Python is incompatiable with Azure Functions Core Tools. Python 3.6 is required.');
         try {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python3 --version')).substring('Python '.length);
             this.pythonAlias = 'python3';
-            return semver.gte(pyVersion, minReqVersion);
+            if (!semver.gte(pyVersion, minReqVersion)) {
+                throw new Error(pythonVersionIncompatiable);
+            }
         } catch {
             // ignore and try next alias
         }
         try {
             const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python --version')).substring('Python '.length);
             this.pythonAlias = 'python';
-            return semver.gte(pyVersion, minReqVersion);
+            if (!semver.gte(pyVersion, minReqVersion)) {
+                throw new Error(pythonVersionIncompatiable);
+            }
         } catch {
-            return false;
+            throw new Error(localize('pythonVersionRequired', 'Python 3.6 is required to create a Python Function project.'));
         }
 
     }
@@ -120,8 +111,10 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     private async ensureVirtualEnviornment(): Promise<void> {
         const funcEnv: string = 'func_env';
         let pythonVenvPath: string;
-        const venvRequired: string = localize('venvRequired', 'You must be running in a virtual environment to create a Python Function project. Would you like to create a new one or use an existing?');
-        const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, { title: 'Create' }, { title: 'Existing' });
+        const createButton: MessageItem = { title: 'Create' };
+        const existingButton: MessageItem = { title: 'Existing' };
+        const venvRequired: string = localize('venvRequired', 'You must be running in a Python virtual environment to create a Python Function project. Create a new one or use an existing?');
+        const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, createButton, existingButton);
         if (input.title === 'Create') {
             if (!(await pathExists(path.join(this.functionAppPath, funcEnv)))) {
                 // if there is no func_env, create one as it's required for Python functions
@@ -150,13 +143,27 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     return path.join('.', venvPath, 'Scripts', 'activate');
                 case Platform.MacOS:
                 default:
-                    // assuming OSX and Linux use the same path
+                    // assuming OSX and Linux use the same path -- need to some testing
                     return path.join('.', venvPath, 'bin', 'activate');
             }
 
         } else {
+            // if there is no venv path, prompt user and recursively call function again
             await this.ensureVirtualEnviornment();
             return await this.getVenvActivatePath(platform);
+        }
+    }
+
+    private async createPythonProject(): Promise<void> {
+        switch (process.platform) {
+            case Platform.Windows:
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} | func init ./ --worker-runtime python`);
+                break;
+            case Platform.MacOS:
+            default:
+                // assuming OSX and Linux use the same path -- need to some testing
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && func init ./ --worker-runtime python`);
+                break;
         }
     }
 }

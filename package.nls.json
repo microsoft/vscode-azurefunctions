@@ -43,5 +43,5 @@
     "azFunc.templateVersion": "A runtime release version (any runtime) that species which templates will be used rather than the latest templates.  This version will be used for ALL runtimes. (Requires a restart of VS Code to take effect)",
     "azFunc.projectOpenBehaviorDescription": "The behavior to use after creating a new project. The options are \"AddToWorkspace\", \"OpenInNewWindow\", or \"OpenInCurrentWindow\".",
     "azFunc.uninstallFuncCoreTools": "Uninstall Azure Functions Core Tools",
-    "azFunc.python.venvRelativePathDescription": "Temporary description"
+    "azFunc.python.venvRelativePathDescription": "The relative path of the root of the Python virtual environment being used for the Python Azure Functions workspace."
 }

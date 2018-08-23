@@ -68,9 +68,6 @@ export async function createNewProject(
         await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
 
-    if (projectCreator instanceof PythonProjectCreator) {
-        await commands.executeCommand('workbench.action.tasks.runTask', 'create');
-    }
     await validateFuncCoreToolsInstalled();
 
     if (openFolder) {
