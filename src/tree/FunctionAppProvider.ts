@@ -35,7 +35,7 @@ export class FunctionAppProvider implements IChildProvider {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId);
+        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
         addExtensionUserAgent(client);
         const webAppCollection: WebAppCollection = this._nextLink === undefined ?
             await client.webApps.list() :
@@ -67,7 +67,7 @@ export class FunctionAppProvider implements IChildProvider {
 
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
-        const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode, appSettings);
+        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }
