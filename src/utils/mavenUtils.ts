@@ -9,6 +9,10 @@ import { TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
+import { ext } from '../extensionVariables';
+import { DialogResponses } from 'vscode-azureextensionui';
+
+import opn = require("opn");
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
@@ -16,6 +20,11 @@ export namespace mavenUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
         } catch (error) {
+            const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please set the maven path');
+            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+            if (result === DialogResponses.learnMore) {
+                await opn('https://aka.ms/azurefunction_maven');
+            }
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
     }
