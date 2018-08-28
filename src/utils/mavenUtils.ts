@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as vscode from 'vscode';
-import { TelemetryProperties } from "vscode-azureextensionui";
+import { TelemetryProperties, DialogResponses } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
-import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
 import { ext } from '../extensionVariables';
-import { DialogResponses } from 'vscode-azureextensionui';
-
-import opn = require("opn");
+import { localize } from '../localize';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
