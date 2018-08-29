@@ -554,6 +554,11 @@
                         "description": "%azFunc.show64BitWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showMavenPathWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showMavenPathWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.enableRemoteDebugging": {
                         "type": "boolean",
                         "description": "%azFunc.enableRemoteDebugging%",

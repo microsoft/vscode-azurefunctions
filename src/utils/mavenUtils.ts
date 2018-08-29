@@ -7,11 +7,12 @@ import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as vscode from 'vscode';
-import { TelemetryProperties, DialogResponses } from "vscode-azureextensionui";
+import { DialogResponses, TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
-import { cpUtils } from './cpUtils';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { cpUtils } from './cpUtils';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
@@ -19,10 +20,15 @@ export namespace mavenUtils {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
         } catch (error) {
-            const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please set the maven path');
-            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-            if (result === DialogResponses.learnMore) {
-                await opn('https://aka.ms/azurefunction_maven');
+            const settingKey: string = 'showMavenPathWarning';
+            if (getFuncExtensionSetting<boolean>(settingKey)) {
+                const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
+                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                if (result === DialogResponses.learnMore) {
+                    await opn('https://aka.ms/azurefunction_maven');
+                } else if (result === DialogResponses.dontWarnAgain) {
+                    await updateGlobalSetting(settingKey, false);
+                }
             }
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
