@@ -1,4 +1,4 @@
-# Config Maven for VS Code
+# Configure Maven for VS Code
 
 Maven is a software project management and comprehension tool, which could manage a project's build, reporting and documentation from a central piece of information. The VS Code Azure Function Plugin use maven to generate Java Function project. Please ensure you have already download maven and set the PATH correctlly before you create Java Functions.
 
