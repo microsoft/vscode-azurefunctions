@@ -11,8 +11,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
-import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
+import { deploySubpathSetting, extensionPrefix, PackageManager, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
+import { installFuncCoreTools } from '../src/funcCoreTools/installFuncCoreTools';
 import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
 import * as fsUtil from '../src/utils/fs';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
@@ -116,6 +117,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     const pythonProject: string = 'PythonProject';
     test(pythonProject, async () => {
         const projectPath: string = path.join(testFolderPath, pythonProject);
+        await installFuncCoreTools(PackageManager.npm);
         await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
         await validateVSCodeProjectFiles(projectPath, false);
     });
