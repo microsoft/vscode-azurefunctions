@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { commands, QuickPickItem, QuickPickOptions } from 'vscode';
+import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -46,8 +46,7 @@ export async function createNewProject(
             const languagePicks: QuickPickItem[] = [
                 { label: ProjectLanguage.JavaScript, description: '' },
                 { label: ProjectLanguage.CSharp, description: '' },
-                { label: ProjectLanguage.Java, description: '' },
-                { label: ProjectLanguage.Python, description: '(Preview)' }
+                { label: ProjectLanguage.Java, description: '' }
             ];
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
             language = (await ext.ui.showQuickPick(languagePicks, options)).label;

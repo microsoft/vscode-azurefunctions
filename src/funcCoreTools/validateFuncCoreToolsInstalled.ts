@@ -15,7 +15,7 @@ import { cpUtils } from '../utils/cpUtils';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = false): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = false, customMessage?: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
@@ -30,7 +30,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
                 installed = true;
             } else {
                 const items: MessageItem[] = [];
-                const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
+                const message: string = customMessage ? customMessage : localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
                 const packageManager: PackageManager | undefined = await getFuncPackageManager(false /* isFuncInstalled */);
                 if (packageManager !== undefined) {
                     items.push(install);
@@ -48,6 +48,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
                 }
 
                 if (forcePrompt) {
+                    // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
                     input = await ext.ui.showWarningMessage(message, { modal: true }, ...items);
                 } else {
                     input = await ext.ui.showWarningMessage(message, ...items);

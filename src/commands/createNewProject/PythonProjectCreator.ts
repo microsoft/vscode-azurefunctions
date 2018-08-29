@@ -3,18 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { pathExists } from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem, OpenDialogOptions, workspace } from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
-import { Platform, TemplateFilter } from "../../constants";
+import { Platform, PythonAlias, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
-import { funcHostTaskId } from "./IProjectCreator";
+import { funcHostProblemMatcher, funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
@@ -40,14 +39,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
-        // need a custom message for warning as this is a dependency
-        if (await validateFuncCoreToolsInstalled(true)) {
-            await this.validatePythonVersion();
-            await this.ensureVirtualEnviornment();
-            await this.createPythonProject();
-        } else {
+        const funcCoreRequired: string = localize('funcCoreRequired', 'You must have the Azure Functions Core Tools installed to create, debug, and local Python functions.');
+        if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
             throw new UserCancelledError();
         }
+        await this.validatePythonVersion();
+        await this.setVirtualEnviornment();
+        await this.createPythonProject();
     }
 
     public async getTasksJson(): Promise<{}> {
@@ -78,7 +76,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                             'languageWorkers:python:arguments': '-m ptvsd --server --port 9091 --file'
                         }
                     },
-                    problemMatcher: []
+                    problemMatcher: [
+                        funcHostProblemMatcher
+                    ]
                 }
             ]
         };
@@ -86,55 +86,33 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     private async validatePythonVersion(): Promise<void> {
         const minReqVersion: string = '3.6.0';
-        let incompatiableVersion: boolean = false;
-        const pythonVersionIncompatiable: string = localize('pythonVersionIncompatiable', 'Current version of Python is incompatiable with Azure Functions Core Tools. Python 3.6 is required.');
-        try {
-            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'py --version')).substring('Python '.length);
-            this.pythonAlias = 'py';
-            if (!semver.gte(pyVersion, minReqVersion)) {
-                incompatiableVersion = true;
-            } else {
-                return;
-            }
-        } catch {
-            // ignore and try next alias
+        await this.tryGetPythonAlias(PythonAlias.py, minReqVersion);
+        await this.tryGetPythonAlias(PythonAlias.python, minReqVersion);
+        await this.tryGetPythonAlias(PythonAlias.python3, minReqVersion);
+        if (!this.pythonAlias) {
+            throw new Error(localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project with Azure Functions Core Tools.', minReqVersion));
         }
-        try {
-            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python3 --version')).substring('Python '.length);
-            this.pythonAlias = 'python3';
-            if (!semver.gte(pyVersion, minReqVersion)) {
-                incompatiableVersion = true;
-            } else {
-                return;
-            }
-        } catch {
-            // ignore and try next alias
-        }
-        try {
-            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, 'python --version')).substring('Python '.length);
-            this.pythonAlias = 'python';
-            if (!semver.gte(pyVersion, minReqVersion)) {
-                incompatiableVersion = true;
-            } else {
-                return;
-            }
-        } catch {
-            if (incompatiableVersion) {
-                throw new Error(pythonVersionIncompatiable);
-            }
-            throw new Error(localize('pythonVersionRequired', 'Python 3.6 is required to create a Python Function project.'));
-        }
-
     }
 
-    private async ensureVirtualEnviornment(): Promise<void> {
+    private async tryGetPythonAlias(pyAlias: PythonAlias, minReqVersion: string): Promise<void> {
+        try {
+            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
+            if (semver.gte(pyVersion, minReqVersion)) {
+                this.pythonAlias = pyAlias;
+            }
+        } catch {
+            // ignore error, not installed under this alias
+        }
+    }
+
+    private async setVirtualEnviornment(): Promise<void> {
         const funcEnv: string = 'func_env';
         let pythonVenvPath: string;
-        const createButton: MessageItem = { title: 'Create' };
-        const existingButton: MessageItem = { title: 'Existing' };
+        const newButton: MessageItem = { title: 'Create New' };
+        const existingButton: MessageItem = { title: 'Use Existing' };
         const venvRequired: string = localize('venvRequired', 'You must be running in a Python virtual environment to create a Python Function project. Create a new one or use an existing?');
-        const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, createButton, existingButton);
-        if (input === createButton) {
+        const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, newButton, existingButton);
+        if (input === newButton) {
             // if there is no func_env, create one as it's required for Python functions
             await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', 'func_env');
             pythonVenvPath = funcEnv;
@@ -166,7 +144,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
         } else {
             // if there is no venv path, prompt user and recursively call function again
-            await this.ensureVirtualEnviornment();
+            await this.setVirtualEnviornment();
             return await this.getVenvActivatePath(platform);
         }
     }
