@@ -33,7 +33,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     public backupTestFolder: string;
     public funcPortalTestFolder: string;
     public funcStagingPortalTestFolder: string;
-    public outputChannel: vscode.OutputChannel;
 
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
@@ -48,8 +47,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         this.backupTestFolder = path.join(this._testFolder, 'backup');
         this.funcPortalTestFolder = path.join(this._testFolder, 'funcPortal');
         this.funcStagingPortalTestFolder = path.join(this._testFolder, 'funcStagingPortal');
-        this.outputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-        ext.outputChannel = this.outputChannel;
     }
 
     public async initAsync(): Promise<void> {
@@ -67,7 +64,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     }
 
     public async dispose(): Promise<void> {
-        this.outputChannel.dispose();
         await fse.remove(this._testFolder);
 
         await updateGlobalSetting(templateFilterSetting, this._oldTemplateFilter);

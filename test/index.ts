@@ -26,7 +26,6 @@ testRunner.configure({
 });
 
 module.exports = testRunner;
-
 ext.context = new TestExtensionContext();
 registerAppServiceExtensionVariables(ext);
 registerUIExtensionVariables(ext);

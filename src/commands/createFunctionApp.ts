@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureTreeDataProvider, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, arg?: IAzureParentNode | string): Promise<string> {
+export async function createFunctionApp(actionContext: IActionContext, arg?: IAzureParentNode | string): Promise<string> {
     let node: IAzureParentNode;
     if (typeof arg === 'string') {
-        node = await nodeUtils.getSubscriptionNode(tree, arg);
+        node = await nodeUtils.getSubscriptionNode(ext.tree, arg);
     } else if (!arg) {
-        node = <IAzureParentNode>await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+        node = <IAzureParentNode>await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
     } else {
         node = arg;
     }
