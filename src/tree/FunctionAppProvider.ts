@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
+import { WebSiteManagementClient } from 'azure-arm-website';
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
@@ -15,6 +14,7 @@ import { localize } from "../localize";
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
+import { InvalidFunctionAppTreeItem } from './InvalidFunctionAppTreeItem';
 
 export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
@@ -35,7 +35,7 @@ export class FunctionAppProvider implements IChildProvider {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId);
+        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
         addExtensionUserAgent(client);
         const webAppCollection: WebAppCollection = this._nextLink === undefined ?
             await client.webApps.list() :
@@ -45,9 +45,15 @@ export class FunctionAppProvider implements IChildProvider {
 
         const treeItems: IAzureTreeItem[] = [];
         for (const site of webAppCollection) {
-            const siteClient: SiteClient = new SiteClient(site, node);
-            if (siteClient.isFunctionApp) {
-                treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+            try {
+                const siteClient: SiteClient = new SiteClient(site, node);
+                if (siteClient.isFunctionApp) {
+                    treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+                }
+            } catch (error) {
+                if (site.name) {
+                    treeItems.push(new InvalidFunctionAppTreeItem(site.name, error));
+                }
             }
         }
         return treeItems;
@@ -61,7 +67,7 @@ export class FunctionAppProvider implements IChildProvider {
 
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
-        const site: Site = await createFunctionApp(actionContext, parent.credentials, parent.subscriptionId, parent.subscriptionDisplayName, showCreatingNode, appSettings);
+        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }

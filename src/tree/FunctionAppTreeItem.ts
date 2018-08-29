@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { OutputChannel } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, ILogStream, SiteClient } from 'vscode-azureappservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -18,9 +17,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly client: SiteClient;
-    public logStream: ILogStream | undefined;
     public logStreamPath: string = '';
-    public logStreamOutputChannel: vscode.OutputChannel | undefined;
 
     private _state?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
