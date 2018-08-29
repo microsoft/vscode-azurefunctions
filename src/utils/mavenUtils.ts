@@ -9,9 +9,11 @@ import { TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
+import { Platform } from '../constants';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
+    const quotationMark: string = process.platform == Platform.Windows ? "\"" : "'";
     export async function validateMavenInstalled(workingDirectory: string | undefined): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
@@ -39,7 +41,7 @@ export namespace mavenUtils {
     }
 
     export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
-        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
+        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args.map((arg) => replaceParameterQuotationMark(arg)));
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
             const linesWithErrors: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(mvnErrorRegexp);
@@ -63,5 +65,12 @@ export namespace mavenUtils {
             }
         }
         return result.cmdOutput;
+    }
+
+    function replaceParameterQuotationMark(input: string): string {
+        if (input.startsWith("'") || input.startsWith("\"")) {
+            input = quotationMark + input.slice(1, input.length - 1) + quotationMark;
+        }
+        return input;
     }
 }
