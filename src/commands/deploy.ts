@@ -9,11 +9,13 @@ import * as fse from 'fs-extra';
 import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
+import { MessageItem } from 'vscode';
 import * as appservice from 'vscode-azureappservice';
+import { SiteClient } from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
+import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
@@ -24,6 +26,7 @@ import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
+import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
 export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
@@ -113,6 +116,20 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
             }
         }
     );
+
+    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', client.fullName);
+    ext.outputChannel.appendLine(deployComplete);
+    const viewOutput: MessageItem = { title: localize('viewOutput', 'View Output') };
+    const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream Logs') };
+
+    // Don't wait
+    vscode.window.showInformationMessage(deployComplete, streamLogs, viewOutput).then(async (result: MessageItem | undefined) => {
+        if (result === viewOutput) {
+            ext.outputChannel.show();
+        } else if (result === streamLogs) {
+            await startStreamingLogs(node);
+        }
+    });
 
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
