@@ -65,9 +65,3 @@ export enum ScmType {
     LocalGit = 'LocalGit',
     GitHub = 'GitHub'
 }
-
-export enum PythonAlias {
-    python = 'python',
-    python3 = 'python3',
-    py = 'py'
-}

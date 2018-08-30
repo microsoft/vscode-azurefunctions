@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem, OpenDialogOptions, workspace } from 'vscode';
 import { UserCancelledError } from 'vscode-azureextensionui';
-import { Platform, PythonAlias, TemplateFilter } from "../../constants";
+import { Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -16,12 +16,18 @@ import { cpUtils } from "../../utils/cpUtils";
 import { funcHostProblemMatcher, funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
+export enum PythonAlias {
+    python = 'python',
+    python3 = 'python3',
+    py = 'py'
+}
+
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     private readonly pythonVenvPathSetting: string = 'python.venvRelativePath';
     private pythonAlias: string;
     public getLaunchJson(): {} {
-        // currently the Python extension launches Windows with type: python and MacOS with type: pythonExperimental
+        // https://github.com/Microsoft/vscode-azurefunctions/issues/543
         const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
         return {
             version: '0.2.0',
@@ -39,7 +45,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
-        const funcCoreRequired: string = localize('funcCoreRequired', 'You must have the Azure Functions Core Tools installed to create, debug, and local Python functions.');
+        const funcCoreRequired: string = localize('funcCoreRequired', 'Azure Functions Core Tools must be installed to create, debug, and deploy local Python Functions projects.');
         if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
             throw new UserCancelledError();
         }
@@ -138,7 +144,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     return path.join('.', venvPath, 'Scripts', 'activate');
                 case Platform.MacOS:
                 default:
-                    // assuming OSX and Linux use the same path -- need to some testing
                     return path.join('.', venvPath, 'bin', 'activate');
             }
 
@@ -150,14 +155,15 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     private async createPythonProject(): Promise<void> {
+        const funcInitPython: string = 'func init ./ --worker-runtime python';
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && func init ./ --worker-runtime python`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
                 break;
             case Platform.MacOS:
             default:
                 // assuming OSX and Linux use the same path -- need to some testing
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && func init ./ --worker-runtime python`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
                 break;
         }
     }

@@ -39,11 +39,6 @@ gulp.task('install-azure-account', async () => {
     }
 });
 
-gulp.task('install-python', async () => {
-    cp.spawn('sudo apt-get update');
-    cp.spawn('sudo apt-get install python3.6');
-})
-
 gulp.task('package', async () => {
     await vsce.createVSIX();
 });
