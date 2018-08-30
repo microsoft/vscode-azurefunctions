@@ -37,7 +37,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         // tslint:disable-next-line:strict-boolean-expressions
         this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
-        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
+        const functionsVersion: string = this._runtime === ProjectRuntime.one ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName, '--arg:AzureFunctionsVersion', functionsVersion);
 
         if (!this._hasDetectedRuntime) {
             await this.detectRuntime();
