@@ -41,7 +41,7 @@ export namespace mavenUtils {
     }
 
     export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
-        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args.map(replaceParameterQuotationMark));
+        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
             const linesWithErrors: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(mvnErrorRegexp);
@@ -67,10 +67,7 @@ export namespace mavenUtils {
         return result.cmdOutput;
     }
 
-    function replaceParameterQuotationMark(input: string): string {
-        if (input.startsWith('\'') || input.startsWith('"')) {
-            input = quotationMark + input.slice(1, input.length - 1) + quotationMark;
-        }
-        return input;
+    export function formatMavenArg(key: string, value: string): string {
+        return `-${key}=${quotationMark}${value}${quotationMark}`;
     }
 }
