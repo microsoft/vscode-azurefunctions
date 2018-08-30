@@ -7,13 +7,11 @@ import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
-import { Platform } from '../constants';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
-    const quotationMark: string = process.platform === Platform.Windows ? '"' : '\'';
     export async function validateMavenInstalled(workingDirectory: string | undefined): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
@@ -68,6 +66,6 @@ export namespace mavenUtils {
     }
 
     export function formatMavenArg(key: string, value: string): string {
-        return `-${key}=${quotationMark}${value}${quotationMark}`;
+        return `-${key}=${cpUtils.wrapArgInQuotes(value)}`;
     }
 }
