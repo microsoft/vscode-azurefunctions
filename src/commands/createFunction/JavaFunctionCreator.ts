@@ -55,8 +55,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
         const javaFuntionProperties: string[] = [];
         for (const key of Object.keys(userSettings)) {
-            // tslint:disable-next-line:no-invalid-template-strings
-            javaFuntionProperties.push(mavenUtils.formatMavenArg('D${key}', userSettings[key]));
+            javaFuntionProperties.push(mavenUtils.formatMavenArg(`D${key}`, userSettings[key]));
         }
 
         await mavenUtils.validateMavenInstalled(this._functionAppPath);
