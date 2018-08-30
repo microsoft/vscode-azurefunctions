@@ -25,13 +25,6 @@ before_install:
   - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version 2.0.0 --install-dir "$DOTNET_INSTALL_DIR"
   - export PATH="$DOTNET_INSTALL_DIR:$PATH"
 
-  # Install python3.6
-  - curl https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tgz > Python-3.6.0.tgz
-  - tar -zxvf Python-3.6.0.tgz
-  - cd Python-3.6.0
-  - make
-  - make install
-
 install:
   - npm install
 

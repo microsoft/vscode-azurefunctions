@@ -114,13 +114,15 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath, false);
     });
 
-    const pythonProject: string = 'PythonProject';
-    test(pythonProject, async () => {
-        const projectPath: string = path.join(testFolderPath, pythonProject);
-        await installFuncCoreTools(PackageManager.npm);
-        await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
-        await validateVSCodeProjectFiles(projectPath, false);
-    });
+    /*  Temporarily disabled: https://github.com/Microsoft/vscode-azurefunctions/issues/542
+        const pythonProject: string = 'PythonProject';
+        test(pythonProject, async () => {
+            const projectPath: string = path.join(testFolderPath, pythonProject);
+            await installFuncCoreTools(PackageManager.npm);
+            await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
+            await validateVSCodeProjectFiles(projectPath, false);
+        });
+    */
 
     const typeScriptProject: string = 'TypeScriptProject';
     test(typeScriptProject, async () => {
