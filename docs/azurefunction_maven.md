@@ -22,4 +22,4 @@ You could download maven from [Apache Maven](https://maven.apache.org/download.c
 
 4. Run `mvn --version` to verify that it is correctly installed.
 
-> NOTE: Please restart vscode to make the path effective when you finished the steps above.
+> NOTE: Please restart vscode to make the path effective when you finish the steps above.
