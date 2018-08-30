@@ -25,6 +25,10 @@ before_install:
   - curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version 2.0.0 --install-dir "$DOTNET_INSTALL_DIR"
   - export PATH="$DOTNET_INSTALL_DIR:$PATH"
 
+  # Install python3.6
+  - apt-get update
+  - apt-get install python3.6
+
 install:
   - npm install
 
