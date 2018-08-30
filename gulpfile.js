@@ -15,12 +15,9 @@ const vsce = require('vsce');
 const packageJson = require('./package.json');
 
 gulp.task('test', ['install-azure-account'], (cb) => {
-    process.env.ENABLE_LONG_RUNNING_TESTS = true;
+    process.env.ENABLE_LONG_RUNNING_TESTS = env.ENABLE_LONG_RUNNING_TESTS | process.env.TRAVIS_EVENT_TYPE === 'cron';
     const cmd = cp.spawn('node', ['./node_modules/vscode/bin/test'], {
-        env: {
-            ENABLE_LONG_RUNNING_TESTS: true
-        }
-        , stdio: 'inherit'
+        env: env, stdio: 'inherit'
     });
     cmd.on('close', (code) => {
         cb(code);

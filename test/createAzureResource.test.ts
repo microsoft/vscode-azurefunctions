@@ -5,8 +5,7 @@
 
 import * as assert from 'assert';
 import { ResourceManagementClient } from 'azure-arm-resource';
-// tslint:disable-next-line:no-require-imports
-import WebSiteManagementClient = require('azure-arm-website');
+import { WebSiteManagementClient } from 'azure-arm-website';
 import { Site } from 'azure-arm-website/lib/models';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
@@ -37,7 +36,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     });
 
     suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-        if (process.env.TRAVIS_EVENT_TYPE !== 'cron') {
+        if (!process.env.ENABLE_LONG_RUNNING_TESTS) {
             this.skip();
         }
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
