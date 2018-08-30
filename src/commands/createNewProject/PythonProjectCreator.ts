@@ -64,13 +64,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     type: 'shell',
                     dependsOn: 'build',
                     osx: {
-                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                        command: `source ${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'bin', 'activate')} && func start host`
                     },
                     windows: {
-                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func start host`
+                        command: `${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'Scripts', 'activate')} | func start host`
                     },
                     linux: {
-                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                        command: `source ${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'bin', 'activate')} && func start host`
                     },
                     isBackground: true,
                     presentation: {
