@@ -6,6 +6,7 @@
 import * as cp from 'child_process';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { isWindows } from '../constants';
 import { localize } from '../localize';
 
 export namespace cpUtils {
@@ -80,5 +81,13 @@ export namespace cpUtils {
         cmdOutput: string;
         cmdOutputIncludingStderr: string;
         formattedArgs: string;
+    }
+
+    const quotationMark: string = isWindows ? '"' : '\'';
+    /**
+     * Ensures spaces and special characters (most notably $) are preserved
+     */
+    export function wrapArgInQuotes(arg: string): string {
+        return quotationMark + arg + quotationMark;
     }
 }
