@@ -591,6 +591,10 @@
                             "OpenInCurrentWindow"
                         ],
                         "description": "%azFunc.projectOpenBehaviorDescription%"
+                    },
+                    "azureFunctions.preDeployTask": {
+                        "type": "string",
+                        "description": "%azFunc.preDeployTaskDescription%"
                     }
                 }
             }

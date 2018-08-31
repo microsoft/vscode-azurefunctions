@@ -10,7 +10,7 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
@@ -22,6 +22,7 @@ import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = publishTaskId;
 
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
@@ -91,7 +92,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: 'publish',
+                    label: publishTaskId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    identifier: publishTaskId,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',

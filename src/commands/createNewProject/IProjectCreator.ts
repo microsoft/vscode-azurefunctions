@@ -12,6 +12,7 @@ import { promptForProjectRuntime } from "../../ProjectSettings";
 
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
+    public preDeployTask: string = '';
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;
