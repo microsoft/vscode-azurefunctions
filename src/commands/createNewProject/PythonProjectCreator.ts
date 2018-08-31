@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, OpenDialogOptions, workspace } from 'vscode';
-import { UserCancelledError } from 'vscode-azureextensionui';
+import { MessageItem } from 'vscode';
+import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
 import { Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
-import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
 import { funcHostProblemMatcher, funcHostTaskId } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
@@ -24,8 +24,8 @@ export enum PythonAlias {
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    private readonly pythonVenvPathSetting: string = 'python.venvRelativePath';
     private pythonAlias: string;
+    private funcEnv: string = 'func_env';
     public getLaunchJson(): {} {
         // https://github.com/Microsoft/vscode-azurefunctions/issues/543
         const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
@@ -50,7 +50,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             throw new UserCancelledError();
         }
         await this.validatePythonVersion();
-        await this.setVirtualEnviornment();
+        await this.createVirtualEnviornment();
         await this.createPythonProject();
     }
 
@@ -64,13 +64,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     type: 'shell',
                     dependsOn: 'build',
                     osx: {
-                        command: `source ${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'bin', 'activate')} && func start host`
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
                     },
                     windows: {
-                        command: `${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'Scripts', 'activate')} | func start host`
+                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func start host`
                     },
                     linux: {
-                        command: `source ${path.join('.', '\${config:azureFunctions.python.venvRelativePath}', 'bin', 'activate')} && func start host`
+                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func start host`
                     },
                     isBackground: true,
                     presentation: {
@@ -111,46 +111,23 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         }
     }
 
-    private async setVirtualEnviornment(): Promise<void> {
-        const funcEnv: string = 'func_env';
-        let pythonVenvPath: string;
-        const newButton: MessageItem = { title: 'Create New' };
-        const existingButton: MessageItem = { title: 'Use Existing' };
-        const venvRequired: string = localize('venvRequired', 'You must be running in a Python virtual environment to create a Python Function project. Create a new one or use an existing?');
-        const input: MessageItem = await ext.ui.showWarningMessage(venvRequired, { modal: true }, newButton, existingButton);
-        if (input === newButton) {
-            // if there is no func_env, create one as it's required for Python functions
-            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', 'func_env');
-            pythonVenvPath = funcEnv;
-        } else {
-            const options: OpenDialogOptions = {
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                defaultUri: workspace.workspaceFolders && workspace.workspaceFolders.length > 0 ? workspace.workspaceFolders[0].uri : undefined,
-                openLabel: localize('select', 'Select')
-            };
-            const venvFspath: string = (await ext.ui.showOpenDialog(options))[0].fsPath;
-            pythonVenvPath = path.relative(this.functionAppPath, venvFspath);
+    private async createVirtualEnviornment(): Promise<void> {
+        if (await fse.pathExists(path.join(this.functionAppPath, this.funcEnv))) {
+            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python Virtual Environment already exists.  Overwrite?', this.funcEnv), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+            if (input === DialogResponses.no) {
+                return;
+            }
         }
-        await updateWorkspaceSetting(this.pythonVenvPathSetting, pythonVenvPath, this.functionAppPath);
+        await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', this.funcEnv);
     }
 
     private async getVenvActivatePath(platform: Platform): Promise<string> {
-        const venvPath: string | undefined = getFuncExtensionSetting(this.pythonVenvPathSetting, this.functionAppPath);
-        if (venvPath) {
-            switch (platform) {
-                case Platform.Windows:
-                    return path.join('.', venvPath, 'Scripts', 'activate');
-                case Platform.MacOS:
-                default:
-                    return path.join('.', venvPath, 'bin', 'activate');
-            }
-
-        } else {
-            // if there is no venv path, prompt user and recursively call function again
-            await this.setVirtualEnviornment();
-            return await this.getVenvActivatePath(platform);
+        switch (platform) {
+            case Platform.Windows:
+                return path.join('.', this.funcEnv, 'Scripts', 'activate');
+            case Platform.MacOS:
+            default:
+                return path.join('.', this.funcEnv, 'bin', 'activate');
         }
     }
 
