@@ -225,9 +225,8 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
         return;
     }
 
-    let isTaskNameDefined: boolean = true;
+    const isTaskNameDefinedInSettings: boolean = !!taskName;
     if (!taskName) {
-        isTaskNameDefined = false;
         switch (language) {
             case ProjectLanguage.CSharp:
                 taskName = publishTaskId;
@@ -271,7 +270,7 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
         const messageLines: string[] = [];
         // If the task name was specified in the user's settings, we will throw an error and block the user's deploy if we can't find that task
         // If the task name was _not_ specified, we will display a warning and let the deployment continue. (The preDeployTask isn't _always_ necessary and we don't want to block old projects that never had this setting)
-        if (isTaskNameDefined) {
+        if (isTaskNameDefinedInSettings) {
             messageLines.push(localize('noPreDeployTaskError', 'Did not find preDeploy task "{0}". Change the "{1}.{2}" setting, manually edit your task.json, or re-initialize your VS Code config with the following steps:', taskName, extensionPrefix, preDeployTaskSetting));
         } else {
             messageLines.push(localize('noPreDeployTaskWarning', 'WARNING: Did not find preDeploy task "{0}". The deployment will continue, but the selected folder may not reflect your latest changes.', taskName));
@@ -283,7 +282,7 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
         messageLines.push(localize('howToAddPreDeploy3', '3. Select "Yes" to overwrite your tasks.json file when prompted'));
 
         const fullMessage: string = messageLines.join(os.EOL);
-        if (isTaskNameDefined) {
+        if (isTaskNameDefinedInSettings) {
             throw new Error(fullMessage);
         } else {
             ext.outputChannel.show(true);
