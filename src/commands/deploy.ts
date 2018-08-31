@@ -214,8 +214,15 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
 
 async function runPreDeployTask(deployFsPath: string, telemetryProperties: TelemetryProperties, language: ProjectLanguage, isZipDeploy: boolean): Promise<void> {
     let taskName: string | undefined = getFuncExtensionSetting(preDeployTaskSetting, deployFsPath);
-    if (!isZipDeploy && taskName) {
-        ext.outputChannel.appendLine(localize('ignoringPreDeployTask', 'WARNING: Ignoring preDeployTask "{0}" for non-zip deploy.', taskName));
+    if (!isZipDeploy) {
+        // We don't run pre deploy tasks for non-zipdeploy since that stuff should be handled by kudu
+
+        if (taskName) {
+            // We only need to warn if they have the setting defined
+            ext.outputChannel.appendLine(localize('ignoringPreDeployTask', 'WARNING: Ignoring preDeployTask "{0}" for non-zip deploy.', taskName));
+        }
+
+        return;
     }
 
     let isTaskNameDefined: boolean = true;
