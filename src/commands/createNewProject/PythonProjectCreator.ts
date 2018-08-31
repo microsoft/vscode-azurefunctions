@@ -162,7 +162,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 break;
             case Platform.MacOS:
             default:
-                // assuming OSX and Linux use the same path -- need to some testing
                 await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
                 break;
         }
