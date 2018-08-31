@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureTreeDataProvider, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, subscription?: IAzureParentNode | string, resourecGroup?: IAzureParentNode | string): Promise<string> {
+export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, subscription?: IAzureParentNode | string, resourceGroup?: IAzureParentNode<FunctionAppTreeItem> | string): Promise<string> {
     let node: IAzureParentNode;
     if (typeof subscription === 'string') {
         node = await nodeUtils.getSubscriptionNode(tree, subscription);
@@ -14,6 +15,12 @@ export async function createFunctionApp(actionContext: IActionContext, tree: Azu
         node = <IAzureParentNode>await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
     } else {
         node = subscription;
+    }
+    if (resourceGroup) {
+        if (typeof resourceGroup !== 'string') {
+            resourceGroup = resourceGroup.treeItem.client.resourceGroup;
+        }
+        actionContext.properties.resourceGroup = resourceGroup;
     }
 
     const funcAppNode: IAzureNode = await node.createChild(actionContext);
