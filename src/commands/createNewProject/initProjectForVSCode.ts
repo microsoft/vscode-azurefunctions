@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
 import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, gitignoreFileName, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
+import { deploySubpathSetting, extensionPrefix, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
 import { confirmOverwriteFile } from '../../utils/fs';
@@ -93,6 +93,9 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
             data[`${extensionPrefix}.${templateFilterSetting}`] = templateFilter;
             if (projectCreator.deploySubpath) {
                 data[`${extensionPrefix}.${deploySubpathSetting}`] = projectCreator.deploySubpath;
+            }
+            if (projectCreator.preDeployTask) {
+                data[`${extensionPrefix}.${preDeployTaskSetting}`] = projectCreator.preDeployTask;
             }
             return data;
         },
