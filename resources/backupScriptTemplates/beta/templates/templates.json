@@ -33,6 +33,12 @@
             "userPrompt": [
                 "connection",
                 "path"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -40,7 +46,7 @@
         "id": "BlobTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, myBlob) {\r\n    context.log(\"JavaScript blob trigger function processed blob \\n Name:\", context.bindingData.name, \"\\n Blob Size:\", myBlob.length, \"Bytes\");\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function (context, myBlob) {\r\n    context.log(\"JavaScript blob trigger function processed blob \\n Name:\", context.bindingData.name, \"\\n Blob Size:\", myBlob.length, \"Bytes\");\r\n};",
             "readme.md": "# BlobTrigger - JavaScript\r\n\r\nThe `BlobTrigger` makes it incredibly easy to react to new Blobs inside of Azure Blob Storage. This sample demonstrates a simple use case of processing data from a given Blob using JavaScript.\r\n\r\n## How it works\r\n\r\nFor a `BlobTrigger` to work, you provide a path which dictates where the blobs are located inside your container, and can also help restrict the types of blobs you wish to return. For instance, you can set the path to `samples/{name}.png` to restrict the trigger to only the samples path and only blobs with \".png\" at the end of their name.\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
             "sample.dat": "samples-workitems/workitem.txt"
         },
@@ -70,6 +76,12 @@
             "userPrompt": [
                 "connection",
                 "path"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -110,6 +122,12 @@
             ],
             "filters": [
                 "Python3"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -125,7 +143,11 @@
                     "type": "cosmosDBTrigger",
                     "name": "input",
                     "direction": "in",
-                    "leaseCollectionName": "leases"
+                    "connectionStringSetting": "",
+                    "databaseName": "",
+                    "collectionName": "",
+                    "leaseCollectionName": "leases",
+                    "createLeaseCollectionIfNotExists": true
                 }
             ]
         },
@@ -150,7 +172,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.0-beta7"
+                    "version": "3.0.1-beta1"
                 }
             ]
         }
@@ -159,7 +181,7 @@
         "id": "CosmosDBTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, documents) {\r\n    if (!!documents && documents.length > 0) {\r\n        context.log('Document Id: ', documents[0].id);\r\n    }\r\n    context.done();\r\n}\r\n",
+            "index.js": "module.exports = async function (context, documents) {\r\n    if (!!documents && documents.length > 0) {\r\n        context.log('Document Id: ', documents[0].id);\r\n    }\r\n}\r\n",
             "sample.dat": "[\r\n\t{\r\n\t\t\"id\": \"sample\"\r\n\t}\r\n]"
         },
         "function": {
@@ -168,7 +190,11 @@
                     "type": "cosmosDBTrigger",
                     "name": "documents",
                     "direction": "in",
-                    "leaseCollectionName": "leases"
+                    "leaseCollectionName": "leases",
+                    "connectionStringSetting": "",
+                    "databaseName": "",
+                    "collectionName": "",
+                    "createLeaseCollectionIfNotExists": true
                 }
             ]
         },
@@ -193,7 +219,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.0-beta7"
+                    "version": "3.0.1-beta1"
                 }
             ]
         }
@@ -212,7 +238,11 @@
                     "type": "cosmosDBTrigger",
                     "name": "documents",
                     "direction": "in",
-                    "leaseCollectionName": "leases"
+                    "leaseCollectionName": "leases",
+                    "connectionStringSetting": "",
+                    "databaseName": "",
+                    "collectionName": "",
+                    "createLeaseCollectionIfNotExists": true
                 }
             ]
         },
@@ -237,7 +267,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.0-beta7"
+                    "version": "3.0.1-beta1"
                 }
             ],
             "filters": [
@@ -276,7 +306,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.2.2-beta3"
+                    "version": "1.6.0"
                 }
             ]
         }
@@ -327,7 +357,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.2.2-beta3"
+                    "version": "1.6.0"
                 }
             ]
         }
@@ -363,7 +393,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.2.2-beta3"
+                    "version": "1.6.0"
                 }
             ]
         }
@@ -399,7 +429,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
-                    "version": "2.0.0-beta1"
+                    "version": "2.0.0-beta4"
                 }
             ]
         }
@@ -408,7 +438,7 @@
         "id": "EventGridTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, eventGridEvent) {\r\n    context.log(typeof eventGridEvent);\r\n    context.log(eventGridEvent);\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function (context, eventGridEvent) {\r\n    context.log(typeof eventGridEvent);\r\n    context.log(eventGridEvent);\r\n};",
             "sample.dat": "{\n  \"topic\": \"/subscriptions/5b4b650e-28b9-4790-b3ab-ddbd88d727c4/resourcegroups/test/providers/Microsoft.EventHub/namespaces/test\",\n  \"subject\": \"eventhubs/test\",\n  \"eventType\": \"captureFileCreated\",\n  \"eventTime\": \"2017-07-14T23:10:27.7689666Z\",\n  \"id\": \"7b11c4ce-1c34-4416-848b-1730e766f126\",\n  \"data\": {\n    \"fileUrl\": \"https://test.blob.core.windows.net/debugging/testblob.txt\",\n    \"fileType\": \"AzureBlockBlob\",\n    \"partitionId\": \"1\",\n    \"sizeInBytes\": 0,\n    \"eventCount\": 0,\n    \"firstSequenceNumber\": -1,\n    \"lastSequenceNumber\": -1,\n    \"firstEnqueueTime\": \"0001-01-01T00:00:00\",\n    \"lastEnqueueTime\": \"0001-01-01T00:00:00\"\n  },\n  \"dataVersion\": \"\", \n  \"metadataVersion\": \"1\" \n}\n"
         },
         "function": {
@@ -435,7 +465,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
-                    "version": "2.0.0-beta1"
+                    "version": "2.0.0-beta4"
                 }
             ]
         }
@@ -471,7 +501,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
-                    "version": "2.0.0-beta1"
+                    "version": "2.0.0-beta4"
                 }
             ]
         }
@@ -515,7 +545,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -560,7 +590,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -613,7 +643,7 @@
         "id": "HttpTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, req) {\r\n    context.log('JavaScript HTTP trigger function processed a request.');\r\n\r\n    if (req.query.name || (req.body && req.body.name)) {\r\n        context.res = {\r\n            // status: 200, /* Defaults to 200 */\r\n            body: \"Hello \" + (req.query.name || req.body.name)\r\n        };\r\n    }\r\n    else {\r\n        context.res = {\r\n            status: 400,\r\n            body: \"Please pass a name on the query string or in the request body\"\r\n        };\r\n    }\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function (context, req) {\r\n    context.log('JavaScript HTTP trigger function processed a request.');\r\n\r\n    if (req.query.name || (req.body && req.body.name)) {\r\n        context.res = {\r\n            // status: 200, /* Defaults to 200 */\r\n            body: \"Hello \" + (req.query.name || req.body.name)\r\n        };\r\n    }\r\n    else {\r\n        context.res = {\r\n            status: 400,\r\n            body: \"Please pass a name on the query string or in the request body\"\r\n        };\r\n    }\r\n};",
             "sample.dat": "{\r\n    \"name\": \"Azure\"\r\n}"
         },
         "function": {
@@ -745,7 +775,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
-                    "version": "1.0.0-beta3"
+                    "version": "1.0.0-beta4"
                 }
             ],
             "AADPermissions": [
@@ -817,7 +847,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
-                    "version": "1.0.0-beta3"
+                    "version": "1.0.0-beta4"
                 }
             ],
             "AADPermissions": [
@@ -872,7 +902,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
-                    "version": "1.0.0-beta3"
+                    "version": "1.0.0-beta4"
                 }
             ],
             "AADPermissions": [
@@ -932,7 +962,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
-                    "version": "1.0.0-beta3"
+                    "version": "1.0.0-beta4"
                 }
             ],
             "AADPermissions": [
@@ -1003,7 +1033,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
-                    "version": "1.0.0-beta3"
+                    "version": "1.0.0-beta4"
                 }
             ],
             "AADPermissions": [
@@ -1053,6 +1083,12 @@
             "userPrompt": [
                 "connection",
                 "queueName"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -1060,7 +1096,7 @@
         "id": "QueueTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, myQueueItem) {\r\n    context.log('JavaScript queue trigger function processed work item', myQueueItem);\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function (context, myQueueItem) {\r\n    context.log('JavaScript queue trigger function processed work item', myQueueItem);\r\n};",
             "readme.md": "# QueueTrigger - JavaScript\r\n\r\nThe `QueueTrigger` makes it incredibly easy to react to new Queues inside of Azure Queue Storage. This sample demonstrates a simple use case of processing data from a given Queue using C#.\r\n\r\n## How it works\r\n\r\nFor a `QueueTrigger` to work, you provide a path which dictates where the queue messages are located inside your container.\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
             "sample.dat": "sample queue data"
         },
@@ -1090,6 +1126,12 @@
             "userPrompt": [
                 "connection",
                 "queueName"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -1130,6 +1172,12 @@
             ],
             "filters": [
                 "Python3"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                    "version": "3.0.0-beta8"
+                }
             ]
         }
     },
@@ -1177,7 +1225,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.SendGrid",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1186,7 +1234,7 @@
         "id": "SendGrid-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "var util = require('util');\r\n\r\n// The 'From' and 'To' fields are automatically populated with the values specified by the binding settings.\r\n//\r\n// You can also optionally configure the default From/To addresses globally via host.config, e.g.:\r\n//\r\n// {\r\n//   \"sendGrid\": {\r\n//      \"to\": \"user@host.com\",\r\n//      \"from\": \"Azure Functions <samples@functions.com>\"\r\n//   }\r\n// }\r\nmodule.exports = function (context, order) {\r\n    context.log('JavaScript queue trigger function processed order', order.orderId);\r\n\r\n    context.done(null, {\r\n        message: {\r\n            subject: util.format('Thanks for your order (#%d)!', order.orderId),\r\n            content: [{\r\n                type: 'text/plain',\r\n                value: util.format(\"%s, your order (%d) is being processed!\", order.customerName, order.orderId)\r\n            }]\r\n        }\r\n    });\r\n}",
+            "index.js": "var util = require('util');\r\n\r\n// The 'From' and 'To' fields are automatically populated with the values specified by the binding settings.\r\n//\r\n// You can also optionally configure the default From/To addresses globally via host.config, e.g.:\r\n//\r\n// {\r\n//   \"sendGrid\": {\r\n//      \"to\": \"user@host.com\",\r\n//      \"from\": \"Azure Functions <samples@functions.com>\"\r\n//   }\r\n// }\r\nmodule.exports = async function (context, order) {\r\n    context.log('JavaScript queue trigger function processed order', order.orderId);\r\n\r\n    context.bindings.message = {\r\n        subject: util.format('Thanks for your order (#%d)!', order.orderId),\r\n        content: [{\r\n            type: 'text/plain',\r\n            value: util.format(\"%s, your order (%d) is being processed!\", order.customerName, order.orderId)\r\n        }]\r\n    };\r\n}",
             "sample.dat": "{ \"orderId\": 12345, \"customerName\": \"Joe Schmoe\", \"customerEmail\": \"joeschmoe@foo.com\" }"
         },
         "function": {
@@ -1203,7 +1251,9 @@
                     "direction": "out",
                     "apiKey": "SendGridApiKey",
                     "from": "Azure Functions <samples@functions.com>",
-                    "to": "{customerEmail}"
+                    "to": "{customerEmail}",
+                    "subject": "",
+                    "text": ""
                 }
             ]
         },
@@ -1228,7 +1278,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.SendGrid",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1270,7 +1320,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.ServiceBus",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1279,7 +1329,7 @@
         "id": "ServiceBusQueueTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function(context, mySbMsg) {\r\n    context.log('JavaScript ServiceBus queue trigger function processed message', mySbMsg);\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function(context, mySbMsg) {\r\n    context.log('JavaScript ServiceBus queue trigger function processed message', mySbMsg);\r\n};",
             "sample.dat": "Service Bus Message"
         },
         "function": {
@@ -1312,7 +1362,49 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.ServiceBus",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
+                }
+            ]
+        }
+    },
+    {
+        "id": "ServiceBusQueueTrigger-Python",
+        "runtime": "2",
+        "files": {
+            "sample.dat": "Service Bus Message",
+            "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(msg: func.ServiceBusMessage):\r\n    logging.info('Python ServiceBus queue trigger processed message: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
+        },
+        "function": {
+            "scriptFile": "__init__.py",
+            "bindings": [
+                {
+                    "name": "msg",
+                    "type": "serviceBusTrigger",
+                    "direction": "in",
+                    "queueName": "myinputqueue",
+                    "connection": ""
+                }
+            ]
+        },
+        "metadata": {
+            "defaultFunctionName": "ServiceBusQueueTriggerPython",
+            "description": "$ServiceBusQueueTrigger_description",
+            "name": "Service Bus Queue trigger",
+            "language": "Python",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "serviceBus",
+            "enabledInTryMode": false,
+            "userPrompt": [
+                "connection",
+                "queueName"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.ServiceBus",
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1356,7 +1448,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.ServiceBus",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1365,7 +1457,7 @@
         "id": "ServiceBusTopicTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function(context, mySbMsg) {\r\n    context.log('JavaScript ServiceBus topic trigger function processed message', mySbMsg);\r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function(context, mySbMsg) {\r\n    context.log('JavaScript ServiceBus topic trigger function processed message', mySbMsg);\r\n};",
             "sample.dat": "Service Bus Message"
         },
         "function": {
@@ -1400,7 +1492,51 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.ServiceBus",
-                    "version": "3.0.0-beta5"
+                    "version": "3.0.0-beta8"
+                }
+            ]
+        }
+    },
+    {
+        "id": "ServiceBusTopicTrigger-Python",
+        "runtime": "2",
+        "files": {
+            "sample.dat": "Service Bus Message",
+            "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(msg: func.ServiceBusMessage):\r\n    logging.info('Python ServiceBus topic trigger processed message: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
+        },
+        "function": {
+            "disabled": false,
+            "bindings": [
+                {
+                    "name": "msg",
+                    "type": "serviceBusTrigger",
+                    "direction": "in",
+                    "topicName": "mytopic",
+                    "subscriptionName": "mysubscription",
+                    "connection": ""
+                }
+            ]
+        },
+        "metadata": {
+            "defaultFunctionName": "ServiceBusTopicTriggerPython",
+            "description": "$ServiceBusTopicTrigger_description",
+            "name": "Service Bus Topic trigger",
+            "language": "Python",
+            "category": [
+                "$temp_category_core",
+                "$temp_category_dataProcessing"
+            ],
+            "categoryStyle": "serviceBus",
+            "enabledInTryMode": false,
+            "userPrompt": [
+                "connection",
+                "topicName",
+                "subscriptionName"
+            ],
+            "extensions": [
+                {
+                    "id": "Microsoft.Azure.WebJobs.ServiceBus",
+                    "version": "3.0.0-beta8"
                 }
             ]
         }
@@ -1444,7 +1580,7 @@
         "id": "TimerTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = function (context, myTimer) {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if(myTimer.isPastDue)\r\n    {\r\n        context.log('JavaScript is running late!');\r\n    }\r\n    context.log('JavaScript timer trigger function ran!', timeStamp);   \r\n    \r\n    context.done();\r\n};",
+            "index.js": "module.exports = async function (context, myTimer) {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if(myTimer.isPastDue)\r\n    {\r\n        context.log('JavaScript is running late!');\r\n    }\r\n    context.log('JavaScript timer trigger function ran!', timeStamp);   \r\n};",
             "readme.md": "# TimerTrigger - JavaScript\r\n\r\nThe `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.\r\n\r\n## How it works\r\n\r\nFor a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: \"When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year\".\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
             "sample.dat": ""
         },
