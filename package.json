@@ -641,7 +641,6 @@
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.2.0",
         "portfinder": "^1.0.13",
-        "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
         "vscode-azureappservice": "^0.21.0",
