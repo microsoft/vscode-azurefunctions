@@ -71,7 +71,7 @@ export class FunctionAppProvider implements IChildProvider {
         return treeItems;
     }
 
-    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
+    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext, resourceGroup?: string): Promise<IAzureTreeItem> {
         // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
         // https://github.com/Microsoft/vscode-azuretools/issues/120
         // tslint:disable-next-line:strict-boolean-expressions
@@ -79,7 +79,7 @@ export class FunctionAppProvider implements IChildProvider {
 
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
-        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings);
+        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings, resourceGroup);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }
