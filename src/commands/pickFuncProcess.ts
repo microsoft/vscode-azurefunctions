@@ -41,13 +41,17 @@ function isFuncTask(task: Task): boolean {
 async function stopFuncTaskIfRunning(): Promise<void> {
     const funcExecution: TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: TaskExecution) => isFuncTask(te.task));
     if (funcExecution) {
-        const waitForEndPromise: Promise<void> = new Promise((resolve: () => void): void => {
+        const waitForEndPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
             const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
                 if (isFuncTask(e.execution.task)) {
                     resolve();
                     listener.dispose();
                 }
             });
+
+            const timeoutInSeconds: number = 30;
+            const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
+            setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
         });
         funcExecution.terminate();
         await waitForEndPromise;
@@ -93,9 +97,14 @@ async function getInnermostWindowsPid(pid: string): Promise<string> {
         throw new Error(localize('noWindowsProcessTree', 'Failed to find dependency "{0}".', moduleName));
     }
 
-    let psTree: IProcessTreeNode = await new Promise((resolve: (psTree: IProcessTreeNode) => void): void => {
+    let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
         windowsProcessTree.getProcessTree(Number(pid), resolve);
     });
+
+    if (!psTree) {
+        throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
+    }
+
     while (psTree.children.length > 0) {
         psTree = psTree.children[0];
     }
@@ -111,5 +120,5 @@ interface IProcessTreeNode {
 }
 
 interface IWindowsProcessTree {
-    getProcessTree(rootPid: number, callback: (tree: IProcessTreeNode) => void): void;
+    getProcessTree(rootPid: number, callback: (tree: IProcessTreeNode | undefined) => void): void;
 }
