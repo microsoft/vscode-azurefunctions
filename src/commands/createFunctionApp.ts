@@ -16,6 +16,6 @@ export async function createFunctionApp(actionContext: IActionContext, tree: Azu
         node = subscription;
     }
 
-    const funcAppNode: IAzureNode = await node.createChild(actionContext, resourceGroup);
+    const funcAppNode: IAzureNode = await node.createChild({ actionContext, resourceGroup });
     return funcAppNode.id;
 }
