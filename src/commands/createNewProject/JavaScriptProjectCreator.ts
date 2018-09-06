@@ -26,7 +26,6 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     type: 'node',
                     request: 'attach',
                     port: 5858,
-                    protocol: 'inspector',
                     preLaunchTask: funcHostTaskId
                 }
             ]
