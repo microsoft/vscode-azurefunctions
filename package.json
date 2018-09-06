@@ -640,7 +640,7 @@
         "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.22.0",
+        "vscode-azureappservice": "^0.21.0",
         "vscode-azureextensionui": "^0.17.0",
         "vscode-azurekudu": "^0.1.8",
         "vscode-extension-telemetry": "^0.0.18",
