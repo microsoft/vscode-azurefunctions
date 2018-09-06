@@ -8,6 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
+import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
 import * as fsUtil from '../../utils/fs';
@@ -20,13 +21,19 @@ export class JavaProjectCreator extends ProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _javaTargetPath: string;
+    private _actionContext: IActionContext;
+
+    constructor(functionAppPath: string, outputChannel: vscode.OutputChannel, ui: IAzureUserInput, actionContext: IActionContext) {
+        super(functionAppPath, outputChannel, ui, actionContext.properties);
+        this._actionContext = actionContext;
+    }
 
     public async getRuntime(): Promise<ProjectRuntime> {
         return JavaProjectCreator.defaultRuntime;
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
-        await mavenUtils.validateMavenInstalled(this.functionAppPath);
+        await mavenUtils.validateMavenInstalled(this._actionContext, this.functionAppPath);
 
         const groupOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.groupIdPlaceholder', 'Group ID'),

@@ -7,29 +7,24 @@ import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as vscode from 'vscode';
-import { DialogResponses, TelemetryProperties } from "vscode-azureextensionui";
+import { DialogResponses, IActionContext, TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
-import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from './cpUtils';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
-    export async function validateMavenInstalled(workingDirectory: string | undefined): Promise<void> {
+    export async function validateMavenInstalled(actionContext: IActionContext, workingDirectory: string | undefined): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
         } catch (error) {
-            const settingKey: string = 'showMavenPathWarning';
-            if (getFuncExtensionSetting<boolean>(settingKey)) {
-                const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
-                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                if (result === DialogResponses.learnMore) {
-                    await opn('https://aka.ms/azurefunction_maven');
-                } else if (result === DialogResponses.dontWarnAgain) {
-                    await updateGlobalSetting(settingKey, false);
-                }
+            const closeMessage: string = 'Close';
+            const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
+            const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, DialogResponses.learnMore, <vscode.MessageItem>{ title: closeMessage });
+            if (result !== undefined && result === DialogResponses.learnMore) {
+                await opn('https://aka.ms/azurefunction_maven');
             }
+            actionContext.suppressErrorDisplay = true; // Swallow errors in case show two error message
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
     }

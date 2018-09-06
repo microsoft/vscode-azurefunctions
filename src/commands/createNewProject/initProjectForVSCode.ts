@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from 'vscode';
-import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, gitignoreFileName, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
@@ -17,7 +17,8 @@ import { getProjectCreator } from './createNewProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
 import { ProjectCreatorBase } from './IProjectCreator';
 
-export async function initProjectForVSCode(telemetryProperties: TelemetryProperties, ui: IAzureUserInput, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
+export async function initProjectForVSCode(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: OutputChannel, functionAppPath?: string, language?: string, runtime?: string, projectCreator?: ProjectCreatorBase): Promise<ProjectCreatorBase> {
+    const telemetryProperties: TelemetryProperties = actionContext.properties;
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder to initialize for use with VS Code'));
     }
@@ -33,7 +34,7 @@ export async function initProjectForVSCode(telemetryProperties: TelemetryPropert
     outputChannel.appendLine(localize('usingLanguage', 'Using "{0}" as the project language...', language));
 
     if (!projectCreator) {
-        projectCreator = getProjectCreator(language, functionAppPath, telemetryProperties);
+        projectCreator = getProjectCreator(language, functionAppPath, actionContext);
     }
 
     // tslint:disable-next-line:strict-boolean-expressions

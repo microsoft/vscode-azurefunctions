@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
 import { removeLanguageFromId } from "../../templates/FunctionTemplates";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
@@ -24,11 +24,13 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _packageName: string;
     private _functionName: string;
     private _telemetryProperties: TelemetryProperties;
+    private _actionContext: IActionContext;
 
-    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, actionContext: IActionContext) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
-        this._telemetryProperties = telemetryProperties;
+        this._telemetryProperties = actionContext.properties;
+        this._actionContext = actionContext;
     }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined): Promise<void> {
@@ -57,8 +59,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
         for (const key of Object.keys(userSettings)) {
             javaFuntionProperties.push(`"-D${key}=${userSettings[key]}"`);
         }
-
-        await mavenUtils.validateMavenInstalled(this._functionAppPath);
+        await mavenUtils.validateMavenInstalled(this._actionContext, this._functionAppPath);
         this._outputChannel.show();
         await mavenUtils.executeMvnCommand(
             this._telemetryProperties,

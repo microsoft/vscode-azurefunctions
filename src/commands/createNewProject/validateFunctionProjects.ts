@@ -35,7 +35,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
-                        await initProjectForVSCode(actionContext.properties, ui, outputChannel, folderPath);
+                        await initProjectForVSCode(actionContext, ui, outputChannel, folderPath);
                     }
                 }
             }
