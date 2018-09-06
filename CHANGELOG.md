@@ -20,6 +20,12 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.1%22+label%3Abug+is%3Aclosed)
 
+### Known Issues
+
+- Configuring deployment source to "GitHub" fails with error "The resource type 'sourceControls' could not be found...". As a workaround, you can make this change directly in the Portal. [vscode-azureappservice#594](https://github.com/Microsoft/vscode-azureappservice/issues/594)
+- "Copy Function Url" for v2 non-anonymous functions will copy an invalid url (that returns a 401 Unauthorized error) due to recent breaking changes in the runtime [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
+
+
 ## 0.10.0 - 2018-07-24
 
 ### Added
@@ -39,11 +45,6 @@ All notable changes to the "azurefunctions" extension will be documented in this
 ### Fixed
 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.0%22+label%3Abug+is%3Aclosed)
-
-### Known Issues
-
-- Configuring deployment source to "GitHub" fails with error "The resource type 'sourceControls' could not be found...". As a workaround, you can make this change directly in the Portal. [vscode-azureappservice#594](https://github.com/Microsoft/vscode-azureappservice/issues/594)
-- "Copy Function Url" for v2 non-anonymous functions will copy an invalid url (that returns a 401 Unauthorized error) due to recent breaking changes in the runtime [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
 
 ## 0.9.1 - 2018-05-23
 
