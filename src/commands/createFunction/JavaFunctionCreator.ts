@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IActionContext, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
 import { removeLanguageFromId } from "../../templates/FunctionTemplates";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
@@ -23,13 +23,11 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
-    private _telemetryProperties: TelemetryProperties;
     private _actionContext: IActionContext;
 
     constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, actionContext: IActionContext) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
-        this._telemetryProperties = actionContext.properties;
         this._actionContext = actionContext;
     }
 
@@ -62,7 +60,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
         await mavenUtils.validateMavenInstalled(this._actionContext, this._functionAppPath);
         this._outputChannel.show();
         await mavenUtils.executeMvnCommand(
-            this._telemetryProperties,
+            this._actionContext.properties,
             this._outputChannel,
             this._functionAppPath,
             'azure-functions:add',
