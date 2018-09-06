@@ -92,7 +92,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
         telemetryProperties.cancelStep = '';
     }
 
-    await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy);
+    await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
 
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
@@ -212,7 +212,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
     }
 }
 
-async function runPreDeployTask(deployFsPath: string, telemetryProperties: TelemetryProperties, language: ProjectLanguage, isZipDeploy: boolean): Promise<void> {
+async function runPreDeployTask(deployFsPath: string, telemetryProperties: TelemetryProperties, language: ProjectLanguage, isZipDeploy: boolean, runtime: ProjectRuntime): Promise<void> {
     let taskName: string | undefined = getFuncExtensionSetting(preDeployTaskSetting, deployFsPath);
     if (!isZipDeploy) {
         // We don't run pre deploy tasks for non-zipdeploy since that stuff should be handled by kudu
@@ -232,7 +232,11 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
                 taskName = publishTaskId;
                 break;
             case ProjectLanguage.JavaScript:
-                taskName = installExtensionsId;
+                if (runtime === ProjectRuntime.one) {
+                    return; // "func extensions install" is only supported on v2
+                } else {
+                    taskName = installExtensionsId;
+                }
                 break;
             default:
                 return; // preDeployTask not needed
