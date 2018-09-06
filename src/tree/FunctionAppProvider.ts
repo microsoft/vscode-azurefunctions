@@ -7,7 +7,7 @@ import { WebSiteManagementClient } from 'azure-arm-website';
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
 import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
-import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
 import { ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
@@ -37,9 +37,21 @@ export class FunctionAppProvider implements IChildProvider {
 
         const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
         addExtensionUserAgent(client);
-        const webAppCollection: WebAppCollection = this._nextLink === undefined ?
-            await client.webApps.list() :
-            await client.webApps.listNext(this._nextLink);
+        let webAppCollection: WebAppCollection;
+        try {
+            webAppCollection = this._nextLink === undefined ?
+                await client.webApps.list() :
+                await client.webApps.listNext(this._nextLink);
+        } catch (error) {
+            if (parseError(error).errorType.toLowerCase() === 'notfound') {
+                // This error type means the 'Microsoft.Web' provider has not been registered in this subscription
+                // In that case, we know there are no function apps, so we can return an empty array
+                // (The provider will be registered automatically if the user creates a new function app)
+                return [];
+            } else {
+                throw error;
+            }
+        }
 
         this._nextLink = webAppCollection.nextLink;
 
@@ -59,15 +71,15 @@ export class FunctionAppProvider implements IChildProvider {
         return treeItems;
     }
 
-    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, actionContext: IActionContext): Promise<IAzureTreeItem> {
+    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, userOptions?: { actionContext: IActionContext, resourceGroup?: string }): Promise<IAzureTreeItem> {
         // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
         // https://github.com/Microsoft/vscode-azuretools/issues/120
         // tslint:disable-next-line:strict-boolean-expressions
-        actionContext = actionContext || <IActionContext>{ properties: {}, measurements: {} };
-
+        const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
+        const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
-        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings);
+        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings, resourceGroup);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }

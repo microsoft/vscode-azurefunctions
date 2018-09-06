@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectRuntime, TemplateFilter } from "../../constants";
+import { installExtensionsId, ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
 import { ITaskOptions } from "./ITasksJson";
@@ -16,6 +16,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     public readonly functionsWorkerRuntime: string | undefined = 'node';
+    public preDeployTask: string = installExtensionsId;
 
     public getLaunchJson(): {} {
         return {
@@ -56,7 +57,17 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     },
                     problemMatcher: [
                         funcHostProblemMatcher
-                    ]
+                    ],
+                    dependsOn: installExtensionsId
+                },
+                {
+                    label: installExtensionsId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    identifier: installExtensionsId,
+                    command: 'func extensions install',
+                    type: 'shell',
+                    presentation: {
+                        reveal: 'always'
+                    }
                 }
             ]
         };

@@ -73,4 +73,8 @@ export namespace mavenUtils {
         }
         return result.cmdOutput;
     }
+
+    export function formatMavenArg(key: string, value: string): string {
+        return `-${key}=${cpUtils.wrapArgInQuotes(value)}`;
+    }
 }

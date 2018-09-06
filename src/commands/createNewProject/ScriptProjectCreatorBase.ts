@@ -70,7 +70,9 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public async addNonVSCodeFiles(): Promise<void> {
         const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath, this.ui)) {
-            const hostJson: {} = {};
+            const hostJson: {} = {
+                version: '2.0'
+            };
             await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
         }
 

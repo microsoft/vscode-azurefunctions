@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%extension.description%",
-    "version": "0.10.1-alpha",
+    "version": "0.10.1",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -591,6 +591,10 @@
                             "OpenInCurrentWindow"
                         ],
                         "description": "%azFunc.projectOpenBehaviorDescription%"
+                    },
+                    "azureFunctions.preDeployTask": {
+                        "type": "string",
+                        "description": "%azFunc.preDeployTaskDescription%"
                     }
                 }
             }
@@ -637,10 +641,9 @@
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.2.0",
         "portfinder": "^1.0.13",
-        "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.20.0",
+        "vscode-azureappservice": "^0.21.0",
         "vscode-azureextensionui": "^0.17.0",
         "vscode-azurekudu": "^0.1.8",
         "vscode-extension-telemetry": "^0.0.18",

@@ -83,13 +83,13 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                 this.outputChannel,
                 tempFolder,
                 'archetype:generate',
-                '-DarchetypeGroupId="com.microsoft.azure"',
-                '-DarchetypeArtifactId="azure-functions-archetype"',
-                `-DgroupId="${groupId}"`,
-                `-DartifactId="${artifactId}"`,
-                `-Dversion="${version}"`,
-                `-Dpackage="${packageName}"`,
-                `-DappName="${appName}"`,
+                mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure'),
+                mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype'),
+                mavenUtils.formatMavenArg('DgroupId', groupId),
+                mavenUtils.formatMavenArg('DartifactId', artifactId),
+                mavenUtils.formatMavenArg('Dversion', version),
+                mavenUtils.formatMavenArg('Dpackage', packageName),
+                mavenUtils.formatMavenArg('DappName', appName),
                 '-B' // in Batch Mode
             );
             await fsUtil.copyFolder(path.join(tempFolder, artifactId), this.functionAppPath, this.ui);

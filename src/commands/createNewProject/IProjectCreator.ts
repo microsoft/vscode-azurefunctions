@@ -7,11 +7,11 @@ import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
 import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
 import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
-import { localize } from "../../localize";
 import { promptForProjectRuntime } from "../../ProjectSettings";
 
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
+    public preDeployTask: string = '';
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;
@@ -47,7 +47,8 @@ export abstract class ProjectCreatorBase {
 }
 
 export const funcHostTaskId: string = 'runFunctionsHost';
-export const funcHostTaskLabel: string = localize('azFunc.runFuncHost', 'Run Functions Host');
+// Don't localize this label until this is fixed: https://github.com/Microsoft/vscode/issues/57707
+export const funcHostTaskLabel: string = 'Run Functions Host';
 export const funcHostProblemMatcher: {} = {
     owner: extensionPrefix,
     pattern: [

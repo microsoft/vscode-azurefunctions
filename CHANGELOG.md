@@ -4,6 +4,22 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.10.1 - 2018-09-06
+
+### Added
+
+- Improved Java templates
+  - More templates are available
+  - Templates will be automatically updated going forward
+
+### Changed
+
+- JavaScript projects run `func extensions install` before debug and deploy
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.1%22+label%3Abug+is%3Aclosed)
+
 ## 0.10.0 - 2018-07-24
 
 ### Added

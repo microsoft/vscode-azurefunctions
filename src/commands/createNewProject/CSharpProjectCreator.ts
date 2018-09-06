@@ -10,17 +10,19 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
+import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = publishTaskId;
 
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
@@ -37,7 +39,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         // tslint:disable-next-line:strict-boolean-expressions
         this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
-        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
+        const functionsVersion: string = this._runtime === ProjectRuntime.one ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
         if (!this._hasDetectedRuntime) {
             await this.detectRuntime();
@@ -89,7 +92,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: 'publish',
+                    label: publishTaskId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    identifier: publishTaskId,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
