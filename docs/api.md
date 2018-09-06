@@ -53,6 +53,7 @@ await vscode.commands.executeCommand('azureFunctions.createFunction', projectPat
 |Name|Type|Description|
 |---|---|---|
 |subscriptionId|string|The subscription you want to create the function app in.|
+|resourceGroup|string|The resource group you want to create the function app in.|
 
 This returns the id (a string) of the newly created function app (e.g. '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/exampleGroup/providers/Microsoft.Web/sites/exampleSite').
 
@@ -60,6 +61,7 @@ This returns the id (a string) of the newly created function app (e.g. '/subscri
 
 ```typescript
 const functionAppId: string = await vscode.commands.executeCommand<string>('azureFunctions.createFunctionApp', '00000000-0000-0000-0000-000000000000');
+const functionAppId: string = await vscode.commands.executeCommand<string>('azureFunctions.createFunctionApp', undefined, 'testResourceGroupName');
 ```
 
 ## Deploy

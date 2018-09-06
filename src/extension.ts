@@ -102,7 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
-        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, subscription?: IAzureParentNode | string, resourceGroup?: string): Promise<string> { return await createFunctionApp(this, tree, subscription, resourceGroup); });
+        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, subscription?: IAzureParentNode | string, resourceGroup?: string): Promise<string> { return await createFunctionApp(this, tree, subscription, 'naturinsss'); });
         registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
