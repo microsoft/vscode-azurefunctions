@@ -114,7 +114,7 @@ async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, tim
         if (psTree.name.toLowerCase().includes('func')) {
             return psTree.pid.toString();
         } else {
-            await delay(1000);
+            await delay(500);
         }
     }
 
