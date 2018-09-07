@@ -13,7 +13,7 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { SiteClient } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -30,7 +30,8 @@ import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+export async function deploy(ui: IAzureUserInput, actionContext: IActionContext, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+    const telemetryProperties: TelemetryProperties = actionContext.properties;
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
@@ -77,7 +78,7 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui, telemetryProperties);
+        deployFsPath = await getJavaFolderPath(actionContext, outputChannel, deployFsPath, ui, telemetryProperties);
     }
 
     await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
@@ -161,8 +162,8 @@ function appendDeploySubpathSetting(targetPath: string): string {
     return targetPath;
 }
 
-async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
-    await mavenUtils.validateMavenInstalled(basePath);
+async function getJavaFolderPath(actionContext: IActionContext, outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
+    await mavenUtils.validateMavenInstalled(actionContext, basePath);
     outputChannel.show();
     await mavenUtils.executeMvnCommand(telemetryProperties, outputChannel, basePath, 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');

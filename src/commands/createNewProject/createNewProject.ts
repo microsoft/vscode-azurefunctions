@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
-import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -54,10 +54,10 @@ export async function createNewProject(
     }
     actionContext.properties.projectLanguage = language;
 
-    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext.properties);
+    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
     await projectCreator.addNonVSCodeFiles();
 
-    await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
+    await initProjectForVSCode(actionContext, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
     if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
         await gitUtils.gitInit(ext.outputChannel, functionAppPath);
@@ -74,19 +74,19 @@ export async function createNewProject(
     }
 }
 
-export function getProjectCreator(language: string, functionAppPath: string, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
+export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext): ProjectCreatorBase {
     switch (language) {
         case ProjectLanguage.Java:
-            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext);
         case ProjectLanguage.JavaScript:
-            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         case ProjectLanguage.CSharp:
-            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         case ProjectLanguage.CSharpScript:
-            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         case ProjectLanguage.Python:
-            return new PythonProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new PythonProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         default:
-            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
     }
 }
