@@ -10,20 +10,24 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
+import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = publishTaskId;
 
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
+
+    private _hasDetectedRuntime: boolean = false;
 
     public async addNonVSCodeFiles(): Promise<void> {
         await dotnetUtils.validateDotnetInstalled();
@@ -35,50 +39,17 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         // tslint:disable-next-line:strict-boolean-expressions
         this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
-        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
+        const functionsVersion: string = this._runtime === ProjectRuntime.one ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+
+        if (!this._hasDetectedRuntime) {
+            await this.detectRuntime();
+        }
     }
 
     public async getRuntime(): Promise<ProjectRuntime> {
-        const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
-        if (!csProjName) {
-            throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
-        }
-
-        const csprojPath: string = path.join(this.functionAppPath, csProjName);
-        const csprojContents: string = (await fse.readFile(csprojPath)).toString();
-
-        await this.validateFuncSdkVersion(csprojPath, csprojContents);
-
-        const matches: RegExpMatchArray | null = csprojContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
-        if (matches === null || matches.length < 1) {
-            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
-        } else {
-            const targetFramework: string = matches[1];
-            this.telemetryProperties.cSharpTargetFramework = targetFramework;
-            if (targetFramework.startsWith('netstandard')) {
-                this._runtime = ProjectRuntime.beta;
-            } else {
-                this._runtime = ProjectRuntime.one;
-                const settingKey: string = 'show64BitWarning';
-                if (getFuncExtensionSetting<boolean>(settingKey)) {
-                    const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
-                    try {
-                        const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                        if (result === DialogResponses.learnMore) {
-                            await opn('https://aka.ms/azFunc64bit');
-                        } else if (result === DialogResponses.dontWarnAgain) {
-                            await updateGlobalSetting(settingKey, false);
-                        }
-                    } catch (err) {
-                        // swallow cancellations (aka if they clicked the 'x' button to dismiss the warning) and proceed to create project
-                        if (!parseError(err).isUserCancelledError) {
-                            throw err;
-                        }
-                    }
-                }
-            }
-            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
-            this._debugSubpath = `bin/Debug/${targetFramework}`;
+        if (!this._hasDetectedRuntime) {
+            await this.detectRuntime();
         }
 
         return this._runtime;
@@ -121,7 +92,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: 'publish',
+                    label: publishTaskId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    identifier: publishTaskId,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
@@ -165,6 +137,56 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
 
     public getRecommendedExtensions(): string[] {
         return super.getRecommendedExtensions().concat(['ms-vscode.csharp']);
+    }
+
+    /**
+     * Detects the runtime based on the targetFramework from the csproj file
+     * Also performs a few validations and sets a few properties based on that targetFramework
+     */
+    private async detectRuntime(): Promise<void> {
+        const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
+        if (!csProjName) {
+            throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
+        }
+
+        const csprojPath: string = path.join(this.functionAppPath, csProjName);
+        const csprojContents: string = (await fse.readFile(csprojPath)).toString();
+
+        await this.validateFuncSdkVersion(csprojPath, csprojContents);
+
+        const matches: RegExpMatchArray | null = csprojContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
+        if (matches === null || matches.length < 1) {
+            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
+        } else {
+            const targetFramework: string = matches[1];
+            this.telemetryProperties.cSharpTargetFramework = targetFramework;
+            if (targetFramework.startsWith('netstandard')) {
+                this._runtime = ProjectRuntime.beta;
+            } else {
+                this._runtime = ProjectRuntime.one;
+                const settingKey: string = 'show64BitWarning';
+                if (getFuncExtensionSetting<boolean>(settingKey)) {
+                    const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
+                    try {
+                        const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        if (result === DialogResponses.learnMore) {
+                            await opn('https://aka.ms/azFunc64bit');
+                        } else if (result === DialogResponses.dontWarnAgain) {
+                            await updateGlobalSetting(settingKey, false);
+                        }
+                    } catch (err) {
+                        // swallow cancellations (aka if they clicked the 'x' button to dismiss the warning) and proceed to create project
+                        if (!parseError(err).isUserCancelledError) {
+                            throw err;
+                        }
+                    }
+                }
+            }
+            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
+            this._debugSubpath = `bin/Debug/${targetFramework}`;
+        }
+
+        this._hasDetectedRuntime = true;
     }
 
     /**
@@ -213,8 +235,12 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     }
 }
 
+/**
+ * If a single csproj file is found at the root of this folder, returns the path to that file. Otherwise returns undefined
+ * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
+ */
 export async function tryGetCsprojFile(functionAppPath: string): Promise<string | undefined> {
     const files: string[] = await fse.readdir(functionAppPath);
-    const projectFiles: string[] = files.filter((f: string) => f.endsWith('.csproj'));
+    const projectFiles: string[] = files.filter((f: string) => /\.csproj$/i.test(f) && !/extensions\.csproj$/i.test(f));
     return projectFiles.length === 1 ? projectFiles[0] : undefined;
 }

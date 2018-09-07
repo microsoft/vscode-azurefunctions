@@ -6,16 +6,16 @@
 import { AzureTreeDataProvider, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, arg?: IAzureParentNode | string): Promise<string> {
+export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, subscription?: IAzureParentNode | string, resourceGroup?: string): Promise<string> {
     let node: IAzureParentNode;
-    if (typeof arg === 'string') {
-        node = await nodeUtils.getSubscriptionNode(tree, arg);
-    } else if (!arg) {
+    if (typeof subscription === 'string') {
+        node = await nodeUtils.getSubscriptionNode(tree, subscription);
+    } else if (!subscription) {
         node = <IAzureParentNode>await tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
     } else {
-        node = arg;
+        node = subscription;
     }
 
-    const funcAppNode: IAzureNode = await node.createChild(actionContext);
+    const funcAppNode: IAzureNode = await node.createChild({ actionContext, resourceGroup });
     return funcAppNode.id;
 }

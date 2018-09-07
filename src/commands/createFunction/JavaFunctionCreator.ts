@@ -55,7 +55,7 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
         const javaFuntionProperties: string[] = [];
         for (const key of Object.keys(userSettings)) {
-            javaFuntionProperties.push(`"-D${key}=${userSettings[key]}"`);
+            javaFuntionProperties.push(mavenUtils.formatMavenArg(`D${key}`, userSettings[key]));
         }
 
         await mavenUtils.validateMavenInstalled(this._functionAppPath);
@@ -66,9 +66,9 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
             this._functionAppPath,
             'azure-functions:add',
             '-B',
-            `"-Dfunctions.package=${this._packageName}"`,
-            `"-Dfunctions.name=${this._functionName}"`,
-            `"-Dfunctions.template=${removeLanguageFromId(this._template.id)}"`,
+            mavenUtils.formatMavenArg('Dfunctions.package', this._packageName),
+            mavenUtils.formatMavenArg('Dfunctions.name', this._functionName),
+            mavenUtils.formatMavenArg('Dfunctions.template', removeLanguageFromId(this._template.id)),
             ...javaFuntionProperties
         );
 

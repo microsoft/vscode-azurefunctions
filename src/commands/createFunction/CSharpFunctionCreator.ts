@@ -12,6 +12,7 @@ import { ProjectRuntime } from '../../constants';
 import { localize } from "../../localize";
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
+import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import * as fsUtil from '../../utils/fs';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
@@ -54,14 +55,14 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
 
         const args: string[] = [];
         args.push('--arg:name');
-        args.push(this._functionName);
+        args.push(cpUtils.wrapArgInQuotes(this._functionName));
 
         args.push('--arg:namespace');
-        args.push(this._namespace);
+        args.push(cpUtils.wrapArgInQuotes(this._namespace));
 
         for (const key of Object.keys(userSettings)) {
             args.push(`--arg:${key}`);
-            args.push(`"${userSettings[key]}"`);
+            args.push(cpUtils.wrapArgInQuotes(userSettings[key]));
         }
 
         await executeDotnetTemplateCommand(runtime, this._functionAppPath, 'create', '--identity', this._template.id, ...args);

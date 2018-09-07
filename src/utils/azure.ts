@@ -64,7 +64,7 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.DocumentDB);
     const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
 
-    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId);
+    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
     addExtensionUserAgent(client);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
@@ -86,7 +86,8 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     const wizardContext: IStorageAccountWizardContext = {
         credentials: node.credentials,
         subscriptionId: node.subscriptionId,
-        subscriptionDisplayName: node.subscriptionDisplayName
+        subscriptionDisplayName: node.subscriptionDisplayName,
+        environment: node.environment
     };
     const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(
         [new StorageAccountListStep({ kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS }, filterOptions)],
@@ -97,7 +98,7 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);
 
-    const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
+    const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
     addExtensionUserAgent(client);
     // tslint:disable-next-line:no-non-null-assertion
     const storageAccount: StorageAccount = wizardContext.storageAccount!;

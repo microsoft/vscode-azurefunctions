@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectRuntime, TemplateFilter } from "../../constants";
+import { installExtensionsId, ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
 import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
 import { ITaskOptions } from "./ITasksJson";
@@ -26,7 +26,6 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     type: 'node',
                     request: 'attach',
                     port: 5858,
-                    protocol: 'inspector',
                     preLaunchTask: funcHostTaskId
                 }
             ]
@@ -35,30 +34,50 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
 
     public getTasksJson(runtime: string): {} {
         let options: ITaskOptions | undefined;
+        // tslint:disable-next-line:no-any
+        const funcTask: any = {
+            label: funcHostTaskLabel,
+            identifier: funcHostTaskId,
+            type: 'shell',
+            command: 'func host start',
+            isBackground: true,
+            presentation: {
+                reveal: 'always'
+            },
+            problemMatcher: [
+                funcHostProblemMatcher
+            ]
+        };
+
+        const installExtensionsTask: {} = {
+            label: installExtensionsId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+            identifier: installExtensionsId,
+            command: 'func extensions install',
+            type: 'shell',
+            presentation: {
+                reveal: 'always'
+            }
+        };
+
+        // tslint:disable-next-line:no-unsafe-any
+        const tasks: {}[] = [funcTask];
+
         if (runtime !== ProjectRuntime.one) {
             options = {};
             options.env = {};
             options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;
+            // tslint:disable-next-line:no-unsafe-any
+            funcTask.options = options;
+
+            // tslint:disable-next-line:no-unsafe-any
+            funcTask.dependsOn = installExtensionsId;
+            this.preDeployTask = installExtensionsId;
+            tasks.push(installExtensionsTask);
         }
 
         return {
             version: '2.0.0',
-            tasks: [
-                {
-                    label: funcHostTaskLabel,
-                    identifier: funcHostTaskId,
-                    type: 'shell',
-                    command: 'func host start',
-                    options: options,
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
-                }
-            ]
+            tasks: tasks
         };
     }
 }

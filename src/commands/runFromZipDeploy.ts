@@ -25,7 +25,7 @@ import { updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import * as  azUtil from '../utils/azure';
 
-export async function runFromZipDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
+export async function runFromZipDeploy(node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
     let createdZip: boolean = false;
     let zipFilePath: string;
     try {

@@ -102,7 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this.properties, ui, outputChannel); });
-        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, arg?: IAzureParentNode | string): Promise<string> { return await createFunctionApp(this, tree, arg); });
+        registerCommand('azureFunctions.createFunctionApp', async function (this: IActionContext, subscription?: IAzureParentNode | string, resourceGroup?: string): Promise<string> { return await createFunctionApp(this, tree, subscription, resourceGroup); });
         registerCommand('azureFunctions.startFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await startFunctionApp(tree, node));
         registerCommand('azureFunctions.stopFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await stopFunctionApp(tree, node));
         registerCommand('azureFunctions.restartFunctionApp', async (node?: IAzureNode<FunctionAppTreeItem>) => await restartFunctionApp(tree, node));
@@ -110,7 +110,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.deploy', async function (this: IActionContext, deployPath: vscode.Uri | string, functionAppId?: string): Promise<void> { await deploy(this, ui, this.properties, tree, outputChannel, deployPath, functionAppId); });
         registerCommand('azureFunctions.configureDeploymentSource', async function (this: IActionContext, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> { await configureDeploymentSource(this.properties, tree, node); });
         registerCommand('azureFunctions.copyFunctionUrl', async (node?: IAzureNode<FunctionTreeItem>) => await copyFunctionUrl(tree, node));
-        registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(context, tree, node));
+        registerCommand('azureFunctions.startStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await startStreamingLogs(node));
         registerCommand('azureFunctions.stopStreamingLogs', async (node?: IAzureNode<ILogStreamTreeItem>) => await stopStreamingLogs(tree, node));
         registerCommand('azureFunctions.deleteFunction', async (node?: IAzureNode) => await deleteNode(tree, FunctionTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.add', async (node?: IAzureParentNode) => await createChildNode(tree, AppSettingsTreeItem.contextValue, node));

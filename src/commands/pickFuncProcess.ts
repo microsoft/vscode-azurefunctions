@@ -3,31 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import ps = require('ps-node');
-import { isNullOrUndefined } from 'util';
 import * as vscode from 'vscode';
+import { Task, TaskExecution } from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, isWindows } from '../constants';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
-import { cpUtils } from '../utils/cpUtils';
-import { funcHostTaskId } from './createNewProject/IProjectCreator';
+import { tryFetchNodeModule } from '../utils/tryFetchNodeModule';
+import { funcHostTaskLabel } from './createNewProject/IProjectCreator';
 
 export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
         throw new UserCancelledError();
     }
 
-    let funcHostPid: string | undefined = await getFuncHostPid();
-    if (funcHostPid !== undefined) {
-        // Stop the functions host to prevent build errors like "Cannot access the file '...' because it is being used by another process."
-        await killProcess(funcHostPid);
-    }
+    // Stop any running func task so that a build can access those dlls
+    await stopFuncTaskIfRunning();
 
-    // Start (or restart) functions host (which will also trigger a build)
-    await vscode.commands.executeCommand('workbench.action.tasks.runTask', funcHostTaskId);
+    const tasks: Task[] = await vscode.tasks.fetchTasks();
+    const funcTask: Task | undefined = tasks.find(isFuncTask);
+    if (!funcTask) {
+        throw new Error(localize('noFuncTask', 'Failed to find task with label "{0}".', funcHostTaskLabel));
+    }
 
     const settingKey: string = 'pickProcessTimeout';
     const settingValue: number | undefined = getFuncExtensionSetting<number>(settingKey);
@@ -36,111 +34,105 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
     }
     actionContext.properties.timeoutInSeconds = timeoutInSeconds.toString();
+    const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
+
+    const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);
+    // On Mac/Linux we can leverage the pid of the task directly.
+    // On Windows, the pid of the task corresponds to the parent PowerShell process and we have to drill down to get the actual func process
+    return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : pid;
+}
+
+function isFuncTask(task: Task): boolean {
+    // Until this is fixed, we have to query the task's name instead of id: https://github.com/Microsoft/vscode/issues/57707
+    return task.name.toLowerCase() === funcHostTaskLabel.toLowerCase();
+}
+
+async function stopFuncTaskIfRunning(): Promise<void> {
+    const funcExecution: TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: TaskExecution) => isFuncTask(te.task));
+    if (funcExecution) {
+        const waitForEndPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
+            const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
+                if (isFuncTask(e.execution.task)) {
+                    resolve();
+                    listener.dispose();
+                }
+            });
+
+            const timeoutInSeconds: number = 30;
+            const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
+            setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
+        });
+        funcExecution.terminate();
+        await waitForEndPromise;
+    }
+}
+
+async function startFuncTask(funcTask: Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+    const waitForStartPromise: Promise<string> = new Promise((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
+        const listener: vscode.Disposable = vscode.tasks.onDidStartTaskProcess((e: vscode.TaskProcessStartEvent) => {
+            if (isFuncTask(e.execution.task)) {
+                resolve(e.processId.toString());
+                listener.dispose();
+            }
+        });
+
+        const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
+            if (e.exitCode !== 0) {
+                // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
+                reject(new Error(localize('taskFailed', 'Failed to start debugging. Task "{0}" failed with exit code "{1}".', e.execution.task.name, e.exitCode)));
+                errorListener.dispose();
+            }
+        });
+
+        setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
+    });
+    await vscode.tasks.executeTask(funcTask);
+    return await waitForStartPromise;
+}
+
+async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+    const moduleName: string = 'windows-process-tree';
+    const windowsProcessTree: IWindowsProcessTree | undefined = await tryFetchNodeModule<IWindowsProcessTree>(moduleName);
+    if (!windowsProcessTree) {
+        throw new Error(localize('noWindowsProcessTree', 'Failed to find dependency "{0}".', moduleName));
+    }
 
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
-        // Wait one second between each attempt
-        // NOTE: Intentionally waiting at the beginning of the loop since we don't want to attach to the process we just stopped above
-        await new Promise((resolve: () => void): void => { setTimeout(resolve, 1000); });
-
-        funcHostPid = await getFuncHostPid();
-        if (funcHostPid !== undefined) {
-            return funcHostPid;
-        }
-    }
-
-    throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
-}
-
-async function getFuncHostPid(): Promise<string | undefined> {
-    let pids: string[] = [];
-    pids = pids.concat(...await Promise.all([
-        // If the cli is self-contained, the command will look like this: func host start
-        getMatchingPids(/.*func.*/, /.*host.*start.*/),
-        // If the cli is an old version that requires .NET Core to be installed, the command will look like this: dotnet Azure.Functions.Cli.dll host start
-        getMatchingPids(/.*dotnet.*/, /.*Azure\.Functions\.Cli\.dll.*host.*start.*/)
-    ]));
-
-    if (pids.length === 0) {
-        return undefined;
-    } else if (pids.length === 1) {
-        return pids[0];
-    } else {
-        throw new Error(localize('multipleFuncHost', 'Detected multiple processes running the Functions host. Stop all but one process in order to debug.'));
-    }
-}
-
-async function getMatchingPids(commandRegExp: RegExp, argumentsRegExp: RegExp): Promise<string[]> {
-    if (isWindows) {
-        // Ideally we could use 'ps.lookup' for all OS's, but unfortunately it's very slow on windows
-        // Instead, we will call 'wmic' manually and parse the results
-        const processList: string = await cpUtils.executeCommand(undefined, undefined, 'wmic', 'process', 'get', 'CommandLine,Name,ProcessId', '/FORMAT:csv');
-        const regExp: RegExp = new RegExp(`^.*,${argumentsRegExp.source},${commandRegExp.source},(\\d+)$`, 'gmi');
-        const pids: string[] = [];
-        // tslint:disable-next-line:no-constant-condition
-        while (true) {
-            const result: RegExpExecArray | null = regExp.exec(processList);
-            if (!isNullOrUndefined(result) && result.length > 1) {
-                pids.push(result[1]);
-            } else {
-                break;
-            }
-        }
-
-        return pids;
-    } else {
-        const processList: IProcess[] = await new Promise((resolve: (processList: IProcess[]) => void, reject: (e: Error) => void): void => {
-            //tslint:disable-next-line:no-unsafe-any
-            ps.lookup(
-                {
-                    command: commandRegExp,
-                    arguments: argumentsRegExp
-                },
-                (error: Error | undefined, result: IProcess[]): void => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve(result);
-                    }
-                });
+        let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
+            windowsProcessTree.getProcessTree(Number(pid), resolve);
         });
 
-        return processList.map((proc: IProcess) => proc.pid);
-    }
-}
-
-interface IProcess {
-    pid: string;
-}
-
-async function killProcess(pid: string, timeoutInSeconds: number = 60): Promise<void> {
-    if (isWindows) {
-        // Just like 'ps.lookup', 'ps.kill' is very slow on windows
-        // We can use it to kill the process, but we have to implement our own 'wait' logic to make sure the process actually stopped
-        //tslint:disable-next-line:no-unsafe-any
-        ps.kill(pid);
-        const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-        while (Date.now() < maxTime) {
-            // Wait one second between each attempt
-            await new Promise((resolve: () => void): void => { setTimeout(resolve, 1000); });
-
-            const oldProcess: string = await cpUtils.executeCommand(undefined, undefined, 'wmic', 'process', 'where', `ProcessId="${pid}"`, 'get', 'ProcessId', '/FORMAT:csv');
-            if (oldProcess.indexOf(pid) === -1) {
-                return;
-            }
+        if (!psTree) {
+            throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
         }
 
-        throw new Error(localize('failedToTerminateProcess', 'Failed to terminate process with pid "{0}" in "{1}" seconds.', pid, timeoutInSeconds));
-    } else {
-        await new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-            //tslint:disable-next-line:no-unsafe-any
-            ps.kill(pid, (err: Error | undefined) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
+        while (psTree.children.length > 0) {
+            psTree = psTree.children[0];
+        }
+
+        if (psTree.name.toLowerCase().includes('func')) {
+            return psTree.pid.toString();
+        } else {
+            await delay(500);
+        }
     }
+
+    throw timeoutError;
+}
+
+interface IProcessTreeNode {
+    pid: number;
+    name: string;
+    memory?: number;
+    commandLine?: string;
+    children: IProcessTreeNode[];
+}
+
+interface IWindowsProcessTree {
+    getProcessTree(rootPid: number, callback: (tree: IProcessTreeNode | undefined) => void): void;
+}
+
+async function delay(ms: number): Promise<void> {
+    await new Promise<void>((resolve: () => void): NodeJS.Timer => setTimeout(resolve, ms));
 }

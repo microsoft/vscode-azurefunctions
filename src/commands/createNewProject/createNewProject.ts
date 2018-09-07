@@ -20,6 +20,7 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { PythonProjectCreator } from './PythonProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export async function createNewProject(
@@ -65,6 +66,7 @@ export async function createNewProject(
     if (templateId) {
         await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
     }
+
     await validateFuncCoreToolsInstalled();
 
     if (openFolder) {
@@ -82,6 +84,8 @@ export function getProjectCreator(language: string, functionAppPath: string, tel
             return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         case ProjectLanguage.CSharpScript:
             return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+        case ProjectLanguage.Python:
+            return new PythonProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
         default:
             return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
     }

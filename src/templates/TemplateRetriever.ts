@@ -10,6 +10,9 @@ import { localize } from '../localize';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { IFunctionTemplate } from './IFunctionTemplate';
 
+const betaBackupTemplatesVersion: string = '2.3.3';
+const oneBackupTemplatesVersion: string = '1.3.0';
+
 export enum TemplateType {
     Script = 'Script',
     Dotnet = '.NET'
@@ -37,13 +40,30 @@ export abstract class TemplateRetriever {
             const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime);
             await this.verifyTemplates(templates, runtime);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), templateVersion);
-            await this.cacheTemplatesFromCliFeed(runtime);
+            await this.cacheTemplates(runtime);
             ext.outputChannel.appendLine(localize('updatedTemplates', 'Successfully updated templates.'));
             return templates;
         } catch (error) {
             const errorMessage: string = parseError(error).message;
             ext.outputChannel.appendLine(errorMessage);
             context.properties.cliFeedError = errorMessage;
+            return undefined;
+        }
+    }
+
+    public async tryGetTemplatesFromBackup(context: IActionContext, runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
+        try {
+            const backupTemplateVersion: string = this.getBackupVersion(runtime);
+            const templates: IFunctionTemplate[] = await this.getTemplatesFromBackup(runtime);
+            await this.verifyTemplates(templates, runtime);
+            ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), backupTemplateVersion);
+            await this.cacheTemplates(runtime);
+            ext.outputChannel.appendLine(localize('usingBackupTemplates', 'Falling back to version "{0}" for {1} templates for runtime "{2}".', backupTemplateVersion, this.templateType, runtime));
+            return templates;
+        } catch (error) {
+            const errorMessage: string = parseError(error).message;
+            ext.outputChannel.appendLine(errorMessage);
+            context.properties.backupError = errorMessage;
             return undefined;
         }
     }
@@ -66,8 +86,20 @@ export abstract class TemplateRetriever {
 
     protected abstract getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined>;
     protected abstract getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime): Promise<IFunctionTemplate[]>;
-    protected abstract cacheTemplatesFromCliFeed(runtime: ProjectRuntime): Promise<void>;
+    protected abstract getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]>;
+    protected abstract cacheTemplates(runtime: ProjectRuntime): Promise<void>;
     protected abstract getVerifiedTemplateIds(runtime: ProjectRuntime): string[];
+
+    protected getBackupVersion(runtime: ProjectRuntime): string {
+        switch (runtime) {
+            case ProjectRuntime.one:
+                return oneBackupTemplatesVersion;
+            case ProjectRuntime.beta:
+                return betaBackupTemplatesVersion;
+            default:
+                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
+        }
+    }
 
     private async verifyTemplates(templates: IFunctionTemplate[], runtime: ProjectRuntime): Promise<void> {
         const verifiedTemplateIds: string[] = this.getVerifiedTemplateIds(runtime);

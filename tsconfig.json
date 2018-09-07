@@ -12,7 +12,14 @@
         "noImplicitThis": true,
         "noImplicitReturns": true,
         "strictNullChecks": true,
-        "noUnusedParameters": true
+        "noUnusedParameters": true,
+        "baseUrl": "./",
+        "paths": {
+            "*": [
+                "node_modules/vscode/*",
+                "*"
+            ]
+        }
     },
     "exclude": [
         "node_modules",

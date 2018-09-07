@@ -4,25 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { SiteLogsConfig } from 'azure-arm-website/lib/models';
-import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { ILogStreamTreeItem } from './ILogStreamTreeItem';
 
-export async function startStreamingLogs(context: vscode.ExtensionContext, tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
+export async function startStreamingLogs(node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
     if (!node) {
-        node = <IAzureNode<ILogStreamTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <IAzureNode<ILogStreamTreeItem>>await ext.tree.showNodePicker(FunctionAppTreeItem.contextValue);
     }
 
     const treeItem: ILogStreamTreeItem = node.treeItem;
-    if (treeItem.logStream && treeItem.logStream.isConnected) {
-        // tslint:disable-next-line:no-non-null-assertion
-        treeItem.logStreamOutputChannel!.show();
-        await ext.ui.showWarningMessage(localize('logStreamAlreadyActive', 'The log-streaming service for "{0}" is already active.', treeItem.logStreamLabel));
-    } else {
+
+    const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
         const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
             const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', treeItem.client.fullName);
@@ -37,14 +33,9 @@ export async function startStreamingLogs(context: vscode.ExtensionContext, tree:
             logsConfig.applicationLogs.azureTableStorage = undefined;
             await treeItem.client.updateLogsConfig(logsConfig);
         }
+    };
 
-        if (!treeItem.logStreamOutputChannel) {
-            const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel(localize('logStreamLabel', '{0} - Log Stream', treeItem.logStreamLabel));
-            context.subscriptions.push(outputChannel);
-            treeItem.logStreamOutputChannel = outputChannel;
-        }
-        treeItem.logStream = await appservice.startStreamingLogs(treeItem.client, treeItem.logStreamOutputChannel, treeItem.logStreamPath);
-    }
+    await appservice.startStreamingLogs(treeItem.client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
 }
 
 function isApplicationLoggingEnabled(config: SiteLogsConfig): boolean {

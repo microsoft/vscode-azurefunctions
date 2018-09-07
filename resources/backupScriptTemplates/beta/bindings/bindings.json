@@ -1,0 +1,2045 @@
+{
+    "$schema": "<TBD>",
+    "contentVersion": "2016-03-04-alpha",
+    "variables": {
+        "storageConnStringLabel": "$variables_storageConnStringLabel",
+        "appSettingsHelp": "$variables_appSettingsHelp",
+        "selectConnection": "$variables_selectConnection",
+        "parameterName": "$variables_parameterName",
+        "paramNameLabel": "$variables_paramNameLabel",
+        "paramNameInputHelp": "$variables_paramNameInputHelp",
+        "paramNameOutputHelp": "$variables_paramNameOutputHelp",
+        "apiHubTableDataSetLabel": "$variables_apiHubTableDataSetLabel",
+        "apiHubTableDataSetHelp": "$variables_apiHubTableDataSetHelp",
+        "apiHubTableNameLabel": "$variables_apiHubTableNameLabel",
+        "apiHubTableHelp": "$variables_apiHubTableHelp",
+        "apiHubTableEntityLabel": "$variables_apiHubTableEntityLabel",
+        "apiHubTableEntityHelp": "$variables_apiHubTableEntityHelp",
+        "apiHubTableConnectionLabel": "$variables_apiHubTableConnectionLabel",
+        "apiHubTableConnectionHelp": "$variables_apiHubTableConnectionHelp"
+    },
+    "bindings": [
+        {
+            "type": "timerTrigger",
+            "displayName": "$timerTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": true,
+            "documentation": "## Settings for timer trigger\r\n\r\nThe settings provide a schedule expression. For example, the following schedule runs the function every minute:\r\n\r\n - `schedule`: Cron tab expression which defines schedule. The cron expression are evaluated against UTC time zone.\r\n - `name`: The variable name used in function code for the TimerTrigger. \r\n - `type`: must be *timerTrigger*\r\n - `direction`: must be *in*\r\n\r\nThe timer trigger handles multi-instance scale-out automatically: only a single instance of a particular timer function will be running across all instances.\r\n\r\n## Format of schedule expression\r\n\r\nThe schedule expression is a [CRON expression](http://en.wikipedia.org/wiki/Cron#CRON_expression) that includes 6 fields:  `{second} {minute} {hour} {day} {month} {day of the week}`. \r\n\r\nNote that many of the cron expressions you find online omit the {second} field, so if you copy from one of those you'll have to adjust for the extra field. \r\n\r\nHere are some other schedule expression examples:\r\n\r\nTo trigger once every 5 minutes:\r\n\r\n```json\r\n\"schedule\": \"0 */5 * * * *\"\r\n```\r\n\r\nTo trigger once at the top of every hour:\r\n\r\n```json\r\n\"schedule\": \"0 0 * * * *\",\r\n```\r\n\r\nTo trigger once every two hours:\r\n\r\n```json\r\n\"schedule\": \"0 0 */2 * * *\",\r\n```\r\n\r\nTo trigger once every hour from 9 AM to 5 PM:\r\n\r\n```json\r\n\"schedule\": \"0 0 9-17 * * *\",\r\n```\r\n\r\nTo trigger At 9:30 AM every day:\r\n\r\n```json\r\n\"schedule\": \"0 30 9 * * *\",\r\n```\r\n\r\nTo trigger At 9:30 AM every weekday:\r\n\r\n```json\r\n\"schedule\": \"0 30 9 * * 1-5\",\r\n```\r\n\r\n## Timer trigger C# code example\r\n\r\nThis C# code example writes a single log each time the function is triggered.\r\n\r\n```csharp\r\npublic static void Run(TimerInfo myTimer, ILogger log)\r\n{\r\n    log.LogInformation($\"C# Timer trigger function executed at: {DateTime.Now}\");    \r\n}\r\n```\r\n\r\n## Timer trigger JavaScript example\r\n\r\n```JavaScript\r\nmodule.exports = function(context, myTimer) {\r\n    if(myTimer.isPastDue)\r\n    {\r\n        context.log('JavaScript is running late!');\r\n    }\r\n    context.log(\"Timer last triggered at \" + myTimer.last);\r\n    context.log(\"Timer triggered at \" + myTimer.next);\r\n    \r\n    context.done();\r\n}\r\n```",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "myTimer",
+                    "required": true,
+                    "label": "$timerTrigger_name_label",
+                    "help": "$timerTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "schedule",
+                    "value": "string",
+                    "defaultValue": "0 * * * * *",
+                    "required": true,
+                    "label": "$timerTrigger_schedule_label",
+                    "help": "$timerTrigger_schedule_help",
+                    "validators": [
+                        {
+                            "expression": "^(\\*|((([1-5]\\d)|\\d)(\\-(([1-5]\\d)|\\d)(\\/\\d+)?)?)(,((([1-5]\\d)|\\d)(\\-(([1-5]\\d)|\\d)(\\/\\d+)?)?))*)(\\/\\d+)? (\\*|((([1-5]\\d)|\\d)(\\-(([1-5]\\d)|\\d)(\\/\\d+)?)?)(,((([1-5]\\d)|\\d)(\\-(([1-5]\\d)|\\d)(\\/\\d+)?)?))*)(\\/\\d+)? (\\*|(((1\\d)|(2[0-3])|\\d)(\\-((1\\d)|(2[0-3])|\\d)(\\/\\d+)?)?)(,(((1\\d)|(2[0-3])|\\d)(\\-((1\\d)|(2[0-3])|\\d)(\\/\\d+)?)?))*)(\\/\\d+)? (\\*|((([1-2]\\d)|(3[0-1])|[1-9])(\\-(([1-2]\\d)|(3[0-1])|[1-9])(\\/\\d+)?)?)(,((([1-2]\\d)|(3[0-1])|[1-9])(\\-(([1-2]\\d)|(3[0-1])|[1-9])(\\/\\d+)?)?))*)(\\/\\d+)? (\\*|(([A-Za-z]+|(1[0-2])|[1-9])(\\-([A-Za-z]+|(1[0-2])|[1-9])(\\/\\d+)?)?)(,(([A-Za-z]+|(1[0-2])|[1-9])(\\-([A-Za-z]+|(1[0-2])|[1-9])(\\/\\d+)?)?))*)(\\/\\d+)? (\\*|(([A-Za-z]+|[0-6])(\\-([A-Za-z]+|[0-6])(\\/\\d+)?)?)(,(([A-Za-z]+|[0-6])(\\-([A-Za-z]+|[0-6])(\\/\\d+)?)?))*)(\\/\\d+)?$",
+                            "errorText": "$timerTrigger_schedule_errorText"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "queue",
+            "displayName": "$queueOut_displayName",
+            "direction": "out",
+            "enabledInTryMode": true,
+            "actions": [
+                {
+                    "template": "QueueTrigger",
+                    "binding": "queueTrigger",
+                    "settings": [
+                        "queueName",
+                        "connection"
+                    ]
+                }
+            ],
+            "documentation": "#### Settings for storage queue output binding\r\n\r\nThe settings specifies the following properties.\r\n\r\n- `name` : The variable name used in function code for the queue or the queue message. \r\n- `queueName` : The name of the queue. For queue naming rules, see [Naming Queues and Metadata](https://msdn.microsoft.com/library/dd179349.aspx).\r\n- `connection` : The name of an app setting that contains a storage connection string. If you leave `connection` empty, the trigger will work with the default storage connection string for the function app, which is specified by the AzureWebJobsStorage app setting.\r\n- `type` : Must be set to *queue*.\r\n- `direction` : Must be set to *out*. \r\n\r\n#### C# types for Storage Queue\r\n\r\nThe `queue` binding can serialize the following types to a queue message:\r\n\r\n* Object (`out T` in C#, creates a message with a null object if the parameter is null when the function ends)\r\n* String (`out string` in C#, creates queue message if parameter value is non-null when the function ends)\r\n* Byte array (`out byte[]` in C#, works like string) \r\n* `out CloudQueueMessage` (C#, works like string) \r\n\r\nIn C# you can also bind to `ICollector<T>` or `IAsyncCollector<T>` where `T` is one of the supported types.\r\n\r\n#### C# Example for Storage Queue\r\n\r\nThis C# code example writes a single output queue message for each input queue message.\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, out string myOutputQueueItem, ILogger log)\r\n{\r\n    myOutputQueueItem = myQueueItem + \"(next step)\";\r\n}\r\n```\r\n\r\nThis C# code example writes multiple messages by using  `ICollector<T>` (use `IAsyncCollector<T>` in an async function):\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, ICollector<string> myQueue, ILogger log)\r\n{\r\n    myQueue.Add(myQueueItem + \"(step 1)\");\r\n    myQueue.Add(myQueueItem + \"(step 2)\");\r\n}\r\n```\r\n\r\n#### JavaScript example for Storage Queue\r\n\r\nJavaScript supports outputing a single object/string or an array of objects/strings. You access your bindings on `context.bindings` object.\r\n\r\nThis shows outputing a single item:\r\n\r\n```JavaScript\r\nmodule.exports = function(context, myQueueItem) {\r\n    context.bindings.output = \"Azure Functions are awesome!\"\r\n    //objects also work:\r\n    //context.bindings.output = { \"name\": \"world\"}\r\n    context.done();\r\n}\r\n```\r\n\r\nThis shows outputing a collection of items:\r\n\r\n```JavaScript\r\nmodule.exports = function(context, myQueueItem) {\r\n    context.bindings.output = [\r\n        {\r\n            \"name\":\"world\"\r\n        },\r\n        \"Azure Functions are awesome!\"\r\n    ]\r\n    context.done();\r\n}\r\n```\r\n\r\n#### Batch File Bindings for Storage Queue\r\n\r\nWhen you define `queue` output bindings in a function each binding will be available to the batch via pre-assigned paths to temporary disk locations. You can inspect the values of these paths by using the `SET` command in your function and viewing the results in the logs, however these files are transient and only available during the scope of the function execution. Each variable defined will be accessible by the same name you provide in the Azure Functions interface.\r\n\r\nFor instance, an output binding you define as `outputQueueItem` will be created for you and populated with a temporary file path. You can access the path using the variable name surrounded by `%` characters such as `%outputQueueItem%`. \r\n\r\nThe following code will test for the presence of the `name` parameter on the querystring of the request, and pipe that value to the `outputQueueItem` file, or return instructions by piping text to the response (in the `res` output location) if the `name` parameter is missing.\r\n\r\n````\r\nIF DEFINED req_query_name (\r\n\techo Hello %req_query_name%! > %outputQueueItem%\r\n\techo The greeting was sent to the queue. > %res%\r\n) ELSE (\r\n\techo Please pass a name on the query string > %res%\r\n)\r\n````\r\n\r\nThe contents of the file is then used by the runtime as the body of the message that is sent to the queue.\r\n\r\nTo pass additional values to the queue you can append to the file using the `>>` directive. \r\n\r\n````\r\necho This text is the first value > %outputQueueItem%\r\necho This text will be appended as a second line >> %outputQueueItem%\r\necho Careful! This line will overwrite previous data > %outputQueueItem%\r\n````\r\n\r\nAzure Functions do not currently provide a facility for serialization of data from a batch file (such as for JSON) so you need to take care of these operations through features natively available to you in batch file syntax. By echoing data and appending to the end of a file, you'll simply be pushing new lines of text to a text file. The values, along with the CRLF characters, will be passed as a single entry to the target queue.\r\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "outputQueueItem",
+                    "required": true,
+                    "label": "$queueOut_name_label",
+                    "help": "$queueOut_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "queueName",
+                    "value": "string",
+                    "defaultValue": "outqueue",
+                    "required": true,
+                    "label": "$queueOut_queueName_label",
+                    "help": "$queueOut_queueName_help",
+                    "validators": [
+                        {
+                            "expression": "^[0-9a-z][a-z0-9-]{1,61}[0-9a-z]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$queueOut_queueName_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "Storage",
+                    "required": true,
+                    "label": "[variables('storageConnStringLabel')]",
+                    "help": "[variables('appSettingsHelp')]",
+                    "placeholder": "[variables('selectConnection')]"
+                }
+            ]
+        },
+        {
+            "type": "queueTrigger",
+            "displayName": "$queueTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": true,
+            "documentation": "#### Settings for storage queue trigger\r\n\r\n- `name` : The variable name used in function code for the queue or the queue message. \r\n- `queueName` : The name of the queue to poll. For queue naming rules, see [Naming Queues and Metadata](https://msdn.microsoft.com/library/dd179349.aspx).\r\n- `connection` : The name of an app setting that contains a storage connection string. If you leave `connection` empty, the trigger will work with the default storage connection string for the function app, which is specified by the AzureWebJobsStorage app setting.\r\n- `type` : Must be set to *queueTrigger*.\r\n- `direction` : Must be set to *in*. \r\n\r\n\r\n#### Additional metadata for Storage Queue trigger\r\n\r\nYou can get queue metadata in your function by using these variable names:\r\n\r\n* ExpirationTime\r\n* InsertionTime\r\n* NextVisibleTime\r\n* Id\r\n* PopReceipt\r\n* DequeueCount\r\n* QueueTrigger (another way to retrieve the queue message text as a string)\r\n\r\n#### C# types for Storage Queue trigger\r\n\r\nThe queue message can be deserialized to any of the following types:\r\n\r\n* Object (from JSON)\r\n* String\r\n* Byte array \r\n* `CloudQueueMessage` (C#) \r\n\r\n#### C# example for Storage Queue trigger\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, \r\n    DateTimeOffset expirationTime, \r\n    DateTimeOffset insertionTime, \r\n    DateTimeOffset nextVisibleTime,\r\n    string queueTrigger,\r\n    string id,\r\n    string popReceipt,\r\n    int dequeueCount,\r\n    ILogger log)\r\n{\r\n    log.LogInformation($\"C# Queue trigger function processed: {myQueueItem}\\n\" +\r\n        $\"queueTrigger={queueTrigger}\\n\" +\r\n        $\"expirationTime={expirationTime}\\n\" +\r\n        $\"insertionTime={insertionTime}\\n\" +\r\n        $\"nextVisibleTime={nextVisibleTime}\\n\" +\r\n        $\"id={id}\\n\" +\r\n        $\"popReceipt={popReceipt}\\n\" + \r\n        $\"dequeueCount={dequeueCount}\");\r\n}\r\n```\r\n\r\n#### JavaScript example for Storage Queue trigger\r\n\r\n```JavaScript\r\nmodule.exports = function(context, myQueueItem) {\r\n    context.log('Dequeue Count: ' + context.bindingData.DequeueCount);\r\n\r\n    // JavaScript supports returning strings or objects for queues\r\n    if(typeof myQueueItem === 'string') {\r\n        context.log('Trigger was a string! - ' + myQueueItem);\r\n    } else if(typeof myQueueItem === 'object') {\r\n        context.log('Trigger was an object! - \\n' + JSON.stringify(myQueueItem, null, ' '));\r\n    }\r\n    context.done(); //finish execution\r\n}\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "myQueueItem",
+                    "required": true,
+                    "label": "$queueTrigger_name_label",
+                    "help": "$queueTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "queueName",
+                    "value": "string",
+                    "defaultValue": "myqueue",
+                    "required": true,
+                    "label": "$queueTrigger_queueName_label",
+                    "help": "$queueTrigger_queueName_help",
+                    "validators": [
+                        {
+                            "expression": "^[0-9a-z][a-z0-9-]{1,61}[0-9a-z]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$queueTrigger_queueName_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "Storage",
+                    "required": true,
+                    "label": "[variables('storageConnStringLabel')]",
+                    "help": "[variables('appSettingsHelp')]",
+                    "placeholder": "[variables('selectConnection')]"
+                }
+            ]
+        },
+        {
+            "type": "blob",
+            "displayName": "$blobOut_displayName",
+            "direction": "out",
+            "enabledInTryMode": true,
+            "actions": [
+                {
+                    "template": "BlobTrigger",
+                    "binding": "blobTrigger",
+                    "settings": [
+                        "path",
+                        "connection"
+                    ]
+                }
+            ],
+            "documentation": "#### Settings for a storage blob output binding\r\n\r\n- `name` : The variable name used in function code for the blob . \r\n- `path` : A path that specifies the container to write the blob to, and optionally a blob name pattern.\r\n- `connection` : The name of an app setting that contains a storage connection string. If you leave `connection` empty, the binding will work with the default storage connection string for the function app, which is specified by the AzureWebJobsStorage app setting.\r\n- `type` : Must be set to *blob*.\r\n- `direction` : Set to *out*. \r\n\r\n#### Blob input and output supported types\r\n\r\nThe `blob` binding can serialize or deserialize the following types in JavaScript or C# functions:\r\n\r\n* Object (`out T` in C# for output blob: creates a blob as null object if parameter value is null when the function ends)\r\n* String (`out string` in C# for output blob: creates a blob only if the string parameter is non-null when the function returns)\r\n\r\nIn C# functions, you can also bind to the following types:\r\n\r\n* `TextWriter`\r\n* `Stream`\r\n* `CloudBlobStream`\r\n* `ICloudBlob`\r\n* `CloudBlockBlob` \r\n* `CloudPageBlob` \r\n\r\n#### Blob output C# code example\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, string myInputBlob, out string myOutputBlob, ILogger log)\r\n{\r\n    log.LogInformation($\"C# Queue trigger function processed: {myQueueItem}\");\r\n    myOutputBlob = myInputBlob;\r\n}\r\n```\r\n\r\n#### Blob output JavaScript example\r\n\r\n```JavaScript\r\nmodule.exports = function(context, trigger) {\r\n    context.bindings.output = { \"hello\":\"world\" }\r\n    context.done();\r\n}\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "outputBlob",
+                    "required": true,
+                    "label": "$blobOut_name_label",
+                    "help": "$blobOut_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "outcontainer/{rand-guid}",
+                    "required": true,
+                    "label": "$blobOut_path_label",
+                    "help": "$blobOut_path_help",
+                    "validators": [
+                        {
+                            "expression": "((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9])|(^[{][a-zA-Z0-9]{1,126}[}])|(^[%][a-zA-Z0-9]{1,126}[%]))[\\/](\\S){0,1023}[^\\/]$|(^[{][a-zA-Z0-9]{1,126}[}]$)|(^[%][a-zA-Z0-9]{1,126}[%]$)",
+                            "errorText": "$blobOut_path_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "Storage",
+                    "required": true,
+                    "label": "[variables('storageConnStringLabel')]",
+                    "help": "[variables('appSettingsHelp')]",
+                    "placeholder": "[variables('selectConnection')]"
+                }
+            ]
+        },
+        {
+            "type": "blob",
+            "displayName": "$blobIn_displayName",
+            "direction": "in",
+            "enabledInTryMode": true,
+            "documentation": "#### Settings for a storage blob input binding\r\n\r\n- `name` : The variable name used in function code for the blob . \r\n- `path` : A path that specifies the container to read the blob from and optionally a blob name pattern.\r\n- `connection` : The name of an app setting that contains a storage connection string. If you leave `connection` empty, the binding will work with the default storage connection string for the function app, which is specified by the AzureWebJobsStorage app setting.\r\n- `type` : Must be set to *blob*.\r\n- `direction` : Set to *in*\r\n\r\n#### Blob input and output supported types\r\n\r\nThe `blob` binding can serialize or deserialize the following types in JavaScript or C# functions:\r\n\r\n* Object\r\n* String\r\n\r\nIn C# functions, you can also bind to the following types:\r\n\r\n* `TextReader`\r\n* `Stream`\r\n* `ICloudBlob`\r\n* `CloudBlockBlob` \r\n* `CloudPageBlob` \r\n\r\n#### Blob output C# code example\r\n\r\nThis C# code example copies a blob whose name is received in a queue message.\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, string myInputBlob, out string myOutputBlob, ILogger log)\r\n{\r\n    log.LogInformation($\"C# Queue trigger function processed: {myQueueItem}\");\r\n    myOutputBlob = myInputBlob;\r\n}\r\n```\r\n\r\n#### Blob output JavaScript example\r\n\r\n```JavaScript\r\n// this assumes that your blob input is your only input\r\nmodule.exports = function(context, trigger, inputBlob) {\r\n    context.log(inputBlob);\r\n    //it's also available on context.bindings\r\n    context.log(context.bindings.inputBlob); // will log the same thing as above\r\n    context.done();\r\n}\r\n```",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "inputBlob",
+                    "required": true,
+                    "label": "$blobIn_name_label",
+                    "help": "$blobIn_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "incontainer/{name}",
+                    "required": true,
+                    "label": "$blobIn_path_label",
+                    "help": "$blobIn_path_help",
+                    "validators": [
+                        {
+                            "expression": "((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9])|(^[{][a-zA-Z0-9]{1,126}[}])|(^[%][a-zA-Z0-9]{1,126}[%]))[\\/](\\S){0,1023}[^\\/]$|(^[{][a-zA-Z0-9]{1,126}[}]$)|(^[%][a-zA-Z0-9]{1,126}[%]$)",
+                            "errorText": "$blobIn_patherrorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "Storage",
+                    "required": true,
+                    "label": "[variables('storageConnStringLabel')]",
+                    "help": "[variables('appSettingsHelp')]",
+                    "placeholder": "[variables('selectConnection')]"
+                }
+            ]
+        },
+        {
+            "type": "blobTrigger",
+            "displayName": "$blobTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": true,
+            "documentation": "#### Settings for storage blob trigger\r\n\r\n- `name` : The variable name used in function code for the blob. \r\n- `path` : A path that specifies the container to monitor, and optionally a blob name pattern.\r\n- `connection` : The name of an app setting that contains a storage connection string. If you leave `connection` empty, the trigger will work with the default storage connection string for the function app, which is specified by the AzureWebJobsStorage app setting.\r\n- `type` : Must be set to *blobTrigger*.\r\n- `direction` : Must be set to *in*.\r\n\r\n#### Blob trigger name patterns\r\n\r\nYou can specify a blob name pattern in the `path` property. For example:\r\n\r\n```json\r\n\"path\": \"input/original-{name}\",\r\n```\r\n\r\nThis path would find a blob named *original-Blob1.txt* in the *input* container, and the value of the `name` variable in function code would be `Blob1`.\r\n\r\nAnother example:\r\n\r\n```json\r\n\"path\": \"input/{blobname}.{blobextension}\",\r\n```\r\n\r\nThis path would also find a blob named *original-Blob1.txt*, and the value of the `blobname` and `blobextension` variables in function code would be *original-Blob1* and *txt*.\r\n\r\nYou can restrict the types of blobs that trigger the function by specifying a pattern with a fixed value for the file extension. If you set the `path` to  *samples/{name}.png*, only *.png* blobs in the *samples* container will trigger the function.\r\n\r\nIf you need to specify a name pattern for blob names that have curly braces in the name, double the curly braces. For example, if you want to find blobs in the *images* container that have names like this:\r\n\r\n\t\t{20140101}-soundfile.mp3\r\n\r\nuse this for the `path` property:\r\n\r\n\t\timages/{{20140101}}-{name}\r\n\r\nIn the example, the `name` variable value would be *soundfile.mp3*. \r\n\r\n#### Blob trigger supported types\r\n\r\nThe blob can be deserialized to any of the following types in JavaScript or C# functions:\r\n\r\n* Object (from JSON)\r\n* String\r\n\r\nIn C# functions you can also bind to any of the following types:\r\n\r\n* `TextReader`\r\n* `Stream`\r\n* `ICloudBlob`\r\n* `CloudBlockBlob`\r\n* `CloudPageBlob`\r\n* `CloudBlobContainer`\r\n* `CloudBlobDirectory`\r\n* `IEnumerable<CloudBlockBlob>`\r\n* `IEnumerable<CloudPageBlob>`\r\n* Other types deserialized by [ICloudBlobStreamBinder](https://azure.microsoft.com/en-us/documentation/articles/websites-dotnet-webjobs-sdk-storage-blobs-how-to/)\r\n\r\n#### Blob trigger C# code example\r\n\r\n```csharp\r\npublic static void Run(string myBlob, ILogger log)\r\n{\r\n    log.LogInformation($\"C# Blob trigger function processed: {myBlob}\");\r\n}\r\n```\r\n\r\n#### Blob trigger JavaScript example\r\n\r\n```JavaScript\r\nmodule.exports = function(context, myBlob) {\r\n    context.log(myBlob);\r\n    context.done();\r\n}\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "myBlob",
+                    "required": true,
+                    "label": "$blobTrigger_name_label",
+                    "help": "$blobTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "mycontainer",
+                    "required": true,
+                    "label": "$blobTrigger_path_label",
+                    "help": "$blobTrigger_path_help",
+                    "validators": [
+                        {
+                            "expression": "(((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9])|(^[{][a-zA-Z0-9]{1,126}[}])|(^[%][a-zA-Z0-9]{1,126}[%]))[\\/](\\S){0,1023}[^\\/]$)|(((^[a-z0-9](?:[a-z0-9]|(?:\\-(?!\\-))){1,61}[a-z0-9]$)|(^[{][a-zA-Z0-9]{1,126}[}]$)|(^[%][a-zA-Z0-9]{1,126}[%]$)))",
+                            "errorText": "$blobTrigger_path_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "Storage",
+                    "required": true,
+                    "label": "[variables('storageConnStringLabel')]",
+                    "help": "[variables('appSettingsHelp')]",
+                    "placeholder": "[variables('selectConnection')]"
+                }
+            ]
+        },
+        {
+            "type": "httpTrigger",
+            "displayName": "$httpTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": true,
+            "documentation": "## Settings for HTTP and webhook bindings\r\n\r\nThe settings provide properties that pertain to both the request and response.\r\n\r\nProperties for the HTTP request:\r\n\r\n- `name` : Variable name used in function code for the request object (or the request body in the case of JavaScript functions).\r\n- `type` : Must be set to *httpTrigger*.\r\n- `direction` : Must be set to *in*. \r\n- `webHookType` : For WebHook triggers, valid values are *github*, *slack*, and *genericJson*. \r\n- `authLevel` : Doesn't apply to WebHook triggers. Set to \"function\" to require the API key, \"anonymous\" to drop the API key requirement, or \"admin\" to require the master API key.\r\n\r\nProperties for the HTTP response:\r\n\r\n- `name` : Variable name used in function code for the response object.\r\n- `type` : Must be set to *http*.\r\n- `direction` : Must be set to *out*. \r\n\r\n## WebHook triggers\r\n\r\nA WebHook trigger is an HTTP trigger that has the following features designed for WebHooks:\r\n\r\n* For specific WebHook providers (currently GitHub and Slack are supported), the Functions runtime validates the provider's signature.\r\n* For JavaScript functions, the Functions runtime provides the request body instead of the request object. There is no special handling for C# functions, because you control what is provided by specifying the parameter type. If you specify `HttpRequestMessage` you get the request object. If you specify a POCO type, the Functions runtime tries to parse a JSON object in the body of the request to populate the object properties.\r\n* To trigger a WebHook function the HTTP request must include an API key. For non-WebHook HTTP triggers,  this requirement is optional.\r\n\r\nFor information about how to set up a GitHub WebHook, see [GitHub Developer - Creating WebHooks](http://go.microsoft.com/fwlink/?LinkID=761099&clcid=0x409).\r\n\r\n## URL to trigger the function\r\n\r\nTo trigger a function, you send an HTTP request to a URL that is a combination of the function app URL and the function name:\r\n\r\n```\r\n https://{function app name}.azurewebsites.net/api/{function name} \r\n```\r\n\r\n## API keys\r\n\r\nBy default, an API key must be included with an HTTP request to trigger an HTTP or WebHook function. The key can be included in a query string variable named `code`, or it can be included in an `x-functions-key` HTTP header. For non-WebHook functions, you can indicate that an API key is not required by setting the `authLevel` property to \"anonymous\" in the *function.json* file.\r\n\r\nYou can find API key values in the *D:\\home\\data\\Functions\\secrets* folder in the file system of the function app.  The master key and function key are set in the *host.json* file, as shown in this example. \r\n\r\n```json\r\n{\r\n  \"masterKey\": \"K6P2VxK6P2VxK6P2VxmuefWzd4ljqeOOZWpgDdHW269P2hb7OSJbDg==\",\r\n  \"functionKey\": \"OBmXvc2K6P2VxK6P2VxK6P2VxVvCdB89gChyHbzwTS/YYGWWndAbmA==\"\r\n}\r\n```\r\n\r\nThe function key from *host.json* can be used to trigger any function but won't trigger a disabled function. The master key can be used to trigger any function and will trigger a function even if it's disabled. You can configure a function to require the master key by setting the `authLevel` property to \"admin\". \r\n\r\nIf the *secrets* folder contains a JSON file with the same name as a function, the `key` property in that file can also be used to trigger the function, and this key will only work with the function it refers to. For example, the API key for a function named `HttpTrigger` is specified in *HttpTrigger.json* in the *secrets* folder. Here is an example:\r\n\r\n```json\r\n{\r\n  \"key\":\"0t04nmo37hmoir2rwk16skyb9xsug32pdo75oce9r4kg9zfrn93wn4cx0sxo4af0kdcz69a4i\"\r\n}\r\n```\r\n\r\n## Example C# code for an HTTP trigger function \r\n\r\n```csharp\r\nusing System.Net;\r\nusing System.Threading.Tasks;\r\n\r\npublic static async Task<HttpResponseMessage> Run(HttpRequestMessage req, ILogger log)\r\n{\r\n    log.LogInformation(\"C# HTTP trigger function processed a request.\");\r\n\r\n    // parse query parameter\r\n    string name = req.GetQueryNameValuePairs()\r\n        .FirstOrDefault(q => string.Compare(q.Key, \"name\", true) == 0)\r\n        .Value;\r\n\r\n    // Get request body\r\n    dynamic data = await req.Content.ReadAsAsync<object>();\r\n\r\n    // Set name to query string or body data\r\n    name = name ?? data?.name;\r\n\r\n    return name == null\r\n        ? req.CreateResponse(HttpStatusCode.BadRequest, \"Please pass a name on the query string or in the request body\")\r\n        : req.CreateResponse(HttpStatusCode.OK, \"Hello \" + name);\r\n}\r\n```\r\n\r\n## Example JavaScript code for an HTTP trigger function \r\n\r\nWe support an [express-like api](https://expressjs.com/en/4x/api.html#res) for JavaScript http triggers.\r\nSee supported methods for [context.req](https://github.com/Azure/azure-functions-host/blob/v1.x/src/WebJobs.Script/azurefunctions/http/request.js) and [context.res](https://github.com/Azure/azure-functions-host/blob/v1.x/src/WebJobs.Script/azurefunctions/http/response.js).\r\n\r\n```javascript\r\nmodule.exports = function(context, req) {\r\n    context.log('JavaScript HTTP trigger function processed a request.');\r\n\r\n    if (req.query.name || (req.body && req.body.name)) {\r\n        // using the express api style\r\n        context.res\r\n            // set statusCode to 200\r\n            .status(200)\r\n            // set a header on the response\r\n            .set(\"QuerySet\", req.query.name != undefined)\r\n            // send will automatically call context.done\r\n            .send(\"Hello \" + (req.query.name || req.body.name));\r\n    } else {\r\n        // alternate style\r\n        context.res = {\r\n            status: 400,\r\n            body: \"Please pass a name on the query string or in the request body\"\r\n        };\r\n        context.done();\r\n    }\r\n};\r\n```\r\n\r\n## Example C# code for a GitHub WebHook function \r\n\r\n```csharp\r\n#r \"Newtonsoft.Json\"\r\n\r\nusing System;\r\nusing System.Net;\r\nusing System.Threading.Tasks;\r\nusing Newtonsoft.Json;\r\n\r\npublic static async Task<object> Run(HttpRequestMessage req, ILogger log)\r\n{\r\n    string jsonContent = await req.Content.ReadAsStringAsync();\r\n    dynamic data = JsonConvert.DeserializeObject(jsonContent);\r\n\r\n    log.LogInformation($\"WebHook was triggered! Comment: {data.comment.body}\");\r\n\r\n    return req.CreateResponse(HttpStatusCode.OK, new {\r\n        body = $\"New GitHub comment: {data.comment.body}\"\r\n    });\r\n}\r\n```\r\n\r\n## Example JavaScript code for a GitHub WebHook function \r\n\r\n```javascript\r\nmodule.exports = function (context, data) {\r\n    context.log('GitHub WebHook triggered!', data.comment.body);\r\n    context.res.send('New GitHub comment: ' + data.comment.body);\r\n};\r\n```\r\n",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "req",
+                    "required": true,
+                    "label": "$httpTrigger_name_label",
+                    "help": "$httpTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "route",
+                    "value": "string",
+                    "required": false,
+                    "label": "$httpTrigger_route_label",
+                    "help": "$httpTrigger_route_help",
+                    "validators": []
+                },
+                {
+                    "name": "webHookType",
+                    "value": "enum",
+                    "enum": [
+                        {
+                            "value": "github",
+                            "display": "GitHub"
+                        },
+                        {
+                            "value": "genericJson",
+                            "display": "Generic JSON"
+                        },
+                        {
+                            "value": "slack",
+                            "display": "Slack"
+                        }
+                    ],
+                    "label": "$httpTrigger_webHookType_label",
+                    "help": "$httpTrigger_webHookType_help"
+                },
+                {
+                    "name": "authLevel",
+                    "value": "enum",
+                    "enum": [
+                        {
+                            "value": "function",
+                            "display": "Function"
+                        },
+                        {
+                            "value": "anonymous",
+                            "display": "Anonymous"
+                        },
+                        {
+                            "value": "admin",
+                            "display": "Admin"
+                        }
+                    ],
+                    "label": "$httpTrigger_authLevel_label",
+                    "help": "$httpTrigger_authLevel_help"
+                },
+                {
+                    "name": "methods",
+                    "value": "checkBoxList",
+                    "defaultValue": [
+                        "get",
+                        "post",
+                        "delete",
+                        "head",
+                        "patch",
+                        "put",
+                        "options",
+                        "trace"
+                    ],
+                    "enum": [
+                        {
+                            "value": "get",
+                            "display": "GET"
+                        },
+                        {
+                            "value": "post",
+                            "display": "POST"
+                        },
+                        {
+                            "value": "delete",
+                            "display": "DELETE"
+                        },
+                        {
+                            "value": "head",
+                            "display": "HEAD"
+                        },
+                        {
+                            "value": "patch",
+                            "display": "PATCH"
+                        },
+                        {
+                            "value": "put",
+                            "display": "PUT"
+                        },
+                        {
+                            "value": "options",
+                            "display": "OPTIONS"
+                        },
+                        {
+                            "value": "trace",
+                            "display": "TRACE"
+                        }
+                    ],
+                    "label": "$httpTrigger_methods_label",
+                    "help": "$httpTrigger_methods_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "mode",
+                    "type": "exclusivity",
+                    "values": [
+                        {
+                            "value": "authLevel",
+                            "display": "Standard",
+                            "hiddenSettings": [
+                                "webHookType"
+                            ],
+                            "shownSettings": [
+                                "authLevel"
+                            ]
+                        },
+                        {
+                            "value": "webHookType",
+                            "display": "Webhook",
+                            "hiddenSettings": [
+                                "authLevel"
+                            ],
+                            "shownSettings": [
+                                "webHookType"
+                            ]
+                        }
+                    ],
+                    "label": "$httpTrigger_mode_label",
+                    "help": "$httpTrigger_mode_help"
+                },
+                {
+                    "name": "methodRule",
+                    "type": "exclusivity",
+                    "values": [
+                        {
+                            "value": "allMethods",
+                            "display": "All methods",
+                            "hiddenSettings": [
+                                "methods"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "methods",
+                            "display": "Selected methods",
+                            "hiddenSettings": [],
+                            "shownSettings": [
+                                "methods"
+                            ]
+                        }
+                    ],
+                    "label": "$httpTrigger_methodRule_label",
+                    "help": "$httpTrigger_methodRule_help"
+                }
+            ]
+        },
+        {
+            "type": "http",
+            "displayName": "$httpOut_displayName",
+            "direction": "out",
+            "enabledInTryMode": true,
+            "documentation": "You need this binding for http responses. Always use this with the HTTP Trigger.\r\n\r\n## Settings for HTTP and webhook bindings\r\n\r\nProperties for the HTTP response:\r\n\r\n- `name` : Variable name used in function code for the response object.\r\n- `type` : Must be set to *http*.\r\n- `direction` : Must be set to *out*. \r\n\r\n\r\nSee HTTP trigger for more samples",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "res",
+                    "required": true,
+                    "label": "$httpOut_name_label",
+                    "help": "$httpOut_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "serviceBusTrigger",
+            "displayName": "$serviceBusTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for Service Bus queue or topic trigger\r\n\r\nThe settings specify the following properties.\r\n\r\n- `name` : The variable name used in function code for the queue or topic, or the queue or topic message. \r\n- `queueName` : For queue trigger only, the name of the queue to poll.\r\n- `topicName` : For topic trigger only, the name of the topic to poll.\r\n- `subscriptionName` : For topic trigger only, the subscription name.\r\n- `connection` : The name of an app setting that contains a Service Bus connection string. The connection string must be for a Service Bus namespace, not limited to a specific queue or topic. If the connection string doesn't have manage rights, set the `accessRights` property. If you leave `connection` empty, the trigger or binding will work with the default Service Bus connection string for the function app, which is specified by the AzureWebJobsServiceBus app setting.\r\n- `type` : Must be set to *serviceBusTrigger*.\r\n- `direction` : Must be set to *in*. \r\n\r\n#### C# code example that processes a Service Bus queue message\r\n\r\n```csharp\r\npublic static void Run(string myQueueItem, ILogger log)\r\n{\r\n    log.LogInformation($\"C# ServiceBus queue trigger function processed message: {myQueueItem}\");\r\n}\r\n```\r\n\r\n#### JavaScript code example that processes a Service Bus queue message\r\n\r\n```javascript\r\nmodule.exports = function(context, myQueueItem) {\r\n    context.log('JavaScript ServiceBus queue trigger function processed message', myQueueItem);\r\n    context.done();\r\n};\r\n```\r\n\r\n#### Supported types\r\n\r\nThe Service Bus queue message can be deserialized to any of the following types:\r\n\r\n* Object (from JSON)\r\n* string\r\n* byte array \r\n* `BrokeredMessage` (C#) \r\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.ServiceBus",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "mySbMsg",
+                    "required": true,
+                    "label": "$serviceBusTrigger_name_label",
+                    "help": "$serviceBusTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "ServiceBus",
+                    "required": true,
+                    "label": "$serviceBusTrigger_connection_label",
+                    "help": "$serviceBusTrigger_connection_help",
+                    "placeholder": "[variables('selectConnection')]"
+                },
+                {
+                    "name": "queueName",
+                    "value": "string",
+                    "defaultValue": "mysbqueue",
+                    "required": true,
+                    "label": "$serviceBusTrigger_queueName_label",
+                    "help": "$serviceBusTrigger_queueName_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}([a-zA-Z0-9]$|[a-zA-Z0-9][\\/]\\$DeadLetterQueue$)|^[{][a-zA-Z0-9]{1,126}([}]$|[}][\\/]\\$DeadLetterQueue$)|^[%][a-zA-Z0-9]{1,126}([%]$|[%][\\/]\\$DeadLetterQueue$)",
+                            "errorText": "$serviceBusTrigger_queueName_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "topicName",
+                    "value": "string",
+                    "defaultValue": "mysbtopic",
+                    "required": true,
+                    "label": "$serviceBusTrigger_topicName_label",
+                    "help": "$serviceBusTrigger_topicName_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}[a-zA-Z0-9]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$serviceBusTrigger_topicName_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "subscriptionName",
+                    "value": "string",
+                    "defaultValue": "mysubscription",
+                    "required": true,
+                    "label": "$serviceBusTrigger_subscriptionName_label",
+                    "help": "$serviceBusTrigger_subscriptionName_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}([a-zA-Z0-9]$|[a-zA-Z0-9][\\/]\\$DeadLetterQueue$)|^[{][a-zA-Z0-9]{1,126}([}]$|[}][\\/]\\$DeadLetterQueue$)|^[%][a-zA-Z0-9]{1,126}([%]$|[%][\\/]\\$DeadLetterQueue$)",
+                            "errorText": "$serviceBusTrigger_subscriptionName_errorText"
+                        }
+                    ]
+                }
+            ],
+            "rules": [
+                {
+                    "name": "messageType",
+                    "type": "exclusivity",
+                    "values": [
+                        {
+                            "value": "queueName",
+                            "display": "$serviceBusTrigger_messageType_queueName",
+                            "hiddenSettings": [
+                                "topicName",
+                                "subscriptionName"
+                            ],
+                            "shownSettings": [
+                                "queueName"
+                            ]
+                        },
+                        {
+                            "value": "topicName",
+                            "display": "$serviceBusTrigger_messageType_topicName",
+                            "hiddenSettings": [
+                                "queueName"
+                            ],
+                            "shownSettings": [
+                                "topicName",
+                                "subscriptionName"
+                            ]
+                        }
+                    ],
+                    "label": "$serviceBusTrigger_messageType_label",
+                    "help": "$serviceBusTrigger_messageType_help"
+                }
+            ]
+        },
+        {
+            "type": "serviceBus",
+            "displayName": "$serviceBusOut_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for Service Bus queue or topic output binding\r\n\r\nThe settings specify the following properties.\r\n\r\n- `name` : The variable name used in function code for the queue or queue message. \r\n- `queueName` : For queue trigger only, the name of the queue to poll.\r\n- `topicName` : For topic trigger only, the name of the topic to poll.\r\n- `subscriptionName` : For topic trigger only, the subscription name.\r\n- `connection` : Same as for Service Bus trigger.\r\n- `type` : Must be set to *serviceBus*.\r\n- `direction` : Must be set to *out*. \r\n\r\n#### Supported types\r\n\r\nAzure Functions can create a Service Bus queue message from any of the following types.\r\n\r\n* Object (always creates a JSON message, creates the message with a null object if the value is null when the function ends)\r\n* string (creates a message if the value is non-null when the function ends)\r\n* byte array (works like string) \r\n* `BrokeredMessage` (C#, works like string)\r\n\r\nFor creating multiple messages in a C# function, you can use `ICollector<T>` or `IAsyncCollector<T>`. A message is created when you call the `Add` method. For JavaScript, you can return an array.\r\n\r\n#### C# code examples that create Service Bus queue messages\r\n\r\n```csharp\r\npublic static void Run(TimerInfo myTimer, ILogger log, out string outputSbQueue)\r\n{\r\n\tstring message = $\"Service Bus queue message created at: {DateTime.Now}\";\r\n    log.LogInformation(message); \r\n    outputSbQueue = message;\r\n}\r\n```\r\n\r\n```csharp\r\npublic static void Run(TimerInfo myTimer, ILogger log, ICollector<string> outputSbQueue)\r\n{\r\n\tstring message = $\"Service Bus queue message created at: {DateTime.Now}\";\r\n    log.LogInformation(message); \r\n    outputSbQueue.Add(\"1 \" + message);\r\n    outputSbQueue.Add(\"2 \" + message);\r\n}\r\n```\r\n\r\n#### JavaScript code example that creates Service Bus queue messages\r\n\r\n```javascript\r\nmodule.exports = function (context, myTimer) {\r\n    var message = 'Service Bus queue message created at ' + timeStamp;\r\n    context.log(message);   \r\n    context.bindings.outputSbQueueMsg = message;\r\n    context.done();\r\n};\r\n```\r\n\r\n```javascript\r\nmodule.exports = function (context, myTimer) {\r\n    var message = 'Service Bus queue message created at ' + timeStamp;\r\n    context.log(message);   \r\n    context.bindings.outputSbQueueMsg = [\r\n        message,\r\n        {\r\n            \"hello\":\"world\"\r\n        }\r\n    ];\r\n    context.done();\r\n};\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.ServiceBus",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "ServiceBus",
+                    "required": true,
+                    "label": "$serviceBusOut_connection_label",
+                    "help": "$serviceBusOut_connection_help",
+                    "placeholder": "[variables('selectConnection')]"
+                },
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "outputSbMsg",
+                    "required": true,
+                    "label": "$serviceBusOut_name_label",
+                    "help": "$serviceBusOut_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "queueName",
+                    "value": "string",
+                    "defaultValue": "outqueue",
+                    "required": true,
+                    "label": "$serviceBusOut_queueName_label",
+                    "help": "$serviceBusOut_queueName_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}([a-zA-Z0-9]$|[a-zA-Z0-9][\\/]\\$DeadLetterQueue$)|^[{][a-zA-Z0-9]{1,126}([}]$|[}][\\/]\\$DeadLetterQueue$)|^[%][a-zA-Z0-9]{1,126}([%]$|[%][\\/]\\$DeadLetterQueue$)",
+                            "errorText": "$serviceBusOut_queueName_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "topicName",
+                    "value": "string",
+                    "defaultValue": "outtopic",
+                    "required": true,
+                    "label": "$serviceBusOut_topicName_label",
+                    "help": "$serviceBusOut_topicName_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}[a-zA-Z0-9]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$serviceBusOut_topicName_errorText"
+                        }
+                    ]
+                }
+            ],
+            "rules": [
+                {
+                    "name": "messageType",
+                    "type": "exclusivity",
+                    "values": [
+                        {
+                            "value": "queueName",
+                            "display": "$serviceBusOut_messageType_queueName",
+                            "hiddenSettings": [
+                                "topicName"
+                            ],
+                            "shownSettings": [
+                                "queueName"
+                            ]
+                        },
+                        {
+                            "value": "topicName",
+                            "display": "$serviceBusOut_messageType_topicName",
+                            "hiddenSettings": [
+                                "queueName"
+                            ],
+                            "shownSettings": [
+                                "topicName"
+                            ]
+                        }
+                    ],
+                    "label": "$serviceBusOut_messageType_label",
+                    "help": "$serviceBusOut_messageType_help"
+                }
+            ]
+        },
+        {
+            "type": "eventHubTrigger",
+            "displayName": "$eventHubTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for Event Hub trigger binding\r\n\r\nThe settings for an Azure Event Hub trigger specifies the following properties:\r\n\r\n- `type` : Must be set to *eventHubTrigger*.\r\n- `name` : The variable name used in function code for the event hub message. \r\n- `direction` : Must be set to *in*. \r\n- `eventHubName` : The name of the event hub.\r\n- `connection` : The name of an app setting that contains the connection string to the namespace that the event hub resides in. Copy this connection string by clicking the **Connection Information** button for the namespace, not the event hub itself.  This connection string must have at least read permissions to activate the trigger.\r\n- `cardinality` : Cardinality of the trigger input. Choose 'One' if the input is a single message or 'Many' if the input is an array of messages. 'Many' is the default if unspecified.\r\n\r\n#### Azure Event Hub trigger C# example\r\n \r\n\tusing System;\r\n\t\r\n\tpublic static void Run(string myEventHubMessage, ILogger log)\r\n\t{\r\n\t    log.LogInformation($\"C# Event Hub trigger function processed a message: {myEventHubMessage}\");\r\n\t}\r\n\r\n#### Azure Event Hub trigger JavaScript example\r\n\r\n\tmodule.exports = function (context, eventHubMessages) {\r\n\t\tcontext.log(`JavaScript eventhub trigger function called for message array ${eventHubMessages}`);\r\n\t\t\r\n\t\teventHubMessages.forEach((message, index) => {\r\n\t\t\tcontext.log(`Processed message ${message}`);\r\n            context.log(`EnqueuedTimeUtc = ${context.bindingData.enqueuedTimeUtcArray[index]}`);\r\n            context.log('SequenceNumber =', context.bindingData.sequenceNumberArray[index]);\r\n            context.log('Offset =', context.bindingData.offsetArray[index]);\r\n\t\t});\r\n\r\n\t\tcontext.done();\r\n\t};\r\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "myEventHubMessage",
+                    "required": true,
+                    "label": "$eventHubTrigger_name_label",
+                    "help": "$eventHubTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "EventHub",
+                    "required": true,
+                    "label": "$eventHubTrigger_connection_label",
+                    "help": "$eventHubTrigger_connection_help",
+                    "placeholder": "[variables('selectConnection')]"
+                },
+                {
+                    "name": "eventHubName",
+                    "value": "string",
+                    "defaultValue": "myeventhub",
+                    "required": true,
+                    "label": "$eventHubOut_path_label",
+                    "help": "$eventHubTrigger_path_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}[a-zA-Z0-9]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$eventHubTrigger_path_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "consumerGroup",
+                    "value": "string",
+                    "defaultValue": "$Default",
+                    "required": false,
+                    "label": "$eventHubTrigger_consumerGroup_label",
+                    "help": "$eventHubTrigger_consumerGroup_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}[a-zA-Z0-9]$)|^\\$Default$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$eventHubTrigger_consumerGroup_errorText"
+                        }
+                    ]
+                },
+                {
+                    "name": "cardinality",
+                    "value": "enum",
+                    "required": false,
+                    "defaultValue": "many",
+                    "enum": [
+                        {
+                            "value": "one",
+                            "display": "One"
+                        },
+                        {
+                            "value": "many",
+                            "display": "Many"
+                        }
+                    ],
+                    "label": "$eventHubTrigger_cardinality_label",
+                    "help": "$eventHubTrigger_cardinality_help"
+                }
+            ]
+        },
+        {
+            "type": "eventHub",
+            "displayName": "$eventHubOut_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "actions": [
+                {
+                    "template": "EventHubTrigger",
+                    "binding": "eventHubTrigger",
+                    "settings": [
+                        "connection",
+                        "path"
+                    ]
+                }
+            ],
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
+                "version": "3.0.0-beta8"
+            },
+            "documentation": "#### Settings for Event Hub output binding\r\n\r\nThe settings for an Azure Event Hub output binding specifies the following properties:\r\n\r\n- `type` : Must be set to *eventHub*.\r\n- `name` : The variable name used in function code for the event hub message. \r\n- `eventHubName` : The name of the event hub.\r\n- `connection` : The name of an app setting that contains the connection string to the namespace that the event hub resides in. Copy this connection string by clicking the **Connection Information** button for the namespace, not the event hub itself.  This connection string must have send permissions to send the message to the Event Hub stream.\r\n- `direction` : Must be set to *out*. \r\n\r\n#### Azure Event Hub C# code example for output binding\r\n\r\nThis example uses a Timer Trigger input, but Event Hubs output can work with any trigger.\r\n \r\n\tusing System;\r\n\t\r\n\tpublic static void Run(TimerInfo myTimer, out string outputEventHubMessage, ILogger log)\r\n\t{\r\n\t    String msg = $\"TimerTriggerCSharp1 executed at: {DateTime.Now}\";\r\n\t\r\n\t    log.LogInformation(msg);   \r\n\t    \r\n\t    outputEventHubMessage = msg;\r\n\t}\r\n\r\n#### Azure Event Hub JavaScript code example for output binding\r\n\r\nThis example uses a Timer Trigger input, but Event Hubs output can work with any trigger.\r\n \r\n\tmodule.exports = function (context, myTimer) {\r\n\t    var timeStamp = new Date().toISOString();\r\n\t    \r\n\t    if(myTimer.isPastDue)\r\n\t    {\r\n\t        context.log('TimerTriggerJS1 is running late!');\r\n\t    }\r\n\r\n\t    context.log('TimerTriggerJS1 function ran!', timeStamp);   \r\n\t    \r\n\t    context.bindings.outputEventHubMessage = \"TimerTriggerJS1 ran at : \" + timeStamp;\r\n\t\r\n\t    context.done();\r\n\t};\r\n",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "outputEventHubMessage",
+                    "required": true,
+                    "label": "$eventHubOut_name_label",
+                    "help": "$eventHubOut_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "connection",
+                    "value": "string",
+                    "resource": "EventHub",
+                    "required": true,
+                    "label": "$eventHubOut_connection_label",
+                    "help": "$eventHubOut_connection_help",
+                    "placeholder": "[variables('selectConnection')]"
+                },
+                {
+                    "name": "eventHubName",
+                    "value": "string",
+                    "defaultValue": "outeventhub",
+                    "required": true,
+                    "label": "$eventHubOut_path_label",
+                    "help": "$eventHubOut_path_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z0-9]$|^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,48}[a-zA-Z0-9]$|^[{][a-zA-Z0-9]{1,126}[}]$|^[%][a-zA-Z0-9]{1,126}[%]$",
+                            "errorText": "$eventHubOut_path_errorText"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "sendGrid",
+            "displayName": "$sendGrid_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for SendGrid output binding\r\n\r\n- `name` : Variable name used in function code for the SendGrid Mail Object.\r\n- `type` : must be set to *\"sendGrid\"*.\r\n- `apiKey` : The name of the app setting containing your SendGrid developer API key.\r\n- `to` : Email address to which the message should be sent. Can be of the form `user@host.com` or `Display Name <user@host.com>`. If not provided here, the value can be specified in code.\r\n- `from` : Email address to which the message should be sent. Can be of the form `user@host.com` or `Display Name <user@host.com>`. If not provided here, the value can be specified in code.\r\n- `subject` : Subject line to use for the message. If not provided here, the value can be specified in code.\r\n- `text` : Text body to use for the message. If not provided here, the value can be specified in code. \r\n- `direction` : must be set to *\"out\"*. \r\n\r\n#### SendGrid output code example for a JavaScript queue trigger\r\n\r\n```javascript\r\nvar util = require('util');\r\n\r\n// The 'From' andd 'To' fields are automatically populated with the values specified by the binding settings.\r\n//\r\n// You can also optionally configure the default From/To addresses globally via host.config, e.g.:\r\n//\r\n// {\r\n//   \"sendGrid\": {\r\n//      \"to\": \"user@host.com\",\r\n//      \"from\": \"Azure Functions <samples@functions.com>\"\r\n//   }\r\n// }\r\n\r\nmodule.exports = function (context, order) {\r\n    context.log('JavaScript queue trigger function processed order', order.orderId);\r\n\r\n    context.done(null, {\r\n        message: {\r\n            subject: util.format('Thanks for your order (#%d)!', order.orderId),\r\n            content: [{\r\n                type: 'text/plain',\r\n                value: util.format(\"%s, your order (%d) is being processed!\", order.customerName, order.orderId)\r\n            }]\r\n        }\r\n    });\r\n}\r\n```\r\n\r\n#### SendGrid output code example for a C# queue trigger\r\n\r\n```csharp\r\n#r \"SendGrid\"\r\n\r\nusing System;\r\nusing SendGrid.Helpers.Mail;\r\nusing Microsoft.Azure.WebJobs.Host;\r\n\r\n// The 'From' and 'To' fields are automatically populated with the values specified by the binding settings.\r\n//\r\n// You can also optionally configure the default From/To addresses globally via host.config, e.g.:\r\n//\r\n// {\r\n//   \"sendGrid\": {\r\n//      \"to\": \"user@host.com\",\r\n//      \"from\": \"Azure Functions <samples@functions.com>\"\r\n//   }\r\n// }\r\npublic static Mail Run(Order order, ILogger log)\r\n{\r\n    log.LogInformation($\"C# Queue trigger function processed order: {order.OrderId}\");\r\n    \r\n    Mail message = new Mail()\r\n    {\r\n        Subject = $\"Thanks for your order (#{order.OrderId})!\"\r\n    };\r\n\r\n    Content content = new Content\r\n    {\r\n        Type = \"text/plain\",\r\n        Value = $\"{order.CustomerName}, your order ({order.OrderId}) is being processed!\"\r\n    };\r\n\r\n    message.AddContent(content);    \r\n    return message;\r\n}\r\n\r\npublic class Order\r\n{\r\n    public string OrderId { get; set; }\r\n    public string CustomerName { get; set; }\r\n    public string CustomerEmail { get; set; }\r\n}\r\n```\r\n\r\n#### Sample Queue message for the above C# and Javascript code examples\r\n\r\n```json\r\n{\r\n    \"OrderId\": 12345,\r\n    \"CustomerName\": \"Joe Schmoe\", \r\n    \"CustomerEmail\": \"joeschmoe@foo.com\" \r\n}\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.SendGrid",
+                "version": "3.0.0-beta8"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "message",
+                    "required": true,
+                    "label": "$sendGrid_name_label",
+                    "help": "$sendGrid_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "apiKey",
+                    "resource": "AppSetting",
+                    "value": "string",
+                    "defaultValue": "SendGridApiKey",
+                    "required": true,
+                    "label": "$sendGrid_apiKey_label",
+                    "help": "$sendGrid_apiKey_help"
+                },
+                {
+                    "name": "to",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": false,
+                    "label": "$sendGrid_to_label",
+                    "help": "$sendGrid_to_help"
+                },
+                {
+                    "name": "from",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": false,
+                    "label": "$sendGrid_from_label",
+                    "help": "$sendGrid_from_help"
+                },
+                {
+                    "name": "subject",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": false,
+                    "label": "$sendGrid_subject_label",
+                    "help": "$sendGrid_subject_help"
+                },
+                {
+                    "name": "text",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": false,
+                    "label": "$sendGrid_text_label",
+                    "help": "$sendGrid_text_help"
+                }
+            ]
+        },
+        {
+            "type": "token",
+            "displayName": "$token_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "documentation": "#### Auth token input binding\r\n\r\nThis binding gets an AAD token for a given resource and provides it to your code as a string. The resource can be any for which the application has permissions. \r\n\r\n#### Configuring an auth token input binding\r\n\r\nThe binding itself does not require any AAD permissions, but depending on how the token is used, you may need to request additional permissions. Check the requirements of the resource you intend to access with the token.\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name` (*required*): the variable name used in function code for the auth token.\r\n- `type` (*required*): must be set to `token`.\r\n- `direction` (*required*): must be set to `in`.\r\n- `resource` (*required*): An AAD resource URL for which the token is being requested.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`:  Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n\r\n### Using an auth token input binding from code\r\n\r\nThe token is always presented to code as a string.\r\n\r\n#### Sample: Getting user profile information\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with a token input binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"type\": \"token\",\r\n      \"direction\": \"in\",\r\n      \"name\": \"graphToken\",\r\n      \"resource\": \"https://graph.microsoft.com\",\r\n      \"identity\": \"userFromRequest\"\r\n    },\r\n    {\r\n      \"name\": \"$return\",\r\n      \"type\": \"http\",\r\n      \"direction\": \"out\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\nThe following C# sample uses the token to make an HTTP call to the Microsoft Graph and returns the result:\r\n\r\n```csharp\r\nusing System.Net; \r\nusing System.Net.Http; \r\nusing System.Net.Http.Headers; \r\n\r\npublic static async Task<HttpResponseMessage> Run(HttpRequestMessage req, string graphToken, ILogger log)\r\n{\r\n    HttpClient client = new HttpClient();\r\n    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(\"Bearer\", graphToken);\r\n    return await client.GetAsync(\"https://graph.microsoft.com/v1.0/me/\");\r\n}\r\n```\r\n\r\nThe following JS sample uses the token to make an HTTP call to the Microsoft Graph and returns the result. In the `function.json` above, change `$return` to `res` first.\r\n\r\n```js\r\nconst rp = require('request-promise');\r\n\r\nmodule.exports = function (context, req) {\r\n    let token = \"Bearer \" + context.bindings.graphToken;\r\n\r\n    let options = {\r\n        uri: 'https://graph.microsoft.com/v1.0/me/',\r\n        headers: {\r\n            'Authorization': token\r\n        }\r\n    };\r\n    \r\n    rp(options)\r\n        .then(function(profile) {\r\n            context.res = {\r\n                body: profile\r\n            };\r\n            context.done();\r\n        })\r\n        .catch(function(err) {\r\n            context.res = {\r\n                status: 500,\r\n                body: err\r\n            };\r\n            context.done();\r\n        });\r\n};\r\n```",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "token",
+                    "required": true,
+                    "label": "$token_in_name_label",
+                    "help": "$token_in_name_help"
+                },
+                {
+                    "name": "resource",
+                    "value": "string",
+                    "required": true,
+                    "label": "$token_in_resource_label",
+                    "help": "$token_in_resource_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "required": false,
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "required": false,
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "excel",
+            "displayName": "$excel_in_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                },
+                {
+                    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "10465720-29dd-4523-a11a-6a75c743c9d9"
+                        }
+                    ]
+                }
+            ],
+            "documentation": "#### Excel table input binding\r\n\r\nThis binding reads the contents of an Excel table stored in OneDrive.\r\n\r\n#### Configuring an Excel table input binding\r\n\r\nThis binding requires the following AAD permissions:\r\n- `Resource`: Microsoft Graph\r\n- `Permission`: Read user files\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the Excel table.\r\n- `type`: *(required)* must be set to `excel`.\r\n- `direction`: *(required)* must be set to `in`.\r\n- `path`: *(required)* the path in OneDrive to the Excel workbook.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n- `worksheetName`: The worksheet in which the table is found.\r\n- `tableName`: The name of the table. If not specified, the contents of the worksheet will be used.\r\n\r\n#### Using an Excel table input binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- string[][]\r\n- Microsoft.Graph.WorkbookTable\r\n- Custom object types (using structural model binding)\r\n\r\n#### Sample: Reading an Excel table\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with an Excel input binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"authLevel\": \"anonymous\",\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"type\": \"excel\",\r\n      \"direction\": \"in\",\r\n      \"name\": \"excelTableData\",\r\n      \"path\": \"{query.workbook}\",\r\n      \"identity\": \"UserFromRequest\",\r\n      \"tableName\": \"{query.table}\"\r\n    },\r\n    {\r\n      \"name\": \"$return\",\r\n      \"type\": \"http\",\r\n      \"direction\": \"out\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\nThe following C# sample adds reads the contents of the specified table and returns them to the user:\r\n\r\n```csharp\r\nusing System.Net;\r\nusing Microsoft.AspNetCore.Mvc;\r\nusing Microsoft.Extensions.Primitives; \r\n\r\npublic static IActionResult Run(HttpRequest req, string[][] excelTableData, ILogger log)\r\n{\r\n    return new OkObjectResult(excelTableData);\r\n}\r\n```\r\n\r\nThe following JS sample adds reads the contents of the specified table and returns them to the user. In the `function.json` above, change `$return` to `res` first.\r\n\r\n```js\r\nmodule.exports = function (context, req) {\r\n    context.res = {\r\n        body: context.bindings.excelTableData\r\n    };\r\n    context.done();\r\n};\r\n```",
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "inputTable",
+                    "required": true,
+                    "label": "$excel_in_name_label",
+                    "help": "$excel_in_name_help"
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "Workbook.xlsx",
+                    "required": true,
+                    "label": "$excel_in_path_label",
+                    "help": "$excel_in_path_help"
+                },
+                {
+                    "name": "worksheetName",
+                    "value": "string",
+                    "defaultValue": "Sheet1",
+                    "label": "$excel_in_worksheetName_label",
+                    "help": "$excel_in_worksheetName_help"
+                },
+                {
+                    "name": "tableName",
+                    "value": "string",
+                    "defaultValue": "Table1",
+                    "label": "$excel_in_tableName_label",
+                    "help": "$excel_in_tableName_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "excel",
+            "displayName": "$excel_out_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### Excel table output binding\r\n\r\nThis binding modifies the contents of an Excel table stored in OneDrive.\r\n\r\n#### Configuring an Excel table output binding\r\n\r\nThis binding requires the following AAD permissions:\r\n- `Resource`: Microsoft Graph\r\n- `Permission`: Have full access to user files\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the auth token.\r\n- `type`: *(required)* must be set to `excel`.\r\n- `direction`: *(required)* must be set to `out`.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n- `path`: *(required)* the path in OneDrive to the Excel workbook.\r\n- `worksheetName`: The worksheet in which the table is found.\r\n- `tableName`: The name of the table. If not specified, the contents of the worksheet will be used.\r\n- `updateType`: *(required)* The type of change to make to the table. Can be one of the following values:\r\n   - `update`: Replaces the contents of the table in OneDrive.\r\n   - `append`: Adds the payload to the end of the table in OneDrive by creating new rows.\r\n\r\n#### Using an Excel table output binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- string[][]\r\n- Newtonsoft.Json.Linq.JObject\r\n- Microsoft.Graph.WorkbookTable\r\n- Custom object types (using structural model binding)\r\n\r\n#### Sample: Adding rows to an Excel table\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with an Excel output binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"authLevel\": \"anonymous\",\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"name\": \"newExcelRow\",\r\n      \"type\": \"excel\",\r\n      \"direction\": \"out\",\r\n      \"identity\": \"userFromRequest\",\r\n      \"updateType\": \"append\",\r\n      \"path\": \"{query.workbook}\",\r\n      \"tableName\": \"{query.table}\"\r\n    },\r\n    {\r\n      \"name\": \"$return\",\r\n      \"type\": \"http\",\r\n      \"direction\": \"out\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\n\r\nThe following C# sample adds a new row to the table (assumed to be single-column) based on input from the query string:\r\n\r\n```csharp\r\nusing System.Net;\r\nusing System.Text;\r\n\r\npublic static async Task Run(HttpRequest req, IAsyncCollector<object> newExcelRow, ILogger log)\r\n{\r\n    string input = req.Query\r\n        .FirstOrDefault(q => string.Compare(q.Key, \"text\", true) == 0)\r\n        .Value;\r\n    await newExcelRow.AddAsync(new {\r\n        Text = input\r\n        // Add other properties for additional columns here\r\n    });\r\n    return;\r\n}\r\n```\r\n\r\nThe following JS sample adds a new row to the table (assumed to be single-column) based on input from the query string. In the `function.json` above, change `$return` to `res` first.\r\n\r\n```js\r\nmodule.exports = function (context, req) {\r\n    context.bindings.newExcelRow = {\r\n        text: req.query.text\r\n        // Add other properties for additional columns here\r\n    }\r\n    context.done();\r\n};\r\n```\r\n",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                },
+                {
+                    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "5c28f0bf-8a70-41f1-8ab2-9032436ddb65"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "outputTable",
+                    "required": true,
+                    "label": "$excel_out_name_label",
+                    "help": "$excel_out_name_help"
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "path/to/file.xlsx",
+                    "required": true,
+                    "label": "$excel_out_path_label",
+                    "help": "$excel_out_path_help"
+                },
+                {
+                    "name": "worksheetName",
+                    "value": "string",
+                    "defaultValue": "Sheet1",
+                    "label": "$excel_out_worksheetName_label",
+                    "help": "$excel_out_worksheetName_help"
+                },
+                {
+                    "name": "tableName",
+                    "value": "string",
+                    "defaultValue": "Table1",
+                    "label": "$excel_out_tableName_label",
+                    "help": "$excel_out_tableName_help"
+                },
+                {
+                    "name": "updateType",
+                    "value": "enum",
+                    "defaultValue": "Append",
+                    "enum": [
+                        {
+                            "value": "Append",
+                            "display": "Append"
+                        },
+                        {
+                            "value": "Update",
+                            "display": "Update"
+                        }
+                    ],
+                    "required": true,
+                    "label": "$excel_out_updateType_label",
+                    "help": "$excel_out_updateType_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "outlook",
+            "displayName": "$outlook_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### Outlook message output binding\r\nSends a mail message through Outlook.\r\n\r\n#### Configuring an Outlook message output binding\r\n\r\nThis binding requires the following AAD permissions:\r\n- `Resource`: Microsoft Graph\r\n- `Permission`: Send mail as user\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the mail message.\r\n- `type`: *(required)* must be set to `outlook`.\r\n- `direction`: *(required)* must be set to `out`.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n\r\n### Using an Outlook message output binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- Microsoft.Graph.Message\r\n- Newtonsoft.Json.Linq.JObject\r\n- string\r\n- Custom object types (using structural model binding)\r\n\r\n#### Sample: Sending an email through Outlook\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with an Outlook message output binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"name\": \"message\",\r\n      \"type\": \"outlook\",\r\n      \"direction\": \"out\",\r\n      \"identity\": \"userFromRequest\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\nThe following C# sample sends a mail from the caller to a recipient specified in the query string:\r\n\r\n```csharp\r\nusing System.Net;\r\n\r\npublic static void Run(HttpRequest req, out Message message, ILogger log)\r\n{ \r\n    string emailAddress = req.Query[\"to\"];\r\n    message = new Message(){\r\n        subject = \"Greetings\",\r\n        body = \"Sent from Azure Functions\",\r\n        recipient = new Recipient() {\r\n            address = emailAddress\r\n        }\r\n    };\r\n}\r\n\r\npublic class Message {\r\n    public String subject {get; set;}\r\n    public String body {get; set;}\r\n    public Recipient recipient {get; set;}\r\n}\r\n\r\npublic class Recipient {\r\n    public String address {get; set;}\r\n    public String name {get; set;}\r\n}\r\n```\r\n\r\nThe following JS sample sends a mail from the caller to a recipient specified in the query string:\r\n\r\n```js\r\nmodule.exports = function (context, req) {\r\n    context.bindings.message = {\r\n        subject: \"Greetings\",\r\n        body: \"Sent from Azure Functions with JavaScript\",\r\n        recipient: {\r\n            address: req.query.to \r\n        } \r\n    };\r\n    context.done();\r\n};\r\n```",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                },
+                {
+                    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "e383f46e-2787-4529-855e-0e479a3ffac0"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "email",
+                    "required": true,
+                    "label": "$outlook_out_name_label",
+                    "help": "$outlook_out_name_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "onedrive",
+            "displayName": "$oneDrive_in_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### OneDrive file input binding\r\n\r\nThis binding reads the contents of a file stored in OneDrive.\r\n\r\n#### Configuring a OneDrive file input binding\r\n\r\nThis binding requires the following AAD permissions:\r\n- `Resource`: Microsoft Graph\r\n- `Permission`: Read user files\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the file.\r\n- `type`: *(required)* must be set to `onedrive`.\r\n- `direction`: *(required)* must be set to `in`.\r\n- `path`: *(required)* the path in OneDrive to the file.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n\r\n### Using a OneDrive file input binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- byte[]\r\n- Stream\r\n- string\r\n- Microsoft.Graph.DriveItem\r\n\r\n#### Sample: Reading a file from OneDrive\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with a OneDrive input binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"authLevel\": \"anonymous\",\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"name\": \"myOneDriveFile\",\r\n      \"type\": \"onedrive\",\r\n      \"direction\": \"in\",\r\n      \"path\": \"{query.filename}\",\r\n      \"identity\": \"userFromRequest\"\r\n    },\r\n    {\r\n      \"name\": \"$return\",\r\n      \"type\": \"http\",\r\n      \"direction\": \"out\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\nThe following C# sample reads the file specified in the query string and logs its length:\r\n\r\n```csharp\r\nusing System.Net;\r\n\r\npublic static void Run(HttpRequestMessage req, Stream myOneDriveFile, ILogger log)\r\n{\r\n    log.LogInformation(myOneDriveFile.Length.ToString());\r\n}\r\n```\r\n\r\nThe following JS sample reads the file specified in the query string and returns its length. In the `function.json` above, change `$return` to `res` first.\r\n\r\n```js\r\nmodule.exports = function (context, req) {\r\n    context.res = {\r\n        body: context.bindings.myOneDriveFile.length\r\n    };\r\n    context.done();\r\n};\r\n```\r\n",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                },
+                {
+                    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "10465720-29dd-4523-a11a-6a75c743c9d9"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "file",
+                    "required": true,
+                    "label": "$oneDrive_in_name_label",
+                    "help": "$oneDrive_in_name_help"
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "Documents/test.txt",
+                    "required": true,
+                    "label": "$oneDrive_in_path_label",
+                    "help": "$oneDrive_in_path_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "onedrive",
+            "displayName": "$oneDrive_out_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### OneDrive file output binding\r\n\r\nThis binding modifies the contents of a file stored in OneDrive.\r\n\r\n#### Configuring a OneDrive file output binding\r\n\r\nThis binding requires the following AAD permissions:\r\n- `Resource`: Microsoft Graph\r\n- `Permission`: Have full access to user files\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for file.\r\n- `type`: *(required)* must be set to `onedrive`.\r\n- `direction`: *(required)* must be set to `out`.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n- `path`: *(required)* the path in OneDrive to the file.\r\n\r\n### Using a OneDrive file output binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- byte[]\r\n- Stream\r\n- string\r\n- Microsoft.Graph.DriveItem\r\n\r\n#### Sample: Writing to a file in OneDrive\r\n\r\nSuppose you have the following function.json that defines an HTTP trigger with a OneDrive output binding:\r\n\r\n```json\r\n{\r\n  \"bindings\": [\r\n    {\r\n      \"authLevel\": \"anonymous\",\r\n      \"name\": \"req\",\r\n      \"type\": \"httpTrigger\",\r\n      \"direction\": \"in\"\r\n    },\r\n    {\r\n      \"name\": \"myOneDriveFile\",\r\n      \"type\": \"onedrive\",\r\n      \"direction\": \"out\",\r\n      \"path\": \"FunctionsTest.txt\",\r\n      \"identity\": \"userFromRequest\"\r\n    },\r\n    {\r\n      \"name\": \"$return\",\r\n      \"type\": \"http\",\r\n      \"direction\": \"out\"\r\n    }\r\n  ],\r\n  \"disabled\": false\r\n}\r\n```\r\n\r\nThe following C# sample gets text from the query string and writes it to a text file (FunctionsTest.txt as defined in the config above) at the root of the caller's OneDrive:\r\n\r\n```csharp\r\nusing System.Net;\r\nusing System.Text;\r\n\r\npublic static async Task Run(HttpRequest req, ILogger log, Stream myOneDriveFile)\r\n{\r\n    string data = req.Query\r\n        .FirstOrDefault(q => string.Compare(q.Key, \"text\", true) == 0)\r\n        .Value;\r\n    await myOneDriveFile.WriteAsync(Encoding.UTF8.GetBytes(data), 0, data.Length);\r\n    return;\r\n}\r\n```\r\nThe following JS sample gets text from the query string and writes it to a text file (FunctionsTest.txt as defined in the config above) at the root of the caller's OneDrive. In the `function.json` above, change `$return` to `res` first.\r\n\r\n```js\r\nmodule.exports = function (context, req) {\r\n    context.bindings.myOneDriveFile = req.query.text;\r\n    context.done();\r\n};\r\n```",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                },
+                {
+                    "resourceAppId": "00000003-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "5c28f0bf-8a70-41f1-8ab2-9032436ddb65"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "file",
+                    "required": true,
+                    "label": "$oneDrive_out_name_label",
+                    "help": "$oneDrive_out_name_help"
+                },
+                {
+                    "name": "path",
+                    "value": "string",
+                    "defaultValue": "Documents/test.txt",
+                    "required": true,
+                    "label": "$oneDrive_out_path_label",
+                    "help": "$oneDrive_out_path_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "graphWebhookSubscription",
+            "displayName": "$MSGraphWebhook_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### Microsoft Graph webhook subscription input binding\r\n\r\nThis binding allows you to retrieve the list of subscriptions managed by this function app. The binding reads from function app storage, and does not reflect other subscriptions created from outside the app.\r\n\r\n#### Configuring a Microsoft Graph webhook subscription input binding\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the mail message.\r\n- `type`: *(required)* must be set to `graphWebhookSubscription`.\r\n- `direction`: *(required)* must be set to `in`.\r\n- `filter`: If set to `userFromRequest`, then the binding will only retrieve subscriptions owned by the calling user ( valid only with HTTP trigger).\r\n\r\n#### Using a Microsoft Graph webhook subscription input binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- string[]\r\n- Custom object type arrays\r\n- Newtonsoft.Json.Linq.JObject[]\r\n- Microsoft.Graph.Subscription[]",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "webhook",
+                    "required": true,
+                    "label": "$MSGraphWebhook_in_name_label",
+                    "help": "$MSGraphWebhook_in_name_help"
+                },
+                {
+                    "name": "filter",
+                    "value": "string",
+                    "label": "$GraphWebhookSubscription_in_filter_label",
+                    "help": "$GraphWebhookSubscription_in_filter_help"
+                }
+            ]
+        },
+        {
+            "type": "graphWebhookSubscription",
+            "displayName": "$MSGraphWebhookCreator_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "documentation": "#### Microsoft Graph webhook subscription output binding\r\n\r\nThis binding allows you to create, delete, and refresh webhook subscriptions in the Microsoft Graph.\r\n\r\n#### Configuring a Microsoft Graph webhook subscription output binding\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the mail message.\r\n- `type`: *(required)* must be set to `graphWebhookSubscription`.\r\n- `direction`: *(required)* must be set to `out`.\r\n- `identity`: *(required)* The identity that will be used to perform the action. Can be one of the following values:\r\n  - userFromRequest: Only valid with HTTP trigger. Uses the identity of the calling user.\r\n  - userFromId: Uses the identity of a previously logged-in user with the specified ID. See the `userId` property.\r\n  - userFromToken: Uses the identity represented by the specified token. See the `userToken` property.\r\n  - clientCredentials: Uses the identity of the function app.\r\n- `userId`: Needed if and only if `identity` is set to `userFromId`. A user principal ID associated with a previously logged-in user.\r\n- `userToken`: Needed if and only if `identity` is set to `userFromToken`. A token valid for the function app.\r\n- `action`: *(required)* specifies the action the binding should perform. Can be one of the following values:\r\n  - `create`: Registers a new subscription.\r\n  - `delete`: Deletes a specified subscription.\r\n  - `refresh`: Refreshes a specified subscription to keep it from expiring.\r\n- `subscriptionResource`: Needed if and only if the _action_ is set to `create`. Specifies the Microsoft Graph resource that will be monitored for changes.\r\n- `changeTypes`: Needed if and only if the _action_ is set to `create`. Indicates the type of change in the subscribed resource that will raise a notification. The supported values are: `created`, `updated`, `deleted`. Multiple values can be combined using a comma-separated list.\r\n\r\n#### Using a Microsoft Graph webhook subscription output binding from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- string\r\n- Microsoft.Graph.Subscription",
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "creator",
+                    "required": true,
+                    "label": "$MSGraphWebhookCreator_in_name_label",
+                    "help": "$MSGraphWebhookCreator_in_name_help"
+                },
+                {
+                    "name": "changeTypes",
+                    "value": "checkBoxList",
+                    "enum": [
+                        {
+                            "value": "created",
+                            "display": "Created"
+                        },
+                        {
+                            "value": "updated",
+                            "display": "Updated"
+                        },
+                        {
+                            "value": "deleted",
+                            "display": "Deleted"
+                        }
+                    ],
+                    "required": true,
+                    "label": "$MSGraphWebhook_in_changeType_label",
+                    "help": "$MSGraphWebhook_in_changeType_help"
+                },
+                {
+                    "name": "action",
+                    "value": "enum",
+                    "enum": [
+                        {
+                            "value": "create",
+                            "display": "Create"
+                        },
+                        {
+                            "value": "refresh",
+                            "display": "Refresh"
+                        },
+                        {
+                            "value": "delete",
+                            "display": "Delete"
+                        }
+                    ],
+                    "label": "$MSGraphWebhook_out_action_label",
+                    "help": "$MSGraphWebhook_out_action_help"
+                },
+                {
+                    "name": "subscriptionResource",
+                    "value": "string",
+                    "label": "$MSGraphWebhook_in_listen_label",
+                    "help": "$MSGraphWebhook_in_listen_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "label": "$userid_label",
+                    "help": "$userid_help"
+                },
+                {
+                    "name": "userToken",
+                    "value": "string",
+                    "label": "$usertoken_label",
+                    "help": "$usertoken_help"
+                }
+            ],
+            "rules": [
+                {
+                    "name": "identity",
+                    "type": "exclusivitySave",
+                    "values": [
+                        {
+                            "value": "UserFromRequest",
+                            "display": "$identity_option_userFromRequest_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        },
+                        {
+                            "value": "userFromId",
+                            "display": "$identity_option_userFromId_label",
+                            "hiddenSettings": [
+                                "userToken"
+                            ],
+                            "shownSettings": [
+                                "userId"
+                            ]
+                        },
+                        {
+                            "value": "userFromToken",
+                            "display": "$identity_option_userFromToken_label",
+                            "hiddenSettings": [
+                                "userId"
+                            ],
+                            "shownSettings": [
+                                "userToken"
+                            ]
+                        },
+                        {
+                            "value": "ClientCredentials",
+                            "display": "$identity_option_clientCredentials_label",
+                            "hiddenSettings": [
+                                "userId",
+                                "userToken"
+                            ],
+                            "shownSettings": []
+                        }
+                    ],
+                    "label": "$Identity_label",
+                    "help": "$Identity_help"
+                }
+            ]
+        },
+        {
+            "type": "graphWebhookTrigger",
+            "direction": "trigger",
+            "displayName": "$MSGraphWebhookTrigger_displayName",
+            "documentation": "#### Microsoft Graph webhook trigger\r\n\r\nThis trigger allows a function to react to an incoming webhook from the Microsoft Graph. Each instance of this trigger can react to one Microsoft Graph resource type.\r\n\r\n#### Configuring a Microsoft Graph webhook trigger\r\n\r\nThe binding supports the following properties:\r\n\r\n- `name`: *(required)* the variable name used in function code for the mail message.\r\n- `type`: *(required)* must be set to `graphWebhookTrigger`.\r\n- `direction`: *(required)* must be set to `trigger`.\r\n- `resourceType`: *(required)* the graph resource for which this function should respond to webhooks. Can be one of the following values:\r\n   - `#Microsoft.Graph.Message`: changes made to Outlook messages.\r\n   - `#Microsoft.Graph.DriveItem`: changes made to OneDrive root items.\r\n   - `#Microsoft.Graph.Contact`: changes made to personal contacts in Outlook.\r\n   - `#Microsoft.Graph.Event`: changes made to Outlook calendar items.\r\n\r\n> Note\r\n> A function app can only have one function which is registered against a given `resourceType` value.\r\n\r\n#### Using a Microsoft Graph webhook trigger from code\r\n\r\nThe binding exposes the following types to .NET functions:\r\n- Microsoft Graph SDK types relevant to the resource type, e.g., Microsoft.Graph.Message, Microsoft.Graph.DriveItem\r\n- Custom object types (using structural model binding)",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.MicrosoftGraph",
+                "version": "1.0.0-beta4"
+            },
+            "enabledInTryMode": false,
+            "AADPermissions": [
+                {
+                    "resourceAppId": "00000002-0000-0000-c000-000000000000",
+                    "resourceAccess": [
+                        {
+                            "type": "Scope",
+                            "id": "311a71cc-e848-46a1-bdf8-97ff7156d8e6"
+                        }
+                    ]
+                }
+            ],
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "notification",
+                    "required": true,
+                    "label": "$MSGraphWebhookTrigger_in_name_label",
+                    "help": "$MSGraphWebhookTrigger_in_help_label"
+                },
+                {
+                    "name": "resourceType",
+                    "value": "enum",
+                    "required": true,
+                    "label": "$MSGraphWebhook_in_listen_label",
+                    "help": "$MSGraphWebhook_in_listen_help",
+                    "enum": [
+                        {
+                            "value": "#Microsoft.Graph.Message",
+                            "display": "Microsoft Graph Message"
+                        },
+                        {
+                            "value": "#Microsoft.Graph.DriveItem",
+                            "display": "Microsoft Graph DriveItem"
+                        },
+                        {
+                            "value": "#Microsoft.Graph.Contact",
+                            "display": "Microsoft Graph Contact"
+                        },
+                        {
+                            "value": "#Microsoft.Graph.Event",
+                            "display": "Microsoft Graph Event"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "activityTrigger",
+            "displayName": "$activityTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings\r\n\r\n- `activity`: (optional) the name of the activity. If not specified uses the Function name. You use the activity name to call a given Function from an orchestration triggered Functions\r\n\r\nNote: this feature is in preview and docs will improve before we GA",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
+                "version": "1.6.0"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "context",
+                    "required": true,
+                    "label": "$activityTrigger_name_label",
+                    "help": "$activityTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "activity",
+                    "value": "string",
+                    "required": false,
+                    "label": "$activityTrigger_activity_label",
+                    "help": "$activityTrigger_activity_help"
+                }
+            ]
+        },
+        {
+            "type": "orchestrationTrigger",
+            "displayName": "$orchestrationTrigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings\r\n\r\n- `orchestration`: (optional) the name of the orchestration. If not specified uses the Function name. You use the orchestration name to start the given Function from an orchestration client\r\n\r\nNote: this feature is in preview and docs will improve before we GA",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
+                "version": "1.6.0"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "context",
+                    "required": true,
+                    "label": "$orchestrationTrigger_name_label",
+                    "help": "$orchestrationTrigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "orchestration",
+                    "value": "string",
+                    "required": false,
+                    "label": "$orchestrationTrigger_orchestration_label",
+                    "help": "$orchestrationTrigger_orchestration_help"
+                }
+            ]
+        },
+        {
+            "type": "orchestrationClient",
+            "displayName": "$orchestrationClientIn_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "documentation": "\r\nNote: this feature is in preview and docs will improve before we GA",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
+                "version": "1.6.0"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "client",
+                    "required": true,
+                    "label": "$orchestrationClientIn_name_label",
+                    "help": "$orchestrationClientIn_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "eventGridTrigger",
+            "displayName": "$eventGrid_trigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "This feature is experimental. Docs will be coming soon!",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
+                "version": "2.0.0-beta4"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "EventGridTrigger",
+                    "required": true,
+                    "label": "$eventGrid_trigger_name_label",
+                    "help": "$eventGrid_trigger_name_help",
+                    "validators": [
+                        {
+                            "expression": "(^[a-zA-Z][a-zA-Z0-9]{0,127}$)|^\\$return$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "cosmosDBTrigger",
+            "displayName": "$cosmosDB_trigger_displayName",
+            "direction": "trigger",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for Cosmos DB trigger binding\r\n\r\nThe Cosmos DB Trigger leverages the [Cosmos DB Change Feed](https://docs.microsoft.com/azure/cosmos-db/change-feed) to listen for changes across partitions. It uses a **second collection** to store *leases* over the partitions.\r\n\r\nBoth the collection being monitored for changes and the collection that will hold the leases need to be available for the trigger to work.\r\n\r\nThe settings for an Azure Cosmos DB trigger specifies the following properties:\r\n\r\n- `type` : Must be set to *cosmosDBTrigger*.\r\n- `name` : The variable name used in function code for the list of documents. \r\n- `direction` : Must be set to *in*. \r\n- `databaseName` : The name of the database that holds the collection to monitor.\r\n- `collectionName` : The name of the collection to monitor.\r\n- `connectionStringSetting` *optional*: The name of an app setting that contains the connection string to the service which holds the collection to monitor. If `connectionStringSetting` is not set then the value of AzureWebJobsDocumentDBConnectionStringName setting is used.\r\n- `leaseConnectionStringSetting` : *optional*. The name of an app setting that contains the connection string to the service which holds the lease collection. If not set it will connect to the service defined by `connectionStringSetting`.\r\n- `leaseDatabaseName` : *optional*. The name of the database that holds the collection to store leases. If not set, it will use the value of `databaseName`.\r\n- `leaseCollectionName` : *optional*. The name of the collection to store leases. If not set, it will use \"leases\".\r\n- `createLeaseCollectionIfNotExists` : *optional*. true/false. Checks for existence and automatically creates the leases collection. Default is `false`.\r\n- `leaseCollectionThroughput` : *optional*. When `createLeaseCollectionIfNotExists` is set to `true`, defines the amount of Request Units to assign to the created lease collection.\r\n\r\n> Connection strings used for the Lease collection require **write permission**.\r\n\r\n#### Azure Cosmos DB trigger C# example\r\n \r\n\t#r \"Microsoft.Azure.Documents.Client\"\r\n\tusing Microsoft.Azure.Documents;\r\n\tusing System.Collections.Generic;\r\n\tusing System;\r\n\tpublic static void Run(IReadOnlyList<Document> input, ILogger log)\r\n\t{\r\n\t\tlog.LogInformation(\"Documents modified \" + input.Count);\r\n\t\tlog.LogInformation(\"First document Id \" + input[0].Id);\r\n\t}\r\n\r\n#### Azure Cosmos DB trigger JavaScript example\r\n\r\n\tmodule.exports = function (context, input) {\r\n\t\tcontext.log('First document Id modified : ', input[0].id);\r\n\r\n\t\tcontext.done();\r\n\t}\r\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
+                "version": "3.0.1-beta1"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "inputDocuments",
+                    "required": true,
+                    "label": "$cosmosDBIn_name_label",
+                    "help": "$cosmosDBIn_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "connectionStringSetting",
+                    "value": "string",
+                    "required": true,
+                    "resource": "DocumentDB",
+                    "label": "$cosmosDBIn_connection_label",
+                    "help": "$cosmosDBIn_connection_help",
+                    "placeholder": "[variables('selectConnection')]"
+                },
+                {
+                    "name": "databaseName",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": true,
+                    "label": "$cosmosDBIn_databaseName_label",
+                    "help": "$cosmosDBIn_databaseName_help"
+                },
+                {
+                    "name": "collectionName",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": true,
+                    "label": "$cosmosDBIn_collectionName_label",
+                    "help": "$cosmosDBIn_collectionName_help"
+                },
+                {
+                    "name": "leaseCollectionName",
+                    "value": "string",
+                    "required": true,
+                    "label": "$cosmosDBIn_leaseCollectionName_label",
+                    "help": "$cosmosDBIn_leaseCollectionName_help"
+                },
+                {
+                    "name": "createLeaseCollectionIfNotExists",
+                    "value": "boolean",
+                    "defaultValue": true,
+                    "required": true,
+                    "label": "$cosmosDBIn_createIfNotExists_label",
+                    "help": "$cosmosDBIn_createIfNotExists_help"
+                }
+            ]
+        }
+    ]
+}
