@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
+import { AppServicePlan, SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
@@ -13,8 +13,8 @@ import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
+import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { deploySubpathSetting, extensionPrefix, funcPack, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -28,10 +28,11 @@ import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
-import { runFromZipDeploy } from './runFromZipDeploy';
+import { runFromPackageDeploy } from './runFromPackageDeploy';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(ui: IAzureUserInput, telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+export async function deploy(ui: IAzureUserInput, actionContext: IActionContext, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
+    const telemetryProperties: TelemetryProperties = actionContext.properties;
     let deployFsPath: string;
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
@@ -72,6 +73,8 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
 
     const client: SiteClient = node.treeItem.client;
+    const asp: AppServicePlan = await client.getAppServicePlan();
+    const isLinuxConsumptionPlan: boolean | undefined = asp.sku && asp.sku.tier === 'Dynamic' && client.kind.includes('linux');
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
@@ -105,8 +108,8 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                if (language === ProjectLanguage.Python && node) {
-                    await runFromZipDeploy(node, deployFsPath);
+                if (node && isLinuxConsumptionPlan) {
+                    await runFromPackageDeploy(actionContext, node, deployFsPath);
                 } else {
                     await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
                 }
@@ -136,6 +139,10 @@ export async function deploy(ui: IAzureUserInput, telemetryProperties: Telemetry
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
     await node.treeDataProvider.refresh(functionsNode);
+    if (isLinuxConsumptionPlan) {
+        // We can't get the function triggers due to no Kudu, so end here
+        return;
+    }
     const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
     const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
@@ -242,6 +249,8 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
                     taskName = installExtensionsId;
                 }
                 break;
+            case ProjectLanguage.Python:
+                taskName = funcPack;
             default:
                 return; // preDeployTask not needed
         }
