@@ -4,6 +4,12 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.10.2 - 2018-09-10
+
+### Fixed
+
+- Debugging C# functions after fixing a build break fails with error "Failed to stop previous running Functions host..." [#534](https://github.com/Microsoft/vscode-azurefunctions/issues/534)
+
 ## 0.10.1 - 2018-09-06
 
 ### Added
