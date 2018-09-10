@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { Task, TaskExecution } from 'vscode';
+import { ext } from 'vscode-azureappservice/lib/extensionVariables';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, isWindows } from '../constants';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -12,6 +13,21 @@ import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { tryFetchNodeModule } from '../utils/tryFetchNodeModule';
 import { funcHostTaskLabel } from './createNewProject/IProjectCreator';
+
+let isFuncTaskRunning: boolean = false;
+export function initPickFuncProcess(): void {
+    ext.context.subscriptions.push(vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
+        if (isFuncTask(e.execution.task)) {
+            isFuncTaskRunning = false;
+        }
+    }));
+
+    ext.context.subscriptions.push(vscode.tasks.onDidStartTask((e: vscode.TaskEndEvent) => {
+        if (isFuncTask(e.execution.task)) {
+            isFuncTaskRunning = true;
+        }
+    }));
+}
 
 export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
@@ -49,7 +65,7 @@ function isFuncTask(task: Task): boolean {
 
 async function stopFuncTaskIfRunning(): Promise<void> {
     const funcExecution: TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: TaskExecution) => isFuncTask(te.task));
-    if (funcExecution) {
+    if (funcExecution && isFuncTaskRunning) {
         const waitForEndPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
             const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
                 if (isFuncTask(e.execution.task)) {

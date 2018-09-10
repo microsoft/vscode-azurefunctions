@@ -29,7 +29,7 @@ import { ILogStreamTreeItem } from './commands/logstream/ILogStreamTreeItem';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
-import { pickFuncProcess } from './commands/pickFuncProcess';
+import { initPickFuncProcess, pickFuncProcess } from './commands/pickFuncProcess';
 import { remoteDebugFunctionApp } from './commands/remoteDebugFunctionApp';
 import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
@@ -124,6 +124,8 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, ui, tree, node));
         registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
+
+        initPickFuncProcess();
     });
 }
 
