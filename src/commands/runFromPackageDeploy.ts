@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { MessageItem } from "vscode";
+import { MessageItem, Progress, ProgressLocation, window } from "vscode";
 import { SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../constants';
@@ -28,47 +28,55 @@ import * as  azUtil from '../utils/azure';
 export async function runFromPackageDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
     let createdZip: boolean = false;
     let zipFilePath: string;
-    try {
-        const blobName: string = azureStorage.date.secondsFromNow(0).toISOString().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s/g, '');
-        ext.outputChannel.show();
-        ext.outputChannel.appendLine(localize('zipCreate', 'Creating zip package...'));
-        ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
-        ext.outputChannel.appendLine(localize('deployStart', 'Starting deployment...'));
-        const blobService: azureStorage.BlobService = await createBlobService(actionContext, node, fsPath);
-        const client: SiteClient = node.treeItem.client;
-        const blobUrl: string = await createBlobFromZip(blobService, zipFilePath, blobName);
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-        if (appSettings.properties) {
-            const WEBSITE_USE_ZIP: string = 'WEBSITE_USE_ZIP';
-            appSettings.properties[WEBSITE_USE_ZIP] = blobUrl;
-        } else {
-            throw new ArgumentError(appSettings);
-        }
-        await client.updateApplicationSettings(appSettings);
-    } catch (error) {
-        // tslint:disable-next-line:no-unsafe-any
-        if (error && error.response && error.response.body) {
-            // Autorest doesn't support plain/text as a MIME type, so we have to get the error message from the response body ourselves
-            // https://github.com/Azure/autorest/issues/1527
+    await window.withProgress({ location: ProgressLocation.Notification, title: localize('deploying', 'Deploying to "{0}"...', node.treeItem.client.fullName) }, async (p: Progress<{}>) => {
+        try {
+            const blobName: string = azureStorage.date.secondsFromNow(0).toISOString().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s/g, '');
+            const creatingZip: string = localize('zipCreate', 'Creating zip package...');
+            p.report({ message: creatingZip });
+            ext.outputChannel.appendLine(creatingZip);
+            ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
+            const blobService: azureStorage.BlobService = await createBlobService(actionContext, node, fsPath);
+            const client: SiteClient = node.treeItem.client;
+            const creatingBlob: string = localize('creatingBlob', 'Uploading zip package to storage container...');
+            p.report({ message: creatingBlob });
+            ext.outputChannel.appendLine(creatingBlob);
+            const blobUrl: string = await createBlobFromZip(blobService, zipFilePath, blobName);
+            const appSettings: StringDictionary = await client.listApplicationSettings();
+            if (appSettings.properties) {
+                const WEBSITE_USE_ZIP: string = 'WEBSITE_USE_ZIP';
+                appSettings.properties[WEBSITE_USE_ZIP] = blobUrl;
+            } else {
+                throw new ArgumentError(appSettings);
+            }
+            await client.updateApplicationSettings(appSettings);
+        } catch (error) {
             // tslint:disable-next-line:no-unsafe-any
-            throw new Error(error.response.body);
-        } else {
-            throw error;
-        }
-    } finally {
-        // clean up zip file
-        if (createdZip) {
-            await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
-                fs.unlink(zipFilePath, (err?: Error) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve();
-                    }
+            if (error && error.response && error.response.body) {
+                // Autorest doesn't support plain/text as a MIME type, so we have to get the error message from the response body ourselves
+                // https://github.com/Azure/autorest/issues/1527
+                // tslint:disable-next-line:no-unsafe-any
+                throw new Error(error.response.body);
+            } else {
+                throw error;
+            }
+        } finally {
+            // clean up zip file
+            if (createdZip) {
+                const cleaningZip: string = localize('cleaningZip', 'Cleaning zip package...');
+                p.report({ message: cleaningZip });
+                ext.outputChannel.appendLine(cleaningZip);
+                await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
+                    fs.unlink(zipFilePath, (err?: Error) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve();
+                        }
+                    });
                 });
-            });
+            }
         }
-    }
+    });
     return;
 }
 
