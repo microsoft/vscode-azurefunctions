@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPack, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -24,7 +24,7 @@ export enum PythonAlias {
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public preDeployTask: string = funcPack;
+    public preDeployTask: string = funcPackId;
     private pythonAlias: string;
     private funcEnv: string = 'func_env';
     public getLaunchJson(): {} {
@@ -89,8 +89,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 },
 
                 {
-                    label: funcPack,
-                    identifier: funcPack, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    label: funcPackId,
+                    identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
                         command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func pack`

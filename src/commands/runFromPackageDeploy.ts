@@ -13,28 +13,41 @@ import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { MessageItem, Progress, ProgressLocation, window } from "vscode";
+import { MessageItem, Progress, ProgressLocation, window, workspace } from "vscode";
 import { SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azureextensionui';
-import { localSettingsFileName } from '../constants';
+import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { getFuncExtensionSetting, getProjectLanguage } from '../ProjectSettings';
 import { updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import * as  azUtil from '../utils/azure';
+import * as fsUtil from '../utils/fs';
+
+/**
+ * Method of deployment that is only intended to be used for Linux Consumption Function apps.
+ * To deploy with Run from Package on a Windows plan, create the app setting "WEBSITE_RUN_FROM_ZIP" and set it to "1".
+ * Then deploy via "zipdeploy" as usual.
+ */
 
 export async function runFromPackageDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
-    let createdZip: boolean = false;
+    const language: ProjectLanguage = await getProjectLanguage(fsPath, ext.ui);
+    let createdZip: boolean = language === ProjectLanguage.Python ? true : false;
     let zipFilePath: string;
     await window.withProgress({ location: ProgressLocation.Notification, title: localize('deploying', 'Deploying to "{0}"...', node.treeItem.client.fullName) }, async (p: Progress<{}>) => {
         try {
             const blobName: string = azureStorage.date.secondsFromNow(0).toISOString().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').replace(/\s/g, '');
             const creatingZip: string = localize('zipCreate', 'Creating zip package...');
-            p.report({ message: creatingZip });
-            ext.outputChannel.appendLine(creatingZip);
-            ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
+            if (language === ProjectLanguage.Python) {
+                // Python pre-deploy task creates a zip file to be deployed
+                zipFilePath = path.join(fsPath, `${workspace.name}.zip`);
+            } else {
+                p.report({ message: creatingZip });
+                ext.outputChannel.appendLine(creatingZip);
+                ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
+            }
             const blobService: azureStorage.BlobService = await createBlobService(actionContext, node, fsPath);
             const client: SiteClient = node.treeItem.client;
             const creatingBlob: string = localize('creatingBlob', 'Uploading zip package to storage container...');
@@ -43,8 +56,8 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
             const blobUrl: string = await createBlobFromZip(blobService, zipFilePath, blobName);
             const appSettings: StringDictionary = await client.listApplicationSettings();
             if (appSettings.properties) {
-                const WEBSITE_USE_ZIP: string = 'WEBSITE_USE_ZIP';
-                appSettings.properties[WEBSITE_USE_ZIP] = blobUrl;
+                const WEBSITE_RUN_FROM_ZIP: string = 'WEBSITE_RUN_FROM_ZIP';
+                appSettings.properties[WEBSITE_RUN_FROM_ZIP] = blobUrl;
             } else {
                 throw new ArgumentError(appSettings);
             }
@@ -82,7 +95,7 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
 
 async function createBlobService(actionContext: IActionContext, node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
     const settingKey: string = 'deployStorageAccount';
-    const storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
+    let storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
     let name: string | undefined;
     let key: string | undefined;
 
@@ -90,29 +103,27 @@ async function createBlobService(actionContext: IActionContext, node: IAzurePare
     if (!storageAccountId) {
         const runFromZipDeployMessage: string = localize('azFunc.AzureDeployStorageWarning', 'An Azure Storage account is required to deploy to this Function App.', localSettingsFileName);
         const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
-        const result: MessageItem | undefined = await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
-        if (result === selectStorageAccountButton) {
-            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
-                kind: [],
-                learnMoreLink: 'https://aka.ms/T5o0nf'
-            });
-            if (sa.id) {
-                await updateWorkspaceSetting(settingKey, sa.id, fsPath);
-            }
-            const accountKey: string = 'AccountKey=';
-            name = sa.name;
-            key = sa.connectionString.substring(sa.connectionString.indexOf(accountKey) + accountKey.length);
+        await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
+        // if the user cancels, the operation will be cancelled completely
+        const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
+            kind: [],
+            learnMoreLink: 'https://aka.ms/T5o0nf'
+        });
+        if (!sa.id) {
+            throw new ArgumentError(sa);
         }
+        storageAccountId = sa.id;
+        await updateWorkspaceSetting(settingKey, storageAccountId, fsPath);
+    }
+
+    const sClient: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
+    const rg: string = azUtil.getResourceGroupFromId(storageAccountId);
+    name = azUtil.getNameFromId(storageAccountId);
+    const result: StorageAccountListKeysResult = await sClient.storageAccounts.listKeys(rg, name);
+    if (!result.keys || result.keys.length === 0) {
+        throw new ArgumentError(result);
     } else {
-        const sClient: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
-        const rg: string = azUtil.getResourceGroupFromId(storageAccountId);
-        name = azUtil.getNameFromId(storageAccountId);
-        const result: StorageAccountListKeysResult = await sClient.storageAccounts.listKeys(rg, name);
-        if (!result.keys || result.keys.length === 0) {
-            throw new ArgumentError(result);
-        } else {
-            key = result.keys[0].value;
-        }
+        key = result.keys[0].value;
     }
 
     if (name !== undefined && key !== undefined) {
@@ -123,7 +134,7 @@ async function createBlobService(actionContext: IActionContext, node: IAzurePare
 }
 
 async function createBlobFromZip(blobService: azureStorage.BlobService, zipFilePath: string, blobName: string): Promise<string> {
-    const containerName: string = 'azureappservice-run-from-zip';
+    const containerName: string = 'azureappservice-run-from-package';
     await new Promise<void>((resolve: () => void, reject: (err: Error) => void): void => {
         blobService.createContainerIfNotExists(containerName, (err: Error) => {
             if (err !== null) {
@@ -161,7 +172,7 @@ async function zipDirectory(fsPath: string, zipFileName?: string, globPattern: s
     let zipFilePath: string;
     let createdZip: boolean = false;
     if (!zipFileName) {
-        zipFileName = randomFileName();
+        zipFileName = fsUtil.getRandomHexString();
     }
 
     try {
@@ -198,9 +209,4 @@ async function zipDirectory(fsPath: string, zipFileName?: string, globPattern: s
         throw error;
     }
     return { zipFilePath: zipFilePath, createdZip: createdZip };
-}
-
-function randomFileName(): string {
-    // tslint:disable-next-line:insecure-random
-    return Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
 }

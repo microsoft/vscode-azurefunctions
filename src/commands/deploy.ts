@@ -14,7 +14,7 @@ import { MessageItem } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, funcPack, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
+import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -74,7 +74,10 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
 
     const client: SiteClient = node.treeItem.client;
     const asp: AppServicePlan = await client.getAppServicePlan();
-    const isLinuxConsumptionPlan: boolean | undefined = asp.sku && asp.sku.tier === 'Dynamic' && client.kind.includes('linux');
+    let isLinuxConsumptionPlan: boolean = false;
+    if (asp && asp.sku && asp.sku.tier) {
+        isLinuxConsumptionPlan = asp.sku.tier.toLowerCase() === 'dynamic' && client.kind.toLowerCase().includes('linux');
+    }
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
@@ -250,7 +253,8 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
                 }
                 break;
             case ProjectLanguage.Python:
-                taskName = funcPack;
+                taskName = funcPackId;
+                break;
             default:
                 return; // preDeployTask not needed
         }
