@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
 import { OutputChannel } from 'vscode';
 import { getKuduClient, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import KuduClient from 'vscode-azurekudu';
-import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
+import { FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -27,12 +28,12 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     private _triggerUrl: string;
 
     public constructor(client: SiteClient, func: FunctionEnvelope, outputChannel: OutputChannel) {
-        if (!func.name) {
+        if (!func.id) {
             throw new ArgumentError(func);
         }
 
         this.client = client;
-        this._name = func.name;
+        this._name = getFunctionNameFromId(func.id);
         this._outputChannel = outputChannel;
 
         this.config = new FunctionConfig(func.config);
@@ -67,8 +68,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         this._outputChannel.show(true);
         this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-        const kuduClient: KuduClient = await getKuduClient(this.client);
-        await kuduClient.functionModel.deleteMethod(this._name);
+        await this.client.deleteFunction(this._name);
         this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
     }
 
@@ -100,4 +100,14 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
 
         this._triggerUrl = triggerUrl.toString();
     }
+}
+
+function getFunctionNameFromId(id: string): string {
+    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(?:[^\/]+)\/resourceGroups\/(?:[^\/]+)\/providers\/Microsoft.Web\/sites\/(?:[^\/]+)\/functions\/([^\/]+)/);
+
+    if (matches === null || matches.length < 2) {
+        throw new Error(localize('invalidFuncId', 'Invalid Functions Id'));
+    }
+
+    return matches[1];
 }
