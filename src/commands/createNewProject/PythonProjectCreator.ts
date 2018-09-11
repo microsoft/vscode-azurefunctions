@@ -110,6 +110,10 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
+    public getRecommendedExtensions(): string[] {
+        return super.getRecommendedExtensions().concat(['ms-python.python']);
+    }
+
     private async validatePythonVersion(): Promise<void> {
         const minReqVersion: string = '3.6.0';
         await this.tryGetPythonAlias(PythonAlias.py, minReqVersion);
