@@ -9,7 +9,7 @@ import { ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
 import * as fsUtil from '../src/utils/fs';
@@ -172,7 +172,8 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         }
 
         const ui: TestUserInput = new TestUserInput(inputs);
-        await initProjectForVSCode({ isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, ui, outputChannel);
+        const actionContext: IActionContext = <IActionContext>{ properties: { isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, measurements: {} };
+        await initProjectForVSCode(actionContext, ui, outputChannel);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });

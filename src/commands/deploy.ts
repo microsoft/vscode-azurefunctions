@@ -84,7 +84,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(outputChannel, deployFsPath, ui, telemetryProperties);
+        deployFsPath = await getJavaFolderPath(actionContext, outputChannel, deployFsPath, ui, telemetryProperties);
     }
 
     await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
@@ -175,8 +175,8 @@ function appendDeploySubpathSetting(targetPath: string): string {
     return targetPath;
 }
 
-async function getJavaFolderPath(outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
-    await mavenUtils.validateMavenInstalled(basePath);
+async function getJavaFolderPath(actionContext: IActionContext, outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
+    await mavenUtils.validateMavenInstalled(actionContext, basePath);
     outputChannel.show();
     await mavenUtils.executeMvnCommand(telemetryProperties, outputChannel, basePath, 'clean', 'package', '-B');
     const pomLocation: string = path.join(basePath, 'pom.xml');
