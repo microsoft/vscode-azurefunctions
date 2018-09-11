@@ -75,6 +75,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const client: SiteClient = node.treeItem.client;
     const asp: AppServicePlan = await client.getAppServicePlan();
     let isLinuxConsumptionPlan: boolean = false;
+    // tslint:disable-next-line:strict-boolean-expressions
     if (asp && asp.sku && asp.sku.tier) {
         isLinuxConsumptionPlan = asp.sku.tier.toLowerCase() === 'dynamic' && client.kind.toLowerCase().includes('linux');
     }
