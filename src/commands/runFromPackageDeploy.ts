@@ -32,8 +32,7 @@ import * as fsUtil from '../utils/fs';
  * Then deploy via "zipdeploy" as usual.
  */
 
-export async function runFromPackageDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<void> {
-    const language: ProjectLanguage = await getProjectLanguage(fsPath, ext.ui);
+export async function runFromPackageDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string, language: ProjectLanguage): Promise<void> {
     let createdZip: boolean = language === ProjectLanguage.Python ? true : false;
     let zipFilePath: string;
     await window.withProgress({ location: ProgressLocation.Notification, title: localize('deploying', 'Deploying to "{0}"...', node.treeItem.client.fullName) }, async (p: Progress<{}>) => {
@@ -68,15 +67,7 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
                 const cleaningZip: string = localize('cleaningZip', 'Cleaning zip package...');
                 p.report({ message: cleaningZip });
                 ext.outputChannel.appendLine(cleaningZip);
-                await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
-                    fse.remove(zipFilePath, (err?: Error) => {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            resolve();
-                        }
-                    });
-                });
+                await fse.remove(zipFilePath);
             }
         }
     });
@@ -84,7 +75,7 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
 }
 
 async function createBlobService(actionContext: IActionContext, node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
-    const settingKey: string = 'deployStorageAccount';
+    const settingKey: string = 'deployStorageAccountId';
     let storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
     let name: string | undefined;
     let key: string | undefined;
@@ -119,7 +110,7 @@ async function createBlobService(actionContext: IActionContext, node: IAzurePare
     if (name !== undefined && key !== undefined) {
         return azureStorage.createBlobService(name, key);
     } else {
-        throw new ArgumentError({ name: name, key: key });
+        throw new ArgumentError(result);
     }
 }
 

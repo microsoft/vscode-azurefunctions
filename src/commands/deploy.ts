@@ -113,7 +113,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
                     await client.stop();
                 }
                 if (node && isLinuxConsumptionPlan) {
-                    await runFromPackageDeploy(actionContext, node, deployFsPath);
+                    await runFromPackageDeploy(actionContext, node, deployFsPath, language);
                 } else {
                     await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
                 }
@@ -143,10 +143,6 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
     await node.treeDataProvider.refresh(functionsNode);
-    if (isLinuxConsumptionPlan) {
-        // We can't get the function triggers due to no Kudu, so end here
-        return;
-    }
     const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
     const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {

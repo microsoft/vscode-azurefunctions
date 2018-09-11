@@ -579,10 +579,10 @@
                         "description": "%azFunc.showFuncInstallationDescription%",
                         "default": true
                     },
-                    "azureFunctions.deployStorageAccount": {
+                    "azureFunctions.deployStorageAccountId": {
                         "scope": "resource",
                         "type": "string",
-                        "description": "%azFunc.deployStorageAccountDescription%"
+                        "description": "%azFunc.deployStorageAccountIdDescription%"
                     },
                     "azureFunctions.templateVersion": {
                         "type": "string",
