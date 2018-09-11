@@ -15,7 +15,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { MessageItem, Progress, ProgressLocation, window, workspace } from "vscode";
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureParentNode, parseError } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -62,16 +62,6 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
                 throw new ArgumentError(appSettings);
             }
             await client.updateApplicationSettings(appSettings);
-        } catch (error) {
-            // tslint:disable-next-line:no-unsafe-any
-            if (error && error.response && error.response.body) {
-                // Autorest doesn't support plain/text as a MIME type, so we have to get the error message from the response body ourselves
-                // https://github.com/Azure/autorest/issues/1527
-                // tslint:disable-next-line:no-unsafe-any
-                throw new Error(error.response.body);
-            } else {
-                throw error;
-            }
         } finally {
             // clean up zip file
             if (createdZip) {
@@ -79,7 +69,7 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
                 p.report({ message: cleaningZip });
                 ext.outputChannel.appendLine(cleaningZip);
                 await new Promise((resolve: () => void, reject: (err: Error) => void): void => {
-                    fs.unlink(zipFilePath, (err?: Error) => {
+                    fse.remove(zipFilePath, (err?: Error) => {
                         if (err) {
                             reject(err);
                         } else {
