@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { FunctionEnvelope, FunctionEnvelopeCollection } from 'azure-arm-website/lib/models';
 import { OutputChannel } from 'vscode';
-import { getKuduClient, SiteClient } from 'vscode-azureappservice';
-import { IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
-import { FunctionEnvelope } from 'vscode-azurekudu/lib/models';
+import { SiteClient } from 'vscode-azureappservice';
+import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionTreeItem } from './FunctionTreeItem';
@@ -20,6 +19,7 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
 
     private readonly _client: SiteClient;
     private readonly _outputChannel: OutputChannel;
+    private _nextLink: string | undefined;
 
     public constructor(client: SiteClient, outputChannel: OutputChannel) {
         this._client = client;
@@ -35,12 +35,16 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     }
 
     public hasMoreChildren(): boolean {
-        return false;
+        return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
-        const client: KuduClient = await getKuduClient(this._client);
-        const funcs: FunctionEnvelope[] = await client.functionModel.list();
+    public async loadMoreChildren(_node: IAzureNode, clearCache: boolean): Promise<IAzureTreeItem[]> {
+        if (clearCache) {
+            this._nextLink = undefined;
+        }
+
+        const funcs: FunctionEnvelopeCollection = this._nextLink ? await this._client.listFunctionsNext(this._nextLink) : await this._client.listFunctions();
+        this._nextLink = funcs.nextLink;
         return await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
             const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe, this._outputChannel);
             if (treeItem.config.isHttpTrigger) {
