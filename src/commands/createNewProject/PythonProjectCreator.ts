@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
-import { Platform, TemplateFilter } from "../../constants";
+import { funcPackId, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -24,6 +24,7 @@ export enum PythonAlias {
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = funcPackId;
     private pythonAlias: string;
     private funcEnv: string = 'func_env';
     public getLaunchJson(): {} {
@@ -85,9 +86,32 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     problemMatcher: [
                         funcHostProblemMatcher
                     ]
+                },
+
+                {
+                    label: funcPackId,
+                    identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    type: 'shell',
+                    osx: {
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func pack`
+                    },
+                    windows: {
+                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func pack`
+                    },
+                    linux: {
+                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func pack`
+                    },
+                    isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    }
                 }
             ]
         };
+    }
+
+    public getRecommendedExtensions(): string[] {
+        return super.getRecommendedExtensions().concat(['ms-python.python']);
     }
 
     private async validatePythonVersion(): Promise<void> {

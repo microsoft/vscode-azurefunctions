@@ -69,3 +69,4 @@ export enum ScmType {
 
 export const publishTaskId: string = 'publish';
 export const installExtensionsId: string = 'installExtensions';
+export const funcPackId: string = 'funcPack';

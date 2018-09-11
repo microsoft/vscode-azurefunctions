@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
+import { AppServicePlan, SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
@@ -11,10 +11,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
-import * as appservice from 'vscode-azureappservice';
 import { SiteClient } from 'vscode-azureappservice';
+import * as appservice from 'vscode-azureappservice';
 import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
+import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -28,6 +28,7 @@ import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
+import { runFromPackageDeploy } from './runFromPackageDeploy';
 
 // tslint:disable-next-line:max-func-body-length
 export async function deploy(ui: IAzureUserInput, actionContext: IActionContext, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
@@ -38,13 +39,13 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
 
     const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
     if (!target) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
     } else if (target instanceof vscode.Uri) {
         deployFsPath = appendDeploySubpathSetting(target.fsPath);
     } else if (typeof target === 'string') {
         deployFsPath = appendDeploySubpathSetting(target);
     } else {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
         node = target;
     }
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
@@ -72,6 +73,12 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
 
     const client: SiteClient = node.treeItem.client;
+    const asp: AppServicePlan = await client.getAppServicePlan();
+    let isLinuxConsumptionPlan: boolean = false;
+    // tslint:disable-next-line:strict-boolean-expressions
+    if (asp && asp.sku && asp.sku.tier) {
+        isLinuxConsumptionPlan = asp.sku.tier.toLowerCase() === 'dynamic' && client.kind.toLowerCase().includes('linux');
+    }
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
@@ -105,8 +112,11 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-
-                await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+                if (node && isLinuxConsumptionPlan) {
+                    await runFromPackageDeploy(actionContext, node, deployFsPath, language);
+                } else {
+                    await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+                }
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
@@ -136,14 +146,14 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
     const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
-        outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+        ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
         for (const func of anonFunctions) {
-            outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+            ext.outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
         }
     }
 
     if (functions.find((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
-        outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+        ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
     }
 }
 
@@ -238,6 +248,9 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
                 } else {
                     taskName = installExtensionsId;
                 }
+                break;
+            case ProjectLanguage.Python:
+                taskName = funcPackId;
                 break;
             default:
                 return; // preDeployTask not needed

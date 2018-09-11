@@ -26,12 +26,16 @@ function parseResourceId(id: string): RegExpMatchArray {
     return matches;
 }
 
-function getResourceGroupFromId(id: string): string {
+export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
 
 export function getSubscriptionFromId(id: string): string {
     return parseResourceId(id)[1];
+}
+
+export function getNameFromId(id: string): string {
+    return parseResourceId(id)[4];
 }
 
 interface IBaseResourceWithName extends BaseResource {
@@ -53,6 +57,7 @@ async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUser
 export interface IResourceResult {
     name: string;
     connectionString: string;
+    id?: string;
 }
 
 export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
@@ -105,11 +110,11 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
         const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, storageAccount.name);
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
-        } else {
-            return {
-                name: storageAccount.name,
-                connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`
-            };
         }
+        return {
+            name: storageAccount.name,
+            connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`,
+            id: storageAccount.id
+        };
     }
 }

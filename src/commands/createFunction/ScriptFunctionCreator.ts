@@ -29,7 +29,7 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
         case ProjectLanguage.PowerShell:
             return 'run.ps1';
         case ProjectLanguage.Python:
-            return 'run.py';
+            return '__init__.py';
         case ProjectLanguage.TypeScript:
             return 'index.ts';
         default:
