@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, gitignoreFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -126,7 +126,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     private async tryGetPythonAlias(pyAlias: PythonAlias, minReqVersion: string): Promise<void> {
         try {
-            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
+            const pyVersion: string = (await cpUtils.executeCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
             if (semver.gte(pyVersion, minReqVersion)) {
                 this.pythonAlias = pyAlias;
             }
@@ -159,12 +159,20 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const funcInitPython: string = 'func init ./ --worker-runtime python';
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython} && ${this.pythonAlias} -m pip install ptvsd`);
                 break;
             case Platform.MacOS:
             default:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython} && ${this.pythonAlias} -m pip install ptvsd`);
                 break;
+        }
+        // .gitignore is created by `func init`
+        const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
+        if (await fse.pathExists(gitignorePath)) {
+            ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
+            let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
+            gitignoreContents = gitignoreContents.concat(`\n${this.funcEnv}`);
+            await fse.writeFile(gitignorePath, gitignoreContents);
         }
     }
 }
