@@ -546,6 +546,7 @@
                         "type": "string",
                         "enum": [
                             "~1",
+                            "~2",
                             "beta"
                         ],
                         "description": "%azFunc.projectRuntimeDescription%"

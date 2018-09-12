@@ -7,7 +7,8 @@
     "search.exclude": {
         "out": true,
         "**/node_modules": true,
-        ".vscode-test": true
+        ".vscode-test": true,
+        "resources/backup*Templates": true
     },
     "tslint.autoFixOnSave": true,
     "tslint.ignoreDefinitionFiles": true,

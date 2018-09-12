@@ -11,7 +11,7 @@ This tool is leveraged by the Functions extension at the root of this repo. It p
 ### List
 
 ```bash
-dotnet --require ./projectTemplates-beta.nupkg --require ./itemTemplates-beta.nupkg --operation list
+dotnet --require ./projectTemplates-~2.nupkg --require ./itemTemplates-~2.nupkg --operation list
 ```
 
 This will list all templates included in the NuGet packages specified with the `require` parameter. Multiple packages can be specified in the format of a disk path, a NuGet package ID, or a NuGet package ID and version formatted as `{id}::{version}`. Example output:
@@ -47,7 +47,7 @@ This will list all templates included in the NuGet packages specified with the `
 ### Create
 
 ```bash
-dotnet --require projectTemplates-beta.nupkg --require itemTemplates-beta.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.1.x --arg:name TimerTriggerCSharp1 --arg:namespace Company.Function --arg:Schedule "0 */5 * * * *"
+dotnet --require projectTemplates-~2.nupkg --require itemTemplates-~2.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.1.x --arg:name TimerTriggerCSharp1 --arg:namespace Company.Function --arg:Schedule "0 */5 * * * *"
 ```
 
 This will create the template with the specified identity. The `require` parameter is the same as used above. The `identity` and `arg` parameters can be retrieved from the result of a list operation, shown above. The `name` and `namespace` args apply to all templates.

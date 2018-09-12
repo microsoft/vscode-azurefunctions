@@ -74,7 +74,7 @@ export function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRun
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
             if (template.id.startsWith('Azure.Function.CSharp.') &&
-                ((runtime === ProjectRuntime.one && template.id.includes('1')) || (runtime === ProjectRuntime.beta && template.id.includes('2')))) {
+                ((runtime === ProjectRuntime.v1 && template.id.includes('1')) || (runtime === ProjectRuntime.v2 && template.id.includes('2')))) {
                 templates.push(template);
             }
         } catch (error) {

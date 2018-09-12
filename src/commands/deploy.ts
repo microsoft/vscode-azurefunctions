@@ -203,7 +203,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
         const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
         // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
-            const message: string = localize('azFunc.notBetaRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
+            const message: string = localize('incompatibleRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
             const result: vscode.MessageItem = await ui.showWarningMessage(message, { modal: true }, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
             if (result === DialogResponses.learnMore) {
@@ -243,7 +243,7 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
                 taskName = publishTaskId;
                 break;
             case ProjectLanguage.JavaScript:
-                if (runtime === ProjectRuntime.one) {
+                if (runtime === ProjectRuntime.v1) {
                     return; // "func extensions install" is only supported on v2
                 } else {
                     taskName = installExtensionsId;

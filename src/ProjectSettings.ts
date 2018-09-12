@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
-import { DialogResponses, IAzureUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
 import { localize } from "./localize";
 
@@ -43,13 +43,13 @@ export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<Pro
 }
 
 export async function promptForProjectRuntime(ui: IAzureUserInput): Promise<ProjectRuntime> {
-    const picks: QuickPickItem[] = [
-        { label: ProjectRuntime.one, description: localize('productionUseDescription', '(Approved for production use)') },
-        { label: ProjectRuntime.beta, description: previewDescription }
+    const picks: IAzureQuickPickItem<ProjectRuntime>[] = [
+        { label: 'Azure Functions v2', description: '(.NET Standard)', data: ProjectRuntime.v2 },
+        { label: 'Azure Functions v1', description: '(.NET Framework)', data: ProjectRuntime.v1 }
     ];
 
     const options: QuickPickOptions = { placeHolder: localize('selectRuntime', 'Select a runtime') };
-    return <ProjectRuntime>(await ui.showQuickPick(picks, options)).label;
+    return <ProjectRuntime>(await ui.showQuickPick(picks, options)).data;
 }
 
 export async function selectTemplateFilter(projectPath: string, ui: IAzureUserInput): Promise<TemplateFilter> {
@@ -96,8 +96,8 @@ export async function getProjectLanguage(projectPath: string, ui: IAzureUserInpu
 
 export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IAzureUserInput): Promise<ProjectRuntime> {
     if (language === ProjectLanguage.Java) {
-        // Java only supports beta
-        return ProjectRuntime.beta;
+        // Java only supports v2
+        return ProjectRuntime.v2;
     }
 
     let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting, projectPath));
@@ -117,14 +117,20 @@ export async function getTemplateFilter(projectPath: string): Promise<TemplateFi
     return templateFilter ? <TemplateFilter>templateFilter : TemplateFilter.Verified;
 }
 
-export function convertStringToRuntime(rawRuntime?: string): ProjectRuntime | undefined {
-    switch (String(rawRuntime).toLowerCase()) {
-        case 'beta':
-            return ProjectRuntime.beta;
-        case '~1':
-        case 'latest':
-            return ProjectRuntime.one;
-        default:
-            return undefined;
+/**
+ * Special notes due to recent GA of v2 (~Sept 2018):
+ * We have to support 'beta' as 'v2' since it's so commonly used. We should remove this support eventually since 'beta' will probably change meaning if there's ever a v3.
+ * We no longer support 'latest'. That value is not recommended, not commonly used, and is changing meaning from v1 to v2. Better to just act like we don't recognize it.
+ * https://github.com/Microsoft/vscode-azurefunctions/issues/562
+ */
+export function convertStringToRuntime(rawRuntime: string | undefined): ProjectRuntime | undefined {
+    rawRuntime = rawRuntime ? rawRuntime.toLowerCase() : '';
+    if (/^~?1.*/.test(rawRuntime)) {
+        return ProjectRuntime.v1;
+    } else if (/^~?2.*/.test(rawRuntime) || rawRuntime === 'beta') {
+        return ProjectRuntime.v2;
+    } else {
+        // Return undefined if we don't recognize the runtime
+        return undefined;
     }
 }

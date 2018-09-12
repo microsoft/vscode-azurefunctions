@@ -13,10 +13,10 @@ export async function updateFuncCoreTools(packageManager: PackageManager, projec
     switch (packageManager) {
         case PackageManager.npm:
             switch (projectRuntime) {
-                case ProjectRuntime.one:
+                case ProjectRuntime.v1:
                     await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', funcPackageName);
                     break;
-                case ProjectRuntime.beta:
+                case ProjectRuntime.v2:
                     await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@core`, '--unsafe-perm', 'true');
                     break;
                 default:

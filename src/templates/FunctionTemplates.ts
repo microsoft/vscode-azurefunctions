@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext, parseError, TelemetryProperties } from 'vscode-azureextensionui';
-import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -26,7 +26,7 @@ export class FunctionTemplates {
         this.copyCSharpSettingsFromJS();
     }
 
-    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
+    public async getTemplates(language: string, runtime: string = ProjectRuntime.v1, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
         const templates: IFunctionTemplate[] | undefined = this._templatesMap[runtime];
         if (!templates) {
             throw new Error(this._noInternetErrMsg);
@@ -118,14 +118,7 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
                     this.properties.templateSource = 'mismatchCache';
                 }
 
-                // 4. Download templates from the cli-feed using the backupVersion
-                if (!templates && cliFeedJson) {
-                    const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
-                    templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, backupVersion, runtime);
-                    this.properties.templateSource = 'backupCliFeed';
-                }
-
-                // 5. Use backup templates shipped with the extension
+                // 4. Use backup templates shipped with the extension
                 if (!templates) {
                     templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
                     this.properties.templateSource = 'backupFromExtension';

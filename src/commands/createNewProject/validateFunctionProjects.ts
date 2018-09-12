@@ -85,7 +85,7 @@ async function verifyDebugConfigIsValid(folderPath: string, actionContext: IActi
     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
     if (language === ProjectLanguage.JavaScript) {
         const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
-        if (localProjectRuntime === ProjectRuntime.beta) {
+        if (localProjectRuntime === ProjectRuntime.v2) {
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
             const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 

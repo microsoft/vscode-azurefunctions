@@ -16,7 +16,7 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
     protected _language: ProjectLanguage = ProjectLanguage.CSharpScript;
-    protected _runtime: ProjectRuntime = ProjectRuntime.one;
+    protected _runtime: ProjectRuntime = ProjectRuntime.v1;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         const functionPath: string = path.join(testFolder, funcName);

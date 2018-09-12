@@ -10,8 +10,8 @@ import { localize } from '../localize';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { IFunctionTemplate } from './IFunctionTemplate';
 
-const betaBackupTemplatesVersion: string = '2.3.3';
-const oneBackupTemplatesVersion: string = '1.3.0';
+const v2BackupTemplatesVersion: string = '2.3.3';
+const v1BackupTemplatesVersion: string = '1.3.0';
 
 export enum TemplateType {
     Script = 'Script',
@@ -73,7 +73,7 @@ export abstract class TemplateRetriever {
      * For backwards compatability, the original runtime and templateType will not have this information
      */
     public getCacheKey(key: string, runtime: ProjectRuntime): string {
-        if (runtime !== ProjectRuntime.one) {
+        if (runtime !== ProjectRuntime.v1) {
             key = `${key}.${runtime}`;
         }
 
@@ -92,10 +92,10 @@ export abstract class TemplateRetriever {
 
     protected getBackupVersion(runtime: ProjectRuntime): string {
         switch (runtime) {
-            case ProjectRuntime.one:
-                return oneBackupTemplatesVersion;
-            case ProjectRuntime.beta:
-                return betaBackupTemplatesVersion;
+            case ProjectRuntime.v1:
+                return v1BackupTemplatesVersion;
+            case ProjectRuntime.v2:
+                return v2BackupTemplatesVersion;
             default:
                 throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
         }

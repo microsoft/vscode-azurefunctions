@@ -93,7 +93,7 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
         'TimerTrigger-JavaScript'
     ];
 
-    if (runtime === ProjectRuntime.one) {
+    if (runtime === ProjectRuntime.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'GenericWebHook-JavaScript',
             'GitHubWebHook-JavaScript',

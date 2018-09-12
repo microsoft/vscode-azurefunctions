@@ -13,10 +13,9 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, par
 import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
-import { getProjectRuntimeFromVersion } from './tryGetLocalRuntimeVersion';
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
@@ -31,7 +30,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             }
             this.properties.localVersion = localVersion;
 
-            const projectRuntime: ProjectRuntime | undefined = getProjectRuntimeFromVersion(localVersion);
+            const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(localVersion);
             if (projectRuntime === undefined) {
                 return;
             }
@@ -50,7 +49,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                     newestVersion
                 );
                 const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
-                if (projectRuntime === ProjectRuntime.beta) {
+                if (projectRuntime === ProjectRuntime.v2) {
                     message += ` ${v2}`;
                 }
                 const update: vscode.MessageItem = { title: 'Update' };
@@ -88,9 +87,9 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
             type distTags = { core: string, docker: string, latest: string };
             const distTags: distTags = <distTags>JSON.parse(await <Thenable<string>>request(npmRegistryUri));
             switch (projectRuntime) {
-                case ProjectRuntime.one:
+                case ProjectRuntime.v1:
                     return distTags.latest;
-                case ProjectRuntime.beta:
+                case ProjectRuntime.v2:
                     return distTags.core;
                 default:
             }
