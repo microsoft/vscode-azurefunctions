@@ -28,14 +28,12 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     private pythonAlias: string;
     private funcEnv: string = 'func_env';
     public getLaunchJson(): {} {
-        // https://github.com/Microsoft/vscode-azurefunctions/issues/543
-        const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
         return {
             version: '0.2.0',
             configurations: [
                 {
                     name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
-                    type: launchType,
+                    type: 'python',
                     request: 'attach',
                     port: 9091,
                     host: 'localhost',
