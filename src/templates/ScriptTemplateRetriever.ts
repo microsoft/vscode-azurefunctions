@@ -100,6 +100,15 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
             'HttpTriggerWithParameters-JavaScript',
             'ManualTrigger-JavaScript'
         ]);
+    } else {
+        verifiedTemplateIds = verifiedTemplateIds.concat([
+            'CosmosDBTrigger-JavaScript', // Only include in v2. v1 doesn't have the same support for 'func extensions install' that's required for Cosmos DB
+            'BlobTrigger-Python',
+            'HttpTrigger-Python',
+            'QueueTrigger-Python',
+            'TimerTrigger-Python',
+            'CosmosDBTrigger-Python'
+        ]);
     }
 
     return verifiedTemplateIds;
