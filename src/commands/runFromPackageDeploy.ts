@@ -81,7 +81,7 @@ async function createBlobService(node: IAzureParentNode<FunctionAppTreeItem>): P
             return azureStorage.createBlobService(name, key);
         }
     }
-    throw new Error(localize('"{0}" app setting must be set to proceed with deploy.', azureWebJobsStorageKey));
+    throw new Error(localize('"{0}" app setting is required for Run From Package deployment.', azureWebJobsStorageKey));
 }
 
 async function createBlobFromZip(blobService: azureStorage.BlobService, zipFilePath: string, blobName: string): Promise<string> {
