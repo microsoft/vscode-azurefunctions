@@ -159,11 +159,11 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const funcInitPython: string = 'func init ./ --worker-runtime python';
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython} && ${this.pythonAlias} -m pip install ptvsd`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython} && pip install ptvsd`);
                 break;
             case Platform.MacOS:
             default:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython} && ${this.pythonAlias} -m pip install ptvsd`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython} && pip install ptvsd`);
                 break;
         }
         // .gitignore is created by `func init`
@@ -171,7 +171,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         if (await fse.pathExists(gitignorePath)) {
             ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
+            // the func_env and ._python_packages are recreated and should not be checked in
             gitignoreContents = gitignoreContents.concat(`\n${this.funcEnv}`);
+            gitignoreContents = gitignoreContents.concat('\n.python_packages');
             await fse.writeFile(gitignorePath, gitignoreContents);
         }
     }
