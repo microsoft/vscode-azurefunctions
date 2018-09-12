@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
@@ -27,6 +28,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public preDeployTask: string = funcPackId;
     private pythonAlias: string;
     private funcEnv: string = 'func_env';
+    private installPtvsd: string = 'pip install ptvsd';
     public getLaunchJson(): {} {
         // https://github.com/Microsoft/vscode-azurefunctions/issues/543
         const launchType: string = process.platform === Platform.Windows ? 'python' : 'pythonExperimental';
@@ -143,6 +145,11 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             }
         }
         await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', this.funcEnv);
+        if (process.platform === Platform.Windows) {
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${this.installPtvsd}`);
+        } else {
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${this.installPtvsd}`);
+        }
     }
 
     private async getVenvActivatePath(platform: Platform): Promise<string> {
@@ -159,11 +166,11 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const funcInitPython: string = 'func init ./ --worker-runtime python';
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython} && pip install ptvsd`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
                 break;
             case Platform.MacOS:
             default:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython} && pip install ptvsd`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
                 break;
         }
         // .gitignore is created by `func init`
@@ -172,8 +179,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
             // the func_env and ._python_packages are recreated and should not be checked in
-            gitignoreContents = gitignoreContents.concat(`\n${this.funcEnv}`);
-            gitignoreContents = gitignoreContents.concat('\n.python_packages');
+            gitignoreContents = gitignoreContents.concat(`${os.EOL}${this.funcEnv}`);
+            gitignoreContents = gitignoreContents.concat(`${os.EOL}.python_packages`);
             await fse.writeFile(gitignorePath, gitignoreContents);
         }
     }
