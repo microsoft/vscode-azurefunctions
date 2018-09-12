@@ -15,8 +15,8 @@
     "azFunc.deleteFunction": "Delete Function...",
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
-    "azFunc.projectRuntimeDescription": "The default runtime to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"~1\" is currently the latest version approved for production use.",
-    "azFunc.projectLanguageDescription": "The default language to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\"). \"F#\", and \"JavaScript\" are currently the only languages approved for production use with runtime \"~1\". \"JavaScript\", \"C#\", and \"Java\" are the only languages that currently support debugging in VS Code.",
+    "azFunc.projectRuntimeDescription": "The default runtime to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\").",
+    "azFunc.projectLanguageDescription": "The default language to use when performing operations in the Azure Functions extension (e.g. \"Create New Function\").",
     "azFunc.deploy": "Deploy to Function App...",
     "azFunc.configureDeploymentSource": "Configure Deployment Source...",
     "azFunc.debugFunctionAppOnAzure": "Attach Debugger",
@@ -45,5 +45,9 @@
     "azFunc.projectOpenBehaviorDescription": "The behavior to use after creating a new project. The options are \"AddToWorkspace\", \"OpenInNewWindow\", or \"OpenInCurrentWindow\".",
     "azFunc.uninstallFuncCoreTools": "Uninstall Azure Functions Core Tools",
     "azFunc.preDeployTaskDescription": "The name of the task to run before zip deployments.",
-    "azFunc.problemMatchers.funcWatch.label": "Azure Functions problems (watch mode)"
+    "azFunc.problemMatchers.funcWatch.label": "Azure Functions problems (watch mode)",
+    "azFunc.projectRuntime.v1Description": "Azure Functions v1 Preview (.NET Framework)",
+    "azFunc.projectRuntime.v2Description": "Azure Functions v2 Preview (.NET Standard)",
+    "azFunc.projectRuntime.betaDescription": "DEPRECATED Use \"~2\" instead.",
+    "azFunc.projectLanguage.previewDescription": "(Preview)"
 }
