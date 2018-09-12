@@ -17,7 +17,7 @@ import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting }
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
+import { funcHostTaskId, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
@@ -115,7 +115,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     presentation: {
                         reveal: 'always'
                     },
-                    problemMatcher: []
+                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };
