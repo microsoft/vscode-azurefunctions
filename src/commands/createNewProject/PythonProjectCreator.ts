@@ -13,7 +13,7 @@ import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
-import { funcHostProblemMatcher, funcHostTaskId } from "./IProjectCreator";
+import { funcHostTaskId, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export enum PythonAlias {
@@ -83,11 +83,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                             'languageWorkers:python:arguments': '-m ptvsd --server --port 9091 --file'
                         }
                     },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
+                    problemMatcher: funcWatchProblemMatcher
                 },
-
                 {
                     label: funcPackId,
                     identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707

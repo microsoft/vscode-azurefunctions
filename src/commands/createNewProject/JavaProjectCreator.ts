@@ -14,7 +14,7 @@ import { localize } from "../../localize";
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
+import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 export class JavaProjectCreator extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.beta;
@@ -120,9 +120,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     presentation: {
                         reveal: 'always'
                     },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
+                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };
@@ -143,8 +141,6 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         tasksJsonString = tasksJsonString.replace(/%path%/g, this._javaTargetPath);
         // tslint:disable-next-line:no-string-literal no-unsafe-any
         tasksJson = JSON.parse(tasksJsonString);
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        tasksJson['tasks'][0]['problemMatcher'][0]['background']['beginsPattern'] = '^.*Scanning for projects.*';
         return tasksJson;
     }
 

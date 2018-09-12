@@ -477,6 +477,35 @@
                 "url": "http://json.schemastore.org/proxies"
             }
         ],
+        "problemPatterns": [
+            {
+                "name": "func",
+                "kind": "file",
+                "regexp": "^.*Missing.*AzureWebJobsStorage.*(local.settings.json).*$",
+                "file": 1,
+                "message": 0
+            }
+        ],
+        "problemMatchers": [
+            {
+                "name": "func-watch",
+                "label": "%azFunc.problemMatchers.funcWatch.label%",
+                "owner": "Azure Functions",
+                "source": "func",
+                "applyTo": "allDocuments",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": "$func",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*(Job host stopped|signaling restart).*$",
+                    "endsPattern": "^.*(?:Application|Job host) started.*$"
+                },
+                "severity": "error"
+            }
+        ],
         "configuration": [
             {
                 "title": "Azure Functions",

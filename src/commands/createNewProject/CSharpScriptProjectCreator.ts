@@ -5,7 +5,7 @@
 
 import { TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
-import { funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
+import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
@@ -24,7 +24,7 @@ export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
                     presentation: {
                         reveal: 'always'
                     },
-                    problemMatcher: []
+                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };

@@ -5,7 +5,7 @@
 
 import { installExtensionsId, ProjectRuntime, TemplateFilter } from "../../constants";
 import { localize } from "../../localize";
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel } from "./IProjectCreator";
+import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ITaskOptions } from "./ITasksJson";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -44,9 +44,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
             presentation: {
                 reveal: 'always'
             },
-            problemMatcher: [
-                funcHostProblemMatcher
-            ]
+            problemMatcher: funcWatchProblemMatcher
         };
 
         const installExtensionsTask: {} = {

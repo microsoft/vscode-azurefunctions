@@ -5,7 +5,7 @@
 
 import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
-import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
+import { ProjectRuntime, TemplateFilter } from "../../constants";
 import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
 import { promptForProjectRuntime } from "../../ProjectSettings";
 
@@ -49,19 +49,4 @@ export abstract class ProjectCreatorBase {
 export const funcHostTaskId: string = 'runFunctionsHost';
 // Don't localize this label until this is fixed: https://github.com/Microsoft/vscode/issues/57707
 export const funcHostTaskLabel: string = 'Run Functions Host';
-export const funcHostProblemMatcher: {} = {
-    owner: extensionPrefix,
-    pattern: [
-        {
-            regexp: '\\b\\B',
-            file: 1,
-            location: 2,
-            message: 3
-        }
-    ],
-    background: {
-        activeOnStart: true,
-        beginsPattern: '^.*Stopping host.*',
-        endsPattern: '^.*Job host started.*'
-    }
-};
+export const funcWatchProblemMatcher: string = '$func-watch';

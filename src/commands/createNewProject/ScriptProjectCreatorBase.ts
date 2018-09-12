@@ -9,7 +9,7 @@ import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime,
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile } from "../../utils/fs";
 import * as fsUtil from '../../utils/fs';
-import { funcHostProblemMatcher, funcHostTaskId, funcHostTaskLabel, ProjectCreatorBase } from './IProjectCreator';
+import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
@@ -59,9 +59,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                     presentation: {
                         reveal: 'always'
                     },
-                    problemMatcher: [
-                        funcHostProblemMatcher
-                    ]
+                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };
