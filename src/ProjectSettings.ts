@@ -4,11 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+// tslint:disable-next-line:no-require-imports
+import opn = require("opn");
 import * as path from 'path';
 import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
 import { DialogResponses, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
+import { ext } from './extensionVariables';
 import { localize } from "./localize";
 
 const previewDescription: string = localize('previewDescription', '(Preview)');
@@ -42,14 +45,23 @@ export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<Pro
     return <ProjectLanguage>(await ui.showQuickPick(picks, options)).label;
 }
 
-export async function promptForProjectRuntime(ui: IAzureUserInput): Promise<ProjectRuntime> {
-    const picks: IAzureQuickPickItem<ProjectRuntime>[] = [
+export async function promptForProjectRuntime(message?: string): Promise<ProjectRuntime> {
+    const picks: IAzureQuickPickItem<ProjectRuntime | undefined>[] = [
         { label: 'Azure Functions v2', description: '(.NET Standard)', data: ProjectRuntime.v2 },
-        { label: 'Azure Functions v1', description: '(.NET Framework)', data: ProjectRuntime.v1 }
+        { label: 'Azure Functions v1', description: '(.NET Framework)', data: ProjectRuntime.v1 },
+        { label: localize('learnMore', 'Learn more...'), description: '', data: undefined }
     ];
 
-    const options: QuickPickOptions = { placeHolder: localize('selectRuntime', 'Select a runtime') };
-    return <ProjectRuntime>(await ui.showQuickPick(picks, options)).data;
+    const options: QuickPickOptions = { placeHolder: message || localize('selectRuntime', 'Select a runtime') };
+    let runtime: ProjectRuntime | undefined;
+    do {
+        runtime = (await ext.ui.showQuickPick(picks, options)).data;
+        if (runtime === undefined) {
+            await opn('https://aka.ms/AA1tpij');
+        }
+    }
+    while (runtime === undefined);
+    return runtime;
 }
 
 export async function selectTemplateFilter(projectPath: string, ui: IAzureUserInput): Promise<TemplateFilter> {
@@ -105,7 +117,7 @@ export async function getProjectRuntime(language: ProjectLanguage, projectPath: 
         const message: string = localize('noRuntime', 'You must have a project runtime set to perform this operation.');
         const selectRuntime: MessageItem = { title: localize('selectRuntimeButton', 'Select Runtime') };
         await ui.showWarningMessage(message, { modal: true }, selectRuntime, DialogResponses.cancel);
-        runtime = await promptForProjectRuntime(ui);
+        runtime = await promptForProjectRuntime();
         await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
     }
 

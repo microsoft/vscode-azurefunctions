@@ -42,16 +42,13 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             }
 
             if (semver.gt(newestVersion, localVersion)) {
-                let message: string = localize(
+                const message: string = localize(
                     'azFunc.outdatedFunctionRuntime',
                     'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
                     localVersion,
                     newestVersion
                 );
-                const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
-                if (projectRuntime === ProjectRuntime.v2) {
-                    message += ` ${v2}`;
-                }
+
                 const update: vscode.MessageItem = { title: 'Update' };
                 let result: vscode.MessageItem;
 

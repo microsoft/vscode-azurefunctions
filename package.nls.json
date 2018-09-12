@@ -46,8 +46,8 @@
     "azFunc.uninstallFuncCoreTools": "Uninstall Azure Functions Core Tools",
     "azFunc.preDeployTaskDescription": "The name of the task to run before zip deployments.",
     "azFunc.problemMatchers.funcWatch.label": "Azure Functions problems (watch mode)",
-    "azFunc.projectRuntime.v1Description": "Azure Functions v1 Preview (.NET Framework)",
-    "azFunc.projectRuntime.v2Description": "Azure Functions v2 Preview (.NET Standard)",
+    "azFunc.projectRuntime.v1Description": "Azure Functions v1 (.NET Framework)",
+    "azFunc.projectRuntime.v2Description": "Azure Functions v2 (.NET Standard)",
     "azFunc.projectRuntime.betaDescription": "DEPRECATED Use \"~2\" instead.",
     "azFunc.projectLanguage.previewDescription": "(Preview)"
 }
