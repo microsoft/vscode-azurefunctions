@@ -176,12 +176,24 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         // .gitignore is created by `func init`
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
-            ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
+            const pythonPackages: string = 'python_packages';
+            let writeFile: boolean = false;
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
             // the func_env and ._python_packages are recreated and should not be checked in
-            gitignoreContents = gitignoreContents.concat(`${os.EOL}${this.funcEnv}`);
-            gitignoreContents = gitignoreContents.concat(`${os.EOL}.python_packages`);
-            await fse.writeFile(gitignorePath, gitignoreContents);
+            if (!gitignoreContents.includes(this.funcEnv)) {
+                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${this.funcEnv}`);
+                writeFile = true;
+            }
+            if (!gitignoreContents.includes(pythonPackages)) {
+                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', pythonPackages));
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${pythonPackages}`);
+                writeFile = true;
+            }
+
+            if (writeFile) {
+                await fse.writeFile(gitignorePath, gitignoreContents);
+            }
         }
     }
 }
