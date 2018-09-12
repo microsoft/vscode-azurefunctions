@@ -113,7 +113,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
                     await client.stop();
                 }
                 if (node && isLinuxConsumptionPlan) {
-                    await runFromPackageDeploy(actionContext, node, deployFsPath, language);
+                    await runFromPackageDeploy(node, deployFsPath, language);
                 } else {
                     await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
                 }

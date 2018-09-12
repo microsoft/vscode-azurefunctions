@@ -4,27 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as archiver from 'archiver';
-// tslint:disable-next-line:no-require-imports
-import StorageClient = require('azure-arm-storage');
-import { StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { StringDictionary } from 'azure-arm-website/lib/models';
 import * as azureStorage from "azure-storage";
 import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { MessageItem, Progress, ProgressLocation, window, workspace } from "vscode";
+import { Progress, ProgressLocation, window, workspace } from "vscode";
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azureextensionui';
-import { localSettingsFileName, ProjectLanguage } from '../constants';
+import { IAzureParentNode } from 'vscode-azureextensionui';
+import { ProjectLanguage } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { azureWebJobsStorageKey } from '../LocalAppSettings';
 import { localize } from '../localize';
-import { getFuncExtensionSetting } from '../ProjectSettings';
-import { updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
-import * as  azUtil from '../utils/azure';
 import * as fsUtil from '../utils/fs';
 /**
  * Method of deployment that is only intended to be used for Linux Consumption Function apps.
@@ -32,7 +26,7 @@ import * as fsUtil from '../utils/fs';
  * Then deploy via "zipdeploy" as usual.
  */
 
-export async function runFromPackageDeploy(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string, language: ProjectLanguage): Promise<void> {
+export async function runFromPackageDeploy(node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string, language: ProjectLanguage): Promise<void> {
     let createdZip: boolean = language === ProjectLanguage.Python ? true : false;
     let zipFilePath: string;
     await window.withProgress({ location: ProgressLocation.Notification, title: localize('deploying', 'Deploying to "{0}"...', node.treeItem.client.fullName) }, async (p: Progress<{}>) => {
@@ -47,7 +41,7 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
                 ext.outputChannel.appendLine(creatingZip);
                 ({ zipFilePath, createdZip } = await zipDirectory(fsPath, blobName));
             }
-            const blobService: azureStorage.BlobService = await createBlobService(actionContext, node, fsPath);
+            const blobService: azureStorage.BlobService = await createBlobService(node);
             const client: SiteClient = node.treeItem.client;
             const creatingBlob: string = localize('creatingBlob', 'Uploading zip package to storage container...');
             p.report({ message: creatingBlob });
@@ -74,55 +68,20 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
     return;
 }
 
-// tslint:disable-next-line:max-func-body-length
-async function createBlobService(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<azureStorage.BlobService> {
-    const settingKey: string = 'deployStorageAccountId';
-    let storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
+async function createBlobService(node: IAzureParentNode<FunctionAppTreeItem>): Promise<azureStorage.BlobService> {
     let name: string | undefined;
     let key: string | undefined;
-    if (!storageAccountId) {
-        const settings: StringDictionary = await node.treeItem.client.listApplicationSettings();
-        if (settings.properties && settings.properties[azureWebJobsStorageKey]) {
-            const accountName: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountName=(.*);/);
-            const accountKey: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountKey=(.*)/);
-            if (accountName && accountKey) {
-                name = accountName[1];
-                key = accountKey[1];
-                return azureStorage.createBlobService(name, key);
-            }
-        } else {
-            // prompt user for the first project deployment to get a storage account
-            const runFromZipDeployMessage: string = localize('azFunc.AzureDeployStorageWarning', 'An Azure Storage account is required to deploy to this Function App.', localSettingsFileName);
-            const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
-            await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
-            // if the user cancels, the operation will be cancelled completely
-            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
-                kind: [],
-                learnMoreLink: 'https://aka.ms/T5o0nf'
-            });
-            if (!sa.id) {
-                throw new ArgumentError(sa);
-            }
-            storageAccountId = sa.id;
-            await updateWorkspaceSetting(settingKey, storageAccountId, fsPath);
+    const settings: StringDictionary = await node.treeItem.client.listApplicationSettings();
+    if (settings.properties && settings.properties[azureWebJobsStorageKey]) {
+        const accountName: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountName=([^;]*);?/);
+        const accountKey: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountKey=([^;]*);?/);
+        if (accountName && accountKey) {
+            name = accountName[1];
+            key = accountKey[1];
+            return azureStorage.createBlobService(name, key);
         }
     }
-
-    const sClient: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
-    const rg: string = azUtil.getResourceGroupFromId(storageAccountId);
-    name = azUtil.getNameFromId(storageAccountId);
-    const result: StorageAccountListKeysResult = await sClient.storageAccounts.listKeys(rg, name);
-    if (!result.keys || result.keys.length === 0) {
-        throw new ArgumentError(result);
-    } else {
-        key = result.keys[0].value;
-    }
-
-    if (name !== undefined && key !== undefined) {
-        return azureStorage.createBlobService(name, key);
-    } else {
-        throw new ArgumentError(result);
-    }
+    throw new Error(localize('"{0}" app setting must be set to proceed with deploy.', azureWebJobsStorageKey));
 }
 
 async function createBlobFromZip(blobService: azureStorage.BlobService, zipFilePath: string, blobName: string): Promise<string> {
