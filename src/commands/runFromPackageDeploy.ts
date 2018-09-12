@@ -19,13 +19,13 @@ import { DialogResponses, IActionContext, IAzureParentNode } from 'vscode-azuree
 import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
+import { azureWebJobsStorageKey } from '../LocalAppSettings';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import * as  azUtil from '../utils/azure';
 import * as fsUtil from '../utils/fs';
-
 /**
  * Method of deployment that is only intended to be used for Linux Consumption Function apps.
  * To deploy with Run from Package on a Windows plan, create the app setting "WEBSITE_RUN_FROM_ZIP" and set it to "1".
@@ -74,27 +74,38 @@ export async function runFromPackageDeploy(actionContext: IActionContext, node: 
     return;
 }
 
-async function createBlobService(actionContext: IActionContext, node: IAzureParentNode, fsPath: string): Promise<azureStorage.BlobService> {
+// tslint:disable-next-line:max-func-body-length
+async function createBlobService(actionContext: IActionContext, node: IAzureParentNode<FunctionAppTreeItem>, fsPath: string): Promise<azureStorage.BlobService> {
     const settingKey: string = 'deployStorageAccountId';
     let storageAccountId: string | undefined = getFuncExtensionSetting<string>(settingKey, fsPath);
     let name: string | undefined;
     let key: string | undefined;
-
-    // prompt user for the first project deployment to get a storage account
     if (!storageAccountId) {
-        const runFromZipDeployMessage: string = localize('azFunc.AzureDeployStorageWarning', 'An Azure Storage account is required to deploy to this Function App.', localSettingsFileName);
-        const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
-        await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
-        // if the user cancels, the operation will be cancelled completely
-        const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
-            kind: [],
-            learnMoreLink: 'https://aka.ms/T5o0nf'
-        });
-        if (!sa.id) {
-            throw new ArgumentError(sa);
+        const settings: StringDictionary = await node.treeItem.client.listApplicationSettings();
+        if (settings.properties && settings.properties[azureWebJobsStorageKey]) {
+            const accountName: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountName=(.*);/);
+            const accountKey: RegExpMatchArray | null = settings.properties[azureWebJobsStorageKey].match(/AccountKey=(.*)/);
+            if (accountName && accountKey) {
+                name = accountName[1];
+                key = accountKey[1];
+                return azureStorage.createBlobService(name, key);
+            }
+        } else {
+            // prompt user for the first project deployment to get a storage account
+            const runFromZipDeployMessage: string = localize('azFunc.AzureDeployStorageWarning', 'An Azure Storage account is required to deploy to this Function App.', localSettingsFileName);
+            const selectStorageAccountButton: MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
+            await ext.ui.showWarningMessage(runFromZipDeployMessage, selectStorageAccountButton, DialogResponses.cancel);
+            // if the user cancels, the operation will be cancelled completely
+            const sa: azUtil.IResourceResult = await azUtil.promptForStorageAccount(actionContext, {
+                kind: [],
+                learnMoreLink: 'https://aka.ms/T5o0nf'
+            });
+            if (!sa.id) {
+                throw new ArgumentError(sa);
+            }
+            storageAccountId = sa.id;
+            await updateWorkspaceSetting(settingKey, storageAccountId, fsPath);
         }
-        storageAccountId = sa.id;
-        await updateWorkspaceSetting(settingKey, storageAccountId, fsPath);
     }
 
     const sClient: StorageClient = new StorageClient(node.credentials, node.subscriptionId);
