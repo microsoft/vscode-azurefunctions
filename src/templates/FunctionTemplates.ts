@@ -26,7 +26,7 @@ export class FunctionTemplates {
         this.copyCSharpSettingsFromJS();
     }
 
-    public async getTemplates(language: string, runtime: string = ProjectRuntime.v1, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
+    public async getTemplates(language: string, runtime: string, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
         const templates: IFunctionTemplate[] | undefined = this._templatesMap[runtime];
         if (!templates) {
             throw new Error(this._noInternetErrMsg);
