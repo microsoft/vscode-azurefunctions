@@ -9,7 +9,7 @@ import opn = require("opn");
 import * as path from 'path';
 import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
 import * as vscode from 'vscode';
-import { DialogResponses, IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
 import { ext } from './extensionVariables';
 import { localize } from "./localize";
@@ -52,12 +52,14 @@ export async function promptForProjectRuntime(message?: string): Promise<Project
         { label: localize('learnMore', 'Learn more...'), description: '', data: undefined }
     ];
 
-    const options: QuickPickOptions = { placeHolder: message || localize('selectRuntime', 'Select a runtime') };
+    const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectRuntime', 'Select a runtime'), suppressPersistence: true };
     let runtime: ProjectRuntime | undefined;
     do {
         runtime = (await ext.ui.showQuickPick(picks, options)).data;
         if (runtime === undefined) {
-            await opn('https://aka.ms/AA1tpij');
+            // don't wait to re-show dialog
+            // tslint:disable-next-line:no-floating-promises
+            opn('https://aka.ms/AA1tpij');
         }
     }
     while (runtime === undefined);
