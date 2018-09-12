@@ -96,8 +96,8 @@ async function getDefaultRuntime(actionContext: IActionContext): Promise<Project
     }
 
     if (!runtime) {
-        // Default to v1 if all else fails
-        runtime = ProjectRuntime.one;
+        // Default to v2 if all else fails
+        runtime = ProjectRuntime.v2;
         actionContext.properties.runtimeSource = 'Backup';
     }
 

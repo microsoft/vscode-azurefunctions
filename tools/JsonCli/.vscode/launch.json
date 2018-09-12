@@ -1,6 +1,6 @@
 {
-  "version": "0.2.0",
-   "configurations": [
+    "version": "0.2.0",
+    "configurations": [
         {
             "name": ".NET Core Launch (create template)",
             "type": "coreclr",
@@ -9,9 +9,9 @@
             "program": "${workspaceFolder}/src/bin/Debug/netcoreapp2.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
                 "--require",
-                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-beta.nupkg",
+                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-~2.nupkg",
                 "--require",
-                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-beta.nupkg",
+                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-~2.nupkg",
                 "--operation",
                 "create",
                 "--identity",
@@ -33,9 +33,9 @@
             "program": "${workspaceFolder}/src/bin/Debug/netcoreapp2.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
                 "--require",
-                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-beta.nupkg",
+                "${workspaceFolder}/../../resources/dotnetTemplates/projectTemplates-~2.nupkg",
                 "--require",
-                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-beta.nupkg",
+                "${workspaceFolder}/../../resources/dotnetTemplates/itemTemplates-~2.nupkg",
                 "--operation",
                 "list"
             ],

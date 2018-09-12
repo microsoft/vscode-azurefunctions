@@ -38,7 +38,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath);
         await validateVSCodeProjectFiles(projectPath);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
     });
 
     const javaScriptProjectWithExtensions: string = 'AutoDetectJavaScriptProjectWithExtensions';
@@ -50,7 +50,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath);
         await validateVSCodeProjectFiles(projectPath);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
     });
 
     const csharpProject: string = 'AutoDetectCSharpProject';
@@ -63,7 +63,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateVSCodeProjectFiles(projectPath, true);
         await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
         await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
@@ -78,7 +78,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateVSCodeProjectFiles(projectPath, true);
         await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
         await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
@@ -90,7 +90,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateVSCodeProjectFiles(projectPath, true);
         await validateExtensionRecommendation(projectPath, 'vscjava.vscode-java-debug');
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.Java);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
     });
 
     const multiLanguageProject: string = 'MultiLanguageProject';
@@ -105,7 +105,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
         await validateVSCodeProjectFiles(projectPath, false);
         await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.beta);
+        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
     });
 
     const goodExtensionFile: string = 'Existing Extensions File';

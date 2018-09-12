@@ -37,9 +37,9 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
 
         // tslint:disable-next-line:strict-boolean-expressions
-        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
-        const functionsVersion: string = this._runtime === ProjectRuntime.one ? 'v1' : 'v2';
+        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
+        const functionsVersion: string = this._runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
         await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
         if (!this._hasDetectedRuntime) {
@@ -127,7 +127,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this._runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
+                    type: this._runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
@@ -161,9 +161,9 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             const targetFramework: string = matches[1];
             this.telemetryProperties.cSharpTargetFramework = targetFramework;
             if (targetFramework.startsWith('netstandard')) {
-                this._runtime = ProjectRuntime.beta;
+                this._runtime = ProjectRuntime.v2;
             } else {
-                this._runtime = ProjectRuntime.one;
+                this._runtime = ProjectRuntime.v1;
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');

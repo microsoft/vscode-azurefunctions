@@ -145,7 +145,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', 'beta', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 

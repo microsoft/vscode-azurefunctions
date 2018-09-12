@@ -60,7 +60,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         // tslint:disable-next-line:no-unsafe-any
         const tasks: {}[] = [funcTask];
 
-        if (runtime !== ProjectRuntime.one) {
+        if (runtime !== ProjectRuntime.v1) {
             options = {};
             options.env = {};
             options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;

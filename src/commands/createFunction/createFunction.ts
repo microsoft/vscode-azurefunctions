@@ -194,7 +194,7 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
         if (isString(result)) {
             switch (result) {
                 case runtimePickId:
-                    runtime = await promptForProjectRuntime(ext.ui);
+                    runtime = await promptForProjectRuntime();
                     await updateWorkspaceSetting(projectRuntimeSetting, runtime, functionAppPath);
                     break;
                 case languagePickId:

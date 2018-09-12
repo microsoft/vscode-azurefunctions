@@ -546,9 +546,15 @@
                         "type": "string",
                         "enum": [
                             "~1",
+                            "~2",
                             "beta"
                         ],
-                        "description": "%azFunc.projectRuntimeDescription%"
+                        "description": "%azFunc.projectRuntimeDescription%",
+                        "enumDescriptions": [
+                            "%azFunc.projectRuntime.v1Description%",
+                            "%azFunc.projectRuntime.v2Description%",
+                            "%azFunc.projectRuntime.betaDescription%"
+                        ]
                     },
                     "azureFunctions.projectLanguage": {
                         "scope": "resource",
@@ -566,7 +572,20 @@
                             "Python",
                             "TypeScript"
                         ],
-                        "description": "%azFunc.projectLanguageDescription%"
+                        "description": "%azFunc.projectLanguageDescription%",
+                        "enumDescriptions": [
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "",
+                            "",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%"
+                        ]
                     },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",

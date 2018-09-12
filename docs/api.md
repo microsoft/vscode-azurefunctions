@@ -17,7 +17,7 @@ Commands:
 |---|---|---|
 |projectPath|string|Absolute file path that will contain your new project. If the path doesn't exist, it will be created.|
 |language|string|The currently supported languages are 'JavaScript', 'C#', and 'Java'.|
-|runtime|string|The currently supported runtimes are "~1" and "beta".|
+|runtime|string|The currently supported runtimes are "~1" and "~2".|
 |openFolder|boolean|(Defaulted to true) Represents whether or not to open the project folder after it has been created. If true, the extension host may be restarted when the folder is opened.|
 |templateId|string|The id of an optional template you want to create with the new project.|
 |functionName|string|The name of the optional function to be created with the new project.|
