@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem } from 'vscode';
+import { MessageItem, window } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
 import { funcPackId, gitignoreFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
@@ -116,7 +116,15 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await this.tryGetPythonAlias(PythonAlias.python, minReqVersion);
         await this.tryGetPythonAlias(PythonAlias.python3, minReqVersion);
         if (!this.pythonAlias) {
-            throw new Error(localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project with Azure Functions Core Tools.', minReqVersion));
+            const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
+            const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minReqVersion);
+            const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
+            if (!result) {
+                throw new UserCancelledError();
+            } else {
+                const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
+                this.pythonAlias = await ext.ui.showInputBox({ placeHolder });
+            }
         }
     }
 
