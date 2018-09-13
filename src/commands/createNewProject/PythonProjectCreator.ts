@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, installExtensionsId, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -61,7 +61,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
                     type: 'shell',
-                    dependsOn: 'build',
+                    dependsOn: installExtensionsId,
                     osx: {
                         command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
                     },
@@ -97,6 +97,23 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                         command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func pack`
                     },
                     isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    }
+                },
+                {
+                    label: installExtensionsId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
+                    identifier: installExtensionsId,
+                    osx: {
+                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func extensions install`
+                    },
+                    windows: {
+                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func extensions install`
+                    },
+                    linux: {
+                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func extensions install`
+                    },
+                    type: 'shell',
                     presentation: {
                         reveal: 'always'
                     }
