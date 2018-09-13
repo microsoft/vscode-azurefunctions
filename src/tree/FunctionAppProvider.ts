@@ -6,9 +6,9 @@
 import { WebSiteManagementClient } from 'azure-arm-website';
 import { Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { OutputChannel } from "vscode";
-import { createFunctionApp, SiteClient } from 'vscode-azureappservice';
+import { createFunctionApp, IAppCreateOptions, SiteClient } from 'vscode-azureappservice';
 import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
-import { ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getFuncExtensionSetting } from '../ProjectSettings';
@@ -78,8 +78,24 @@ export class FunctionAppProvider implements IChildProvider {
         const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
-        const appSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
-        const site: Site = await createFunctionApp(actionContext, parent, showCreatingNode, appSettings, resourceGroup);
+        const functionAppSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
+        const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
+        const createOptions: IAppCreateOptions = { functionAppSettings, resourceGroup };
+
+        if (language === ProjectLanguage.Python) {
+            createOptions.os = 'linux';
+            createOptions.runtime = 'python';
+        } else {
+            // If the language isn't set, just assume it's not Python. Python is still in preview and it's not worth an extra prompt yet
+
+            // Default to windows because linux is still in preview
+            createOptions.os = 'windows';
+            // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
+            // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+            functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
+        }
+
+        const site: Site = await createFunctionApp(actionContext, parent, createOptions, showCreatingNode);
         return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
     }
 }
