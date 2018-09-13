@@ -63,7 +63,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     label: localize('azFunc.runFuncHost', 'Run Functions Host'),
                     identifier: funcHostTaskId,
                     type: 'shell',
-                    dependsOn: 'build',
                     osx: {
                         command: `func extensions install && source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
                     },
