@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppServicePlan, SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
+import { SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
 import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
@@ -28,7 +28,6 @@ import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
-import { runFromPackageDeploy } from './runFromPackageDeploy';
 
 // tslint:disable-next-line:max-func-body-length
 export async function deploy(ui: IAzureUserInput, actionContext: IActionContext, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
@@ -73,12 +72,6 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
 
     const client: SiteClient = node.treeItem.client;
-    const asp: AppServicePlan = await client.getAppServicePlan();
-    let isLinuxConsumptionPlan: boolean = false;
-    // tslint:disable-next-line:strict-boolean-expressions
-    if (asp && asp.sku && asp.sku.tier) {
-        isLinuxConsumptionPlan = asp.sku.tier.toLowerCase() === 'dynamic' && client.kind.toLowerCase().includes('linux');
-    }
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
@@ -102,6 +95,11 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
 
     await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
 
+    if (language === ProjectLanguage.Python) {
+        // Python pre-deploy task creates a zip file to be deployed
+        deployFsPath = path.join(deployFsPath, `${path.basename(deployFsPath)}.zip`);
+    }
+
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
         async () => {
@@ -112,11 +110,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
                     outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                if (node && isLinuxConsumptionPlan) {
-                    await runFromPackageDeploy(node, deployFsPath, language);
-                } else {
-                    await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
-                }
+                await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
