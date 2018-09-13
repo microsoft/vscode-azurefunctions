@@ -65,13 +65,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     type: 'shell',
                     dependsOn: 'build',
                     osx: {
-                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                        command: `func extensions install && source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
                     },
                     windows: {
-                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func start host`
+                        command: `func extensions install | ${await this.getVenvActivatePath(Platform.Windows)} | func start host`
                     },
                     linux: {
-                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func start host`
+                        command: `func extensions install && source ${await this.getVenvActivatePath(Platform.Linux)} && func start host`
                     },
                     isBackground: true,
                     presentation: {
