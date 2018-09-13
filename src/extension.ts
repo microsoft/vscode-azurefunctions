@@ -36,6 +36,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
+import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { FunctionTemplates, getFunctionTemplates } from './templates/FunctionTemplates';
@@ -123,6 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.appSettings.delete', async (node?: IAzureNode<AppSettingTreeItem>) => await deleteNode(tree, AppSettingTreeItem.contextValue, node));
         registerCommand('azureFunctions.debugFunctionAppOnAzure', async (node?: IAzureNode<FunctionAppTreeItem>) => await remoteDebugFunctionApp(outputChannel, ui, tree, node));
         registerCommand('azureFunctions.deleteProxy', async (node?: IAzureNode) => await deleteNode(tree, ProxyTreeItem.contextValue, node));
+        registerCommand('azureFunctions.installOrUpdateFuncCoreTools', async () => await installOrUpdateFuncCoreTools());
         registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
 
         initPickFuncProcess();
