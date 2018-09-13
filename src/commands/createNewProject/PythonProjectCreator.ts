@@ -199,6 +199,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         if (!isWindows) {
             const localSettingsPath: string = path.join(this.functionAppPath, localSettingsFileName);
             const localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
+            // tslint:disable-next-line:strict-boolean-expressions
             localSettings.Values = localSettings.Values || {};
             localSettings.Values[azureWebJobsStorageKey] = '';
             await fsUtil.writeFormattedJson(localSettingsPath, localSettings);
