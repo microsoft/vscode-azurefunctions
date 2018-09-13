@@ -59,4 +59,6 @@ export async function downloadAppSettings(node?: IAzureNode): Promise<void> {
             }
         }
     });
+
+    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(localSettingsUri));
 }
