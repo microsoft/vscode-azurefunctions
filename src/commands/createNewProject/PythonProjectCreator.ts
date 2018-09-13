@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem } from 'vscode';
 import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, gitignoreFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../localize";
@@ -27,6 +28,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public preDeployTask: string = funcPackId;
     private pythonAlias: string;
     private funcEnv: string = 'func_env';
+    private installPtvsd: string = 'pip install ptvsd';
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
@@ -121,7 +123,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     private async tryGetPythonAlias(pyAlias: PythonAlias, minReqVersion: string): Promise<void> {
         try {
-            const pyVersion: string = (await cpUtils.executeCommand(ext.outputChannel, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
+            const pyVersion: string = (await cpUtils.executeCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
             if (semver.gte(pyVersion, minReqVersion)) {
                 this.pythonAlias = pyAlias;
             }
@@ -138,6 +140,11 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             }
         }
         await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', this.funcEnv);
+        if (process.platform === Platform.Windows) {
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${this.installPtvsd}`);
+        } else {
+            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${this.installPtvsd}`);
+        }
     }
 
     private async getVenvActivatePath(platform: Platform): Promise<string> {
@@ -160,6 +167,28 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             default:
                 await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
                 break;
+        }
+        // .gitignore is created by `func init`
+        const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
+        if (await fse.pathExists(gitignorePath)) {
+            const pythonPackages: string = '.python_packages';
+            let writeFile: boolean = false;
+            let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
+            // the func_env and ._python_packages are recreated and should not be checked in
+            if (!gitignoreContents.includes(this.funcEnv)) {
+                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${this.funcEnv}`);
+                writeFile = true;
+            }
+            if (!gitignoreContents.includes(pythonPackages)) {
+                ext.outputChannel.appendLine(localize('gitAddPythonPackages', 'Adding "{0}" to .gitignore...', pythonPackages));
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${pythonPackages}`);
+                writeFile = true;
+            }
+
+            if (writeFile) {
+                await fse.writeFile(gitignorePath, gitignoreContents);
+            }
         }
     }
 }
