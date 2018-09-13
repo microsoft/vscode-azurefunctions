@@ -58,6 +58,7 @@
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
         "onCommand:azureFunctions.uninstallFuncCoreTools",
+        "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
         "onView:azureFunctionsExplorer"
@@ -232,6 +233,11 @@
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
                 "title": "%azFunc.uninstallFuncCoreTools%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.installOrUpdateFuncCoreTools",
+                "title": "%azFunc.installOrUpdateFuncCoreTools%",
                 "category": "Azure Functions"
             }
         ],
