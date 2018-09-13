@@ -176,7 +176,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         // .gitignore is created by `func init`
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
-            const pythonPackages: string = 'python_packages';
+            const pythonPackages: string = '.python_packages';
             let writeFile: boolean = false;
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
             // the func_env and ._python_packages are recreated and should not be checked in
@@ -186,7 +186,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 writeFile = true;
             }
             if (!gitignoreContents.includes(pythonPackages)) {
-                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', pythonPackages));
+                ext.outputChannel.appendLine(localize('gitAddPythonPackages', 'Adding "{0}" to .gitignore...', pythonPackages));
                 gitignoreContents = gitignoreContents.concat(`${os.EOL}${pythonPackages}`);
                 writeFile = true;
             }
