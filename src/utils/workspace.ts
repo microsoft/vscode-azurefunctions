@@ -80,16 +80,21 @@ const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 /**
  * If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
  */
-export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext): Promise<void> {
+export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext, message?: string, allowSubFolder: boolean = false): Promise<void> {
     // tslint:disable-next-line:strict-boolean-expressions
     const openFolders: vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders || [];
     const folder: vscode.WorkspaceFolder | undefined = openFolders.find((f: vscode.WorkspaceFolder): boolean => {
-        return fsUtils.isPathEqual(f.uri.fsPath, fsPath);
+        return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || (allowSubFolder && fsUtils.isSubpath(f.uri.fsPath, fsPath));
     });
 
     if (folder) {
         actionContext.properties.openBehavior = 'AlreadyOpen';
     } else {
+        if (message) {
+            const open: vscode.MessageItem = { title: localize('open', 'Open Folder') };
+            await ext.ui.showWarningMessage(message, { modal: true }, open);
+        }
+
         actionContext.properties.openBehaviorFromSetting = 'false';
         const setting: string | undefined = getFuncExtensionSetting(projectOpenBehaviorSetting);
         let openBehavior: OpenBehavior | undefined;
@@ -140,6 +145,12 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
         } else {
             await vscode.commands.executeCommand('vscode.openFolder', uri, openBehavior === OpenBehavior.OpenInNewWindow /* forceNewWindow */);
+        }
+
+        if (message) {
+            // After we've opened the folder, throw the error message for the sake of telemetry
+            actionContext.suppressErrorDisplay = true;
+            throw new Error(message);
         }
     }
 }
