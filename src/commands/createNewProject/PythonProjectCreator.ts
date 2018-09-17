@@ -7,8 +7,8 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem } from 'vscode';
-import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
+import { MessageItem, window } from 'vscode';
+import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { funcPackId, gitignoreFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -22,6 +22,8 @@ export enum PythonAlias {
     python3 = 'python3',
     py = 'py'
 }
+
+const minPythonVersion: string = '3.6.0';
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
@@ -111,23 +113,25 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     private async validatePythonVersion(): Promise<void> {
-        const minReqVersion: string = '3.6.0';
-        await this.tryGetPythonAlias(PythonAlias.py, minReqVersion);
-        await this.tryGetPythonAlias(PythonAlias.python, minReqVersion);
-        await this.tryGetPythonAlias(PythonAlias.python3, minReqVersion);
-        if (!this.pythonAlias) {
-            throw new Error(localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project with Azure Functions Core Tools.', minReqVersion));
-        }
-    }
-
-    private async tryGetPythonAlias(pyAlias: PythonAlias, minReqVersion: string): Promise<void> {
-        try {
-            const pyVersion: string = (await cpUtils.executeCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`)).substring('Python '.length);
-            if (semver.gte(pyVersion, minReqVersion)) {
-                this.pythonAlias = pyAlias;
+        for (const key of Object.keys(PythonAlias)) {
+            const alias: PythonAlias = <PythonAlias>PythonAlias[key];
+            const errorMessage: string | undefined = await validatePythonAlias(alias);
+            if (!errorMessage) {
+                this.pythonAlias = alias;
+                break;
             }
-        } catch {
-            // ignore error, not installed under this alias
+        }
+
+        if (!this.pythonAlias) {
+            const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
+            const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minPythonVersion);
+            const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
+            if (!result) {
+                throw new UserCancelledError();
+            } else {
+                const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
+                this.pythonAlias = await ext.ui.showInputBox({ placeHolder, validateInput: validatePythonAlias });
+            }
         }
     }
 
@@ -189,5 +193,26 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 await fse.writeFile(gitignorePath, gitignoreContents);
             }
         }
+    }
+}
+
+/**
+ * Returns undefined if valid or an error message if not
+ */
+async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undefined> {
+    try {
+        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
+        if (result.code !== 0) {
+            return localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr);
+        }
+
+        const pyVersion: string | undefined = result.cmdOutputIncludingStderr.substring('Python '.length).trim();
+        if (semver.gte(pyVersion, minPythonVersion)) {
+            return undefined;
+        } else {
+            return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+        }
+    } catch (error) {
+        return parseError(error).message;
     }
 }
