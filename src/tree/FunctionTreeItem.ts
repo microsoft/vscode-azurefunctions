@@ -6,10 +6,8 @@
 import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
 import { OutputChannel } from 'vscode';
-import { getKuduClient, SiteClient } from 'vscode-azureappservice';
+import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
-import { FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -73,32 +71,41 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     }
 
     public async initializeTriggerUrl(): Promise<void> {
-        const kuduClient: KuduClient = await getKuduClient(this.client);
-        const functionSecrets: FunctionSecrets = await kuduClient.functionModel.getSecrets(this._name);
-        if (functionSecrets.triggerUrl === undefined) {
-            throw new ArgumentError(functionSecrets);
-        }
-
-        const triggerUrl: URL = new URL(functionSecrets.triggerUrl);
-        switch (this.config.authLevel) {
-            case HttpAuthLevel.admin:
-                const keyResult: MasterKey = await kuduClient.functionModel.getMasterKey();
-                if (keyResult.masterKey === undefined) {
-                    throw new ArgumentError(keyResult);
-                }
-                // tslint:disable-next-line:no-backbone-get-set-outside-model
-                triggerUrl.searchParams.set('code', keyResult.masterKey);
-                break;
-            case HttpAuthLevel.anonymous:
-                triggerUrl.search = '';
-                break;
-            case HttpAuthLevel.function:
-            default:
-                // Nothing to do here (the original trigger url already has a 'function' level key attached)
-                break;
+        const triggerUrl: URL = new URL(`${this.client.defaultHostUrl}/api/${this._name}`);
+        const key: string | undefined = await this.getKey();
+        if (key) {
+            // tslint:disable-next-line:no-backbone-get-set-outside-model
+            triggerUrl.searchParams.set('code', key);
         }
 
         this._triggerUrl = triggerUrl.toString();
+    }
+
+    public async getKey(): Promise<string | undefined> {
+        let urlPath: string;
+        switch (this.config.authLevel) {
+            case HttpAuthLevel.admin:
+                urlPath = '/host/systemkeys/_master';
+                break;
+            case HttpAuthLevel.function:
+                urlPath = `functions/${this._name}/keys/default`;
+                break;
+            case HttpAuthLevel.anonymous:
+            default:
+                return undefined;
+        }
+
+        const data: string = await functionsAdminRequest(this.client, urlPath);
+        try {
+            const result: string = JSON.parse(data).value;
+            if (result) {
+                return result;
+            }
+        } catch {
+            // ignore json parse error and throw better error below
+        }
+
+        throw new Error(localize('keyFail', 'Failed to get key for trigger "{0}".', this._name));
     }
 }
 
