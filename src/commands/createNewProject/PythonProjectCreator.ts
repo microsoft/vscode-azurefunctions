@@ -203,7 +203,7 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     try {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
         if (result.code !== 0) {
-            return localize('failValidate', 'Failed to validate version:{1}{2}', pyAlias, os.EOL, result.cmdOutputIncludingStderr);
+            return localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr);
         }
 
         const pyVersion: string | undefined = result.cmdOutputIncludingStderr.substring('Python '.length).trim();
