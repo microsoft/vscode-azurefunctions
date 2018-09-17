@@ -16,7 +16,8 @@ export enum ValueType {
 export enum ResourceType {
     DocumentDB = 'DocumentDB',
     Storage = 'Storage',
-    EventHub = 'EventHub'
+    EventHub = 'EventHub',
+    ServiceBus = 'ServiceBus'
 }
 
 export function getResourceTypeLabel(resourceType: ResourceType): string {
@@ -27,6 +28,8 @@ export function getResourceTypeLabel(resourceType: ResourceType): string {
             return localize('azFunc.Storage', 'Storage Account');
         case ResourceType.EventHub:
             return localize('azFunc.EventHub', 'Event Hub');
+        case ResourceType.ServiceBus:
+            return localize('azFunc.ServiceBus', 'Service Bus');
         default:
             return resourceType;
     }
