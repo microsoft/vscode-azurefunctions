@@ -197,6 +197,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         }
 
         if (!isWindows) {
+            // Make sure local settings isn't using Storage Emulator for non-windows
+            // https://github.com/Microsoft/vscode-azurefunctions/issues/583
             const localSettingsPath: string = path.join(this.functionAppPath, localSettingsFileName);
             const localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
             // tslint:disable-next-line:strict-boolean-expressions
