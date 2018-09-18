@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { getFile, IFileResult, putFile, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureParentTreeItem, IAzureTreeItem, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
@@ -23,11 +22,9 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
     private _deletingProxy: boolean = false;
 
     private readonly _client: SiteClient;
-    private readonly _outputChannel: vscode.OutputChannel;
 
-    public constructor(client: SiteClient, outputChannel: vscode.OutputChannel) {
+    public constructor(client: SiteClient) {
         this._client = client;
-        this._outputChannel = outputChannel;
     }
 
     public get id(): string {
@@ -73,12 +70,12 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         } else {
             this._deletingProxy = true;
             try {
-                this._outputChannel.show(true);
-                this._outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
+                ext.outputChannel.show(true);
+                ext.outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
                 this._etag = await putFile(this._client, data, this._proxiesJsonPath, this._etag);
-                this._outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
+                ext.outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;
             }

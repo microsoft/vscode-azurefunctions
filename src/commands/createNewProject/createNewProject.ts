@@ -10,7 +10,7 @@ import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../c
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
-import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
@@ -46,9 +46,13 @@ export async function createNewProject(
             const languagePicks: QuickPickItem[] = [
                 { label: ProjectLanguage.JavaScript, description: '' },
                 { label: ProjectLanguage.CSharp, description: '' },
-                { label: ProjectLanguage.Java, description: '' },
-                { label: ProjectLanguage.Python, description: '(Preview)' }
+                { label: ProjectLanguage.Java, description: '' }
             ];
+
+            if (getFuncExtensionSetting('enablePython')) {
+                languagePicks.push({ label: ProjectLanguage.Python, description: '(Preview)' });
+            }
+
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
             language = (await ext.ui.showQuickPick(languagePicks, options)).label;
         }

@@ -49,5 +49,6 @@
     "azFunc.projectRuntime.v1Description": "Azure Functions v1 (.NET Framework)",
     "azFunc.projectRuntime.v2Description": "Azure Functions v2 (.NET Standard)",
     "azFunc.projectRuntime.betaDescription": "DEPRECATED Use \"~2\" instead.",
-    "azFunc.projectLanguage.previewDescription": "(Preview)"
+    "azFunc.projectLanguage.previewDescription": "(Preview)",
+    "azFunc.enablePythonDescription": "Enable Python support when creating new projects. Local support is in preview and deploying to Azure is in private preview."
 }

@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient } from 'azure-arm-website';
-import { Site, WebAppCollection } from "azure-arm-website/lib/models";
-import { OutputChannel } from "vscode";
+import { AppServicePlan, Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { createFunctionApp, IAppCreateOptions, SiteClient } from 'vscode-azureappservice';
 import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
@@ -20,11 +19,6 @@ export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
 
     private _nextLink: string | undefined;
-    private readonly _outputChannel: OutputChannel;
-
-    public constructor(outputChannel: OutputChannel) {
-        this._outputChannel = outputChannel;
-    }
 
     public hasMoreChildren(): boolean {
         return this._nextLink !== undefined;
@@ -56,18 +50,20 @@ export class FunctionAppProvider implements IChildProvider {
         this._nextLink = webAppCollection.nextLink;
 
         const treeItems: IAzureTreeItem[] = [];
-        for (const site of webAppCollection) {
+        await Promise.all(webAppCollection.map(async (site: Site) => {
             try {
                 const siteClient: SiteClient = new SiteClient(site, node);
                 if (siteClient.isFunctionApp) {
-                    treeItems.push(new FunctionAppTreeItem(siteClient, this._outputChannel));
+                    const asp: AppServicePlan = await siteClient.getAppServicePlan();
+                    const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
+                    treeItems.push(new FunctionAppTreeItem(siteClient, isLinuxPreview));
                 }
             } catch (error) {
                 if (site.name) {
                     treeItems.push(new InvalidTreeItem(site.name, error, 'azFuncInvalidFunctionApp'));
                 }
             }
-        }
+        }));
         return treeItems;
     }
 
@@ -82,7 +78,8 @@ export class FunctionAppProvider implements IChildProvider {
         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
         const createOptions: IAppCreateOptions = { functionAppSettings, resourceGroup };
 
-        if (language === ProjectLanguage.Python) {
+        const isPython: boolean = language === ProjectLanguage.Python;
+        if (isPython) {
             // Python only works on Linux
             createOptions.os = 'linux';
             createOptions.runtime = 'python';
@@ -97,7 +94,7 @@ export class FunctionAppProvider implements IChildProvider {
         }
 
         const site: Site = await createFunctionApp(actionContext, parent, createOptions, showCreatingNode);
-        return new FunctionAppTreeItem(new SiteClient(site, parent), this._outputChannel);
+        return new FunctionAppTreeItem(new SiteClient(site, parent), isPython);
     }
 }
 

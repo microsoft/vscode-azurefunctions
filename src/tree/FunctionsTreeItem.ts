@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope, FunctionEnvelopeCollection } from 'azure-arm-website/lib/models';
-import { OutputChannel } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
@@ -19,12 +18,10 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     public readonly childTypeLabel: string = localize('azFunc.Function', 'Function');
 
     private readonly _client: SiteClient;
-    private readonly _outputChannel: OutputChannel;
     private _nextLink: string | undefined;
 
-    public constructor(client: SiteClient, outputChannel: OutputChannel) {
+    public constructor(client: SiteClient) {
         this._client = client;
-        this._outputChannel = outputChannel;
     }
 
     public get id(): string {
@@ -50,7 +47,7 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
         const treeItems: IAzureTreeItem[] = [];
         await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
             try {
-                const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe, this._outputChannel);
+                const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe);
                 if (treeItem.config.isHttpTrigger) {
                     // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
                     // (Otherwise there might be a second or two delay which could lead to confusion)

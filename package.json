@@ -649,6 +649,11 @@
                     "azureFunctions.preDeployTask": {
                         "type": "string",
                         "description": "%azFunc.preDeployTaskDescription%"
+                    },
+                    "azureFunctions.enablePython": {
+                        "type": "boolean",
+                        "description": "%azFunc.enablePythonDescription%",
+                        "default": false
                     }
                 }
             }
