@@ -697,7 +697,7 @@
         "portfinder": "^1.0.13",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.21.3",
+        "vscode-azureappservice": "^0.22.0",
         "vscode-azureextensionui": "^0.17.4",
         "vscode-azurekudu": "^0.1.8",
         "vscode-extension-telemetry": "^0.0.18",
