@@ -16,6 +16,7 @@ import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
+import { getNpmDistTag } from "./getNpmDistTag";
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
@@ -80,16 +81,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
                 return matches[1];
             }
         } else {
-            const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
-            type distTags = { core: string, docker: string, latest: string };
-            const distTags: distTags = <distTags>JSON.parse(await <Thenable<string>>request(npmRegistryUri));
-            switch (projectRuntime) {
-                case ProjectRuntime.v1:
-                    return distTags.latest;
-                case ProjectRuntime.v2:
-                    return distTags.core;
-                default:
-            }
+            return (await getNpmDistTag(projectRuntime)).value;
         }
     } catch (error) {
         actionContext.properties.latestRuntimeError = parseError(error).message;

@@ -8,6 +8,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { promptForProjectRuntime } from "../ProjectSettings";
 import { cpUtils } from '../utils/cpUtils';
+import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
 export async function installFuncCoreTools(packageManager: PackageManager): Promise<void> {
     let runtime: ProjectRuntime;
@@ -20,16 +21,8 @@ export async function installFuncCoreTools(packageManager: PackageManager): Prom
     ext.outputChannel.show();
     switch (packageManager) {
         case PackageManager.npm:
-            switch (runtime) {
-                case ProjectRuntime.v1:
-                    await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', funcPackageName);
-                    break;
-                case ProjectRuntime.v2:
-                    await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@core`, '--unsafe-perm', 'true');
-                    break;
-                default:
-                    throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
-            }
+            const distTag: INpmDistTag = await getNpmDistTag(runtime);
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
             break;
         case PackageManager.brew:
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'tap', 'azure/functions');
