@@ -623,6 +623,11 @@
                         "description": "%azFunc.showDebugConfigWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showPythonVenvWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showPythonVenvWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",

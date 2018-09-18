@@ -19,6 +19,7 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 import { funcHostTaskId } from './IProjectCreator';
 import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
+import { createVirtualEnviornment, funcEnvName, runPythonCommandInVenv } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -32,6 +33,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                     actionContext.properties.isInitialized = 'true';
                     actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
                     await verifyDebugConfigIsValid(folderPath, actionContext);
+                    await verifyPythonVenv(folderPath);
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
@@ -143,4 +145,33 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
     }
 
     return false;
+}
+
+async function verifyPythonVenv(folderPath: string): Promise<void> {
+    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+    if (language === ProjectLanguage.Python) {
+        if (!await fse.pathExists(path.join(folderPath, funcEnvName))) {
+            const settingKey: string = 'showPythonVenvWarning';
+            if (getFuncExtensionSetting<boolean>(settingKey)) {
+                const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
+                const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment, which is required to debug and deploy your Azure Functions project.');
+                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
+                if (result === createVenv) {
+                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
+                        // create venv
+                        await createVirtualEnviornment(folderPath);
+                        // install venv requirements
+                        const requirementsFileName: string = 'requirements.txt';
+                        if (await fse.pathExists(path.join(folderPath, requirementsFileName))) {
+                            await runPythonCommandInVenv(folderPath, `pip install -r ${requirementsFileName}`);
+                        }
+                    });
+                    // don't wait
+                    vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
+                } else if (result === DialogResponses.dontWarnAgain) {
+                    await updateGlobalSetting(settingKey, false);
+                }
+            }
+        }
+    }
 }
