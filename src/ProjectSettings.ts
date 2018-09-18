@@ -87,7 +87,6 @@ export function getGlobalFuncExtensionSetting<T>(key: string): T | undefined {
 
 export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, fsPath ? vscode.Uri.file(fsPath) : undefined);
-    // tslint:disable-next-line:no-backbone-get-set-outside-model
     return projectConfiguration.get<T>(key);
 }
 

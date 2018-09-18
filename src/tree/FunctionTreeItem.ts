@@ -74,7 +74,6 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
         const triggerUrl: URL = new URL(`${this.client.defaultHostUrl}/api/${this._name}`);
         const key: string | undefined = await this.getKey();
         if (key) {
-            // tslint:disable-next-line:no-backbone-get-set-outside-model
             triggerUrl.searchParams.set('code', key);
         }
 
