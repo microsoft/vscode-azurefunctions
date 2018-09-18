@@ -9,11 +9,13 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem, window } from 'vscode';
 import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, gitignoreFileName, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
+import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
+import * as fsUtil from '../../utils/fs';
 import { funcHostTaskId, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -192,6 +194,17 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             if (writeFile) {
                 await fse.writeFile(gitignorePath, gitignoreContents);
             }
+        }
+
+        if (!isWindows) {
+            // Make sure local settings isn't using Storage Emulator for non-windows
+            // https://github.com/Microsoft/vscode-azurefunctions/issues/583
+            const localSettingsPath: string = path.join(this.functionAppPath, localSettingsFileName);
+            const localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
+            // tslint:disable-next-line:strict-boolean-expressions
+            localSettings.Values = localSettings.Values || {};
+            localSettings.Values[azureWebJobsStorageKey] = '';
+            await fsUtil.writeFormattedJson(localSettingsPath, localSettings);
         }
     }
 }
