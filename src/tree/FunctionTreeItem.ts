@@ -97,6 +97,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
 
         const data: string = await functionsAdminRequest(this.client, urlPath);
         try {
+            // tslint:disable-next-line:no-unsafe-any
             const result: string = JSON.parse(data).value;
             if (result) {
                 return result;
