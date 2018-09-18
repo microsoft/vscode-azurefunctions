@@ -58,6 +58,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             if (input === DialogResponses.yes) {
                 await createVirtualEnviornment(this.functionAppPath);
             }
+        } else {
+            await createVirtualEnviornment(this.functionAppPath);
         }
         await this.createPythonProject();
     }
