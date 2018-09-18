@@ -83,12 +83,13 @@ export class FunctionAppProvider implements IChildProvider {
         const createOptions: IAppCreateOptions = { functionAppSettings, resourceGroup };
 
         if (language === ProjectLanguage.Python) {
+            // Python only works on Linux
             createOptions.os = 'linux';
             createOptions.runtime = 'python';
         } else {
             // If the language isn't set, just assume it's not Python. Python is still in preview and it's not worth an extra prompt yet
 
-            // Default to windows because linux is still in preview
+            // Use windows because linux is still in preview
             createOptions.os = 'windows';
             // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
             // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
