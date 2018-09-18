@@ -7,9 +7,8 @@ import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureex
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export class InvalidFunctionAppTreeItem implements IAzureParentTreeItem {
-    public static contextValue: string = 'azFuncInvalidFunctionApp';
-    public readonly contextValue: string = InvalidFunctionAppTreeItem.contextValue;
+export class InvalidTreeItem implements IAzureParentTreeItem {
+    public readonly contextValue: string;
     public readonly label: string;
     public readonly description: string = localize('invalid', 'Invalid');
 
@@ -17,13 +16,14 @@ export class InvalidFunctionAppTreeItem implements IAzureParentTreeItem {
     private _error: any;
 
     // tslint:disable-next-line:no-any
-    constructor(label: string, error: any) {
+    constructor(label: string, error: any, contextValue: string) {
         this.label = label;
         this._error = error;
+        this.contextValue = contextValue;
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(InvalidFunctionAppTreeItem.contextValue);
+        return nodeUtils.getIconPath(this.contextValue);
     }
 
     public async loadMoreChildren(_node: IAzureNode<IAzureTreeItem>, _clearCache: boolean): Promise<IAzureTreeItem[]> {

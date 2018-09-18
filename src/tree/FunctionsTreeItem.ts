@@ -9,7 +9,8 @@ import { SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
-import { FunctionTreeItem } from './FunctionTreeItem';
+import { FunctionTreeItem, getFunctionNameFromId } from './FunctionTreeItem';
+import { InvalidTreeItem } from './InvalidTreeItem';
 
 export class FunctionsTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctions';
@@ -45,14 +46,24 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
 
         const funcs: FunctionEnvelopeCollection = this._nextLink ? await this._client.listFunctionsNext(this._nextLink) : await this._client.listFunctions();
         this._nextLink = funcs.nextLink;
-        return await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
-            const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe, this._outputChannel);
-            if (treeItem.config.isHttpTrigger) {
-                // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
-                // (Otherwise there might be a second or two delay which could lead to confusion)
-                await treeItem.initializeTriggerUrl();
+
+        const treeItems: IAzureTreeItem[] = [];
+        await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
+            try {
+                const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe, this._outputChannel);
+                if (treeItem.config.isHttpTrigger) {
+                    // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
+                    // (Otherwise there might be a second or two delay which could lead to confusion)
+                    await treeItem.initializeTriggerUrl();
+                }
+                treeItems.push(treeItem);
+            } catch (error) {
+                if (fe.id) {
+                    treeItems.push(new InvalidTreeItem(getFunctionNameFromId(fe.id), error, 'azFuncInvalidFunction'));
+                }
             }
-            return treeItem;
         }));
+
+        return treeItems;
     }
 }

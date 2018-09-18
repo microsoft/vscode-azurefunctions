@@ -109,7 +109,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     }
 }
 
-function getFunctionNameFromId(id: string): string {
+export function getFunctionNameFromId(id: string): string {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(?:[^\/]+)\/resourceGroups\/(?:[^\/]+)\/providers\/Microsoft.Web\/sites\/(?:[^\/]+)\/functions\/([^\/]+)/);
 
     if (matches === null || matches.length < 2) {
