@@ -32,8 +32,11 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                 if (isInitializedProject(folderPath)) {
                     actionContext.properties.isInitialized = 'true';
                     actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
-                    await verifyDebugConfigIsValid(folderPath, actionContext);
-                    await verifyPythonVenv(folderPath);
+
+                    const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+                    actionContext.properties.projectLanguage = String(projectLanguage);
+                    await verifyDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                    await verifyPythonVenv(projectLanguage, folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
@@ -87,9 +90,8 @@ function isInitializedProject(folderPath: string): boolean {
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30. This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-async function verifyDebugConfigIsValid(folderPath: string, actionContext: IActionContext): Promise<void> {
-    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
-    if (language === ProjectLanguage.JavaScript) {
+async function verifyDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    if (projectLanguage === ProjectLanguage.JavaScript) {
         const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
         if (localProjectRuntime === ProjectRuntime.v2) {
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
@@ -147,10 +149,11 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
     return false;
 }
 
-async function verifyPythonVenv(folderPath: string): Promise<void> {
-    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
-    if (language === ProjectLanguage.Python) {
+async function verifyPythonVenv(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    if (projectLanguage === ProjectLanguage.Python) {
         if (!await fse.pathExists(path.join(folderPath, funcEnvName))) {
+            actionContext.properties.pythonVenvExists = 'false';
+
             const settingKey: string = 'showPythonVenvWarning';
             if (getFuncExtensionSetting<boolean>(settingKey)) {
                 const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
