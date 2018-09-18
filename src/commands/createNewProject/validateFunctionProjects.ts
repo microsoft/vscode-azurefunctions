@@ -35,7 +35,11 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
-                        await initProjectForVSCode(actionContext, ui, outputChannel, folderPath);
+                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creating', 'Initializing project...') }, async () => {
+                            await initProjectForVSCode(actionContext, ui, outputChannel, folderPath);
+                        });
+                        // don't wait
+                        vscode.window.showInformationMessage(localize('finishedInit', 'Finished initializing project.'));
                     }
                 }
             }

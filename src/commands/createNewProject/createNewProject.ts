@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { QuickPickItem, QuickPickOptions } from 'vscode';
+import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -55,20 +55,31 @@ export async function createNewProject(
     }
     actionContext.properties.projectLanguage = language;
 
-    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
-    await projectCreator.addNonVSCodeFiles();
+    await window.withProgress({ location: ProgressLocation.Notification, title: localize('creating', 'Creating new project...') }, async () => {
+        // tslint:disable-next-line:no-non-null-assertion
+        functionAppPath = functionAppPath!;
+        // tslint:disable-next-line:no-non-null-assertion
+        language = language!;
 
-    await initProjectForVSCode(actionContext, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
+        const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
+        await projectCreator.addNonVSCodeFiles();
 
-    if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
-        await gitUtils.gitInit(ext.outputChannel, functionAppPath);
-    }
+        await initProjectForVSCode(actionContext, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
-    if (templateId) {
-        await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
-    }
+        if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
+            await gitUtils.gitInit(ext.outputChannel, functionAppPath);
+        }
 
-    await validateFuncCoreToolsInstalled();
+        if (templateId) {
+            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
+        }
+    });
+    // don't wait
+    window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
+
+    // don't wait
+    // tslint:disable-next-line:no-floating-promises
+    validateFuncCoreToolsInstalled();
 
     if (openFolder) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);

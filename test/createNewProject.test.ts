@@ -13,7 +13,6 @@ import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureexte
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
-import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
 import * as fsUtil from '../src/utils/fs';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
@@ -150,11 +149,6 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     });
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
-        // Setup common inputs
-        if (!(await funcToolsInstalled())) {
-            inputs.push(DialogResponses.skipForNow.title);
-        }
-
         if (!previewLanguage) {
             inputs.unshift(language); // Specify the function name
         }

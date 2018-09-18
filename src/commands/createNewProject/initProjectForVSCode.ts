@@ -30,7 +30,6 @@ export async function initProjectForVSCode(actionContext: IActionContext, ui: IA
     }
     telemetryProperties.projectLanguage = language;
 
-    outputChannel.show();
     outputChannel.appendLine(localize('usingLanguage', 'Using "{0}" as the project language...', language));
 
     if (!projectCreator) {
