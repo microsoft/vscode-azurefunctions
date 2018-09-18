@@ -15,8 +15,7 @@ import { funcToolsInstalled } from './validateFuncCoreToolsInstalled';
 export async function installOrUpdateFuncCoreTools(): Promise<void> {
     const isFuncInstalled: boolean = await funcToolsInstalled();
     const packageManager: PackageManager | undefined = await getFuncPackageManager(isFuncInstalled);
-    // tslint:disable-next-line:strict-boolean-expressions
-    if (!packageManager) {
+    if (packageManager === undefined) {
         throw new Error(localize('installNotSupported', 'Install or update is only supported for brew or npm.'));
     }
 
