@@ -169,6 +169,8 @@ async function verifyPythonVenv(projectLanguage: string | undefined, folderPath:
                             await runPythonCommandInVenv(folderPath, `pip install -r ${requirementsFileName}`);
                         }
                     });
+
+                    actionContext.properties.createdPythonVenv = 'true';
                     // don't wait
                     vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
                 } else if (result === DialogResponses.dontWarnAgain) {

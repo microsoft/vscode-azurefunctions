@@ -53,14 +53,19 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
             throw new UserCancelledError();
         }
+
+        let createVenv: boolean = false;
         if (await fse.pathExists(path.join(this.functionAppPath, funcEnvName))) {
-            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python Virtual Environment already exists.  Overwrite?', funcEnvName), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
-            if (input === DialogResponses.yes) {
-                await createVirtualEnviornment(this.functionAppPath);
-            }
+            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python virtual environment "{0}" already exists. Overwrite?', funcEnvName), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+            createVenv = input === DialogResponses.yes;
         } else {
+            createVenv = true;
+        }
+
+        if (createVenv) {
             await createVirtualEnviornment(this.functionAppPath);
         }
+
         await this.createPythonProject();
     }
 
