@@ -14,7 +14,7 @@ import { localize } from "../localize";
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
-import { InvalidFunctionAppTreeItem } from './InvalidFunctionAppTreeItem';
+import { InvalidTreeItem } from './InvalidTreeItem';
 
 export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
@@ -64,7 +64,7 @@ export class FunctionAppProvider implements IChildProvider {
                 }
             } catch (error) {
                 if (site.name) {
-                    treeItems.push(new InvalidFunctionAppTreeItem(site.name, error));
+                    treeItems.push(new InvalidTreeItem(site.name, error, 'azFuncInvalidFunctionApp'));
                 }
             }
         }

@@ -145,8 +145,8 @@ async function listHttpTriggerUrls(node: IAzureParentNode): Promise<void> {
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
     await node.treeDataProvider.refresh(functionsNode);
-    const functions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>await functionsNode.getCachedChildren();
-    const anonFunctions: IAzureNode<FunctionTreeItem>[] = functions.filter((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
+    const functions: IAzureNode[] = await functionsNode.getCachedChildren();
+    const anonFunctions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>functions.filter((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
         ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
         for (const func of anonFunctions) {
@@ -154,7 +154,7 @@ async function listHttpTriggerUrls(node: IAzureParentNode): Promise<void> {
         }
     }
 
-    if (functions.find((f: IAzureNode<FunctionTreeItem>) => f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
+    if (functions.find((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
         ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
     }
 }
