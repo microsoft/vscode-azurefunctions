@@ -78,15 +78,14 @@ export class FunctionAppProvider implements IChildProvider {
         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
         const createOptions: IAppCreateOptions = { functionAppSettings, resourceGroup };
 
-        const isPython: boolean = language === ProjectLanguage.Python;
-        if (isPython) {
-            // Python only works on Linux
+        // There are two things in preview right now:
+        // 1. Python support
+        // 2. Linux support
+        // Python only works on Linux, so we have to use Linux when creating a function app. For other languages, we will stick with Windows until Linux GA's
+        if (language === ProjectLanguage.Python) {
             createOptions.os = 'linux';
             createOptions.runtime = 'python';
         } else {
-            // If the language isn't set, just assume it's not Python. Python is still in preview and it's not worth an extra prompt yet
-
-            // Use windows because linux is still in preview
             createOptions.os = 'windows';
             // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
             // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
@@ -94,7 +93,7 @@ export class FunctionAppProvider implements IChildProvider {
         }
 
         const site: Site = await createFunctionApp(actionContext, parent, createOptions, showCreatingNode);
-        return new FunctionAppTreeItem(new SiteClient(site, parent), isPython);
+        return new FunctionAppTreeItem(new SiteClient(site, parent), createOptions.os === 'linux' /* isLinuxPreview */);
     }
 }
 
