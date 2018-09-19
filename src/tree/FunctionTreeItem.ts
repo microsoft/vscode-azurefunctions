@@ -5,7 +5,6 @@
 
 import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
-import { OutputChannel } from 'vscode';
 import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
@@ -22,17 +21,15 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public readonly client: SiteClient;
 
     private readonly _name: string;
-    private readonly _outputChannel: OutputChannel;
     private _triggerUrl: string;
 
-    public constructor(client: SiteClient, func: FunctionEnvelope, outputChannel: OutputChannel) {
+    public constructor(client: SiteClient, func: FunctionEnvelope) {
         if (!func.id) {
             throw new ArgumentError(func);
         }
 
         this.client = client;
         this._name = getFunctionNameFromId(func.id);
-        this._outputChannel = outputChannel;
 
         this.config = new FunctionConfig(func.config);
     }
@@ -64,10 +61,10 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
-        this._outputChannel.show(true);
-        this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
+        ext.outputChannel.show(true);
+        ext.outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
         await this.client.deleteFunction(this._name);
-        this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
+        ext.outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
     }
 
     public async initializeTriggerUrl(): Promise<void> {

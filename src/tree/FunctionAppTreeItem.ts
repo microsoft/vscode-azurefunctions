@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OutputChannel } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, SiteClient } from 'vscode-azureappservice';
 import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
+import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
@@ -23,15 +23,15 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
-    private readonly _outputChannel: OutputChannel;
+    private readonly _isLinuxPreview: boolean;
 
-    public constructor(client: SiteClient, outputChannel: OutputChannel) {
+    public constructor(client: SiteClient, isLinuxPreview: boolean) {
         this.client = client;
         this._state = client.initialState;
-        this._outputChannel = outputChannel;
-        this._functionsTreeItem = new FunctionsTreeItem(client, this._outputChannel);
+        this._functionsTreeItem = new FunctionsTreeItem(client);
         this._appSettingsTreeItem = new AppSettingsTreeItem(client);
-        this._proxiesTreeItem = new ProxiesTreeItem(client, this._outputChannel);
+        this._proxiesTreeItem = new ProxiesTreeItem(client);
+        this._isLinuxPreview = isLinuxPreview;
     }
 
     public get logStreamLabel(): string {
@@ -47,7 +47,13 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     }
 
     public get description(): string | undefined {
-        return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
+        const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
+        const previewDescription: string | undefined = this._isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
+        if (stateDescription && previewDescription) {
+            return `${previewDescription} - ${stateDescription}`;
+        } else {
+            return stateDescription || previewDescription;
+        }
     }
 
     public get iconPath(): string {
