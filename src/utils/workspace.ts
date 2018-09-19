@@ -92,6 +92,7 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
     } else {
         if (message) {
             const open: vscode.MessageItem = { title: localize('open', 'Open Folder') };
+            // No need to check result. Open/Cancel are the only possibilities and Cancel will throw a UserCancelledError
             await ext.ui.showWarningMessage(message, { modal: true }, open);
         }
 
