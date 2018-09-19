@@ -6,14 +6,13 @@
 import { WebSiteManagementClient } from 'azure-arm-website';
 import { AppServicePlan, Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { createFunctionApp, IAppCreateOptions, SiteClient } from 'vscode-azureappservice';
-import { addExtensionUserAgent, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, createTreeItemsWithErrorHandling, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
-import { InvalidTreeItem } from './InvalidTreeItem';
 
 export class FunctionAppProvider implements IChildProvider {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
@@ -49,22 +48,22 @@ export class FunctionAppProvider implements IChildProvider {
 
         this._nextLink = webAppCollection.nextLink;
 
-        const treeItems: IAzureTreeItem[] = [];
-        await Promise.all(webAppCollection.map(async (site: Site) => {
-            try {
+        return await createTreeItemsWithErrorHandling(
+            webAppCollection,
+            'azFuncInvalidFunctionApp',
+            async (site: Site) => {
                 const siteClient: SiteClient = new SiteClient(site, node);
                 if (siteClient.isFunctionApp) {
                     const asp: AppServicePlan = await siteClient.getAppServicePlan();
                     const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
-                    treeItems.push(new FunctionAppTreeItem(siteClient, isLinuxPreview));
+                    return new FunctionAppTreeItem(siteClient, isLinuxPreview);
                 }
-            } catch (error) {
-                if (site.name) {
-                    treeItems.push(new InvalidTreeItem(site.name, error, 'azFuncInvalidFunctionApp'));
-                }
+                return undefined;
+            },
+            (site: Site) => {
+                return site.name;
             }
-        }));
-        return treeItems;
+        );
     }
 
     public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, userOptions?: { actionContext: IActionContext, resourceGroup?: string }): Promise<IAzureTreeItem> {
