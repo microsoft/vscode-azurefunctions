@@ -4,6 +4,19 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.11.0 - 2018-09-24
+
+### Added
+- Preview support for creating and debugging Python projects. To enable, set `azureFunctions.enablePython` to true. **IMPORTANT**: Python support in Azure is still in private preview.
+- Added several more templates to the "verified" category, including Cosmos DB and Service Bus.
+
+### Changed
+- Newly created function apps will default to "Run From Package". See [here](https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package) for more info.
+- Deprecated projectRuntime of "beta" in favor of "~2".
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.11.0%22+label%3Abug+is%3Aclosed)
+- "Copy Function Url" for v2 non-anonymous functions will copy an invalid url [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
+
 ## 0.10.2 - 2018-09-10
 
 ### Fixed

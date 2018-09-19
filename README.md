@@ -19,6 +19,7 @@ Install the prerequisites for your desired language:
 * [JavaScript](#javascript)
 * [C#](#c)
 * [Java](#java)
+* [Python (Preview)](#python)
 
 > **NOTE**: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
 
@@ -53,7 +54,7 @@ Install the prerequisites for your desired language:
 
 ### Windows
 
-Both v1 and v2 of the runtime can be installed on Windows. v2 is cross platform, but is still in preview and not recommended for production use. v1 is Windows-only, but is approved for production use.
+Both v1 and v2 of the runtime can be installed on Windows. [See here](https://docs.microsoft.com/azure/azure-functions/functions-versions) for more information on each version.
 
 To install v1:
 
@@ -64,7 +65,21 @@ npm i -g azure-functions-core-tools
 To install v2:
 
 ```bash
-npm i -g azure-functions-core-tools@core --unsafe-perm true
+npm i -g azure-functions-core-tools@core
+```
+
+**IMPORTANT**: v2 is becoming generally available (GA) soon (as of 9/19/2018). After GA, the commands will change to the following:
+
+To install v1:
+
+```bash
+npm i -g azure-functions-core-tools@v1
+```
+
+To install v2:
+
+```bash
+npm i -g azure-functions-core-tools
 ```
 
 ### Mac
@@ -125,6 +140,11 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 * [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 * [Maven 3.0+](https://maven.apache.org/)
   > **NOTE**: Once Maven is downloaded, you must ensure that Maven is in your PATH environment variable. You can check this by running: `mvn -v`.
+
+### Python
+
+* [Python 3.6.x](https://www.python.org/downloads/)
+* To enable project creation and debugging, set `azureFunctions.enablePython` to true. **IMPORTANT**: Python support in Azure is still in private preview.
 
 ## Managing Azure Subscriptions
 
