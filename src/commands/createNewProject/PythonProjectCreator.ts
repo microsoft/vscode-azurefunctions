@@ -19,6 +19,8 @@ import * as fsUtil from '../../utils/fs';
 import { funcHostTaskId, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
+export const funcEnvName: string = 'func_env';
+
 export enum PythonAlias {
     python = 'python',
     python3 = 'python3',
@@ -30,9 +32,6 @@ const minPythonVersion: string = '3.6.0';
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     public preDeployTask: string = funcPackId;
-    private pythonAlias: string;
-    private funcEnv: string = 'func_env';
-    private installPtvsd: string = 'pip install ptvsd';
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
@@ -54,8 +53,19 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
             throw new UserCancelledError();
         }
-        await this.validatePythonVersion();
-        await this.createVirtualEnviornment();
+
+        let createVenv: boolean = false;
+        if (await fse.pathExists(path.join(this.functionAppPath, funcEnvName))) {
+            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python virtual environment "{0}" already exists. Overwrite?', funcEnvName), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+            createVenv = input === DialogResponses.yes;
+        } else {
+            createVenv = true;
+        }
+
+        if (createVenv) {
+            await createVirtualEnviornment(this.functionAppPath);
+        }
+
         await this.createPythonProject();
     }
 
@@ -68,13 +78,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     osx: {
-                        command: `func extensions install && source ${await this.getVenvActivatePath(Platform.MacOS)} && func start host`
+                        command: `func extensions install && source ${await getVenvActivatePath(Platform.MacOS)} && func start host`
                     },
                     windows: {
-                        command: `func extensions install | ${await this.getVenvActivatePath(Platform.Windows)} | func start host`
+                        command: `func extensions install | ${await getVenvActivatePath(Platform.Windows)} | func start host`
                     },
                     linux: {
-                        command: `func extensions install && source ${await this.getVenvActivatePath(Platform.Linux)} && func start host`
+                        command: `func extensions install && source ${await getVenvActivatePath(Platform.Linux)} && func start host`
                     },
                     isBackground: true,
                     presentation: {
@@ -93,13 +103,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
-                        command: `source ${await this.getVenvActivatePath(Platform.MacOS)} && func pack`
+                        command: `source ${await getVenvActivatePath(Platform.MacOS)} && func pack`
                     },
                     windows: {
-                        command: `${await this.getVenvActivatePath(Platform.Windows)} | func pack`
+                        command: `${await getVenvActivatePath(Platform.Windows)} | func pack`
                     },
                     linux: {
-                        command: `source ${await this.getVenvActivatePath(Platform.Linux)} && func pack`
+                        command: `source ${await getVenvActivatePath(Platform.Linux)} && func pack`
                     },
                     isBackground: true,
                     presentation: {
@@ -114,63 +124,15 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         return super.getRecommendedExtensions().concat(['ms-python.python']);
     }
 
-    private async validatePythonVersion(): Promise<void> {
-        for (const key of Object.keys(PythonAlias)) {
-            const alias: PythonAlias = <PythonAlias>PythonAlias[key];
-            const errorMessage: string | undefined = await validatePythonAlias(alias);
-            if (!errorMessage) {
-                this.pythonAlias = alias;
-                break;
-            }
-        }
-
-        if (!this.pythonAlias) {
-            const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
-            const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minPythonVersion);
-            const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
-            if (!result) {
-                throw new UserCancelledError();
-            } else {
-                const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
-                this.pythonAlias = await ext.ui.showInputBox({ placeHolder, validateInput: validatePythonAlias });
-            }
-        }
-    }
-
-    private async createVirtualEnviornment(): Promise<void> {
-        if (await fse.pathExists(path.join(this.functionAppPath, this.funcEnv))) {
-            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python Virtual Environment already exists.  Overwrite?', this.funcEnv), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
-            if (input === DialogResponses.no) {
-                return;
-            }
-        }
-        await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, this.pythonAlias, '-m', 'venv', this.funcEnv);
-        if (process.platform === Platform.Windows) {
-            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${this.installPtvsd}`);
-        } else {
-            await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${this.installPtvsd}`);
-        }
-    }
-
-    private async getVenvActivatePath(platform: Platform): Promise<string> {
-        switch (platform) {
-            case Platform.Windows:
-                return path.join('.', this.funcEnv, 'Scripts', 'activate');
-            case Platform.MacOS:
-            default:
-                return path.join('.', this.funcEnv, 'bin', 'activate');
-        }
-    }
-
     private async createPythonProject(): Promise<void> {
         const funcInitPython: string = 'func init ./ --worker-runtime python';
         switch (process.platform) {
             case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await this.getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
                 break;
             case Platform.MacOS:
             default:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await this.getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
+                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
                 break;
         }
         // .gitignore is created by `func init`
@@ -180,9 +142,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             let writeFile: boolean = false;
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
             // the func_env and ._python_packages are recreated and should not be checked in
-            if (!gitignoreContents.includes(this.funcEnv)) {
-                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', this.funcEnv));
-                gitignoreContents = gitignoreContents.concat(`${os.EOL}${this.funcEnv}`);
+            if (!gitignoreContents.includes(funcEnvName)) {
+                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', funcEnvName));
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${funcEnvName}`);
                 writeFile = true;
             }
             if (!gitignoreContents.includes(pythonPackages)) {
@@ -227,5 +189,50 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
         }
     } catch (error) {
         return parseError(error).message;
+    }
+}
+
+async function getVenvActivatePath(platform: Platform): Promise<string> {
+    switch (platform) {
+        case Platform.Windows:
+            return path.join('.', funcEnvName, 'Scripts', 'activate');
+        case Platform.MacOS:
+        default:
+            return path.join('.', funcEnvName, 'bin', 'activate');
+    }
+}
+
+async function getPythonAlias(): Promise<string> {
+    for (const key of Object.keys(PythonAlias)) {
+        const alias: PythonAlias = <PythonAlias>PythonAlias[key];
+        const errorMessage: string | undefined = await validatePythonAlias(alias);
+        if (!errorMessage) {
+            return alias;
+        }
+    }
+
+    const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
+    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minPythonVersion);
+    const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
+    if (!result) {
+        throw new UserCancelledError();
+    } else {
+        const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
+        return await ext.ui.showInputBox({ placeHolder, validateInput: validatePythonAlias });
+    }
+}
+
+export async function createVirtualEnviornment(functionAppPath: string): Promise<void> {
+    const pythonAlias: string = await getPythonAlias();
+    await cpUtils.executeCommand(ext.outputChannel, functionAppPath, pythonAlias, '-m', 'venv', funcEnvName);
+    // install ptvsd - required for debugging in VS Code
+    await runPythonCommandInVenv(functionAppPath, 'pip install ptvsd');
+}
+
+export async function runPythonCommandInVenv(folderPath: string, command: string): Promise<void> {
+    if (process.platform === Platform.Windows) {
+        await cpUtils.executeCommand(ext.outputChannel, folderPath, `${await getVenvActivatePath(Platform.Windows)} && ${command}`);
+    } else {
+        await cpUtils.executeCommand(ext.outputChannel, folderPath, `source ${await getVenvActivatePath(Platform.MacOS)} && ${command}`);
     }
 }
