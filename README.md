@@ -19,7 +19,7 @@ Install the prerequisites for your desired language:
 * [JavaScript](#javascript)
 * [C#](#c)
 * [Java](#java)
-* [Python](#python)
+* [Python (Preview)](#python)
 
 > **NOTE**: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
 
@@ -56,8 +56,6 @@ Install the prerequisites for your desired language:
 
 Both v1 and v2 of the runtime can be installed on Windows. [See here](https://docs.microsoft.com/azure/azure-functions/functions-versions) for more information on each version.
 
-> **IMPORTANT**: v2 is becoming generally available (GA) soon (as of 9/19/2018). After GA, the "core" tag will no longer be required for v2, and a "v1" tag will be introduced for v1.
-
 To install v1:
 
 ```bash
@@ -68,6 +66,20 @@ To install v2:
 
 ```bash
 npm i -g azure-functions-core-tools@core
+```
+
+**IMPORTANT**: v2 is becoming generally available (GA) soon (as of 9/19/2018). After GA, the commands will change to the following:
+
+To install v1:
+
+```bash
+npm i -g azure-functions-core-tools@v1
+```
+
+To install v2:
+
+```bash
+npm i -g azure-functions-core-tools
 ```
 
 ### Mac
