@@ -47,6 +47,10 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
         deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
         node = target;
     }
+
+    const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
+    await workspaceUtil.ensureFolderIsOpen(deployFsPath, actionContext, folderOpenWarning, true /* allowSubFolder */);
+
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
         // event is fired from azure-extensionui if node was created during deployment
         newNodes.push(newNode);
@@ -134,6 +138,10 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
         }
     });
 
+    await listHttpTriggerUrls(node);
+}
+
+async function listHttpTriggerUrls(node: IAzureParentNode): Promise<void> {
     const children: IAzureNode[] = await node.getCachedChildren();
     const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
     await node.treeDataProvider.refresh(functionsNode);
