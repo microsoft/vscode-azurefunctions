@@ -72,7 +72,9 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
         'HttpTrigger',
         'BlobTrigger',
         'QueueTrigger',
-        'TimerTrigger'
+        'TimerTrigger',
+        'ServiceBusTopicTrigger',
+        'ServiceBusQueueTrigger'
     ];
 
     if (runtime === ProjectRuntime.v1) {

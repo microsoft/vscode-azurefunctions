@@ -5,16 +5,19 @@
 
 import { CosmosDBManagementClient } from 'azure-arm-cosmosdb';
 import { DatabaseAccount, DatabaseAccountListKeysResult } from 'azure-arm-cosmosdb/lib/models';
+import { ServiceBusManagementClient } from 'azure-arm-sb';
+import { AccessKeys, SBAuthorizationRule, SBNamespace } from 'azure-arm-sb/lib/models';
 // tslint:disable-next-line:no-require-imports
 import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, createAzureClient, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/IFunctionSetting';
+import { nonNullProp } from './nonNull';
 
 function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
@@ -117,4 +120,26 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
             id: storageAccount.id
         };
     }
+}
+
+export async function promptForServiceBus(): Promise<IResourceResult> {
+    const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.ServiceBus);
+    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+
+    const client: ServiceBusManagementClient = createAzureClient(node, ServiceBusManagementClient);
+    const resource: SBNamespace = await promptForResource<SBNamespace>(ext.ui, resourceTypeLabel, client.namespaces.list());
+    const id: string = nonNullProp(resource, 'id');
+    const name: string = nonNullProp(resource, 'name');
+
+    const resourceGroup: string = getResourceGroupFromId(id);
+    const authRules: SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
+    const authRule: SBAuthorizationRule | undefined = authRules.find((ar: SBAuthorizationRule) => ar.rights.some((r: string) => r.toLowerCase() === 'listen'));
+    if (!authRule) {
+        throw new Error(localize('noAuthRule', 'Failed to get connection string for Service Bus namespace "{0}".', name));
+    }
+    const keys: AccessKeys = await client.namespaces.listKeys(resourceGroup, name, nonNullProp(authRule, 'name'));
+    return {
+        name: name,
+        connectionString: nonNullProp(keys, 'primaryConnectionString')
+    };
 }

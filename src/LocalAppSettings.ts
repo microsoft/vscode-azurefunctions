@@ -57,6 +57,9 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
                     }
                 );
                 break;
+            case ResourceType.ServiceBus:
+                resourceResult = await azUtil.promptForServiceBus();
+                break;
             default:
         }
     } catch (error) {
