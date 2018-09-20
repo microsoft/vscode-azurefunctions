@@ -628,6 +628,11 @@
                         "description": "%azFunc.showPythonVenvWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showDeploySubpathWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showDeploySubpathWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",

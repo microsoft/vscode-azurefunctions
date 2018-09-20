@@ -19,7 +19,7 @@ import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
@@ -36,15 +36,12 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
     let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
 
-    const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
-    if (!target) {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
-    } else if (target instanceof vscode.Uri) {
-        deployFsPath = appendDeploySubpathSetting(target.fsPath);
+    if (target instanceof vscode.Uri) {
+        deployFsPath = await appendDeploySubpathSetting(target.fsPath);
     } else if (typeof target === 'string') {
-        deployFsPath = appendDeploySubpathSetting(target);
+        deployFsPath = await appendDeploySubpathSetting(target);
     } else {
-        deployFsPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+        deployFsPath = await getDeployFsPath();
         node = target;
     }
 
@@ -98,11 +95,6 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     }
 
     await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
-
-    if (language === ProjectLanguage.Python) {
-        // Python pre-deploy task creates a zip file to be deployed
-        deployFsPath = path.join(deployFsPath, `${path.basename(deployFsPath)}.zip`);
-    }
 
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
@@ -160,14 +152,53 @@ async function listHttpTriggerUrls(node: IAzureParentNode): Promise<void> {
 }
 
 /**
+ * If there is only one workspace and it has 'deploySubPath' set - return that value. Otherwise, prompt the user
+ */
+async function getDeployFsPath(): Promise<string> {
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length === 1) {
+        const folderPath: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const deploySubpath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, folderPath);
+        if (deploySubpath) {
+            return path.join(folderPath, deploySubpath);
+        }
+    }
+
+    const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
+    return await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+}
+
+/**
  * Appends the deploySubpath setting if the target path matches the root of a workspace folder
  * If the targetPath is a sub folder instead of the root, leave the targetPath as-is and assume they want that exact folder used
  */
-function appendDeploySubpathSetting(targetPath: string): string {
-    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.some((folder: vscode.WorkspaceFolder) => isPathEqual(folder.uri.fsPath, targetPath))) {
+async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
+    if (vscode.workspace.workspaceFolders) {
         const deploySubPath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, targetPath);
         if (deploySubPath) {
-            return path.join(targetPath, deploySubPath);
+            if (vscode.workspace.workspaceFolders.some((f: vscode.WorkspaceFolder) => isPathEqual(f.uri.fsPath, targetPath))) {
+                return path.join(targetPath, deploySubPath);
+            } else {
+                const folder: vscode.WorkspaceFolder | undefined = vscode.workspace.workspaceFolders.find((f: vscode.WorkspaceFolder) => isSubpath(f.uri.fsPath, targetPath));
+                if (folder) {
+                    const fsPathWithSetting: string = path.join(folder.uri.fsPath, deploySubPath);
+                    if (!isPathEqual(fsPathWithSetting, targetPath)) {
+                        const settingKey: string = 'showDeploySubpathWarning';
+                        if (getFuncExtensionSetting(settingKey)) {
+                            const selectedFolder: string = path.relative(folder.uri.fsPath, targetPath);
+                            const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}" based on setting "{2}.{3}".', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
+                            // don't wait
+                            // tslint:disable-next-line:no-floating-promises
+                            ext.ui.showWarningMessage(message, { title: localize('ok', 'OK') }, DialogResponses.dontWarnAgain).then(async (result: MessageItem) => {
+                                if (result === DialogResponses.dontWarnAgain) {
+                                    await updateGlobalSetting(settingKey, false);
+                                }
+                            });
+                        }
+                    }
+
+                    return fsPathWithSetting;
+                }
+            }
         }
     }
 

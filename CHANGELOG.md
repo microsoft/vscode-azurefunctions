@@ -13,6 +13,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 ### Changed
 - Newly created function apps will default to "Run From Package". See [here](https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package) for more info.
 - Deprecated projectRuntime of "beta" in favor of "~2".
+- "azureFunctions.deploySubpath" setting takes precedence
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.11.0%22+label%3Abug+is%3Aclosed)
 - "Copy Function Url" for v2 non-anonymous functions will copy an invalid url [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)

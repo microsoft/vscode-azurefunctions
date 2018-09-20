@@ -70,6 +70,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public async getTasksJson(): Promise<{}> {
+        // setting the deploySubpath to the result of the 'funcPack' task included below
+        this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
         return {
             version: '2.0.0',
             tasks: [
