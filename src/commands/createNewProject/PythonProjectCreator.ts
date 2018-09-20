@@ -28,6 +28,7 @@ export enum PythonAlias {
 }
 
 const minPythonVersion: string = '3.6.0';
+const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the label to make it more clear that any patch version is allowed
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
@@ -185,11 +186,16 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
             return localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr);
         }
 
-        const pyVersion: string | undefined = result.cmdOutputIncludingStderr.substring('Python '.length).trim();
-        if (semver.gte(pyVersion, minPythonVersion)) {
-            return undefined;
+        const matches: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(/^Python (\S*)/i);
+        if (matches === null || !matches[1]) {
+            return localize('failedParse', 'Failed to parse version: {0}', result.cmdOutputIncludingStderr);
         } else {
-            return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            const pyVersion: string = matches[1];
+            if (semver.gte(pyVersion, minPythonVersion)) {
+                return undefined;
+            } else {
+                return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            }
         }
     } catch (error) {
         return parseError(error).message;
@@ -216,7 +222,7 @@ async function getPythonAlias(): Promise<string> {
     }
 
     const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
-    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minPythonVersion);
+    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project and was not found.', minPythonVersionLabel);
     const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
     if (!result) {
         throw new UserCancelledError();
