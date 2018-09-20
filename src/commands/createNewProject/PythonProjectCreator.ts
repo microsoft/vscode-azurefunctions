@@ -70,6 +70,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public async getTasksJson(): Promise<{}> {
+        // func host task requires this
+        await makeVenvDebuggable(this.functionAppPath);
         return {
             version: '2.0.0',
             tasks: [
@@ -225,6 +227,9 @@ async function getPythonAlias(): Promise<string> {
 export async function createVirtualEnviornment(functionAppPath: string): Promise<void> {
     const pythonAlias: string = await getPythonAlias();
     await cpUtils.executeCommand(ext.outputChannel, functionAppPath, pythonAlias, '-m', 'venv', funcEnvName);
+}
+
+export async function makeVenvDebuggable(functionAppPath: string): Promise<void> {
     // install ptvsd - required for debugging in VS Code
     await runPythonCommandInVenv(functionAppPath, 'pip install ptvsd');
 }
