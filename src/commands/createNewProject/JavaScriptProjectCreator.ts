@@ -14,6 +14,7 @@ export const funcNodeDebugEnvVar: string = 'languageWorkers:node:arguments';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public readonly deploySubpath: string = '.';
 
     public readonly functionsWorkerRuntime: string | undefined = 'node';
 

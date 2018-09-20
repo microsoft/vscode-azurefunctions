@@ -30,6 +30,5 @@ export async function installFuncCoreTools(packageManager: PackageManager): Prom
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManager));
-            break;
     }
 }
