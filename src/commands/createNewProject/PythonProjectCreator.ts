@@ -75,6 +75,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
         // func host task requires this
         await makeVenvDebuggable(this.functionAppPath);
+        const funcPackCommand: string = 'func pack';
+        const funcHostStartCommand: string = 'func host start';
+        const funcExtensionsCommand: string = 'func extensions install';
         return {
             version: '2.0.0',
             tasks: [
@@ -83,13 +86,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     osx: {
-                        command: `func extensions install && source ${await getVenvActivatePath(Platform.MacOS)} && func start host`
+                        command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.MacOS)}`
                     },
                     windows: {
-                        command: `func extensions install | ${await getVenvActivatePath(Platform.Windows)} | func start host`
+                        command: `${funcExtensionsCommand} | ${convertToVenvCommand(funcHostStartCommand, Platform.Windows)}`
                     },
                     linux: {
-                        command: `func extensions install && source ${await getVenvActivatePath(Platform.Linux)} && func start host`
+                        command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.Linux)}`
                     },
                     isBackground: true,
                     presentation: {
@@ -108,13 +111,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
-                        command: `source ${await getVenvActivatePath(Platform.MacOS)} && func pack`
+                        command: convertToVenvCommand(funcPackCommand, Platform.MacOS)
                     },
                     windows: {
-                        command: `${await getVenvActivatePath(Platform.Windows)} | func pack`
+                        command: convertToVenvCommand(funcPackCommand, Platform.Windows)
                     },
                     linux: {
-                        command: `source ${await getVenvActivatePath(Platform.Linux)} && func pack`
+                        command: convertToVenvCommand(funcPackCommand, Platform.Linux)
                     },
                     isBackground: true,
                     presentation: {
@@ -130,16 +133,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     private async createPythonProject(): Promise<void> {
-        const funcInitPython: string = 'func init ./ --worker-runtime python';
-        switch (process.platform) {
-            case Platform.Windows:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `${await getVenvActivatePath(Platform.Windows)} && ${funcInitPython}`);
-                break;
-            case Platform.MacOS:
-            default:
-                await cpUtils.executeCommand(ext.outputChannel, this.functionAppPath, `source ${await getVenvActivatePath(Platform.MacOS)} && ${funcInitPython}`);
-                break;
-        }
+        await runPythonCommandInVenv(this.functionAppPath, 'func init ./ --worker-runtime python');
         // .gitignore is created by `func init`
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
@@ -202,13 +196,12 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     }
 }
 
-async function getVenvActivatePath(platform: Platform): Promise<string> {
+function convertToVenvCommand(command: string, platform: NodeJS.Platform = process.platform): string {
     switch (platform) {
         case Platform.Windows:
-            return path.join('.', funcEnvName, 'Scripts', 'activate');
-        case Platform.MacOS:
+            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} | ${command}`;
         default:
-            return path.join('.', funcEnvName, 'bin', 'activate');
+            return `. ${path.join('.', funcEnvName, 'bin', 'activate')} && ${command}`;
     }
 }
 
@@ -243,9 +236,5 @@ export async function makeVenvDebuggable(functionAppPath: string): Promise<void>
 }
 
 export async function runPythonCommandInVenv(folderPath: string, command: string): Promise<void> {
-    if (process.platform === Platform.Windows) {
-        await cpUtils.executeCommand(ext.outputChannel, folderPath, `${await getVenvActivatePath(Platform.Windows)} && ${command}`);
-    } else {
-        await cpUtils.executeCommand(ext.outputChannel, folderPath, `source ${await getVenvActivatePath(Platform.MacOS)} && ${command}`);
-    }
+    await cpUtils.executeCommand(ext.outputChannel, folderPath, convertToVenvCommand(command));
 }
