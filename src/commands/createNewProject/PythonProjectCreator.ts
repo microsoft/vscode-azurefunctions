@@ -181,11 +181,16 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
             return localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr);
         }
 
-        const pyVersion: string | undefined = result.cmdOutputIncludingStderr.substring('Python '.length).trim();
-        if (semver.gte(pyVersion, minPythonVersion)) {
-            return undefined;
+        const matches: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(/^Python (\S*)/i);
+        if (matches === null || !matches[1]) {
+            return localize('failedParse', 'Failed to parse version: {0}', result.cmdOutputIncludingStderr);
         } else {
-            return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            const pyVersion: string = matches[1];
+            if (semver.gte(pyVersion, minPythonVersion)) {
+                return undefined;
+            } else {
+                return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            }
         }
     } catch (error) {
         return parseError(error).message;
