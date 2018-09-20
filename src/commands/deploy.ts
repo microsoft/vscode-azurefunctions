@@ -185,7 +185,7 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
                         const settingKey: string = 'showDeploySubpathWarning';
                         if (getFuncExtensionSetting(settingKey)) {
                             const selectedFolder: string = path.relative(folder.uri.fsPath, targetPath);
-                            const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}". Use "{2}.{3}" to override this behavior.', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
+                            const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}". Use "{2}.{3}" to change this behavior.', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
                             // don't wait
                             // tslint:disable-next-line:no-floating-promises
                             ext.ui.showWarningMessage(message, { title: localize('ok', 'OK') }, DialogResponses.dontWarnAgain).then(async (result: MessageItem) => {
