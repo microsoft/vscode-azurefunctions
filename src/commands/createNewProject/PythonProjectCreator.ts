@@ -28,6 +28,7 @@ export enum PythonAlias {
 }
 
 const minPythonVersion: string = '3.6.0';
+const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the label to make it more clear that any patch version is allowed
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
@@ -217,7 +218,7 @@ async function getPythonAlias(): Promise<string> {
     }
 
     const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
-    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} or higher is required to create a Python Function project and was not found.', minPythonVersion);
+    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project and was not found.', minPythonVersionLabel);
     const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
     if (!result) {
         throw new UserCancelledError();
