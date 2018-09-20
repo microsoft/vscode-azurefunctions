@@ -19,7 +19,7 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 import { funcHostTaskId } from './IProjectCreator';
 import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
-import { createVirtualEnviornment, funcEnvName, runPythonCommandInVenv } from './PythonProjectCreator';
+import { createVirtualEnviornment, funcEnvName, makeVenvDebuggable, runPythonCommandInVenv } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -163,6 +163,7 @@ async function verifyPythonVenv(projectLanguage: string | undefined, folderPath:
                     await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                         // create venv
                         await createVirtualEnviornment(folderPath);
+                        await makeVenvDebuggable(folderPath);
                         // install venv requirements
                         const requirementsFileName: string = 'requirements.txt';
                         if (await fse.pathExists(path.join(folderPath, requirementsFileName))) {
