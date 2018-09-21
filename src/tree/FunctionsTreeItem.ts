@@ -43,6 +43,7 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
 
         const funcs: FunctionEnvelopeCollection = this._nextLink ? await this._client.listFunctionsNext(this._nextLink) : await this._client.listFunctions();
 
+        // https://github.com/Azure/azure-functions-host/issues/3502
         if (!isArray(funcs)) {
             throw new Error(localize('failedToList', 'Failed to list functions.'));
         }
