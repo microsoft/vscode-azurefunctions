@@ -130,24 +130,31 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
         }
     });
 
-    await listHttpTriggerUrls(node);
+    await listHttpTriggerUrls(node, actionContext);
 }
 
-async function listHttpTriggerUrls(node: IAzureParentNode): Promise<void> {
-    const children: IAzureNode[] = await node.getCachedChildren();
-    const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
-    await node.treeDataProvider.refresh(functionsNode);
-    const functions: IAzureNode[] = await functionsNode.getCachedChildren();
-    const anonFunctions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>functions.filter((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
-    if (anonFunctions.length > 0) {
-        ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
-        for (const func of anonFunctions) {
-            ext.outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+async function listHttpTriggerUrls(node: IAzureParentNode, actionContext: IActionContext): Promise<void> {
+    try {
+        const children: IAzureNode[] = await node.getCachedChildren();
+        const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
+        await node.treeDataProvider.refresh(functionsNode);
+        const functions: IAzureNode[] = await functionsNode.getCachedChildren();
+        const anonFunctions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>functions.filter((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
+        if (anonFunctions.length > 0) {
+            ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+            for (const func of anonFunctions) {
+                ext.outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+            }
         }
-    }
 
-    if (functions.find((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
-        ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+        if (functions.find((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
+            ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+        }
+    } catch (error) {
+        // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
+        actionContext.suppressErrorDisplay = true;
+        ext.outputChannel.appendLine(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
+        throw error;
     }
 }
 
