@@ -18,6 +18,9 @@ All notable changes to the "azurefunctions" extension will be documented in this
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.11.0%22+label%3Abug+is%3Aclosed)
 - "Copy Function Url" for v2 non-anonymous functions will copy an invalid url [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
 
+### Known Issues
+- Functions cannot be listed for Linux Consumption apps [azure-functions-host#3502](https://github.com/Azure/azure-functions-host/issues/3502)
+
 ## 0.10.2 - 2018-09-10
 
 ### Fixed
