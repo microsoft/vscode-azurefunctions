@@ -94,7 +94,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                         command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.MacOS)}`
                     },
                     windows: {
-                        command: `${funcExtensionsCommand} | ${convertToVenvCommand(funcHostStartCommand, Platform.Windows)}`
+                        command: `${funcExtensionsCommand} ; ${convertToVenvCommand(funcHostStartCommand, Platform.Windows)}`
                     },
                     linux: {
                         command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.Linux)}`
@@ -205,7 +205,7 @@ function convertToVenvCommand(command: string, platform: NodeJS.Platform, separa
     switch (platform) {
         case Platform.Windows:
             // tslint:disable-next-line:strict-boolean-expressions
-            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} ${separator || '|'} ${command}`;
+            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} ${separator || ';'} ${command}`;
         default:
             // tslint:disable-next-line:strict-boolean-expressions
             return `. ${path.join('.', funcEnvName, 'bin', 'activate')} ${separator || '&&'} ${command}`;
