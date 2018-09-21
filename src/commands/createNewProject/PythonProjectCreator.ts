@@ -201,12 +201,14 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     }
 }
 
-function convertToVenvCommand(command: string, platform: NodeJS.Platform = process.platform): string {
+function convertToVenvCommand(command: string, platform: NodeJS.Platform, separator?: string): string {
     switch (platform) {
         case Platform.Windows:
-            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} | ${command}`;
+            // tslint:disable-next-line:strict-boolean-expressions
+            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} ${separator || '|'} ${command}`;
         default:
-            return `. ${path.join('.', funcEnvName, 'bin', 'activate')} && ${command}`;
+            // tslint:disable-next-line:strict-boolean-expressions
+            return `. ${path.join('.', funcEnvName, 'bin', 'activate')} ${separator || '&&'} ${command}`;
     }
 }
 
@@ -241,5 +243,6 @@ export async function makeVenvDebuggable(functionAppPath: string): Promise<void>
 }
 
 export async function runPythonCommandInVenv(folderPath: string, command: string): Promise<void> {
-    await cpUtils.executeCommand(ext.outputChannel, folderPath, convertToVenvCommand(command));
+    // executeCommand always uses '&&' separator even on Windows
+    await cpUtils.executeCommand(ext.outputChannel, folderPath, convertToVenvCommand(command, process.platform, '&&'));
 }
