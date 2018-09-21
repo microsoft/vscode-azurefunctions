@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem, window } from 'vscode';
 import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, TemplateFilter } from "../../constants";
+import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
@@ -47,6 +47,11 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 }
             ]
         };
+    }
+
+    public async getRuntime(): Promise<ProjectRuntime> {
+        // Python only works on v2
+        return ProjectRuntime.v2;
     }
 
     public async addNonVSCodeFiles(): Promise<void> {
