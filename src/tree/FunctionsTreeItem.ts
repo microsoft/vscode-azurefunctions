@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope, FunctionEnvelopeCollection } from 'azure-arm-website/lib/models';
+import { isArray } from 'util';
 import { SiteClient } from 'vscode-azureappservice';
 import { createTreeItemsWithErrorHandling, IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
@@ -41,6 +42,11 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
         }
 
         const funcs: FunctionEnvelopeCollection = this._nextLink ? await this._client.listFunctionsNext(this._nextLink) : await this._client.listFunctions();
+
+        if (!isArray(funcs)) {
+            throw new Error(localize('failedToList', 'Failed to list functions.'));
+        }
+
         this._nextLink = funcs.nextLink;
 
         return await createTreeItemsWithErrorHandling(
