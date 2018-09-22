@@ -80,6 +80,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
         // func host task requires this
         await makeVenvDebuggable(this.functionAppPath);
+        // func pack task may fail with "The process cannot access the file because it is being used by another process." unless venv is in '.funcignore' file
+        await this.ensureVenvInFuncIgnore();
         const funcPackCommand: string = 'func pack';
         const funcHostStartCommand: string = 'func host start';
         const funcExtensionsCommand: string = 'func extensions install';
@@ -172,6 +174,23 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             localSettings.Values[azureWebJobsStorageKey] = '';
             await fsUtil.writeFormattedJson(localSettingsPath, localSettings);
         }
+    }
+
+    private async ensureVenvInFuncIgnore(): Promise<void> {
+        const funcIgnorePath: string = path.join(this.functionAppPath, '.funcignore');
+        let funcIgnoreContents: string | undefined;
+        if (await fse.pathExists(funcIgnorePath)) {
+            funcIgnoreContents = (await fse.readFile(funcIgnorePath)).toString();
+            if (funcIgnoreContents && !funcIgnoreContents.includes(funcEnvName)) {
+                funcIgnoreContents = funcIgnoreContents.concat(`${os.EOL}${funcEnvName}`);
+            }
+        }
+
+        if (!funcIgnoreContents) {
+            funcIgnoreContents = funcEnvName;
+        }
+
+        await fse.writeFile(funcIgnorePath, funcIgnoreContents);
     }
 }
 
