@@ -10,7 +10,7 @@ import { addExtensionUserAgent, createTreeItemsWithErrorHandling, IActionContext
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
 
@@ -98,7 +98,7 @@ export class FunctionAppProvider implements IChildProvider {
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting);
+    let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting));
     actionContext.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {
