@@ -83,7 +83,7 @@ function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '');
 }
 
-export async function getFunctionTemplates(): Promise<FunctionTemplates> {
+export async function getFunctionTemplates(source?: 'backup' | 'cliFeed'): Promise<FunctionTemplates> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
@@ -101,25 +101,25 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
                 let templates: IFunctionTemplate[] | undefined;
 
                 // 1. Use the cached templates if they match templateVersion
-                if (ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
+                if (!source && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'matchingCache';
                 }
 
                 // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
-                if (!templates && cliFeedJson && templateVersion) {
+                if ((!source || source === 'cliFeed') && !templates && cliFeedJson && templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, templateVersion, runtime);
                     this.properties.templateSource = 'cliFeed';
                 }
 
                 // 3. Use the cached templates, even if they don't match templateVersion
-                if (!templates) {
+                if (!source && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'mismatchCache';
                 }
 
                 // 4. Use backup templates shipped with the extension
-                if (!templates) {
+                if ((!source || source === 'backup') && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
                     this.properties.templateSource = 'backupFromExtension';
                 }

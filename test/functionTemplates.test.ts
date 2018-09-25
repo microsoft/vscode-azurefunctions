@@ -4,31 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { IHookCallbackContext } from 'mocha';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
-import { FunctionTemplates, getFunctionTemplates } from '../src/templates/FunctionTemplates';
+import { FunctionTemplates } from '../src/templates/FunctionTemplates';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
-
-let backupTemplates: FunctionTemplates;
-let latestTemplates: FunctionTemplates | undefined;
-
-// tslint:disable-next-line:no-function-expression
-suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-    this.timeout(30 * 1000);
-    backupTemplates = <FunctionTemplates>(await getFunctionTemplates());
-    latestTemplates = <FunctionTemplates>(await getFunctionTemplates());
-    // https://github.com/Microsoft/vscode-azurefunctions/issues/334
-});
+import { backupTemplates, latestTemplates } from './global.test';
 
 suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
-        if (latestTemplates) {
-            await validateTemplateCounts(latestTemplates);
-        } else {
-            assert.fail('Failed to find templates from functions portal.');
-        }
-
+        await validateTemplateCounts(latestTemplates);
         await validateTemplateCounts(backupTemplates);
     });
 });

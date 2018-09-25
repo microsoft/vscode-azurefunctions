@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import { ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -21,17 +21,12 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     this.timeout(60 * 1000);
 
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
-    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
-    ext.outputChannel = outputChannel;
 
-    // tslint:disable-next-line:no-function-expression
-    suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(120 * 1000);
+    suiteSetup(async () => {
         await fse.ensureDir(testFolderPath);
     });
 
     suiteTeardown(async () => {
-        outputChannel.dispose();
         await fse.remove(testFolderPath);
     });
 
