@@ -84,7 +84,7 @@
         "no-with-statement": true,
         "promise-function-async": true,
         "promise-must-complete": true,
-        "radix": true,
+        "radix": false, // changed
         "react-this-binding-issue": true,
         "react-unused-props-and-state": true,
         "restrict-plus-operands": true,

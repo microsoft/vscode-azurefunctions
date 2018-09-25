@@ -20,7 +20,6 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${fsUtil.getRandomHexString()}`);
     const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
-    // tslint:disable-next-line:no-function-expression
     suiteSetup(async () => {
         await fse.ensureDir(testFolderPath);
     });
