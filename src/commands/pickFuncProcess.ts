@@ -4,41 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { Task, TaskExecution } from 'vscode';
-import { ext } from 'vscode-azureappservice/lib/extensionVariables';
+import { Task } from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, isWindows } from '../constants';
+import { funcHostTaskLabel, stopFuncHostPromise } from "../funcCoreTools/funcHostTask";
+import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { tryFetchNodeModule } from '../utils/tryFetchNodeModule';
-import { funcHostTaskLabel } from './createNewProject/IProjectCreator';
-
-let isFuncTaskRunning: boolean = false;
-export function initPickFuncProcess(): void {
-    ext.context.subscriptions.push(vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
-        if (isFuncTask(e.execution.task)) {
-            isFuncTaskRunning = false;
-        }
-    }));
-
-    ext.context.subscriptions.push(vscode.tasks.onDidStartTask((e: vscode.TaskEndEvent) => {
-        if (isFuncTask(e.execution.task)) {
-            isFuncTaskRunning = true;
-        }
-    }));
-}
 
 export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
         throw new UserCancelledError();
     }
 
-    // Stop any running func task so that a build can access those dlls
-    await stopFuncTaskIfRunning();
+    await stopFuncHostPromise;
 
     const tasks: Task[] = await vscode.tasks.fetchTasks();
-    const funcTask: Task | undefined = tasks.find(isFuncTask);
+    const funcTask: Task | undefined = tasks.find(isFuncHostTask);
     if (!funcTask) {
         throw new Error(localize('noFuncTask', 'Failed to find task with label "{0}".', funcHostTaskLabel));
     }
@@ -58,35 +42,10 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : pid;
 }
 
-function isFuncTask(task: Task): boolean {
-    // Until this is fixed, we have to query the task's name instead of id: https://github.com/Microsoft/vscode/issues/57707
-    return task.name.toLowerCase() === funcHostTaskLabel.toLowerCase();
-}
-
-async function stopFuncTaskIfRunning(): Promise<void> {
-    const funcExecution: TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: TaskExecution) => isFuncTask(te.task));
-    if (funcExecution && isFuncTaskRunning) {
-        const waitForEndPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-            const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
-                if (isFuncTask(e.execution.task)) {
-                    resolve();
-                    listener.dispose();
-                }
-            });
-
-            const timeoutInSeconds: number = 30;
-            const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
-            setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
-        });
-        funcExecution.terminate();
-        await waitForEndPromise;
-    }
-}
-
 async function startFuncTask(funcTask: Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
     const waitForStartPromise: Promise<string> = new Promise((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
         const listener: vscode.Disposable = vscode.tasks.onDidStartTaskProcess((e: vscode.TaskProcessStartEvent) => {
-            if (isFuncTask(e.execution.task)) {
+            if (isFuncHostTask(e.execution.task)) {
                 resolve(e.processId.toString());
                 listener.dispose();
             }

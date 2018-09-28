@@ -46,7 +46,4 @@ export abstract class ProjectCreatorBase {
     }
 }
 
-export const funcHostTaskId: string = 'runFunctionsHost';
-// Don't localize this label until this is fixed: https://github.com/Microsoft/vscode/issues/57707
-export const funcHostTaskLabel: string = 'Run Functions Host';
 export const funcWatchProblemMatcher: string = '$func-watch';

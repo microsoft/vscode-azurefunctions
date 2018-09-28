@@ -10,11 +10,12 @@ import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
 import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from '../../constants';
+import { funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
-import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 export class JavaProjectCreator extends ProjectCreatorBase {
     public static defaultRuntime: ProjectRuntime = ProjectRuntime.v2;
@@ -105,7 +106,6 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             tasks: [
                 {
                     label: funcHostTaskLabel,
-                    identifier: funcHostTaskId,
                     linux: {
                         command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
                     },
@@ -154,7 +154,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     request: 'attach',
                     hostName: 'localhost',
                     port: 5005,
-                    preLaunchTask: funcHostTaskId
+                    preLaunchTask: funcHostTaskLabel
                 }
             ]
         };

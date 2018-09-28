@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { installExtensionsId, ProjectRuntime, TemplateFilter } from "../../constants";
+import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
-import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher } from "./IProjectCreator";
+import { funcWatchProblemMatcher } from "./IProjectCreator";
 import { ITaskOptions } from "./ITasksJson";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -27,7 +28,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
                     type: 'node',
                     request: 'attach',
                     port: 5858,
-                    preLaunchTask: funcHostTaskId
+                    preLaunchTask: funcHostTaskLabel
                 }
             ]
         };
@@ -38,9 +39,8 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         // tslint:disable-next-line:no-any
         const funcTask: any = {
             label: funcHostTaskLabel,
-            identifier: funcHostTaskId,
             type: 'shell',
-            command: 'func host start',
+            command: funcHostCommand,
             isBackground: true,
             presentation: {
                 reveal: 'always'
@@ -49,8 +49,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         };
 
         const installExtensionsTask: {} = {
-            label: installExtensionsId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
-            identifier: installExtensionsId,
+            label: installExtensionsId,
             command: 'func extensions install',
             type: 'shell',
             presentation: {

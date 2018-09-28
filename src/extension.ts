@@ -29,13 +29,14 @@ import { ILogStreamTreeItem } from './commands/logstream/ILogStreamTreeItem';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
-import { initPickFuncProcess, pickFuncProcess } from './commands/pickFuncProcess';
+import { pickFuncProcess } from './commands/pickFuncProcess';
 import { remoteDebugFunctionApp } from './commands/remoteDebugFunctionApp';
 import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { ext } from './extensionVariables';
+import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
@@ -127,7 +128,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', async () => await installOrUpdateFuncCoreTools());
         registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
 
-        initPickFuncProcess();
+        registerFuncHostTaskEvents();
     });
 }
 

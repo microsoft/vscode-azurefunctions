@@ -301,7 +301,6 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
     let preDeployTask: vscode.Task | undefined;
     for (const task of tasks) {
-        // Until this is fixed, we have to query the task's name instead of id: https://github.com/Microsoft/vscode/issues/57707
         if (task.name.toLowerCase() === taskName.toLowerCase() && task.scope !== undefined) {
             const workspaceFolder: vscode.WorkspaceFolder = <vscode.WorkspaceFolder>task.scope;
             if (<vscode.Uri | undefined>workspaceFolder.uri && (isPathEqual(workspaceFolder.uri.fsPath, deployFsPath) || isSubpath(workspaceFolder.uri.fsPath, deployFsPath))) {
