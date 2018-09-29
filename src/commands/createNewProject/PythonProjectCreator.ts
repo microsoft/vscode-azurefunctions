@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, window } from 'vscode';
+import { DebugConfiguration, MessageItem, window } from 'vscode';
 import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
@@ -33,19 +33,14 @@ const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the labe
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     public preDeployTask: string = funcPackId;
-    public getLaunchJson(): {} {
+    public getLaunchConfiguration(): DebugConfiguration {
         return {
-            version: '0.2.0',
-            configurations: [
-                {
-                    name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
-                    type: 'python',
-                    request: 'attach',
-                    port: 9091,
-                    host: 'localhost',
-                    preLaunchTask: funcHostTaskId
-                }
-            ]
+            name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
+            type: 'python',
+            request: 'attach',
+            port: 9091,
+            host: 'localhost',
+            preLaunchTask: funcHostTaskId
         };
     }
 

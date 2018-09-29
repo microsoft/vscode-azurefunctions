@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { OutputChannel } from 'vscode';
+import { DebugConfiguration, OutputChannel } from 'vscode';
 import { IActionContext, IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { localize } from '../../localize';
@@ -74,11 +74,14 @@ async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscod
         await fsUtil.writeFormattedJson(tasksJsonPath, await projectCreator.getTasksJson(runtime));
     }
 
-    const launchJson: {} | undefined = projectCreator.getLaunchJson();
-    if (launchJson) {
+    const launchConfig: DebugConfiguration | undefined = projectCreator.getLaunchConfiguration();
+    if (launchConfig) {
         const launchJsonPath: string = path.join(vscodePath, 'launch.json');
         if (await confirmOverwriteFile(launchJsonPath, ui)) {
-            await fsUtil.writeFormattedJson(launchJsonPath, launchJson);
+            await fsUtil.writeFormattedJson(launchJsonPath, {
+                version: '0.2.0',
+                configurations: [launchConfig]
+            });
         }
     }
 }

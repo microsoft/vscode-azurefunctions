@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { InputBoxOptions } from 'vscode';
+import { DebugConfiguration, InputBoxOptions } from 'vscode';
 import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { localize } from "../../localize";
@@ -144,19 +144,14 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         return tasksJson;
     }
 
-    public getLaunchJson(): {} {
+    public getLaunchConfiguration(): DebugConfiguration {
         return {
-            version: '0.2.0',
-            configurations: [
-                {
-                    name: localize('azFunc.attachToJavaFunc', 'Attach to Java Functions'),
-                    type: 'java',
-                    request: 'attach',
-                    hostName: 'localhost',
-                    port: 5005,
-                    preLaunchTask: funcHostTaskId
-                }
-            ]
+            name: localize('azFunc.attachToJavaFunc', 'Attach to Java Functions'),
+            type: 'java',
+            request: 'attach',
+            hostName: 'localhost',
+            port: 5005,
+            preLaunchTask: funcHostTaskId
         };
     }
 

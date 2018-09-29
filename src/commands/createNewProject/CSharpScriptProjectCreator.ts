@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DebugConfiguration } from "vscode";
 import { TemplateFilter } from "../../constants";
-import { localize } from "../../localize";
+import { getCoreClrLaunchConfiguration } from "../../debug/FuncCoreClrDebugConfigProvider";
 import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -30,18 +31,8 @@ export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
-    public getLaunchJson(): {} {
-        return {
-            version: '0.2.0',
-            configurations: [
-                {
-                    name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Script Functions"),
-                    type: 'coreclr',
-                    request: 'attach',
-                    processId: '\${command:azureFunctions.pickProcess}'
-                }
-            ]
-        };
+    public getLaunchConfiguration(): DebugConfiguration {
+        return getCoreClrLaunchConfiguration();
     }
 
     public getRecommendedExtensions(): string[] {

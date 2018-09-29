@@ -9,22 +9,24 @@ import opn = require("opn");
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
+import { DebugConfiguration } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { getCoreClrLaunchConfiguration } from '../../debug/FuncCoreClrDebugConfigProvider';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostTaskId, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     public preDeployTask: string = publishTaskId;
 
-    private _debugSubpath: string;
+    private _targetFramework: string;
     private _runtime: ProjectRuntime;
 
     private _hasDetectedRuntime: boolean = false;
@@ -101,38 +103,13 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                         reveal: 'always'
                     },
                     problemMatcher: '$msCompile'
-                },
-                {
-                    label: localize('azFunc.runFuncHost', 'Run Functions Host'),
-                    identifier: funcHostTaskId,
-                    type: 'shell',
-                    dependsOn: 'build',
-                    options: {
-                        cwd: `\${workspaceFolder}/${this._debugSubpath}`
-                    },
-                    command: 'func host start',
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };
     }
 
-    public getLaunchJson(): {} {
-        return {
-            version: '0.2.0',
-            configurations: [
-                {
-                    name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this._runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
-                    request: 'attach',
-                    processId: '\${command:azureFunctions.pickProcess}'
-                }
-            ]
-        };
+    public getLaunchConfiguration(): DebugConfiguration {
+        return getCoreClrLaunchConfiguration(this._targetFramework);
     }
 
     public getRecommendedExtensions(): string[] {
@@ -158,9 +135,9 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         if (matches === null || matches.length < 1) {
             throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
         } else {
-            const targetFramework: string = matches[1];
-            this.telemetryProperties.cSharpTargetFramework = targetFramework;
-            if (targetFramework.startsWith('netstandard')) {
+            this._targetFramework = matches[1];
+            this.telemetryProperties.cSharpTargetFramework = this._targetFramework;
+            if (this._targetFramework.startsWith('netstandard')) {
                 this._runtime = ProjectRuntime.v2;
             } else {
                 this._runtime = ProjectRuntime.v1;
@@ -182,8 +159,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     }
                 }
             }
-            this.deploySubpath = `bin/Release/${targetFramework}/publish`;
-            this._debugSubpath = `bin/Debug/${targetFramework}`;
+            this.deploySubpath = `bin/Release/${this._targetFramework}/publish`;
         }
 
         this._hasDetectedRuntime = true;

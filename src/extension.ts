@@ -35,6 +35,8 @@ import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
+import { FuncCoreClrDebugConfigProvider } from './debug/FuncCoreClrDebugConfigProvider';
+import { FuncNodeDebugConfigProvider } from './debug/FuncNodeDebugConfigProvider';
 import { ext } from './extensionVariables';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
@@ -128,6 +130,9 @@ export function activate(context: vscode.ExtensionContext): void {
         registerCommand('azureFunctions.uninstallFuncCoreTools', async () => await uninstallFuncCoreTools());
 
         initPickFuncProcess();
+
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('func-node', new FuncNodeDebugConfigProvider()));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('func-coreclr', new FuncCoreClrDebugConfigProvider()));
     });
 }
 

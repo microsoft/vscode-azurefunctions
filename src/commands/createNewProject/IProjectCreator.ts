@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OutputChannel } from "vscode";
+import { DebugConfiguration, OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from "../../constants";
 import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
@@ -31,7 +31,7 @@ export abstract class ProjectCreatorBase {
         return await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
     }
 
-    public getLaunchJson(): {} | undefined {
+    public getLaunchConfiguration(): DebugConfiguration | undefined {
         // By default languages do not support attaching on F5. Each language that supports F5'ing will have to overwrite this method in the subclass
         return undefined;
     }

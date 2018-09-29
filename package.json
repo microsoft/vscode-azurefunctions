@@ -61,7 +61,9 @@
         "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
-        "onView:azureFunctionsExplorer"
+        "onView:azureFunctionsExplorer",
+        "onDebugInitialConfigurations",
+        "onDebugResolve:func-node"
     ],
     "main": "./out/src/extension",
     "contributes": {
@@ -665,6 +667,73 @@
                         "type": "boolean",
                         "description": "%azFunc.enablePythonDescription%",
                         "default": false
+                    }
+                }
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "func-node",
+                "label": "Azure JavaScript Functions",
+                "configurationSnippets": [
+                    {
+                        "label": "Func: Launch JavaScript Functions",
+                        "description": "Func: Launch JavaScript Functions",
+                        "body": {
+                            "name": "Func: Launch JavaScript Functions",
+                            "type": "func-node",
+                            "request": "launch",
+                            "port": 5858,
+                            "internalConsoleOptions": "openOnSessionStart"
+                        }
+                    }
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "type": "object",
+                        "required": [],
+                        "properties": {
+                            "port": {
+                                "type": "integer",
+                                "default": 5858
+                            },
+                            "cwd": {
+                                "type": "string",
+                                "description": "Path to the working directory of the functions being debugged. Default is the current workspace.",
+                                "default": "${workspaceFolder}"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "type": "func-coreclr",
+                "label": "Azure C# Functions",
+                "configurationSnippets": [
+                    {
+                        "label": "Func: Launch C# Functions",
+                        "description": "Func: Launch C# Functions",
+                        "body": {
+                            "name": "Func: Launch C# Functions",
+                            "type": "func-coreclr",
+                            "request": "launch",
+                            "cwd": "^\"\\${workspaceFolder}/bin/Debug/${1:<target-framework>}\"",
+                            "preLaunchTask": "build",
+                            "internalConsoleOptions": "openOnSessionStart"
+                        }
+                    }
+                ],
+                "configurationAttributes": {
+                    "launch": {
+                        "type": "object",
+                        "required": [],
+                        "properties": {
+                            "cwd": {
+                                "type": "string",
+                                "description": "Path to the working directory of the functions being debugged.\nThis property normally takes the form: '${workspaceFolder}/bin/Debug/(target-framework)/'\nExample: '${workspaceFolder}/bin/Debug/netstandard2.0/'\n\nWhere:\n(target-framework) is the framework that the debugged project is being built for. This is normally found in the project file as the 'TargetFramework' property.\n",
+                                "default": "${workspaceFolder}/bin/Debug/<insert-target-framework-here>"
+                            }
+                        }
                     }
                 }
             }
