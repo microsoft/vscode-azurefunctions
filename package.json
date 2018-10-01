@@ -507,7 +507,7 @@
                 "background": {
                     "activeOnStart": true,
                     "beginsPattern": "^.*(Job host stopped|signaling restart).*$",
-                    "endsPattern": "^.*(?:Application|Job host) started.*$"
+                    "endsPattern": "^.*Host lock lease acquired by instance ID.*$"
                 },
                 "severity": "error"
             }
