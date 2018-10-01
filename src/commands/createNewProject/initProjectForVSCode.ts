@@ -97,6 +97,10 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
             if (projectCreator.preDeployTask) {
                 data[`${extensionPrefix}.${preDeployTaskSetting}`] = projectCreator.preDeployTask;
             }
+
+            // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
+            data['debug.internalConsoleOptions'] = 'neverOpen';
+
             return data;
         },
         ui
