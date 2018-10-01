@@ -28,10 +28,10 @@ async function validateTemplateCounts(templates: FunctionTemplates): Promise<voi
     assert.equal(javaTemplates.length, 4, 'Unexpected Java templates count.');
 
     const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);
-    assert.equal(cSharpTemplates.length, 9, 'Unexpected CSharp (.NET Framework) templates count.');
+    assert.equal(cSharpTemplates.length, 10, 'Unexpected CSharp (.NET Framework) templates count.');
 
     const cSharpTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(cSharpTemplatesv2.length, 6, 'Unexpected CSharp (.NET Core) templates count.');
+    assert.equal(cSharpTemplatesv2.length, 7, 'Unexpected CSharp (.NET Core) templates count.');
 
     const pythonTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
     assert.equal(pythonTemplates.length, 7, 'Unexpected Python templates count.');
