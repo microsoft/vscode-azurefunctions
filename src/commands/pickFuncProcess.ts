@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { Task, TaskExecution } from 'vscode';
 import { ext } from 'vscode-azureappservice/lib/extensionVariables';
@@ -53,9 +54,7 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
     const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
 
     const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);
-    // On Mac/Linux we can leverage the pid of the task directly.
-    // On Windows, the pid of the task corresponds to the parent PowerShell process and we have to drill down to get the actual func process
-    return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : pid;
+    return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
 }
 
 function isFuncTask(task: Task): boolean {
@@ -106,6 +105,26 @@ async function startFuncTask(funcTask: Task, timeoutInSeconds: number, timeoutEr
     return await waitForStartPromise;
 }
 
+/**
+ * Gets the innermost child pid for a unix process. This is only really necessary if the user installs 'func' with a tool like 'npm', which uses a wrapper around the main func exe
+ */
+async function getInnermostUnixPid(pid: string): Promise<string> {
+    return await new Promise<string>((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
+        unixPsTree(parseInt(pid), (error: Error | undefined, children: unixPsTree.PS[]) => {
+            if (error) {
+                reject(error);
+            } else {
+                const child: unixPsTree.PS | undefined = children.pop();
+                resolve(child ? child.PID : pid);
+            }
+        });
+    });
+}
+
+/**
+ * Gets the innermost child pid for a Windows process. This is almost always necessary since the original pid is associated with the parent PowerShell process.
+ * We also need to delay to make sure the func process has been started within the PowerShell process.
+ */
 async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
     const moduleName: string = 'windows-process-tree';
     const windowsProcessTree: IWindowsProcessTree | undefined = await tryFetchNodeModule<IWindowsProcessTree>(moduleName);
