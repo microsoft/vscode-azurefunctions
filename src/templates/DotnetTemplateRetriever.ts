@@ -74,7 +74,8 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
         'QueueTrigger',
         'TimerTrigger',
         'ServiceBusTopicTrigger',
-        'ServiceBusQueueTrigger'
+        'ServiceBusQueueTrigger',
+        'CosmosDBTrigger'
     ];
 
     if (runtime === ProjectRuntime.v1) {
