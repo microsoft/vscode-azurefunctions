@@ -15,10 +15,10 @@ const vsce = require('vsce');
 const packageJson = require('./package.json');
 
 gulp.task('test', ['install-azure-account'], (cb) => {
-    process.env.ENABLE_LONG_RUNNING_TESTS = env.ENABLE_LONG_RUNNING_TESTS | process.env.TRAVIS_EVENT_TYPE === 'cron';
-    const cmd = cp.spawn('node', ['./node_modules/vscode/bin/test'], {
-        env: env, stdio: 'inherit'
-    });
+    const env = process.env;
+    env.DEBUGTELEMETRY = 1;
+    env.ENABLE_LONG_RUNNING_TESTS = env.ENABLE_LONG_RUNNING_TESTS | process.env.TRAVIS_EVENT_TYPE === 'cron';
+    const cmd = cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
     cmd.on('close', (code) => {
         cb(code);
     });

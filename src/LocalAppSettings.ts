@@ -21,7 +21,7 @@ export interface ILocalAppSettings {
     ConnectionStrings?: { [key: string]: string };
 }
 
-const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
+export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 
 export async function promptForAppSetting(actionContext: IActionContext, localSettingsPath: string, resourceType: ResourceType): Promise<string> {
     const settings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
@@ -56,6 +56,9 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
                         learnMoreLink: 'https://aka.ms/T5o0nf'
                     }
                 );
+                break;
+            case ResourceType.ServiceBus:
+                resourceResult = await azUtil.promptForServiceBus();
                 break;
             default:
         }

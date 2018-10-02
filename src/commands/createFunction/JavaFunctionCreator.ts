@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { OutputChannel } from "vscode";
-import { IAzureUserInput, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from "../../localize";
 import { removeLanguageFromId } from "../../templates/FunctionTemplates";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
@@ -23,12 +23,12 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
-    private _telemetryProperties: TelemetryProperties;
+    private _actionContext: IActionContext;
 
-    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, actionContext: IActionContext) {
         super(functionAppPath, template);
         this._outputChannel = outputChannel;
-        this._telemetryProperties = telemetryProperties;
+        this._actionContext = actionContext;
     }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined): Promise<void> {
@@ -55,20 +55,19 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
     public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
         const javaFuntionProperties: string[] = [];
         for (const key of Object.keys(userSettings)) {
-            javaFuntionProperties.push(`"-D${key}=${userSettings[key]}"`);
+            javaFuntionProperties.push(mavenUtils.formatMavenArg(`D${key}`, userSettings[key]));
         }
-
-        await mavenUtils.validateMavenInstalled(this._functionAppPath);
+        await mavenUtils.validateMavenInstalled(this._actionContext, this._functionAppPath);
         this._outputChannel.show();
         await mavenUtils.executeMvnCommand(
-            this._telemetryProperties,
+            this._actionContext.properties,
             this._outputChannel,
             this._functionAppPath,
             'azure-functions:add',
             '-B',
-            `"-Dfunctions.package=${this._packageName}"`,
-            `"-Dfunctions.name=${this._functionName}"`,
-            `"-Dfunctions.template=${removeLanguageFromId(this._template.id)}"`,
+            mavenUtils.formatMavenArg('Dfunctions.package', this._packageName),
+            mavenUtils.formatMavenArg('Dfunctions.name', this._functionName),
+            mavenUtils.formatMavenArg('Dfunctions.template', removeLanguageFromId(this._template.id)),
             ...javaFuntionProperties
         );
 

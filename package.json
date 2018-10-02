@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%extension.description%",
-    "version": "0.10.1-alpha",
+    "version": "0.11.1-alpha",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -58,6 +58,7 @@
         "onCommand:azureFunctions.stopStreamingLogs",
         "onCommand:azureFunctions.deleteProxy",
         "onCommand:azureFunctions.uninstallFuncCoreTools",
+        "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
         "onView:azureFunctionsExplorer"
@@ -232,6 +233,11 @@
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
                 "title": "%azFunc.uninstallFuncCoreTools%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.installOrUpdateFuncCoreTools",
+                "title": "%azFunc.installOrUpdateFuncCoreTools%",
                 "category": "Azure Functions"
             }
         ],
@@ -477,6 +483,35 @@
                 "url": "http://json.schemastore.org/proxies"
             }
         ],
+        "problemPatterns": [
+            {
+                "name": "func",
+                "kind": "file",
+                "regexp": "^.*Missing.*AzureWebJobsStorage.*(local.settings.json).*$",
+                "file": 1,
+                "message": 0
+            }
+        ],
+        "problemMatchers": [
+            {
+                "name": "func-watch",
+                "label": "%azFunc.problemMatchers.funcWatch.label%",
+                "owner": "Azure Functions",
+                "source": "func",
+                "applyTo": "allDocuments",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": "$func",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*(Job host stopped|signaling restart).*$",
+                    "endsPattern": "^.*Host lock lease acquired by instance ID.*$"
+                },
+                "severity": "error"
+            }
+        ],
         "configuration": [
             {
                 "title": "Azure Functions",
@@ -517,9 +552,15 @@
                         "type": "string",
                         "enum": [
                             "~1",
+                            "~2",
                             "beta"
                         ],
-                        "description": "%azFunc.projectRuntimeDescription%"
+                        "description": "%azFunc.projectRuntimeDescription%",
+                        "enumDescriptions": [
+                            "%azFunc.projectRuntime.v1Description%",
+                            "%azFunc.projectRuntime.v2Description%",
+                            "%azFunc.projectRuntime.betaDescription%"
+                        ]
                     },
                     "azureFunctions.projectLanguage": {
                         "scope": "resource",
@@ -537,7 +578,20 @@
                             "Python",
                             "TypeScript"
                         ],
-                        "description": "%azFunc.projectLanguageDescription%"
+                        "description": "%azFunc.projectLanguageDescription%",
+                        "enumDescriptions": [
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "",
+                            "",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%",
+                            "%azFunc.projectLanguage.previewDescription%"
+                        ]
                     },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",
@@ -569,6 +623,16 @@
                         "description": "%azFunc.showDebugConfigWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showPythonVenvWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showPythonVenvWarningDescription%",
+                        "default": true
+                    },
+                    "azureFunctions.showDeploySubpathWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showDeploySubpathWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",
@@ -591,6 +655,16 @@
                             "OpenInCurrentWindow"
                         ],
                         "description": "%azFunc.projectOpenBehaviorDescription%"
+                    },
+                    "azureFunctions.preDeployTask": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azFunc.preDeployTaskDescription%"
+                    },
+                    "azureFunctions.enablePython": {
+                        "type": "boolean",
+                        "description": "%azFunc.enablePythonDescription%",
+                        "default": false
                     }
                 }
             }
@@ -630,6 +704,7 @@
         "azure-arm-resource": "^3.0.0-preview",
         "azure-arm-storage": "^3.1.0",
         "azure-arm-website": "^4.0.0",
+        "azure-arm-sb": "^2.3.0-preview",
         "clipboardy": "^1.2.2",
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
@@ -637,11 +712,10 @@
         "ms-rest-azure": "^2.3.1",
         "opn": "^5.2.0",
         "portfinder": "^1.0.13",
-        "ps-node": "^0.1.6",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.20.0",
-        "vscode-azureextensionui": "^0.17.0",
+        "vscode-azureappservice": "^0.22.2",
+        "vscode-azureextensionui": "^0.17.6",
         "vscode-azurekudu": "^0.1.8",
         "vscode-extension-telemetry": "^0.0.18",
         "vscode-nls": "^2.0.2",

@@ -162,5 +162,5 @@ Example format for the Timer Trigger:
 And the following is an example command for creating a template:
 
 ```
-dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-beta.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-beta.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.2.x --arg:Schedule 0 */5 * * * * --arg:name TimerTriggerCSharp --arg:namespace Company.Function
+dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-~2.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-~2.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.2.x --arg:Schedule 0 */5 * * * * --arg:name TimerTriggerCSharp --arg:namespace Company.Function
 ```

@@ -47,9 +47,9 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
 
 export function getFeedRuntime(runtime: ProjectRuntime): string {
     switch (runtime) {
-        case ProjectRuntime.beta:
+        case ProjectRuntime.v2:
             return 'v2';
-        case ProjectRuntime.one:
+        case ProjectRuntime.v1:
             return 'v1';
         default:
             throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
@@ -62,7 +62,7 @@ export function getFeedRuntime(runtime: ProjectRuntime): string {
 export async function getCliFeedAppSettings(projectRuntime: ProjectRuntime): Promise<{ [key: string]: string }> {
     // Use these defaults in case we can't get the cli-feed
     let funcVersion: string = projectRuntime;
-    let nodeVersion: string = projectRuntime === ProjectRuntime.one ? v1DefaultNodeVersion : v2DefaultNodeVersion;
+    let nodeVersion: string = projectRuntime === ProjectRuntime.v1 ? v1DefaultNodeVersion : v2DefaultNodeVersion;
 
     const cliFeed: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
     if (cliFeed) {

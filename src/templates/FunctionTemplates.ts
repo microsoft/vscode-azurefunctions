@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext, parseError, TelemetryProperties } from 'vscode-azureextensionui';
-import { betaReleaseVersion, ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting, v1ReleaseVersion } from '../constants';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -26,7 +26,7 @@ export class FunctionTemplates {
         this.copyCSharpSettingsFromJS();
     }
 
-    public async getTemplates(language: string, runtime: string = ProjectRuntime.one, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
+    public async getTemplates(language: string, runtime: string, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
         const templates: IFunctionTemplate[] | undefined = this._templatesMap[runtime];
         if (!templates) {
             throw new Error(this._noInternetErrMsg);
@@ -83,7 +83,7 @@ function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '');
 }
 
-export async function getFunctionTemplates(): Promise<FunctionTemplates> {
+export async function getFunctionTemplates(source?: 'backup' | 'cliFeed'): Promise<FunctionTemplates> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
@@ -101,32 +101,25 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
                 let templates: IFunctionTemplate[] | undefined;
 
                 // 1. Use the cached templates if they match templateVersion
-                if (ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
+                if (!source && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'matchingCache';
                 }
 
                 // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
-                if (!templates && cliFeedJson && templateVersion) {
+                if ((!source || source === 'cliFeed') && !templates && cliFeedJson && templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, templateVersion, runtime);
                     this.properties.templateSource = 'cliFeed';
                 }
 
                 // 3. Use the cached templates, even if they don't match templateVersion
-                if (!templates) {
+                if (!source && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'mismatchCache';
                 }
 
-                // 4. Download templates from the cli-feed using the backupVersion
-                if (!templates && cliFeedJson) {
-                    const backupVersion: string = runtime === ProjectRuntime.one ? v1ReleaseVersion : betaReleaseVersion;
-                    templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, backupVersion, runtime);
-                    this.properties.templateSource = 'backupCliFeed';
-                }
-
-                // 5. Use backup templates shipped with the extension
-                if (!templates) {
+                // 4. Use backup templates shipped with the extension
+                if ((!source || source === 'backup') && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
                     this.properties.templateSource = 'backupFromExtension';
                 }

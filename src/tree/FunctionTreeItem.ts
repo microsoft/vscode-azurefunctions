@@ -3,12 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
-import { OutputChannel } from 'vscode';
-import { getKuduClient, SiteClient } from 'vscode-azureappservice';
+import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
-import { FunctionEnvelope, FunctionSecrets, MasterKey } from 'vscode-azurekudu/lib/models';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -23,17 +21,15 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public readonly client: SiteClient;
 
     private readonly _name: string;
-    private readonly _outputChannel: OutputChannel;
     private _triggerUrl: string;
 
-    public constructor(client: SiteClient, func: FunctionEnvelope, outputChannel: OutputChannel) {
-        if (!func.name) {
+    public constructor(client: SiteClient, func: FunctionEnvelope) {
+        if (!func.id) {
             throw new ArgumentError(func);
         }
 
         this.client = client;
-        this._name = func.name;
-        this._outputChannel = outputChannel;
+        this._name = getFunctionNameFromId(func.id);
 
         this.config = new FunctionConfig(func.config);
     }
@@ -65,39 +61,57 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
-        this._outputChannel.show(true);
-        this._outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-        const kuduClient: KuduClient = await getKuduClient(this.client);
-        await kuduClient.functionModel.deleteMethod(this._name);
-        this._outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
+        ext.outputChannel.show(true);
+        ext.outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
+        await this.client.deleteFunction(this._name);
+        ext.outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
     }
 
     public async initializeTriggerUrl(): Promise<void> {
-        const kuduClient: KuduClient = await getKuduClient(this.client);
-        const functionSecrets: FunctionSecrets = await kuduClient.functionModel.getSecrets(this._name);
-        if (functionSecrets.triggerUrl === undefined) {
-            throw new ArgumentError(functionSecrets);
-        }
-
-        const triggerUrl: URL = new URL(functionSecrets.triggerUrl);
-        switch (this.config.authLevel) {
-            case HttpAuthLevel.admin:
-                const keyResult: MasterKey = await kuduClient.functionModel.getMasterKey();
-                if (keyResult.masterKey === undefined) {
-                    throw new ArgumentError(keyResult);
-                }
-                // tslint:disable-next-line:no-backbone-get-set-outside-model
-                triggerUrl.searchParams.set('code', keyResult.masterKey);
-                break;
-            case HttpAuthLevel.anonymous:
-                triggerUrl.search = '';
-                break;
-            case HttpAuthLevel.function:
-            default:
-                // Nothing to do here (the original trigger url already has a 'function' level key attached)
-                break;
+        const triggerUrl: URL = new URL(`${this.client.defaultHostUrl}/api/${this._name}`);
+        const key: string | undefined = await this.getKey();
+        if (key) {
+            triggerUrl.searchParams.set('code', key);
         }
 
         this._triggerUrl = triggerUrl.toString();
     }
+
+    public async getKey(): Promise<string | undefined> {
+        let urlPath: string;
+        switch (this.config.authLevel) {
+            case HttpAuthLevel.admin:
+                urlPath = '/host/systemkeys/_master';
+                break;
+            case HttpAuthLevel.function:
+                urlPath = `functions/${this._name}/keys/default`;
+                break;
+            case HttpAuthLevel.anonymous:
+            default:
+                return undefined;
+        }
+
+        const data: string = await functionsAdminRequest(this.client, urlPath);
+        try {
+            // tslint:disable-next-line:no-unsafe-any
+            const result: string = JSON.parse(data).value;
+            if (result) {
+                return result;
+            }
+        } catch {
+            // ignore json parse error and throw better error below
+        }
+
+        throw new Error(localize('keyFail', 'Failed to get key for trigger "{0}".', this._name));
+    }
+}
+
+export function getFunctionNameFromId(id: string): string {
+    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(?:[^\/]+)\/resourceGroups\/(?:[^\/]+)\/providers\/Microsoft.Web\/sites\/(?:[^\/]+)\/functions\/([^\/]+)/);
+
+    if (matches === null || matches.length < 2) {
+        throw new Error(localize('invalidFuncId', 'Invalid Functions Id'));
+    }
+
+    return matches[1];
 }

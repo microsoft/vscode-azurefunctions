@@ -5,13 +5,13 @@
 
 import { OutputChannel } from "vscode";
 import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
-import { extensionPrefix, ProjectRuntime, TemplateFilter } from "../../constants";
+import { ProjectRuntime, TemplateFilter } from "../../constants";
 import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
-import { localize } from "../../localize";
 import { promptForProjectRuntime } from "../../ProjectSettings";
 
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
+    public preDeployTask: string = '';
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;
@@ -28,7 +28,7 @@ export abstract class ProjectCreatorBase {
 
     public async getRuntime(): Promise<ProjectRuntime> {
         // tslint:disable-next-line:strict-boolean-expressions
-        return await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
+        return await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
     }
 
     public getLaunchJson(): {} | undefined {
@@ -46,21 +46,4 @@ export abstract class ProjectCreatorBase {
     }
 }
 
-export const funcHostTaskId: string = 'runFunctionsHost';
-export const funcHostTaskLabel: string = localize('azFunc.runFuncHost', 'Run Functions Host');
-export const funcHostProblemMatcher: {} = {
-    owner: extensionPrefix,
-    pattern: [
-        {
-            regexp: '\\b\\B',
-            file: 1,
-            location: 2,
-            message: 3
-        }
-    ],
-    background: {
-        activeOnStart: true,
-        beginsPattern: '^.*Stopping host.*',
-        endsPattern: '^.*Job host started.*'
-    }
-};
+export const funcWatchProblemMatcher: string = '$func-watch';

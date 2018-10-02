@@ -11,8 +11,7 @@ export const projectRuntimeSetting: string = 'projectRuntime';
 export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
 export const templateVersionSetting: string = 'templateVersion';
-export const v1ReleaseVersion: string = '1.0.12'; // known stable version
-export const betaReleaseVersion: string = '2.0.1-beta.25'; // known stable version
+export const preDeployTaskSetting: string = 'preDeployTask';
 
 export enum ProjectLanguage {
     Bash = 'Bash',
@@ -30,8 +29,8 @@ export enum ProjectLanguage {
 }
 
 export enum ProjectRuntime {
-    one = '~1',
-    beta = 'beta'
+    v1 = '~1',
+    v2 = '~2'
 }
 
 export enum TemplateFilter {
@@ -65,3 +64,7 @@ export enum ScmType {
     LocalGit = 'LocalGit',
     GitHub = 'GitHub'
 }
+
+export const publishTaskId: string = 'publish';
+export const installExtensionsId: string = 'installExtensions';
+export const funcPackId: string = 'funcPack';

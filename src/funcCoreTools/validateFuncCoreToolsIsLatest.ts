@@ -13,10 +13,10 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, par
 import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
-import { getProjectRuntimeFromVersion } from './tryGetLocalRuntimeVersion';
+import { getNpmDistTag } from "./getNpmDistTag";
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
@@ -31,7 +31,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             }
             this.properties.localVersion = localVersion;
 
-            const projectRuntime: ProjectRuntime | undefined = getProjectRuntimeFromVersion(localVersion);
+            const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(localVersion);
             if (projectRuntime === undefined) {
                 return;
             }
@@ -43,16 +43,13 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             }
 
             if (semver.gt(newestVersion, localVersion)) {
-                let message: string = localize(
+                const message: string = localize(
                     'azFunc.outdatedFunctionRuntime',
                     'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
                     localVersion,
                     newestVersion
                 );
-                const v2: string = localize('v2BreakingChanges', 'v2 is in preview and may have breaking changes (which are automatically applied to Azure).');
-                if (projectRuntime === ProjectRuntime.beta) {
-                    message += ` ${v2}`;
-                }
+
                 const update: vscode.MessageItem = { title: 'Update' };
                 let result: vscode.MessageItem;
 
@@ -84,16 +81,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
                 return matches[1];
             }
         } else {
-            const npmRegistryUri: string = 'https://aka.ms/W2mvv3';
-            type distTags = { core: string, docker: string, latest: string };
-            const distTags: distTags = <distTags>JSON.parse(await <Thenable<string>>request(npmRegistryUri));
-            switch (projectRuntime) {
-                case ProjectRuntime.one:
-                    return distTags.latest;
-                case ProjectRuntime.beta:
-                    return distTags.core;
-                default:
-            }
+            return (await getNpmDistTag(projectRuntime)).value;
         }
     } catch (error) {
         actionContext.properties.latestRuntimeError = parseError(error).message;

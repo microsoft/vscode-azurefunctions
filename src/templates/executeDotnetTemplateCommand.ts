@@ -10,7 +10,18 @@ import { cpUtils } from "../utils/cpUtils";
 
 export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
-    return await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', jsonDllPath, '--require', getDotnetItemTemplatePath(runtime), '--require', getDotnetProjectTemplatePath(runtime), '--operation', operation, ...args);
+    return await cpUtils.executeCommand(
+        undefined,
+        workingDirectory,
+        'dotnet',
+        cpUtils.wrapArgInQuotes(jsonDllPath),
+        '--require',
+        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(runtime)),
+        '--require',
+        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(runtime)),
+        '--operation',
+        operation,
+        ...args);
 }
 
 export function getDotnetTemplatesPath(): string {

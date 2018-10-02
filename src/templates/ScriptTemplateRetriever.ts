@@ -93,12 +93,27 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
         'TimerTrigger-JavaScript'
     ];
 
-    if (runtime === ProjectRuntime.one) {
+    if (runtime === ProjectRuntime.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'GenericWebHook-JavaScript',
             'GitHubWebHook-JavaScript',
             'HttpTriggerWithParameters-JavaScript',
             'ManualTrigger-JavaScript'
+        ]);
+    } else {
+        // Python is only supported in v2
+        // For JavaScript, only include triggers that require extensions in v2. v1 doesn't have the same support for 'func extensions install'
+        verifiedTemplateIds = verifiedTemplateIds.concat([
+            'CosmosDBTrigger-JavaScript',
+            'ServiceBusQueueTrigger-JavaScript',
+            'ServiceBusTopicTrigger-JavaScript',
+            'BlobTrigger-Python',
+            'HttpTrigger-Python',
+            'QueueTrigger-Python',
+            'TimerTrigger-Python',
+            'CosmosDBTrigger-Python',
+            'ServiceBusQueueTrigger-Python',
+            'ServiceBusTopicTrigger-Python'
         ]);
     }
 

@@ -10,17 +10,20 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { funcHostCommand, funcHostTaskLabel } from '../../funcCoreTools/funcHostTask';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
+import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostTaskId, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = publishTaskId;
 
     private _debugSubpath: string;
     private _runtime: ProjectRuntime;
@@ -35,9 +38,10 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
 
         // tslint:disable-next-line:strict-boolean-expressions
-        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime(this.ui);
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.one ? '1' : '2'}.x`;
-        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', projectName);
+        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
+        const functionsVersion: string = this._runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
         if (!this._hasDetectedRuntime) {
             await this.detectRuntime();
@@ -89,7 +93,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: 'publish',
+                    label: publishTaskId,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
@@ -99,19 +103,18 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: localize('azFunc.runFuncHost', 'Run Functions Host'),
-                    identifier: funcHostTaskId,
+                    label: funcHostTaskLabel,
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
                         cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
-                    command: 'func host start',
+                    command: funcHostCommand,
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
                     },
-                    problemMatcher: []
+                    problemMatcher: funcWatchProblemMatcher
                 }
             ]
         };
@@ -123,7 +126,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this._runtime === ProjectRuntime.beta ? 'coreclr' : 'clr',
+                    type: this._runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
@@ -157,9 +160,9 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             const targetFramework: string = matches[1];
             this.telemetryProperties.cSharpTargetFramework = targetFramework;
             if (targetFramework.startsWith('netstandard')) {
-                this._runtime = ProjectRuntime.beta;
+                this._runtime = ProjectRuntime.v2;
             } else {
-                this._runtime = ProjectRuntime.one;
+                this._runtime = ProjectRuntime.v1;
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');

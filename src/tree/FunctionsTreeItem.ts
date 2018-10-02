@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OutputChannel } from 'vscode';
-import { getKuduClient, SiteClient } from 'vscode-azureappservice';
-import { IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
-import KuduClient from 'vscode-azurekudu';
-import { FunctionEnvelope } from 'vscode-azurekudu/lib/models';
+import { FunctionEnvelope, FunctionEnvelopeCollection } from 'azure-arm-website/lib/models';
+import { isArray } from 'util';
+import { SiteClient } from 'vscode-azureappservice';
+import { createTreeItemsWithErrorHandling, IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
-import { FunctionTreeItem } from './FunctionTreeItem';
+import { FunctionTreeItem, getFunctionNameFromId } from './FunctionTreeItem';
 
 export class FunctionsTreeItem implements IAzureParentTreeItem {
     public static contextValue: string = 'azFuncFunctions';
@@ -19,11 +18,10 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     public readonly childTypeLabel: string = localize('azFunc.Function', 'Function');
 
     private readonly _client: SiteClient;
-    private readonly _outputChannel: OutputChannel;
+    private _nextLink: string | undefined;
 
-    public constructor(client: SiteClient, outputChannel: OutputChannel) {
+    public constructor(client: SiteClient) {
         this._client = client;
-        this._outputChannel = outputChannel;
     }
 
     public get id(): string {
@@ -35,20 +33,38 @@ export class FunctionsTreeItem implements IAzureParentTreeItem {
     }
 
     public hasMoreChildren(): boolean {
-        return false;
+        return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
-        const client: KuduClient = await getKuduClient(this._client);
-        const funcs: FunctionEnvelope[] = await client.functionModel.list();
-        return await Promise.all(funcs.map(async (fe: FunctionEnvelope) => {
-            const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe, this._outputChannel);
-            if (treeItem.config.isHttpTrigger) {
-                // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
-                // (Otherwise there might be a second or two delay which could lead to confusion)
-                await treeItem.initializeTriggerUrl();
+    public async loadMoreChildren(_node: IAzureNode, clearCache: boolean): Promise<IAzureTreeItem[]> {
+        if (clearCache) {
+            this._nextLink = undefined;
+        }
+
+        const funcs: FunctionEnvelopeCollection = this._nextLink ? await this._client.listFunctionsNext(this._nextLink) : await this._client.listFunctions();
+
+        // https://github.com/Azure/azure-functions-host/issues/3502
+        if (!isArray(funcs)) {
+            throw new Error(localize('failedToList', 'Failed to list functions.'));
+        }
+
+        this._nextLink = funcs.nextLink;
+
+        return await createTreeItemsWithErrorHandling(
+            funcs,
+            'azFuncInvalidFunction',
+            async (fe: FunctionEnvelope) => {
+                const treeItem: FunctionTreeItem = new FunctionTreeItem(this._client, fe);
+                if (treeItem.config.isHttpTrigger) {
+                    // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
+                    // (Otherwise there might be a second or two delay which could lead to confusion)
+                    await treeItem.initializeTriggerUrl();
+                }
+                return treeItem;
+            },
+            (fe: FunctionEnvelope) => {
+                return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }
-            return treeItem;
-        }));
+        );
     }
 }

@@ -11,14 +11,15 @@ import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { funcHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
-import { funcHostTaskId } from './IProjectCreator';
 import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
+import { createVirtualEnviornment, funcEnvName, makeVenvDebuggable } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -31,11 +32,19 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                 if (isInitializedProject(folderPath)) {
                     actionContext.properties.isInitialized = 'true';
                     actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
-                    await verifyDebugConfigIsValid(folderPath, actionContext);
+
+                    const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+                    actionContext.properties.projectLanguage = String(projectLanguage);
+                    await verifyDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                    await verifyPythonVenv(projectLanguage, folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(ui, folderPath)) {
-                        await initProjectForVSCode(actionContext.properties, ui, outputChannel, folderPath);
+                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creating', 'Initializing project...') }, async () => {
+                            await initProjectForVSCode(actionContext, ui, outputChannel, folderPath);
+                        });
+                        // don't wait
+                        vscode.window.showInformationMessage(localize('finishedInit', 'Finished initializing project.'));
                     }
                 }
             }
@@ -81,18 +90,17 @@ function isInitializedProject(folderPath: string): boolean {
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30. This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-async function verifyDebugConfigIsValid(folderPath: string, actionContext: IActionContext): Promise<void> {
-    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
-    if (language === ProjectLanguage.JavaScript) {
+async function verifyDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    if (projectLanguage === ProjectLanguage.JavaScript) {
         const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
-        if (localProjectRuntime === ProjectRuntime.beta) {
+        if (localProjectRuntime === ProjectRuntime.v2) {
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
             const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
             if (!rawTasksData.includes(funcNodeDebugEnvVar)) {
                 const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
-                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => t.identifier === funcHostTaskId);
+                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => funcHostNameRegEx.test(t.label));
                 if (funcTask) {
                     actionContext.properties.debugConfigValid = 'false';
 
@@ -139,4 +147,32 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
     }
 
     return false;
+}
+
+async function verifyPythonVenv(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    if (projectLanguage === ProjectLanguage.Python) {
+        if (!await fse.pathExists(path.join(folderPath, funcEnvName))) {
+            actionContext.properties.pythonVenvExists = 'false';
+
+            const settingKey: string = 'showPythonVenvWarning';
+            if (getFuncExtensionSetting<boolean>(settingKey)) {
+                const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
+                const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment, which is required to debug and deploy your Azure Functions project.');
+                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
+                if (result === createVenv) {
+                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
+                        // create venv
+                        await createVirtualEnviornment(folderPath);
+                        await makeVenvDebuggable(folderPath);
+                    });
+
+                    actionContext.properties.createdPythonVenv = 'true';
+                    // don't wait
+                    vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
+                } else if (result === DialogResponses.dontWarnAgain) {
+                    await updateGlobalSetting(settingKey, false);
+                }
+            }
+        }
+    }
 }

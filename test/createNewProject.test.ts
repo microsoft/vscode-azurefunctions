@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import { ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -13,7 +13,6 @@ import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureexte
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
-import { funcToolsInstalled } from '../src/funcCoreTools/validateFuncCoreToolsInstalled';
 import * as fsUtil from '../src/utils/fs';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
@@ -22,9 +21,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     this.timeout(60 * 1000);
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
 
-    // tslint:disable-next-line:no-function-expression
-    suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(120 * 1000);
+    suiteSetup(async () => {
         await fse.ensureDir(testFolderPath);
     });
 
@@ -109,12 +106,15 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath, false);
     });
 
-    const pythonProject: string = 'PythonProject';
-    test(pythonProject, async () => {
-        const projectPath: string = path.join(testFolderPath, pythonProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
-        await validateVSCodeProjectFiles(projectPath, false);
-    });
+    /*  Temporarily disabled: https://github.com/Microsoft/vscode-azurefunctions/issues/542
+        const pythonProject: string = 'PythonProject';
+        test(pythonProject, async () => {
+            const projectPath: string = path.join(testFolderPath, pythonProject);
+            await installFuncCoreTools(PackageManager.npm);
+            await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
+            await validateVSCodeProjectFiles(projectPath, false);
+        });
+    */
 
     const typeScriptProject: string = 'TypeScriptProject';
     test(typeScriptProject, async () => {
@@ -138,16 +138,11 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', 'beta', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
     });
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
-        // Setup common inputs
-        if (!(await funcToolsInstalled())) {
-            inputs.push(DialogResponses.skipForNow.title);
-        }
-
         if (!previewLanguage) {
             inputs.unshift(language); // Specify the function name
         }

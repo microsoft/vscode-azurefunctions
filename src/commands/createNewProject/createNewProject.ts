@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { QuickPickItem, QuickPickOptions } from 'vscode';
-import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
+import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
-import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
@@ -20,6 +20,7 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { PythonProjectCreator } from './PythonProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export async function createNewProject(
@@ -47,42 +48,61 @@ export async function createNewProject(
                 { label: ProjectLanguage.CSharp, description: '' },
                 { label: ProjectLanguage.Java, description: '' }
             ];
+
+            if (getFuncExtensionSetting('enablePython')) {
+                languagePicks.push({ label: ProjectLanguage.Python, description: '(Preview)' });
+            }
+
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
             language = (await ext.ui.showQuickPick(languagePicks, options)).label;
         }
     }
     actionContext.properties.projectLanguage = language;
 
-    const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext.properties);
-    await projectCreator.addNonVSCodeFiles();
+    await window.withProgress({ location: ProgressLocation.Notification, title: localize('creating', 'Creating new project...') }, async () => {
+        // tslint:disable-next-line:no-non-null-assertion
+        functionAppPath = functionAppPath!;
+        // tslint:disable-next-line:no-non-null-assertion
+        language = language!;
 
-    await initProjectForVSCode(actionContext.properties, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
+        const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
+        await projectCreator.addNonVSCodeFiles();
 
-    if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
-        await gitUtils.gitInit(ext.outputChannel, functionAppPath);
-    }
+        await initProjectForVSCode(actionContext, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
 
-    if (templateId) {
-        await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
-    }
-    await validateFuncCoreToolsInstalled();
+        if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
+            await gitUtils.gitInit(ext.outputChannel, functionAppPath);
+        }
+
+        if (templateId) {
+            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
+        }
+    });
+    // don't wait
+    window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
+
+    // don't wait
+    // tslint:disable-next-line:no-floating-promises
+    validateFuncCoreToolsInstalled();
 
     if (openFolder) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
 }
 
-export function getProjectCreator(language: string, functionAppPath: string, telemetryProperties: TelemetryProperties): ProjectCreatorBase {
+export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext): ProjectCreatorBase {
     switch (language) {
         case ProjectLanguage.Java:
-            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext);
         case ProjectLanguage.JavaScript:
-            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         case ProjectLanguage.CSharp:
-            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         case ProjectLanguage.CSharpScript:
-            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+        case ProjectLanguage.Python:
+            return new PythonProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
         default:
-            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, telemetryProperties);
+            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
     }
 }

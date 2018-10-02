@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -14,20 +13,9 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { FunctionTemplates, getFunctionTemplates } from '../../src/templates/FunctionTemplates';
+import { FunctionTemplates } from '../../src/templates/FunctionTemplates';
 import * as fsUtil from '../../src/utils/fs';
-
-let backupTemplates: FunctionTemplates;
-let latestTemplates: FunctionTemplates | undefined;
-
-// tslint:disable-next-line:no-function-expression
-suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-    this.timeout(30 * 1000);
-    // Ensure templates are initialized before any 'Create Function' test is run
-    backupTemplates = <FunctionTemplates>(await getFunctionTemplates());
-    latestTemplates = <FunctionTemplates>(await getFunctionTemplates());
-    // https://github.com/Microsoft/vscode-azurefunctions/issues/334
-});
+import { backupTemplates, latestTemplates } from '../global.test';
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
     public backupTestFolder: string;
@@ -72,12 +60,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
-        if (latestTemplates) {
-            await this.testCreateFunctionInternal(latestTemplates, this.funcPortalTestFolder, templateName, inputs.slice());
-        } else {
-            assert.fail('Failed to find templates from functions portal.');
-        }
-
+        await this.testCreateFunctionInternal(latestTemplates, this.funcPortalTestFolder, templateName, inputs.slice());
         await this.testCreateFunctionInternal(backupTemplates, this.backupTestFolder, templateName, inputs.slice());
     }
 

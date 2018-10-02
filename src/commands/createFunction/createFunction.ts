@@ -135,7 +135,7 @@ export async function createFunction(
     let functionCreator: FunctionCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel, actionContext.properties);
+            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel, actionContext);
             break;
         case ProjectLanguage.CSharp:
             functionCreator = new CSharpFunctionCreator(functionAppPath, template);
@@ -194,7 +194,7 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
         if (isString(result)) {
             switch (result) {
                 case runtimePickId:
-                    runtime = await promptForProjectRuntime(ext.ui);
+                    runtime = await promptForProjectRuntime();
                     await updateWorkspaceSetting(projectRuntimeSetting, runtime, functionAppPath);
                     break;
                 case languagePickId:

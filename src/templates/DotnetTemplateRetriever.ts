@@ -72,10 +72,13 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
         'HttpTrigger',
         'BlobTrigger',
         'QueueTrigger',
-        'TimerTrigger'
+        'TimerTrigger',
+        'ServiceBusTopicTrigger',
+        'ServiceBusQueueTrigger',
+        'CosmosDBTrigger'
     ];
 
-    if (runtime === ProjectRuntime.one) {
+    if (runtime === ProjectRuntime.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'GenericWebHook',
             'GitHubWebHook',
@@ -86,9 +89,9 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
     return verifiedTemplateIds.map((id: string) => {
         id = `Azure.Function.CSharp.${id}`;
         switch (runtime) {
-            case ProjectRuntime.one:
+            case ProjectRuntime.v1:
                 return `${id}.1.x`;
-            case ProjectRuntime.beta:
+            case ProjectRuntime.v2:
                 return `${id}.2.x`;
             default:
                 throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
