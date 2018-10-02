@@ -8,7 +8,7 @@ export interface ITasksJson {
 }
 
 export interface ITask {
-    identifier: string;
+    label: string;
     options?: ITaskOptions;
 }
 

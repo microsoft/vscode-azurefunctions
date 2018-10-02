@@ -11,12 +11,12 @@ import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { funcHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
-import { funcHostTaskId } from './IProjectCreator';
 import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
 import { createVirtualEnviornment, funcEnvName, makeVenvDebuggable } from './PythonProjectCreator';
@@ -100,7 +100,7 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
             if (!rawTasksData.includes(funcNodeDebugEnvVar)) {
                 const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
-                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => t.identifier === funcHostTaskId);
+                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => funcHostNameRegEx.test(t.label));
                 if (funcTask) {
                     actionContext.properties.debugConfigValid = 'false';
 

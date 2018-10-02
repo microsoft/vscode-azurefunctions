@@ -11,13 +11,14 @@ import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { funcHostCommand, funcHostTaskLabel } from '../../funcCoreTools/funcHostTask';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcHostTaskId, funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
@@ -92,8 +93,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: publishTaskId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
-                    identifier: publishTaskId,
+                    label: publishTaskId,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
@@ -103,14 +103,13 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: localize('azFunc.runFuncHost', 'Run Functions Host'),
-                    identifier: funcHostTaskId,
+                    label: funcHostTaskLabel,
                     type: 'shell',
                     dependsOn: 'build',
                     options: {
                         cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
-                    command: 'func host start',
+                    command: funcHostCommand,
                     isBackground: true,
                     presentation: {
                         reveal: 'always'

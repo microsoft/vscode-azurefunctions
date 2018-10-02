@@ -11,12 +11,13 @@ import { MessageItem, window } from 'vscode';
 import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
+import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
-import { funcHostTaskId, funcWatchProblemMatcher } from "./IProjectCreator";
+import { funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export const funcEnvName: string = 'func_env';
@@ -43,7 +44,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     request: 'attach',
                     port: 9091,
                     host: 'localhost',
-                    preLaunchTask: funcHostTaskId
+                    preLaunchTask: funcHostTaskLabel
                 }
             ]
         };
@@ -85,24 +86,22 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await this.ensureAzureWebJobsStorage();
 
         const funcPackCommand: string = 'func pack';
-        const funcHostStartCommand: string = 'func host start';
         const funcExtensionsCommand: string = 'func extensions install';
         const pipInstallCommand: string = 'pip install -r requirements.txt';
         return {
             version: '2.0.0',
             tasks: [
                 {
-                    label: localize('azFunc.runFuncHost', 'Run Functions Host'),
-                    identifier: funcHostTaskId,
+                    label: funcHostTaskLabel,
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     windows: {
-                        command: convertToVenvCommand(Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     linux: {
-                        command: convertToVenvCommand(Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -118,7 +117,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 },
                 {
                     label: funcPackId,
-                    identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
                         command: convertToVenvCommand(Platform.MacOS, funcPackCommand)

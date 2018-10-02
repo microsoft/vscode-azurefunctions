@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TemplateFilter } from "../../constants";
+import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
-import { funcHostTaskId, funcHostTaskLabel, funcWatchProblemMatcher } from "./IProjectCreator";
+import { funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
@@ -17,9 +18,8 @@ export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
             tasks: [
                 {
                     label: funcHostTaskLabel,
-                    identifier: funcHostTaskId,
                     type: 'shell',
-                    command: 'func host start',
+                    command: funcHostCommand,
                     isBackground: true,
                     presentation: {
                         reveal: 'always'
