@@ -91,7 +91,7 @@ export namespace cpUtils {
         return quotationMark + arg + quotationMark;
     }
 
-    export function joinCommands(platform: Platform, ...commands: string[]): string {
+    export function joinCommands(platform: NodeJS.Platform, ...commands: string[]): string {
         let separator: string;
         switch (platform) {
             case Platform.Windows:

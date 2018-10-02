@@ -96,13 +96,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     osx: {
-                        command: cpUtils.joinCommands(Platform.MacOS, getVenvActivateCommand(Platform.MacOS), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     windows: {
-                        command: cpUtils.joinCommands(Platform.Windows, getVenvActivateCommand(Platform.Windows), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     linux: {
-                        command: cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(Platform.Linux), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
+                        command: convertToVenvCommand(Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -121,13 +121,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
-                        command: cpUtils.joinCommands(Platform.MacOS, getVenvActivateCommand(Platform.MacOS), funcPackCommand)
+                        command: convertToVenvCommand(Platform.MacOS, funcPackCommand)
                     },
                     windows: {
-                        command: cpUtils.joinCommands(Platform.Windows, getVenvActivateCommand(Platform.Windows), funcPackCommand)
+                        command: convertToVenvCommand(Platform.Windows, funcPackCommand)
                     },
                     linux: {
-                        command: cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(Platform.Linux), funcPackCommand)
+                        command: convertToVenvCommand(Platform.Linux, funcPackCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -223,6 +223,10 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     } catch (error) {
         return parseError(error).message;
     }
+}
+
+function convertToVenvCommand(platform: NodeJS.Platform, ...commands: string[]): string {
+    return cpUtils.joinCommands(platform, getVenvActivateCommand(platform), ...commands);
 }
 
 function getVenvActivateCommand(platform: NodeJS.Platform): string {
