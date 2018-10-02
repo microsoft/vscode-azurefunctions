@@ -87,6 +87,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const funcPackCommand: string = 'func pack';
         const funcHostStartCommand: string = 'func host start';
         const funcExtensionsCommand: string = 'func extensions install';
+        const pipInstallCommand: string = 'pip install -r requirements.txt';
         return {
             version: '2.0.0',
             tasks: [
@@ -95,13 +96,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcHostTaskId,
                     type: 'shell',
                     osx: {
-                        command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.MacOS)}`
+                        command: cpUtils.joinCommands(Platform.MacOS, getVenvActivateCommand(Platform.MacOS), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     windows: {
-                        command: `${funcExtensionsCommand} ; ${convertToVenvCommand(funcHostStartCommand, Platform.Windows)}`
+                        command: cpUtils.joinCommands(Platform.Windows, getVenvActivateCommand(Platform.Windows), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     linux: {
-                        command: `${funcExtensionsCommand} && ${convertToVenvCommand(funcHostStartCommand, Platform.Linux)}`
+                        command: cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(Platform.Linux), funcExtensionsCommand, pipInstallCommand, funcHostStartCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -120,13 +121,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     identifier: funcPackId, // Until this is fixed, the label must be the same as the id: https://github.com/Microsoft/vscode/issues/57707
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(funcPackCommand, Platform.MacOS)
+                        command: cpUtils.joinCommands(Platform.MacOS, getVenvActivateCommand(Platform.MacOS), funcPackCommand)
                     },
                     windows: {
-                        command: convertToVenvCommand(funcPackCommand, Platform.Windows)
+                        command: cpUtils.joinCommands(Platform.Windows, getVenvActivateCommand(Platform.Windows), funcPackCommand)
                     },
                     linux: {
-                        command: convertToVenvCommand(funcPackCommand, Platform.Linux)
+                        command: cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(Platform.Linux), funcPackCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -224,14 +225,12 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     }
 }
 
-function convertToVenvCommand(command: string, platform: NodeJS.Platform, separator?: string): string {
+function getVenvActivateCommand(platform: NodeJS.Platform): string {
     switch (platform) {
         case Platform.Windows:
-            // tslint:disable-next-line:strict-boolean-expressions
-            return `${path.join('.', funcEnvName, 'Scripts', 'activate')} ${separator || ';'} ${command}`;
+            return `${path.join('.', funcEnvName, 'Scripts', 'activate')}`;
         default:
-            // tslint:disable-next-line:strict-boolean-expressions
-            return `. ${path.join('.', funcEnvName, 'bin', 'activate')} ${separator || '&&'} ${command}`;
+            return `. ${path.join('.', funcEnvName, 'bin', 'activate')}`;
     }
 }
 
@@ -268,6 +267,7 @@ export async function makeVenvDebuggable(functionAppPath: string): Promise<void>
 }
 
 export async function runPythonCommandInVenv(folderPath: string, command: string): Promise<void> {
-    // executeCommand always uses '&&' separator even on Windows
-    await cpUtils.executeCommand(ext.outputChannel, folderPath, convertToVenvCommand(command, process.platform, '&&'));
+    // executeCommand always uses Linux '&&' separator, even on Windows
+    const fullCommand: string = cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(process.platform), command);
+    await cpUtils.executeCommand(ext.outputChannel, folderPath, fullCommand);
 }
