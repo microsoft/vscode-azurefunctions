@@ -72,16 +72,18 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             await createVirtualEnviornment(this.functionAppPath);
         }
 
-        await this.createPythonProject();
+        await runPythonCommandInVenv(this.functionAppPath, 'func init ./ --worker-runtime python');
     }
 
     public async getTasksJson(): Promise<{}> {
-        // setting the deploySubpath to the result of the 'funcPack' task included below
+        // The code in getTasksJson occurs for createNewProject _and_ initProjectForVSCode, which is why the next few lines are here even if they're only somewhat related to 'getting the tasks.json'
+        // We should probably refactor this eventually to make it more clear what's going on.
         this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
-        // func host task requires this
         await makeVenvDebuggable(this.functionAppPath);
-        // func pack task may fail with "The process cannot access the file because it is being used by another process." unless venv is in '.funcignore' file
         await this.ensureVenvInFuncIgnore();
+        await this.ensureGitIgnoreContents();
+        await this.ensureAzureWebJobsStorage();
+
         const funcPackCommand: string = 'func pack';
         const funcHostStartCommand: string = 'func host start';
         const funcExtensionsCommand: string = 'func extensions install';
@@ -139,31 +141,33 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         return super.getRecommendedExtensions().concat(['ms-python.python']);
     }
 
-    private async createPythonProject(): Promise<void> {
-        await runPythonCommandInVenv(this.functionAppPath, 'func init ./ --worker-runtime python');
+    private async ensureGitIgnoreContents(): Promise<void> {
         // .gitignore is created by `func init`
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
-            const pythonPackages: string = '.python_packages';
             let writeFile: boolean = false;
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
-            // the func_env and ._python_packages are recreated and should not be checked in
-            if (!gitignoreContents.includes(funcEnvName)) {
-                ext.outputChannel.appendLine(localize('gitAddFunc_Env', 'Adding "{0}" to .gitignore...', funcEnvName));
-                gitignoreContents = gitignoreContents.concat(`${os.EOL}${funcEnvName}`);
-                writeFile = true;
+
+            function esnureInGitIgnore(newLine: string): void {
+                if (!gitignoreContents.includes(newLine)) {
+                    ext.outputChannel.appendLine(localize('gitAddNewLine', 'Adding "{0}" to .gitignore...', newLine));
+                    gitignoreContents = gitignoreContents.concat(`${os.EOL}${newLine}`);
+                    writeFile = true;
+                }
             }
-            if (!gitignoreContents.includes(pythonPackages)) {
-                ext.outputChannel.appendLine(localize('gitAddPythonPackages', 'Adding "{0}" to .gitignore...', pythonPackages));
-                gitignoreContents = gitignoreContents.concat(`${os.EOL}${pythonPackages}`);
-                writeFile = true;
-            }
+
+            esnureInGitIgnore(funcEnvName);
+            esnureInGitIgnore('.python_packages');
+            esnureInGitIgnore('__pycache__');
+            esnureInGitIgnore(`${path.basename(this.functionAppPath)}.zip`);
 
             if (writeFile) {
                 await fse.writeFile(gitignorePath, gitignoreContents);
             }
         }
+    }
 
+    private async ensureAzureWebJobsStorage(): Promise<void> {
         if (!isWindows) {
             // Make sure local settings isn't using Storage Emulator for non-windows
             // https://github.com/Microsoft/vscode-azurefunctions/issues/583
