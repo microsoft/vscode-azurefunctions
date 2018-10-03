@@ -11,7 +11,6 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, TestAzureAccount, TestUserInput } from 'vscode-azureextensionui';
 import { ext } from '../src/extensionVariables';
-import { localize } from '../src/localize';
 import { FunctionAppProvider } from '../src/tree/FunctionAppProvider';
 import * as fsUtil from '../src/utils/fs';
 
@@ -20,7 +19,6 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     await vscode.commands.executeCommand('azureFunctions.refresh'); //activate the extension before testing begins to make sure activation doesn't change any extensionVariables
 });
 
-// This ensures that this will only run on nightly cron builds
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(1200 * 1000);
     const resourceName: string = fsUtil.getRandomHexString().toLocaleLowerCase(); // storage accounts cannot contain upper case chars
@@ -32,7 +30,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         }
         this.timeout(120 * 1000);
         await testAccount.signIn();
-        ext.tree = new AzureTreeDataProvider(new FunctionAppProvider(ext.outputChannel), 'azureFunctions.startTesting', undefined, testAccount);
+        ext.tree = new AzureTreeDataProvider(new FunctionAppProvider(), 'azureFunctions.startTesting', undefined, testAccount);
     });
 
     suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
