@@ -68,7 +68,7 @@ export async function createNewProject(
         const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
         await projectCreator.addNonVSCodeFiles();
 
-        await initProjectForVSCode(actionContext, ext.ui, ext.outputChannel, functionAppPath, language, runtime, projectCreator);
+        await initProjectForVSCode(actionContext, functionAppPath, language, runtime, projectCreator);
 
         if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
             await gitUtils.gitInit(ext.outputChannel, functionAppPath);
@@ -93,16 +93,16 @@ export async function createNewProject(
 export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext): ProjectCreatorBase {
     switch (language) {
         case ProjectLanguage.Java:
-            return new JavaProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext);
+            return new JavaProjectCreator(functionAppPath, actionContext);
         case ProjectLanguage.JavaScript:
-            return new JavaScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+            return new JavaScriptProjectCreator(functionAppPath, actionContext.properties);
         case ProjectLanguage.CSharp:
-            return new CSharpProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+            return new CSharpProjectCreator(functionAppPath, actionContext.properties);
         case ProjectLanguage.CSharpScript:
-            return new CSharpScriptProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+            return new CSharpScriptProjectCreator(functionAppPath, actionContext.properties);
         case ProjectLanguage.Python:
-            return new PythonProjectCreator(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+            return new PythonProjectCreator(functionAppPath, actionContext.properties);
         default:
-            return new ScriptProjectCreatorBase(functionAppPath, ext.outputChannel, ext.ui, actionContext.properties);
+            return new ScriptProjectCreatorBase(functionAppPath, actionContext.properties);
     }
 }

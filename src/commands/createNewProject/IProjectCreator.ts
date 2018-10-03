@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OutputChannel } from "vscode";
-import { IAzureUserInput, TelemetryProperties } from "vscode-azureextensionui";
+import { TelemetryProperties } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from "../../constants";
 import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
 import { promptForProjectRuntime } from "../../ProjectSettings";
@@ -15,14 +14,10 @@ export abstract class ProjectCreatorBase {
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;
-    protected readonly outputChannel: OutputChannel;
-    protected readonly ui: IAzureUserInput;
     protected readonly telemetryProperties: TelemetryProperties;
 
-    constructor(functionAppPath: string, outputChannel: OutputChannel, ui: IAzureUserInput, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, telemetryProperties: TelemetryProperties) {
         this.functionAppPath = functionAppPath;
-        this.outputChannel = outputChannel;
-        this.ui = ui;
         this.telemetryProperties = telemetryProperties;
     }
 

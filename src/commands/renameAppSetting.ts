@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingTreeItem } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 
-export async function renameAppSetting(tree: AzureTreeDataProvider, node?: IAzureNode<AppSettingTreeItem>): Promise<void> {
+export async function renameAppSetting(node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<AppSettingTreeItem>>await tree.showNodePicker(AppSettingTreeItem.contextValue);
+        node = <AppSettingTreeItem>await ext.tree.showTreeItemPicker(AppSettingTreeItem.contextValue);
     }
 
-    await node.treeItem.rename(node);
+    await node.rename();
 }

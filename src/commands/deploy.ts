@@ -11,9 +11,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { MessageItem } from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IActionContext, IAzureNode, IAzureParentNode, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { SiteClient } from 'vscode-azureappservice';
+import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
@@ -30,11 +30,11 @@ import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(ui: IAzureUserInput, actionContext: IActionContext, tree: AzureTreeDataProvider, outputChannel: vscode.OutputChannel, target?: vscode.Uri | string | IAzureParentNode<FunctionAppTreeItem>, functionAppId?: string | {}): Promise<void> {
-    const telemetryProperties: TelemetryProperties = actionContext.properties;
+export async function deploy(this: IActionContext, target?: vscode.Uri | string | FunctionAppTreeItem, functionAppId?: string | {}): Promise<void> {
+    const telemetryProperties: TelemetryProperties = this.properties;
     let deployFsPath: string;
-    const newNodes: IAzureNode<FunctionAppTreeItem>[] = [];
-    let node: IAzureParentNode<FunctionAppTreeItem> | undefined;
+    const newNodes: FunctionAppTreeItem[] = [];
+    let node: FunctionAppTreeItem | undefined;
 
     if (target instanceof vscode.Uri) {
         deployFsPath = await appendDeploySubpathSetting(target.fsPath);
@@ -46,20 +46,20 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     }
 
     const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
-    await workspaceUtil.ensureFolderIsOpen(deployFsPath, actionContext, folderOpenWarning, true /* allowSubFolder */);
+    await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
 
-    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = tree.onNodeCreate((newNode: IAzureNode<FunctionAppTreeItem>) => {
+    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: FunctionAppTreeItem) => {
         // event is fired from azure-extensionui if node was created during deployment
         newNodes.push(newNode);
     });
     try {
         if (!node) {
             if (!functionAppId || typeof functionAppId !== 'string') {
-                node = <IAzureParentNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+                node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
             } else {
-                const functionAppNode: IAzureNode | undefined = await tree.findNode(functionAppId);
+                const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId);
                 if (functionAppNode) {
-                    node = <IAzureParentNode<FunctionAppTreeItem>>functionAppNode;
+                    node = <FunctionAppTreeItem>functionAppNode;
                 } else {
                     throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
                 }
@@ -70,19 +70,19 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     }
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
-    const confirmDeployment: boolean = !newNodes.some((newNode: IAzureNode) => !!node && newNode.id === node.id);
+    const confirmDeployment: boolean = !newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
 
-    const client: SiteClient = node.treeItem.client;
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ui);
+    const client: SiteClient = node.root.client;
+    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ext.ui);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
+    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ext.ui);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(actionContext, outputChannel, deployFsPath, ui, telemetryProperties);
+        deployFsPath = await getJavaFolderPath(this, ext.outputChannel, deployFsPath, ext.ui, telemetryProperties);
     }
 
-    await verifyRuntimeIsCompatible(runtime, ui, outputChannel, client, telemetryProperties);
+    await verifyRuntimeIsCompatible(runtime, ext.ui, ext.outputChannel, client, telemetryProperties);
 
     const siteConfig: SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
@@ -90,7 +90,7 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
         const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
         telemetryProperties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
-        await ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
+        await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
         telemetryProperties.cancelStep = '';
     }
 
@@ -103,13 +103,13 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
                 // Stop function app here to avoid *.jar file in use on server side.
                 // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
                 if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
+                    ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
                 await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
             } finally {
                 if (language === ProjectLanguage.Java) {
-                    outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
+                    ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
                     await client.start();
                 }
             }
@@ -130,24 +130,24 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
         }
     });
 
-    await listHttpTriggerUrls(node, actionContext);
+    await listHttpTriggerUrls(node, this);
 }
 
-async function listHttpTriggerUrls(node: IAzureParentNode, actionContext: IActionContext): Promise<void> {
+async function listHttpTriggerUrls(node: FunctionAppTreeItem, actionContext: IActionContext): Promise<void> {
     try {
-        const children: IAzureNode[] = await node.getCachedChildren();
-        const functionsNode: IAzureParentNode<FunctionsTreeItem> = <IAzureParentNode<FunctionsTreeItem>>children.find((n: IAzureNode) => n.treeItem instanceof FunctionsTreeItem);
+        const children: AzureTreeItem[] = await node.getCachedChildren();
+        const functionsNode: FunctionsTreeItem = <FunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof FunctionsTreeItem);
         await node.treeDataProvider.refresh(functionsNode);
-        const functions: IAzureNode[] = await functionsNode.getCachedChildren();
-        const anonFunctions: IAzureNode<FunctionTreeItem>[] = <IAzureNode<FunctionTreeItem>[]>functions.filter((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel === HttpAuthLevel.anonymous);
+        const functions: AzureTreeItem[] = await functionsNode.getCachedChildren();
+        const anonFunctions: FunctionTreeItem[] = <FunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
         if (anonFunctions.length > 0) {
             ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
             for (const func of anonFunctions) {
-                ext.outputChannel.appendLine(`  ${func.treeItem.label}: ${func.treeItem.triggerUrl}`);
+                ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
             }
         }
 
-        if (functions.find((f: IAzureNode) => f.treeItem instanceof FunctionTreeItem && f.treeItem.config.isHttpTrigger && f.treeItem.config.authLevel !== HttpAuthLevel.anonymous)) {
+        if (functions.find((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
             ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
         }
     } catch (error) {

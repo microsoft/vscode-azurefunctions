@@ -5,30 +5,28 @@
 
 import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
-import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
-import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
+import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
+import { AzureParentTreeItem, AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export class FunctionTreeItem implements ILogStreamTreeItem {
+export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunction';
     public readonly contextValue: string = FunctionTreeItem.contextValue;
     public readonly config: FunctionConfig;
-    public readonly client: SiteClient;
 
     private readonly _name: string;
     private _triggerUrl: string;
 
-    public constructor(client: SiteClient, func: FunctionEnvelope) {
+    public constructor(parent: AzureParentTreeItem, func: FunctionEnvelope) {
+        super(parent);
         if (!func.id) {
             throw new ArgumentError(func);
         }
 
-        this.client = client;
         this._name = getFunctionNameFromId(func.id);
 
         this.config = new FunctionConfig(func.config);
@@ -51,24 +49,24 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
     }
 
     public get logStreamLabel(): string {
-        return `${this.client.fullName}/${this._name}`;
+        return `${this.root.client.fullName}/${this._name}`;
     }
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this._name)}`;
     }
 
-    public async deleteTreeItem(_node: IAzureNode): Promise<void> {
+    public async deleteTreeItemImpl(): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         ext.outputChannel.show(true);
         ext.outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-        await this.client.deleteFunction(this._name);
+        await this.root.client.deleteFunction(this._name);
         ext.outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
     }
 
     public async initializeTriggerUrl(): Promise<void> {
-        const triggerUrl: URL = new URL(`${this.client.defaultHostUrl}/api/${this._name}`);
+        const triggerUrl: URL = new URL(`${this.root.client.defaultHostUrl}/api/${this._name}`);
         const key: string | undefined = await this.getKey();
         if (key) {
             triggerUrl.searchParams.set('code', key);
@@ -91,7 +89,7 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
                 return undefined;
         }
 
-        const data: string = await functionsAdminRequest(this.client, urlPath);
+        const data: string = await functionsAdminRequest(this.root.client, urlPath);
         try {
             // tslint:disable-next-line:no-unsafe-any
             const result: string = JSON.parse(data).value;

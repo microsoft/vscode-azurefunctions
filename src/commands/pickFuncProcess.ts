@@ -15,7 +15,7 @@ import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { tryFetchNodeModule } from '../utils/tryFetchNodeModule';
 
-export async function pickFuncProcess(actionContext: IActionContext): Promise<string | undefined> {
+export async function pickFuncProcess(this: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
         throw new UserCancelledError();
     }
@@ -34,7 +34,7 @@ export async function pickFuncProcess(actionContext: IActionContext): Promise<st
     if (isNaN(timeoutInSeconds)) {
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
     }
-    actionContext.properties.timeoutInSeconds = timeoutInSeconds.toString();
+    this.properties.timeoutInSeconds = timeoutInSeconds.toString();
     const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
 
     const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);

@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTreeDataProvider, IActionContext, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeItem, IActionContext, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { nodeUtils } from '../utils/nodeUtils';
 
-export async function createFunctionApp(actionContext: IActionContext, tree: AzureTreeDataProvider, subscription?: IAzureParentNode | string, resourceGroup?: string): Promise<string> {
-    let node: IAzureParentNode;
+export async function createFunctionApp(this: IActionContext, subscription?: AzureParentTreeItem | string, resourceGroup?: string): Promise<string> {
+    let node: AzureParentTreeItem;
     if (typeof subscription === 'string') {
-        node = await nodeUtils.getSubscriptionNode(tree, subscription);
+        node = await nodeUtils.getSubscriptionNode(ext.tree, subscription);
     } else if (!subscription) {
-        node = <IAzureParentNode>await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+        node = <AzureParentTreeItem>await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
     } else {
         node = subscription;
     }
 
-    const funcAppNode: IAzureNode = await node.createChild({ actionContext, resourceGroup });
-    return funcAppNode.id;
+    const funcAppNode: AzureTreeItem = await node.createChild({ actionContext: this, resourceGroup });
+    return funcAppNode.fullId;
 }

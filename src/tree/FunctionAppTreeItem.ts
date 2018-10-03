@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, SiteClient } from 'vscode-azureappservice';
-import { IAzureNode, IAzureParentTreeItem, IAzureTreeItem } from 'vscode-azureextensionui';
-import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
+import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
@@ -13,37 +12,42 @@ import { FunctionTreeItem } from './FunctionTreeItem';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 import { ProxyTreeItem } from './ProxyTreeItem';
 
-export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTreeItem {
+export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
-    public readonly client: SiteClient;
     public logStreamPath: string = '';
 
+    private readonly _root: ISiteTreeRoot;
     private _state?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
     private readonly _isLinuxPreview: boolean;
 
-    public constructor(client: SiteClient, isLinuxPreview: boolean) {
-        this.client = client;
+    public constructor(parent: AzureParentTreeItem, client: SiteClient, isLinuxPreview: boolean) {
+        super(parent);
+        this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
-        this._functionsTreeItem = new FunctionsTreeItem(client);
-        this._appSettingsTreeItem = new AppSettingsTreeItem(client);
-        this._proxiesTreeItem = new ProxiesTreeItem(client);
+        this._functionsTreeItem = new FunctionsTreeItem(this);
+        this._appSettingsTreeItem = new AppSettingsTreeItem(this);
+        this._proxiesTreeItem = new ProxiesTreeItem(this);
         this._isLinuxPreview = isLinuxPreview;
     }
 
+    public get root(): ISiteTreeRoot {
+        return this._root;
+    }
+
     public get logStreamLabel(): string {
-        return this.client.fullName;
+        return this.root.client.fullName;
     }
 
     public get id(): string {
-        return this.client.id;
+        return this.root.client.id;
     }
 
     public get label(): string {
-        return this.client.fullName;
+        return this.root.client.fullName;
     }
 
     public get description(): string | undefined {
@@ -60,23 +64,23 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         return nodeUtils.getIconPath(FunctionAppTreeItem.contextValue);
     }
 
-    public hasMoreChildren(): boolean {
+    public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
     public async refreshLabel(): Promise<void> {
         try {
-            this._state = await this.client.getState();
+            this._state = await this.root.client.getState();
         } catch {
             this._state = 'Unknown';
         }
     }
 
-    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         return [this._functionsTreeItem, this._appSettingsTreeItem, this._proxiesTreeItem];
     }
 
-    public pickTreeItem(expectedContextValue: string): IAzureTreeItem | undefined {
+    public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem | undefined {
         switch (expectedContextValue) {
             case FunctionsTreeItem.contextValue:
             case FunctionTreeItem.contextValue:
@@ -92,7 +96,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         }
     }
 
-    public async deleteTreeItem(_node: IAzureNode): Promise<void> {
-        await deleteSite(this.client);
+    public async deleteTreeItemImpl(): Promise<void> {
+        await deleteSite(this.root.client);
     }
 }

@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { funcHostNameRegEx } from "../../funcCoreTools/funcHostTask";
@@ -21,7 +21,7 @@ import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
 import { createVirtualEnviornment, funcEnvName, makeVenvDebuggable } from './PythonProjectCreator';
 
-export async function validateFunctionProjects(actionContext: IActionContext, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
     if (folders) {
         for (const folder of folders) {
@@ -39,9 +39,9 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
                     await verifyPythonVenv(projectLanguage, folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
-                    if (await promptToInitializeProject(ui, folderPath)) {
+                    if (await promptToInitializeProject(folderPath)) {
                         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creating', 'Initializing project...') }, async () => {
-                            await initProjectForVSCode(actionContext, ui, outputChannel, folderPath);
+                            await initProjectForVSCode(actionContext, folderPath);
                         });
                         // don't wait
                         vscode.window.showInformationMessage(localize('finishedInit', 'Finished initializing project.'));
@@ -52,16 +52,16 @@ export async function validateFunctionProjects(actionContext: IActionContext, ui
     }
 }
 
-async function promptToInitializeProject(ui: IAzureUserInput, folderPath: string): Promise<boolean> {
+async function promptToInitializeProject(folderPath: string): Promise<boolean> {
     const settingKey: string = 'showProjectWarning';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
         const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(folderPath));
-        const result: vscode.MessageItem = await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
         } else if (result === DialogResponses.learnMore) {
             await opn('https://aka.ms/azFuncProject');
-            return await promptToInitializeProject(ui, folderPath);
+            return await promptToInitializeProject(folderPath);
         } else {
             return true;
         }
