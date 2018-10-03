@@ -17,7 +17,6 @@ const packageJson = require('./package.json');
 gulp.task('test', ['install-azure-account'], (cb) => {
     const env = process.env;
     env.DEBUGTELEMETRY = 1;
-    env.ENABLELONGRUNNINGTESTS = env.ENABLELONGRUNNINGTESTS | process.env.TRAVIS_EVENT_TYPE === 'cron';
     const cmd = cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
     cmd.on('close', (code) => {
         cb(code);
