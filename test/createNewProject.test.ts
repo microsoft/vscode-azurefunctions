@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { ISuiteCallbackContext } from 'mocha';
+import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -14,12 +14,12 @@ import { createNewProject } from '../src/commands/createNewProject/createNewProj
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import * as fsUtil from '../src/utils/fs';
+import { longRunningTestsEnabled } from './global.test';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
-
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${fsUtil.getRandomHexString()}`);
 
     suiteSetup(async () => {
@@ -31,7 +31,11 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     });
 
     const javaProject: string = 'JavaProject';
-    test(javaProject, async () => {
+    test(javaProject, async function (this: IHookCallbackContext): Promise<void> {
+        if (!longRunningTestsEnabled) {
+            this.skip();
+        }
+        this.timeout(5 * 60 * 1000);
         const projectPath: string = path.join(testFolderPath, javaProject);
         await testCreateNewProject(
             projectPath,
@@ -130,7 +134,11 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath);
     });
 
-    test('createNewProject API C#', async () => {
+    test('createNewProject API C#', async function (this: IHookCallbackContext): Promise<void> {
+        if (!longRunningTestsEnabled) {
+            this.skip();
+        }
+        this.timeout(5 * 60 * 1000);
         // Intentionally testing IoTHub trigger since a partner team plans to use that
         const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
         const functionName: string = 'createFunctionApi';

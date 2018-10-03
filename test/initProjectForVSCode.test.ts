@@ -12,20 +12,19 @@ import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
+import { ext } from '../src/extensionVariables';
 import * as fsUtil from '../src/utils/fs';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
     const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${fsUtil.getRandomHexString()}`);
-    const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Azure Functions Test');
 
     suiteSetup(async () => {
         await fse.ensureDir(testFolderPath);
     });
 
     suiteTeardown(async () => {
-        outputChannel.dispose();
         await fse.remove(testFolderPath);
     });
 
@@ -172,7 +171,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
 
         const ui: TestUserInput = new TestUserInput(inputs);
         const actionContext: IActionContext = <IActionContext>{ properties: { isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, measurements: {} };
-        await initProjectForVSCode(actionContext, ui, outputChannel);
+        await initProjectForVSCode(actionContext, ui, ext.outputChannel);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });
