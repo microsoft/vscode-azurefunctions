@@ -78,6 +78,10 @@ export async function deploy(ui: IAzureUserInput, actionContext: IActionContext,
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ui);
     telemetryProperties.projectRuntime = runtime;
 
+    if (language === ProjectLanguage.Python && !node.treeItem.getLinuxPreview()) {
+        throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function apps.  Deploy to a Linux Consumption app.'));
+    }
+
     if (language === ProjectLanguage.Java) {
         deployFsPath = await getJavaFolderPath(actionContext, outputChannel, deployFsPath, ui, telemetryProperties);
     }
