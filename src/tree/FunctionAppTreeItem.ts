@@ -18,12 +18,12 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public readonly client: SiteClient;
     public logStreamPath: string = '';
+    public readonly isLinuxPreview: boolean;
 
     private _state?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
-    private readonly _isLinuxPreview: boolean;
 
     public constructor(client: SiteClient, isLinuxPreview: boolean) {
         this.client = client;
@@ -31,7 +31,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
         this._functionsTreeItem = new FunctionsTreeItem(client);
         this._appSettingsTreeItem = new AppSettingsTreeItem(client);
         this._proxiesTreeItem = new ProxiesTreeItem(client);
-        this._isLinuxPreview = isLinuxPreview;
+        this.isLinuxPreview = isLinuxPreview;
     }
 
     public get logStreamLabel(): string {
@@ -48,7 +48,7 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
 
     public get description(): string | undefined {
         const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
-        const previewDescription: string | undefined = this._isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
+        const previewDescription: string | undefined = this.isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
         if (stateDescription && previewDescription) {
             return `${previewDescription} - ${stateDescription}`;
         } else {
@@ -94,9 +94,5 @@ export class FunctionAppTreeItem implements ILogStreamTreeItem, IAzureParentTree
 
     public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         await deleteSite(this.client);
-    }
-
-    public getLinuxPreview(): boolean {
-        return this._isLinuxPreview;
     }
 }
