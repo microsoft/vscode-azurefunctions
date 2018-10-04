@@ -5,6 +5,7 @@
 
 import { FunctionEnvelope } from 'azure-arm-website/lib/models';
 import { URL } from 'url';
+import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
 import { ILogStreamTreeItem } from '../commands/logstream/ILogStreamTreeItem';
@@ -60,11 +61,15 @@ export class FunctionTreeItem implements ILogStreamTreeItem {
 
     public async deleteTreeItem(_node: IAzureNode): Promise<void> {
         const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
+        const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this._name);
+        const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
-        ext.outputChannel.show(true);
-        ext.outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-        await this.client.deleteFunction(this._name);
-        ext.outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
+        await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
+            ext.outputChannel.appendLine(deleting);
+            await this.client.deleteFunction(this._name);
+            window.showInformationMessage(deleteSucceeded);
+            ext.outputChannel.appendLine(deleteSucceeded);
+        });
     }
 
     public async initializeTriggerUrl(): Promise<void> {
