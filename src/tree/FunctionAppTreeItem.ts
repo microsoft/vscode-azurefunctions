@@ -80,7 +80,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return [this._functionsTreeItem, this._appSettingsTreeItem, this._proxiesTreeItem];
     }
 
-    public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem | undefined {
+    public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem<ISiteTreeRoot> | undefined {
         switch (expectedContextValue) {
             case FunctionsTreeItem.contextValue:
             case FunctionTreeItem.contextValue:
