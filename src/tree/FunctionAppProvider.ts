@@ -86,9 +86,11 @@ export class FunctionAppProvider implements IChildProvider {
             createOptions.runtime = 'python';
         } else {
             createOptions.os = 'windows';
-            // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
-            // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-            functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
+            if (language !== ProjectLanguage.CSharpScript || runtime !== ProjectRuntime.v1) {
+                // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
+                // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+                functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
+            }
         }
 
         const site: Site = await createFunctionApp(actionContext, parent, createOptions, showCreatingNode);
