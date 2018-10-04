@@ -86,9 +86,13 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             createOptions.runtime = 'python';
         } else {
             createOptions.os = 'windows';
-            // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
-            // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-            functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
+            // need to check if a project is both a C# Script and running v1
+            // https://github.com/Microsoft/vscode-azurefunctions/issues/684
+            if (language !== ProjectLanguage.CSharpScript || runtime !== ProjectRuntime.v1) {
+                // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
+                // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+                functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
+            }
         }
 
         const site: Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
