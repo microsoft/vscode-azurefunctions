@@ -3,16 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureNode, IAzureParentNode, IAzureTreeItem } from 'vscode-azureextensionui';
+import { ISiteTreeRoot } from 'vscode-azureappservice';
+import { AzureTreeItem } from 'vscode-azureextensionui';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
-export class ProxyTreeItem implements IAzureTreeItem {
+export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static readonly contextValue: string = 'azFuncProxy';
     public readonly contextValue: string = ProxyTreeItem.contextValue;
+    public readonly parent: ProxiesTreeItem;
     private readonly _name: string;
 
-    public constructor(name: string) {
+    public constructor(parent: ProxiesTreeItem, name: string) {
+        super(parent);
         this._name = name;
     }
 
@@ -24,7 +27,7 @@ export class ProxyTreeItem implements IAzureTreeItem {
         return nodeUtils.getIconPath(ProxyTreeItem.contextValue);
     }
 
-    public async deleteTreeItem(node: IAzureNode<ProxyTreeItem>): Promise<void> {
-        await (<IAzureParentNode<ProxiesTreeItem>>node.parent).treeItem.deleteProxy(this._name);
+    public async deleteTreeItemImpl(): Promise<void> {
+        await this.parent.deleteProxy(this._name);
     }
 }

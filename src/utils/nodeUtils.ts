@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { AzureTreeDataProvider, IAzureNode, IAzureParentNode } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 
 export namespace nodeUtils {
@@ -24,8 +24,8 @@ export namespace nodeUtils {
         };
     }
 
-    export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<IAzureParentNode> {
-        const node: IAzureParentNode | undefined = <IAzureParentNode | undefined>(await tree.getChildren()).find((n: IAzureNode) => n.subscriptionId === subscriptionId);
+    export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<AzureParentTreeItem> {
+        const node: AzureParentTreeItem | undefined = <AzureParentTreeItem | undefined>(await tree.getChildren()).find((n: AzureTreeItem) => n.root.subscriptionId === subscriptionId);
         if (node) {
             return node;
         } else {

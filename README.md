@@ -59,27 +59,13 @@ Both v1 and v2 of the runtime can be installed on Windows. [See here](https://do
 To install v1:
 
 ```bash
-npm i -g azure-functions-core-tools
+npm i -g azure-functions-core-tools@1
 ```
 
 To install v2:
 
 ```bash
-npm i -g azure-functions-core-tools@core
-```
-
-**IMPORTANT**: v2 is becoming generally available (GA) soon (as of 9/19/2018). After GA, the commands will change to the following:
-
-To install v1:
-
-```bash
-npm i -g azure-functions-core-tools@v1
-```
-
-To install v2:
-
-```bash
-npm i -g azure-functions-core-tools
+npm i -g azure-functions-core-tools@2
 ```
 
 ### Mac

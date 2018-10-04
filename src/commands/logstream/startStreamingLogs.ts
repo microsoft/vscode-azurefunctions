@@ -5,23 +5,23 @@
 
 import { SiteLogsConfig } from 'azure-arm-website/lib/models';
 import * as appservice from 'vscode-azureappservice';
-import { DialogResponses, IAzureNode } from 'vscode-azureextensionui';
+import { SiteClient } from 'vscode-azureappservice';
+import { DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
-import { ILogStreamTreeItem } from './ILogStreamTreeItem';
+import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
 
-export async function startStreamingLogs(node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
-    if (!node) {
-        node = <IAzureNode<ILogStreamTreeItem>>await ext.tree.showNodePicker(FunctionAppTreeItem.contextValue);
+export async function startStreamingLogs(treeItem?: FunctionAppTreeItem | FunctionTreeItem): Promise<void> {
+    if (!treeItem) {
+        treeItem = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
-    const treeItem: ILogStreamTreeItem = node.treeItem;
-
+    const client: SiteClient = treeItem.root.client;
     const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
-        const logsConfig: SiteLogsConfig = await treeItem.client.getLogsConfig();
+        const logsConfig: SiteLogsConfig = await client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
-            const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', treeItem.client.fullName);
+            const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
             await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             // tslint:disable-next-line:strict-boolean-expressions
             logsConfig.applicationLogs = logsConfig.applicationLogs || {};
@@ -31,11 +31,11 @@ export async function startStreamingLogs(node?: IAzureNode<ILogStreamTreeItem>):
             // Azure will throw errors if these have incomplete information (aka missing a sasUrl). Since we already know these are turned off, just make them undefined
             logsConfig.applicationLogs.azureBlobStorage = undefined;
             logsConfig.applicationLogs.azureTableStorage = undefined;
-            await treeItem.client.updateLogsConfig(logsConfig);
+            await client.updateLogsConfig(logsConfig);
         }
     };
 
-    await appservice.startStreamingLogs(treeItem.client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
+    await appservice.startStreamingLogs(treeItem.root.client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
 }
 
 function isApplicationLoggingEnabled(config: SiteLogsConfig): boolean {

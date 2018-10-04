@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
-export async function openInPortal(tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function openInPortal(node?: FunctionAppTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
     node.openInPortal();

@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTreeDataProvider, IAzureParentNode } from 'vscode-azureextensionui';
+import { AzureParentTreeItem } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 
-export async function createChildNode(tree: AzureTreeDataProvider, expectedContextValue: string, node?: IAzureParentNode): Promise<void> {
+export async function createChildNode(expectedContextValue: string, node?: AzureParentTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureParentNode>await tree.showNodePicker(expectedContextValue);
+        node = <AzureParentTreeItem>await ext.tree.showTreeItemPicker(expectedContextValue);
     }
 
     await node.createChild();

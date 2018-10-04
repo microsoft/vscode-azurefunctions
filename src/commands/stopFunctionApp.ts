@@ -3,20 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { SiteClient } from 'vscode-azureappservice';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
-export async function stopFunctionApp(tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function stopFunctionApp(node?: FunctionAppTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
+    const client: SiteClient = node.root.client;
     await node.runWithTemporaryDescription(
         localize('stopping', 'Stopping...'),
         async () => {
-            // tslint:disable-next-line:no-non-null-assertion
-            await node!.treeItem.client.stop();
+            await client.stop();
         }
     );
 }
