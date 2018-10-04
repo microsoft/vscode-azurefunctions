@@ -34,6 +34,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         this._isLinuxPreview = isLinuxPreview;
     }
 
+    // overrides ISubscriptionRoot with an object that also has SiteClient
     public get root(): ISiteTreeRoot {
         return this._root;
     }
