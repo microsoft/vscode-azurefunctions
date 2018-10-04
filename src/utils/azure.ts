@@ -12,7 +12,7 @@ import StorageClient = require('azure-arm-storage');
 import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
-import { addExtensionUserAgent, AzureTreeDataProvider, AzureWizard, createAzureClient, IActionContext, IAzureNode, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { AzureTreeItem, AzureWizard, createAzureClient, IActionContext, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -65,10 +65,9 @@ export interface IResourceResult {
 
 export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.DocumentDB);
-    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+    const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
-    const client: CosmosDBManagementClient = new CosmosDBManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
-    addExtensionUserAgent(client);
+    const client: CosmosDBManagementClient = createAzureClient(node.root, CosmosDBManagementClient);
     const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
@@ -84,14 +83,9 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
 }
 
 export async function promptForStorageAccount(actionContext: IActionContext, filterOptions: IStorageAccountFilters): Promise<IResourceResult> {
-    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+    const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
-    const wizardContext: IStorageAccountWizardContext = {
-        credentials: node.credentials,
-        subscriptionId: node.subscriptionId,
-        subscriptionDisplayName: node.subscriptionDisplayName,
-        environment: node.environment
-    };
+    const wizardContext: IStorageAccountWizardContext = Object.assign({}, node.root);
     const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(
         [new StorageAccountListStep({ kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS }, filterOptions)],
         [],
@@ -101,8 +95,7 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);
 
-    const client: StorageClient = new StorageClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
-    addExtensionUserAgent(client);
+    const client: StorageClient = createAzureClient(node.root, StorageClient);
     // tslint:disable-next-line:no-non-null-assertion
     const storageAccount: StorageAccount = wizardContext.storageAccount!;
 
@@ -124,9 +117,9 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
 
 export async function promptForServiceBus(): Promise<IResourceResult> {
     const resourceTypeLabel: string = getResourceTypeLabel(ResourceType.ServiceBus);
-    const node: IAzureNode = await ext.tree.showNodePicker(AzureTreeDataProvider.subscriptionContextValue);
+    const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
-    const client: ServiceBusManagementClient = createAzureClient(node, ServiceBusManagementClient);
+    const client: ServiceBusManagementClient = createAzureClient(node.root, ServiceBusManagementClient);
     const resource: SBNamespace = await promptForResource<SBNamespace>(ext.ui, resourceTypeLabel, client.namespaces.list());
     const id: string = nonNullProp(resource, 'id');
     const name: string = nonNullProp(resource, 'name');

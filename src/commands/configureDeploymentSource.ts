@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { editScmType } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode, TelemetryProperties } from 'vscode-azureextensionui';
+import { IActionContext } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
-export async function configureDeploymentSource(telemetryProperties: TelemetryProperties, tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function configureDeploymentSource(this: IActionContext, node?: FunctionAppTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
-    const updatedScmType: string | undefined = await editScmType(node.treeItem.client, node);
+    const updatedScmType: string | undefined = await editScmType(node.root.client, node);
     if (updatedScmType !== undefined) {
-        telemetryProperties.updatedScmType = updatedScmType;
+        this.properties.updatedScmType = updatedScmType;
     }
 }

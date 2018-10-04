@@ -9,7 +9,8 @@ import * as path from 'path';
 // tslint:disable-next-line:no-require-imports
 import request = require('request-promise');
 import { MessageItem } from "vscode";
-import { DialogResponses, IAzureUserInput } from "vscode-azureextensionui";
+import { DialogResponses } from "vscode-azureextensionui";
+import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 import { parseJavaClassName } from './javaNameUtils';
 
@@ -17,30 +18,30 @@ export async function writeFormattedJson(fsPath: string, data: object): Promise<
     await fse.writeJson(fsPath, data, { spaces: 2 });
 }
 
-export async function copyFolder(fromPath: string, toPath: string, ui: IAzureUserInput): Promise<void> {
+export async function copyFolder(fromPath: string, toPath: string): Promise<void> {
     const files: string[] = await fse.readdir(fromPath);
     for (const file of files) {
         const originPath: string = path.join(fromPath, file);
         const stat: fse.Stats = await fse.stat(originPath);
         const targetPath: string = path.join(toPath, file);
         if (stat.isFile()) {
-            if (await confirmOverwriteFile(targetPath, ui)) {
+            if (await confirmOverwriteFile(targetPath)) {
                 await fse.copy(originPath, targetPath, { overwrite: true });
             }
         } else if (stat.isDirectory()) {
-            await copyFolder(originPath, targetPath, ui);
+            await copyFolder(originPath, targetPath);
         }
     }
 }
 
-export async function confirmEditJsonFile(fsPath: string, editJson: (existingData: {}) => {}, ui: IAzureUserInput): Promise<void> {
+export async function confirmEditJsonFile(fsPath: string, editJson: (existingData: {}) => {}): Promise<void> {
     let newData: {};
     if (await fse.pathExists(fsPath)) {
         try {
             newData = editJson(<{}>await fse.readJson(fsPath));
         } catch (error) {
             // If we failed to parse or edit the existing file, just ask to overwrite the file completely
-            if (await confirmOverwriteFile(fsPath, ui)) {
+            if (await confirmOverwriteFile(fsPath)) {
                 newData = editJson({});
             } else {
                 return;
@@ -53,9 +54,9 @@ export async function confirmEditJsonFile(fsPath: string, editJson: (existingDat
     await writeFormattedJson(fsPath, newData);
 }
 
-export async function confirmOverwriteFile(fsPath: string, ui: IAzureUserInput): Promise<boolean> {
+export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
-        const result: MessageItem | undefined = await ui.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+        const result: MessageItem | undefined = await ext.ui.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             return true;
         } else {

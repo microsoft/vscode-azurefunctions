@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { ext } from '../../extensionVariables';
 import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
-import { ILogStreamTreeItem } from './ILogStreamTreeItem';
+import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
 
-export async function stopStreamingLogs(tree: AzureTreeDataProvider, node?: IAzureNode<ILogStreamTreeItem>): Promise<void> {
+export async function stopStreamingLogs(node?: FunctionAppTreeItem | FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<ILogStreamTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
-    await appservice.stopStreamingLogs(node.treeItem.client, node.treeItem.logStreamPath);
+    await appservice.stopStreamingLogs(node.root.client, node.logStreamPath);
 }

@@ -4,17 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as clipboardy from 'clipboardy';
-import { AzureTreeDataProvider, IAzureNode } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 
-export async function copyFunctionUrl(tree: AzureTreeDataProvider, node?: IAzureNode<FunctionTreeItem>): Promise<void> {
+export async function copyFunctionUrl(node?: FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<FunctionTreeItem>>await tree.showNodePicker(FunctionTreeItem.contextValue);
+        node = <FunctionTreeItem>await ext.tree.showTreeItemPicker(FunctionTreeItem.contextValue);
     }
 
-    if (node.treeItem.config.isHttpTrigger) {
-        await clipboardy.write(node.treeItem.triggerUrl);
+    if (node.config.isHttpTrigger) {
+        await clipboardy.write(node.triggerUrl);
     } else {
         throw new Error(localize('CopyFailedForNonHttp', 'Function URLs can only be used for HTTP triggers.'));
     }

@@ -7,28 +7,25 @@ import { StringDictionary } from "azure-arm-website/lib/models";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
-import { IAzureNode } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
-import { FunctionAppTreeItem } from "../../tree/FunctionAppTreeItem";
 import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 
-export async function uploadAppSettings(node?: IAzureNode): Promise<void> {
+export async function uploadAppSettings(node?: AppSettingsTreeItem): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
     const localSettingsPath: string = await workspaceUtil.selectWorkspaceFile(ext.ui, message, () => localSettingsFileName);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     if (!node) {
-        node = await ext.tree.showNodePicker(AppSettingsTreeItem.contextValue);
+        node = <AppSettingsTreeItem>await ext.tree.showTreeItemPicker(AppSettingsTreeItem.contextValue);
     }
 
-    // tslint:disable-next-line:no-non-null-assertion
-    const client: SiteClient = (<FunctionAppTreeItem>node.parent!.treeItem).client;
+    const client: SiteClient = node.root.client;
 
     await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
         ext.outputChannel.show(true);

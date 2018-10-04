@@ -26,7 +26,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         }
         this.timeout(120 * 1000);
         await testAccount.signIn();
-        ext.tree = new AzureTreeDataProvider(new FunctionAppProvider(), 'azureFunctions.startTesting', undefined, testAccount);
+        ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
     });
 
     suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {

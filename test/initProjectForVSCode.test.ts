@@ -169,9 +169,9 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUserInput = new TestUserInput(inputs);
+        ext.ui = new TestUserInput(inputs);
         const actionContext: IActionContext = <IActionContext>{ properties: { isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, measurements: {} };
-        await initProjectForVSCode(actionContext, ui, ext.outputChannel);
+        await initProjectForVSCode(actionContext);
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
     }
 });
