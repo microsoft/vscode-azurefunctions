@@ -62,19 +62,12 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
         const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this._name);
         const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
-<<<<<<< HEAD
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
             ext.outputChannel.appendLine(deleting);
-            await this.client.deleteFunction(this._name);
+            await this.root.client.deleteFunction(this._name);
             window.showInformationMessage(deleteSucceeded);
             ext.outputChannel.appendLine(deleteSucceeded);
         });
-=======
-        ext.outputChannel.show(true);
-        ext.outputChannel.appendLine(localize('DeletingFunction', 'Deleting function "{0}"...', this._name));
-        await this.root.client.deleteFunction(this._name);
-        ext.outputChannel.appendLine(localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name));
->>>>>>> 90ede2d3526dfab8452ec97937470fe2c6bdf00c
     }
 
     public async initializeTriggerUrl(): Promise<void> {
