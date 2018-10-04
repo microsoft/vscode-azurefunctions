@@ -6,7 +6,7 @@
 import { WebSiteManagementClient } from 'azure-arm-website';
 import { AppServicePlan, Site, WebAppCollection } from "azure-arm-website/lib/models";
 import { createFunctionApp, IAppCreateOptions, SiteClient } from 'vscode-azureappservice';
-import { addExtensionUserAgent, createTreeItemsWithErrorHandling, IActionContext, IAzureNode, IAzureTreeItem, IChildProvider, parseError } from 'vscode-azureextensionui';
+import { AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
@@ -14,22 +14,21 @@ import { convertStringToRuntime, getFuncExtensionSetting } from '../ProjectSetti
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
 
-export class FunctionAppProvider implements IChildProvider {
+export class FunctionAppProvider extends SubscriptionTreeItem {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
 
     private _nextLink: string | undefined;
 
-    public hasMoreChildren(): boolean {
+    public hasMoreChildrenImpl(): boolean {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildren(node: IAzureNode, clearCache: boolean): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzureTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = new WebSiteManagementClient(node.credentials, node.subscriptionId, node.environment.resourceManagerEndpointUrl);
-        addExtensionUserAgent(client);
+        const client: WebSiteManagementClient = createAzureClient(this.root, WebSiteManagementClient);
         let webAppCollection: WebAppCollection;
         try {
             webAppCollection = this._nextLink === undefined ?
@@ -49,14 +48,15 @@ export class FunctionAppProvider implements IChildProvider {
         this._nextLink = webAppCollection.nextLink;
 
         return await createTreeItemsWithErrorHandling(
+            this,
             webAppCollection,
             'azFuncInvalidFunctionApp',
             async (site: Site) => {
-                const siteClient: SiteClient = new SiteClient(site, node);
+                const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    const asp: AppServicePlan = await siteClient.getAppServicePlan();
-                    const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
-                    return new FunctionAppTreeItem(siteClient, isLinuxPreview);
+                    const asp: AppServicePlan | undefined = await siteClient.getAppServicePlan();
+                    const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
+                    return new FunctionAppTreeItem(this, siteClient, isLinuxPreview);
                 }
                 return undefined;
             },
@@ -66,7 +66,7 @@ export class FunctionAppProvider implements IChildProvider {
         );
     }
 
-    public async createChild(parent: IAzureNode, showCreatingNode: (label: string) => void, userOptions?: { actionContext: IActionContext, resourceGroup?: string }): Promise<IAzureTreeItem> {
+    public async createChildImpl(showCreatingTreeItem: (label: string) => void, userOptions?: { actionContext: IActionContext, resourceGroup?: string }): Promise<AzureTreeItem> {
         // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
         // https://github.com/Microsoft/vscode-azuretools/issues/120
         // tslint:disable-next-line:strict-boolean-expressions
@@ -91,8 +91,8 @@ export class FunctionAppProvider implements IChildProvider {
             functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
         }
 
-        const site: Site = await createFunctionApp(actionContext, parent, createOptions, showCreatingNode);
-        return new FunctionAppTreeItem(new SiteClient(site, parent), createOptions.os === 'linux' /* isLinuxPreview */);
+        const site: Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
+        return new FunctionAppTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
     }
 }
 

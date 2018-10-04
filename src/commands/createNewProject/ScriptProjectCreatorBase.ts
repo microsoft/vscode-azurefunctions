@@ -67,7 +67,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
 
     public async addNonVSCodeFiles(): Promise<void> {
         const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
-        if (await confirmOverwriteFile(hostJsonPath, this.ui)) {
+        if (await confirmOverwriteFile(hostJsonPath)) {
             const hostJson: {} = {
                 version: '2.0'
             };
@@ -75,7 +75,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
         }
 
         const localSettingsJsonPath: string = path.join(this.functionAppPath, localSettingsFileName);
-        if (await confirmOverwriteFile(localSettingsJsonPath, this.ui)) {
+        if (await confirmOverwriteFile(localSettingsJsonPath)) {
             const localSettingsJson: ILocalAppSettings = {
                 IsEncrypted: false,
                 Values: {
@@ -92,7 +92,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
         }
 
         const proxiesJsonPath: string = path.join(this.functionAppPath, proxiesFileName);
-        if (await confirmOverwriteFile(proxiesJsonPath, this.ui)) {
+        if (await confirmOverwriteFile(proxiesJsonPath)) {
             const proxiesJson: {} = {
                 // tslint:disable-next-line:no-http-string
                 $schema: 'http://json.schemastore.org/proxies',
@@ -102,7 +102,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
         }
 
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
-        if (await confirmOverwriteFile(gitignorePath, this.ui)) {
+        if (await confirmOverwriteFile(gitignorePath)) {
             await fse.writeFile(gitignorePath, gitignore);
         }
     }

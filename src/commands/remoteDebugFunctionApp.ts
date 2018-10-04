@@ -9,22 +9,23 @@ import opn = require("opn");
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { AzureTreeDataProvider, DialogResponses, IAzureNode, IAzureUserInput } from 'vscode-azureextensionui';
+import { DialogResponses } from 'vscode-azureextensionui';
 import { DebugProxy } from '../DebugProxy';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel, ui: IAzureUserInput, tree: AzureTreeDataProvider, node?: IAzureNode<FunctionAppTreeItem>): Promise<void> {
+export async function remoteDebugFunctionApp(node?: FunctionAppTreeItem): Promise<void> {
     if (!node) {
-        node = <IAzureNode<FunctionAppTreeItem>>await tree.showNodePicker(FunctionAppTreeItem.contextValue);
+        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
-    const client: SiteClient = node.treeItem.client;
+    const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();
     const publishCredential: User = await client.getWebAppPublishCredential();
-    const debugProxy: DebugProxy = new DebugProxy(outputChannel, client, portNumber, publishCredential);
+    const debugProxy: DebugProxy = new DebugProxy(ext.outputChannel, client, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();
@@ -39,18 +40,18 @@ export async function remoteDebugFunctionApp(outputChannel: vscode.OutputChannel
                 const appSettings: StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
-                    const result: vscode.MessageItem = await ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
+                    const result: vscode.MessageItem = await ext.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
                     if (result === DialogResponses.learnMore) {
                         await opn('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
-                        await updateSiteConfig(outputChannel, client, p, siteConfig);
-                        await updateAppSettings(outputChannel, client, p, appSettings);
+                        await updateSiteConfig(ext.outputChannel, client, p, siteConfig);
+                        await updateAppSettings(ext.outputChannel, client, p, appSettings);
                     }
                 }
 
                 p.report({ message: 'starting debug proxy...' });
-                outputChannel.appendLine('starting debug proxy...');
+                ext.outputChannel.appendLine('starting debug proxy...');
                 // tslint:disable-next-line:no-floating-promises
                 debugProxy.startProxy();
                 debugProxy.on('start', resolve);

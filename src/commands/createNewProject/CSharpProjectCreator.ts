@@ -11,6 +11,7 @@ import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { funcHostCommand, funcHostTaskLabel } from '../../funcCoreTools/funcHostTask';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
@@ -167,7 +168,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
                     try {
-                        const result: vscode.MessageItem = await this.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
                             await opn('https://aka.ms/azFunc64bit');
                         } else if (result === DialogResponses.dontWarnAgain) {
@@ -226,7 +227,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         }
 
         if (existingFiles.length > 0) {
-            await this.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), { modal: true }, DialogResponses.yes, DialogResponses.cancel);
+            await ext.ui.showWarningMessage(localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', ')), { modal: true }, DialogResponses.yes, DialogResponses.cancel);
             return true;
         } else {
             return false;

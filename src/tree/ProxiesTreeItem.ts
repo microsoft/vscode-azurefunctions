@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getFile, IFileResult, putFile, SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IAzureParentTreeItem, IAzureTreeItem, parseError } from 'vscode-azureextensionui';
+import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
+import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
 
-export class ProxiesTreeItem implements IAzureParentTreeItem {
+export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncProxies';
     public readonly contextValue: string = ProxiesTreeItem.contextValue;
     public readonly label: string = localize('azFunc.Proxies', 'Proxies');
@@ -21,12 +21,6 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
     private _etag: string;
     private _deletingProxy: boolean = false;
 
-    private readonly _client: SiteClient;
-
-    public constructor(client: SiteClient) {
-        this._client = client;
-    }
-
     public get id(): string {
         return 'proxies';
     }
@@ -35,14 +29,14 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
         return nodeUtils.getThemedIconPath('BulletList');
     }
 
-    public hasMoreChildren(): boolean {
+    public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
-    public async loadMoreChildren(): Promise<IAzureTreeItem[]> {
+    public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         let proxiesJson: string;
         try {
-            const result: IFileResult = await getFile(this._client, this._proxiesJsonPath);
+            const result: IFileResult = await getFile(this.root.client, this._proxiesJsonPath);
             proxiesJson = result.data;
             this._etag = result.etag;
         } catch (err) {
@@ -56,7 +50,7 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
                 rawProxyConfig.proxies = {};
             }
             this._proxyConfig = <IProxyConfig>rawProxyConfig;
-            return Object.keys(this._proxyConfig.proxies).map((name: string) => new ProxyTreeItem(name));
+            return Object.keys(this._proxyConfig.proxies).map((name: string) => new ProxyTreeItem(this, name));
         } catch (err) {
             throw new Error(localize('failedToParseProxyConfig', 'Failed to parse "proxies.json" file: {0}', parseError(err).message));
         }
@@ -74,7 +68,7 @@ export class ProxiesTreeItem implements IAzureParentTreeItem {
                 ext.outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
-                this._etag = await putFile(this._client, data, this._proxiesJsonPath, this._etag);
+                this._etag = await putFile(this.root.client, data, this._proxiesJsonPath, this._etag);
                 ext.outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;

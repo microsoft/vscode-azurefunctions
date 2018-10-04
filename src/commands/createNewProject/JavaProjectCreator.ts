@@ -8,8 +8,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { InputBoxOptions } from 'vscode';
-import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
+import { IActionContext } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
 import * as fsUtil from '../../utils/fs';
@@ -24,8 +25,8 @@ export class JavaProjectCreator extends ProjectCreatorBase {
     private _javaTargetPath: string;
     private _actionContext: IActionContext;
 
-    constructor(functionAppPath: string, outputChannel: vscode.OutputChannel, ui: IAzureUserInput, actionContext: IActionContext) {
-        super(functionAppPath, outputChannel, ui, actionContext.properties);
+    constructor(functionAppPath: string, actionContext: IActionContext) {
+        super(functionAppPath, actionContext.properties);
         this._actionContext = actionContext;
     }
 
@@ -42,7 +43,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             validateInput: validateMavenIdentifier,
             value: 'com.function'
         };
-        const groupId: string = await this.ui.showInputBox(groupOptions);
+        const groupId: string = await ext.ui.showInputBox(groupOptions);
 
         const artifactOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.artifactIdPlaceholder', 'Artifact ID'),
@@ -50,14 +51,14 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             validateInput: validateMavenIdentifier,
             value: path.basename(this.functionAppPath)
         };
-        const artifactId: string = await this.ui.showInputBox(artifactOptions);
+        const artifactId: string = await ext.ui.showInputBox(artifactOptions);
 
         const versionOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.versionPlaceHolder', 'Version'),
             prompt: localize('azFunc.java.versionPrompt', 'Provide value for version'),
             value: '1.0-SNAPSHOT'
         };
-        const version: string = await this.ui.showInputBox(versionOptions);
+        const version: string = await ext.ui.showInputBox(versionOptions);
 
         const packageOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.packagePlaceHolder', 'Package'),
@@ -65,23 +66,23 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             validateInput: validatePackageName,
             value: groupId
         };
-        const packageName: string = await this.ui.showInputBox(packageOptions);
+        const packageName: string = await ext.ui.showInputBox(packageOptions);
 
         const appNameOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.appNamePlaceHolder', 'App Name'),
             prompt: localize('azFunc.java.appNamePrompt', 'Provide value for appName'),
             value: `${artifactId}-${Date.now()}`
         };
-        const appName: string = await this.ui.showInputBox(appNameOptions);
+        const appName: string = await ext.ui.showInputBox(appNameOptions);
 
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
         await fse.ensureDir(tempFolder);
         try {
             // Use maven command to init Java function project.
-            this.outputChannel.show();
+            ext.outputChannel.show();
             await mavenUtils.executeMvnCommand(
                 this.telemetryProperties,
-                this.outputChannel,
+                ext.outputChannel,
                 tempFolder,
                 'archetype:generate',
                 mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure'),
@@ -93,7 +94,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                 mavenUtils.formatMavenArg('DappName', appName),
                 '-B' // in Batch Mode
             );
-            await fsUtil.copyFolder(path.join(tempFolder, artifactId), this.functionAppPath, this.ui);
+            await fsUtil.copyFolder(path.join(tempFolder, artifactId), this.functionAppPath);
         } finally {
             await fse.remove(tempFolder);
         }
