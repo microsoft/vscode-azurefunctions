@@ -31,10 +31,10 @@ export async function getNpmDistTag(runtime: ProjectRuntime): Promise<INpmDistTa
             throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
     }
 
-    const filteredVersions: string[] = Object.keys(packageMetadata.versions).filter((v: string) => v.startsWith(majorVersion));
-    if (filteredVersions.length < 1) {
+    const validVersions: string[] = Object.keys(packageMetadata.versions).filter((v: string) => !!semver.valid(v));
+    const maxVersion: string | null = semver.maxSatisfying(validVersions, majorVersion);
+    if (!maxVersion) {
         throw new Error(localize('noDistTag', 'Failed to retrieve NPM tag for runtime "{0}".', runtime));
     }
-    const maxVersion: string = filteredVersions.reduce((v1: string, v2: string) => semver.gt(v1, v2) ? v1 : v2);
     return { tag: majorVersion, value: maxVersion };
 }
