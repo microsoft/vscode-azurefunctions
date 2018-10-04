@@ -78,7 +78,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ext.ui);
     telemetryProperties.projectRuntime = runtime;
 
-    if (language === ProjectLanguage.Python && !node.treeItem.isLinuxPreview) {
+    if (language === ProjectLanguage.Python && !node.isLinuxPreview) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function apps.  Deploy to a Linux Consumption app.'));
     }
 
