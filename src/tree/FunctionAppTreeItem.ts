@@ -16,13 +16,13 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunctionApp';
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public logStreamPath: string = '';
+    public readonly isLinuxPreview: boolean;
 
     private readonly _root: ISiteTreeRoot;
     private _state?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
-    private readonly _isLinuxPreview: boolean;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient, isLinuxPreview: boolean) {
         super(parent);
@@ -31,7 +31,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         this._functionsTreeItem = new FunctionsTreeItem(this);
         this._appSettingsTreeItem = new AppSettingsTreeItem(this);
         this._proxiesTreeItem = new ProxiesTreeItem(this);
-        this._isLinuxPreview = isLinuxPreview;
+        this.isLinuxPreview = isLinuxPreview;
     }
 
     // overrides ISubscriptionRoot with an object that also has SiteClient
@@ -53,7 +53,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
 
     public get description(): string | undefined {
         const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
-        const previewDescription: string | undefined = this._isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
+        const previewDescription: string | undefined = this.isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
         if (stateDescription && previewDescription) {
             return `${previewDescription} - ${stateDescription}`;
         } else {
