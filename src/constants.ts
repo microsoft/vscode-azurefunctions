@@ -68,3 +68,6 @@ export enum ScmType {
 export const publishTaskId: string = 'publish';
 export const installExtensionsId: string = 'installExtensions';
 export const funcPackId: string = 'funcPack';
+
+export const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
+export const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';

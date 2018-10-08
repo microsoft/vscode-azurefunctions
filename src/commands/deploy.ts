@@ -14,7 +14,7 @@ import { MessageItem } from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { SiteClient } from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
+import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType, WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -80,6 +80,22 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     if (language === ProjectLanguage.Python && !node.isLinuxPreview) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function apps.  Deploy to a Linux Consumption app.'));
+    }
+
+    // we need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
+    if (node.isLinuxPreview) {
+        const applicationSettings: StringDictionary = await client.listApplicationSettings();
+        if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {
+            await ext.ui.showWarningMessage(
+                localize('noDeployWithWebsiteContent', 'App settings "{0}" and "{1}" are required for Portal editing, but prevent deployment.  Delete these settings and deploy?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
+                { modal: true },
+                DialogResponses.yes,
+                DialogResponses.cancel
+            );
+            delete applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
+            delete applicationSettings.properties[WEBSITE_CONTENTSHARE];
+            await client.updateApplicationSettings(applicationSettings);
+        }
     }
 
     if (language === ProjectLanguage.Java) {
