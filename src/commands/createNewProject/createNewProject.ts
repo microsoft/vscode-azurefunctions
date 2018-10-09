@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
+import { ProgressLocation, QuickPickItem, QuickPickOptions, Uri, window, workspace, WorkspaceConfiguration } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
+import { DefaultFilesExcluded, ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
@@ -69,6 +69,10 @@ export async function createNewProject(
         await projectCreator.addNonVSCodeFiles();
 
         await initProjectForVSCode(actionContext, functionAppPath, language, runtime, projectCreator);
+        // Functions has a dependency on C# that creates build artifacts: https://github.com/Microsoft/vscode-azurefunctions/issues/658
+        if (language !== ProjectLanguage.CSharp) {
+            await addToFilesExclude(['bin', 'obj'], functionAppPath);
+        }
 
         if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
             await gitUtils.gitInit(ext.outputChannel, functionAppPath);
@@ -105,4 +109,26 @@ export function getProjectCreator(language: string, functionAppPath: string, act
         default:
             return new ScriptProjectCreatorBase(functionAppPath, actionContext.properties);
     }
+}
+
+async function addToFilesExclude(filesToExclude: string | string[], fsPath: string): Promise<void> {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration('files', Uri.file(fsPath));
+    // tslint:disable:no-any no-unsafe-any
+    let excludedFiles: any | undefined = projectConfiguration.get('exclude');
+    if (excludedFiles) {
+        for (const key of Object.keys(DefaultFilesExcluded)) {
+            delete excludedFiles[DefaultFilesExcluded[key]];
+        }
+    } else {
+        excludedFiles = {};
+    }
+
+    if (filesToExclude.length > 0) {
+        for (const file of filesToExclude) {
+            excludedFiles[file] = true;
+        }
+    } else {
+        excludedFiles.filesToExclude = true;
+    }
+    await projectConfiguration.update('exclude', excludedFiles, false);
 }
