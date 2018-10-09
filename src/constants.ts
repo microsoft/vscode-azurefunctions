@@ -68,11 +68,3 @@ export enum ScmType {
 export const publishTaskId: string = 'publish';
 export const installExtensionsId: string = 'installExtensions';
 export const funcPackId: string = 'funcPack';
-
-export enum DefaultFilesExcluded {
-    DS_Store = '**/.DS_Store',
-    Git = '**/.git',
-    Hg = '**/.hg',
-    Svn = '**/.svn',
-    CVS = '**/CVS'
-}

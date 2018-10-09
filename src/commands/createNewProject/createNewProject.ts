@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import { ProgressLocation, QuickPickItem, QuickPickOptions, Uri, window, workspace, WorkspaceConfiguration } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { DefaultFilesExcluded, ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
@@ -112,23 +112,18 @@ export function getProjectCreator(language: string, functionAppPath: string, act
 }
 
 async function addToFilesExclude(filesToExclude: string | string[], fsPath: string): Promise<void> {
+    const exclude: string = 'exclude';
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration('files', Uri.file(fsPath));
-    // tslint:disable:no-any no-unsafe-any
-    let excludedFiles: any | undefined = projectConfiguration.get('exclude');
-    if (excludedFiles) {
-        for (const key of Object.keys(DefaultFilesExcluded)) {
-            delete excludedFiles[DefaultFilesExcluded[key]];
-        }
-    } else {
-        excludedFiles = {};
-    }
+    const allExcludedFiles: { key: string; workspaceValue?: {} } | undefined = projectConfiguration.inspect(exclude);
+    const workspaceExcludedFiles: { [key: string]: boolean } = allExcludedFiles && allExcludedFiles.workspaceValue ? allExcludedFiles.workspaceValue : {};
 
-    if (filesToExclude.length > 0) {
+    // if multiple directories were passed in, iterate over and include to files.exclude
+    if (Array.isArray(filesToExclude)) {
         for (const file of filesToExclude) {
-            excludedFiles[file] = true;
+            workspaceExcludedFiles[file] = true;
         }
     } else {
-        excludedFiles.filesToExclude = true;
+        workspaceExcludedFiles[filesToExclude] = true;
     }
-    await projectConfiguration.update('exclude', excludedFiles, false);
+    await projectConfiguration.update(exclude, workspaceExcludedFiles, false /*Workspace*/);
 }
