@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { ProgressLocation, QuickPickItem, QuickPickOptions, Uri, window, workspace, WorkspaceConfiguration } from 'vscode';
+import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -69,11 +69,6 @@ export async function createNewProject(
         await projectCreator.addNonVSCodeFiles();
 
         await initProjectForVSCode(actionContext, functionAppPath, language, runtime, projectCreator);
-        // Functions has a dependency on C# that creates build artifacts: https://github.com/Microsoft/vscode-azurefunctions/issues/658
-        if (language !== ProjectLanguage.CSharp) {
-            await addToFilesExclude(['bin', 'obj'], functionAppPath);
-        }
-
         if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
             await gitUtils.gitInit(ext.outputChannel, functionAppPath);
         }
@@ -109,21 +104,4 @@ export function getProjectCreator(language: string, functionAppPath: string, act
         default:
             return new ScriptProjectCreatorBase(functionAppPath, actionContext.properties);
     }
-}
-
-async function addToFilesExclude(filesToExclude: string | string[], fsPath: string): Promise<void> {
-    const exclude: string = 'exclude';
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration('files', Uri.file(fsPath));
-    const allExcludedFiles: { key: string; workspaceValue?: {} } | undefined = projectConfiguration.inspect(exclude);
-    const workspaceExcludedFiles: { [key: string]: boolean } = allExcludedFiles && allExcludedFiles.workspaceValue ? allExcludedFiles.workspaceValue : {};
-
-    // if multiple directories were passed in, iterate over and include to files.exclude
-    if (Array.isArray(filesToExclude)) {
-        for (const file of filesToExclude) {
-            workspaceExcludedFiles[file] = true;
-        }
-    } else {
-        workspaceExcludedFiles[filesToExclude] = true;
-    }
-    await projectConfiguration.update(exclude, workspaceExcludedFiles, false /*Workspace*/);
 }

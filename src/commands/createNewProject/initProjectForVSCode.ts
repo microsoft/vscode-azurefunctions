@@ -5,8 +5,9 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { Uri, workspace, WorkspaceConfiguration } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
+import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
@@ -98,6 +99,10 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
                 data[`${extensionPrefix}.${preDeployTaskSetting}`] = projectCreator.preDeployTask;
             }
 
+            if (projectCreator.excludedFiles) {
+                data[filesExcludeSetting] = addToFilesExcludeSetting(projectCreator.excludedFiles, vscodePath);
+            }
+
             // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
             data['debug.internalConsoleOptions'] = 'neverOpen';
 
@@ -122,6 +127,23 @@ async function writeExtensionRecommendations(projectCreator: ProjectCreatorBase,
             return data;
         }
     );
+}
+
+function addToFilesExcludeSetting(filesToExclude: string | string[], fsPath: string): { [key: string]: boolean } {
+    const exclude: string = 'exclude';
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration('files', Uri.file(fsPath));
+    const allExcludedFiles: { key: string; workspaceValue?: {} } | undefined = projectConfiguration.inspect(exclude);
+    const workspaceExcludedFiles: { [key: string]: boolean } = allExcludedFiles && allExcludedFiles.workspaceValue ? allExcludedFiles.workspaceValue : {};
+
+    // if multiple directories were passed in, iterate over and include to files.exclude
+    if (Array.isArray(filesToExclude)) {
+        for (const file of filesToExclude) {
+            workspaceExcludedFiles[file] = true;
+        }
+    } else {
+        workspaceExcludedFiles[filesToExclude] = true;
+    }
+    return workspaceExcludedFiles;
 }
 
 interface IRecommendations {
