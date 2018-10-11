@@ -84,7 +84,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     // we need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
     if (node.isLinuxPreview) {
-        verifyWebContentSettings(node, telemetryProperties);
+        await verifyWebContentSettings(node, telemetryProperties);
     }
 
     if (language === ProjectLanguage.Java) {
@@ -375,6 +375,6 @@ async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProp
         telemetryProperties.webContentSettingsRemoved = 'true';
         await client.updateApplicationSettings(applicationSettings);
         // if the user cancels the deployment, the app settings node doesn't reflect the deleted settings
-        node.refresh();
+        await node.refresh();
     }
 }
