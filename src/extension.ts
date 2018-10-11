@@ -8,8 +8,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceFoldersChangeEvent } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
-import TelemetryReporter from 'vscode-extension-telemetry';
+import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
 import { decryptLocalSettings } from './commands/appSettings/decryptLocalSettings';
 import { downloadAppSettings } from './commands/appSettings/downloadAppSettings';
 import { encryptLocalSettings } from './commands/appSettings/encryptLocalSettings';
@@ -49,14 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
     ext.context = context;
-
-    try {
-        const packageInfo: IPackageInfo = (<(id: string) => IPackageInfo>require)(context.asAbsolutePath('./package.json'));
-        ext.reporter = new TelemetryReporter(packageInfo.name, packageInfo.version, packageInfo.aiKey);
-    } catch (error) {
-        // swallow exceptions so that telemetry doesn't affect user
-    }
-
+    ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
     context.subscriptions.push(ext.outputChannel);
 
@@ -128,10 +120,4 @@ export function activate(context: vscode.ExtensionContext): void {
 
 // tslint:disable-next-line:no-empty
 export function deactivate(): void {
-}
-
-interface IPackageInfo {
-    name: string;
-    version: string;
-    aiKey: string;
 }
