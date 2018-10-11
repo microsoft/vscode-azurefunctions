@@ -5,7 +5,6 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Uri, workspace, WorkspaceConfiguration } from 'vscode';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -100,7 +99,7 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
             }
 
             if (projectCreator.excludedFiles) {
-                data[filesExcludeSetting] = addToFilesExcludeSetting(projectCreator.excludedFiles, vscodePath);
+                data[filesExcludeSetting] = addToFilesExcludeSetting(projectCreator.excludedFiles, data);
             }
 
             // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
@@ -129,12 +128,9 @@ async function writeExtensionRecommendations(projectCreator: ProjectCreatorBase,
     );
 }
 
-function addToFilesExcludeSetting(filesToExclude: string | string[], fsPath: string): { [key: string]: boolean } {
-    const exclude: string = 'exclude';
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration('files', Uri.file(fsPath));
-    const allExcludedFiles: { key: string; workspaceValue?: {} } | undefined = projectConfiguration.inspect(exclude);
-    const workspaceExcludedFiles: { [key: string]: boolean } = allExcludedFiles && allExcludedFiles.workspaceValue ? allExcludedFiles.workspaceValue : {};
-
+function addToFilesExcludeSetting(filesToExclude: string | string[], data: {}): { [key: string]: boolean } {
+    // tslint:disable-next-line:no-unsafe-any
+    const workspaceExcludedFiles: { [key: string]: boolean } = data[filesExcludeSetting] ? data[filesExcludeSetting] : {};
     // if multiple directories were passed in, iterate over and include to files.exclude
     if (Array.isArray(filesToExclude)) {
         for (const file of filesToExclude) {
