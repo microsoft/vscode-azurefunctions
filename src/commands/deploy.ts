@@ -358,12 +358,12 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
 }
 
 async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProperties: TelemetryProperties): Promise<void> {
-    telemetryProperties.webContentSettingsRemoved = 'cancelled ';
     const client: SiteClient = node.root.client;
     const applicationSettings: StringDictionary = await client.listApplicationSettings();
     const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
     const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
     if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {
+        telemetryProperties.webContentSettingsRemoved = 'cancelled ';
         await ext.ui.showWarningMessage(
             localize('noDeployWithWebsiteContent', 'App settings "{0}" and "{1}" are required for Portal editing, but prevent deployment.  Delete these settings and deploy?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
             { modal: true },
