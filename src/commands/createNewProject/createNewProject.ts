@@ -10,7 +10,7 @@ import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../c
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
@@ -66,7 +66,7 @@ export async function createNewProject(
         language = language!;
 
         const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
-        await projectCreator.addNonVSCodeFiles();
+        await projectCreator.addNonVSCodeFiles(convertStringToRuntime(runtime));
 
         await initProjectForVSCode(actionContext, functionAppPath, language, runtime, projectCreator);
         if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
