@@ -83,7 +83,7 @@ function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '');
 }
 
-export async function getFunctionTemplates(source?: 'backup' | 'cliFeed'): Promise<FunctionTemplates> {
+export async function getFunctionTemplates(source?: 'backup' | 'cliFeed' | 'stagingCliFeed'): Promise<FunctionTemplates> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
@@ -97,7 +97,8 @@ export async function getFunctionTemplates(source?: 'backup' | 'cliFeed'): Promi
                 this.properties.isActivationEvent = 'true';
                 this.properties.runtime = runtime;
                 this.properties.templateType = templateRetriever.templateType;
-                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime);
+                const useStagingTemplates: boolean = source === 'stagingCliFeed';
+                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime, useStagingTemplates);
                 let templates: IFunctionTemplate[] | undefined;
 
                 // 1. Use the cached templates if they match templateVersion
@@ -107,7 +108,7 @@ export async function getFunctionTemplates(source?: 'backup' | 'cliFeed'): Promi
                 }
 
                 // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
-                if ((!source || source === 'cliFeed') && !templates && cliFeedJson && templateVersion) {
+                if ((!source || source === 'cliFeed' || source === 'stagingCliFeed') && !templates && cliFeedJson && templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, templateVersion, runtime);
                     this.properties.templateSource = 'cliFeed';
                 }
@@ -142,8 +143,8 @@ export function removeLanguageFromId(id: string): string {
     return id.split('-')[0];
 }
 
-async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
-    const feedRuntime: string = getFeedRuntime(runtime);
+async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime, useStagingTemplates: boolean): Promise<string | undefined> {
+    const feedRuntime: string = getFeedRuntime(runtime, useStagingTemplates);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
     try {
         if (userTemplateVersion) {
@@ -173,7 +174,6 @@ async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson
                     templateVersion = cliFeedJson.tags[feedRuntime].release;
                     // reset user setting so that it always gets latest
                     await updateGlobalSetting(templateVersionSetting, '');
-
                 }
             }
         } else {
