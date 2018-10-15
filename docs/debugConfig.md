@@ -2,7 +2,7 @@
 
 The debug configuration for v2 of the Azure Functions runtime [has changed](https://github.com/Azure/azure-functions-core-tools/issues/521) and old configurations will likely fail with the error "Cannot connect to runtime process, timeout after 10000 ms". You will automatically be prompted to update your configuration when you open a project. However, you can manually update your project with one of the following options:
 
-The first option is to add `languageWorkers:node:arguments` to your `runFunctionsHost` task in `.vscode\tasks.json` as seen below:
+The first option is to add `languageWorkers__node__arguments` to your `runFunctionsHost` task in `.vscode\tasks.json` as seen below:
 
 ```json
 {
@@ -15,7 +15,7 @@ The first option is to add `languageWorkers:node:arguments` to your `runFunction
       "command": "func host start",
       "options": {
         "env": {
-          "languageWorkers:node:arguments": "--inspect=5858"
+          "languageWorkers__node__arguments": "--inspect=5858"
         }
       },
       "isBackground": true,

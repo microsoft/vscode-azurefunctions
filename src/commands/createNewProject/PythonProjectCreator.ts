@@ -113,8 +113,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     },
                     options: {
                         env: {
-                            // tslint:disable-next-line:no-invalid-template-strings
-                            'languageWorkers:python:arguments': '-m ptvsd --server --port 9091 --file'
+                            languageWorkers__python__arguments: '-m ptvsd --server --port 9091 --file'
                         }
                     },
                     problemMatcher: funcWatchProblemMatcher
