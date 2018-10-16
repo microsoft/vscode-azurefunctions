@@ -17,7 +17,7 @@ import { longRunningTestsEnabled } from './global.test';
 
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(1200 * 1000);
-    const resourceName: string = fsUtil.getRandomHexString().toLocaleLowerCase(); // storage accounts cannot contain upper case chars
+    const resourceGroupsToDelete: string[] = [];
     const testAccount: TestAzureAccount = new TestAzureAccount();
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
@@ -33,30 +33,52 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         if (!longRunningTestsEnabled) {
             this.skip();
         }
+        this.timeout(1200 * 1000);
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
-        ext.outputChannel.appendLine(`Deleting resource group "${resourceName}..."`);
-        await client.resourceGroups.deleteMethod(resourceName);
-        ext.outputChannel.appendLine(`Resource group "${resourceName}" deleted.`);
+        for (const resourceGroup of resourceGroupsToDelete) {
+            if (await client.resourceGroups.checkExistence(resourceGroup)) {
+                console.log(`Deleting resource group "${resourceGroup}"...`);
+                await client.resourceGroups.deleteMethod(resourceGroup);
+                console.log(`Resource group "${resourceGroup}" deleted.`);
+            } else {
+                // If the test failed, the resource group might not actually exist
+                console.log(`Ignoring resource group "${resourceGroup}" because it does not exist.`);
+            }
+        }
         ext.tree.dispose();
     });
 
-    const createNewFunctionApp: string = 'Create New Function App';
-    test(createNewFunctionApp, async () => {
+    test('Create and Delete New Function App', async () => {
+        const resourceName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        resourceGroupsToDelete.push(resourceName);
+
         const testInputs: string[] = [resourceName, '$(plus) Create new resource group', resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
         ext.ui = new TestUserInput(testInputs);
         await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
         const createdApp: Site = await client.webApps.get(resourceName, resourceName);
         assert.ok(createdApp);
-    });
 
-    const deleteFunctionApp: string = 'Delete Function App';
-    test(deleteFunctionApp, async () => {
         ext.ui = new TestUserInput([resourceName, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
         await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
-        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
         const deletedApp: Site | undefined = await client.webApps.get(resourceName, resourceName);
         assert.ifError(deletedApp); // if app was deleted, get() returns null.  assert.ifError throws if the value passed is not null/undefined
+    });
+
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
+    test('createFunctionApp API', async () => {
+        const resourceName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        resourceGroupsToDelete.push(resourceName);
+
+        const testInputs: string[] = [resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
+        ext.ui = new TestUserInput(testInputs);
+        const apiResult: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceName);
+        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
+        const createdApp: Site = await client.webApps.get(resourceName, resourceName);
+        assert.ok(createdApp);
+        assert.equal(apiResult, createdApp.id);
+
+        // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });
 });
 

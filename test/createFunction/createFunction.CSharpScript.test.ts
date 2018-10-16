@@ -51,6 +51,7 @@ suite('Create C# Script Function Tests', async () => {
     const iotFunctionName: string = 'createFunctionApi';
     const iotFunctionSettings: {} = { connection: 'test_EVENTHUB', path: 'sample-workitems', consumerGroup: '$Default' };
 
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
         // Intentionally testing IoTHub trigger since a partner team plans to use that
 

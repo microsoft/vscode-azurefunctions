@@ -139,6 +139,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
         );
     });
 
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
         const templateId: string = 'HttpTrigger-JavaScript';
         const functionName: string = 'createFunctionApi';
