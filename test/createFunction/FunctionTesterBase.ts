@@ -15,7 +15,7 @@ import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import { FunctionTemplates } from '../../src/templates/FunctionTemplates';
 import * as fsUtil from '../../src/utils/fs';
-import { backupTemplates, latestTemplates } from '../global.test';
+import { backupTemplates, latestTemplates, stagingTemplates } from '../global.test';
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
     public backupTestFolder: string;
@@ -62,6 +62,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
         await this.testCreateFunctionInternal(latestTemplates, this.funcPortalTestFolder, templateName, inputs.slice());
         await this.testCreateFunctionInternal(backupTemplates, this.backupTestFolder, templateName, inputs.slice());
+        await this.testCreateFunctionInternal(stagingTemplates, this.funcStagingPortalTestFolder, templateName, inputs.slice());
     }
 
     public abstract async validateFunction(testFolder: string, funcName: string): Promise<void>;

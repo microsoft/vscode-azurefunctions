@@ -8,12 +8,13 @@ import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProject
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { FunctionTemplates } from '../src/templates/FunctionTemplates';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
-import { backupTemplates, latestTemplates } from './global.test';
+import { backupTemplates, latestTemplates, stagingTemplates } from './global.test';
 
 suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
         await validateTemplateCounts(latestTemplates);
         await validateTemplateCounts(backupTemplates);
+        await validateTemplateCounts(stagingTemplates);
     });
 });
 
