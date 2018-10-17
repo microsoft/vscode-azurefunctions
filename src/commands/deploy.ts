@@ -100,6 +100,10 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
 
+    if (siteConfig.scmType === ScmType.LocalGit) {
+        deployFsPath = await removeSubDeployFromFsPath(deployFsPath);
+    }
+
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
         async () => {
@@ -176,6 +180,11 @@ async function getDeployFsPath(): Promise<string> {
 
     const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
     return await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+}
+
+async function removeSubDeployFromFsPath(deployFsPath: string): Promise<string> {
+    const deploySubpath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, deployFsPath);
+    return deploySubpath ? path.normalize(deployFsPath).replace(path.normalize(deploySubpath), '') : deployFsPath;
 }
 
 /**
