@@ -133,26 +133,15 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
         value: context.storageConnectionString
     });
 
+    // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
     if (projectRuntime === ProjectRuntime.v1) {
-        // this setting is only for v1
-        // https://github.com/Microsoft/vscode-azurefunctions/issues/640
         appSettings.push({
             name: 'AzureWebJobsDashboard',
             value: context.storageConnectionString
         });
-    } else {
-        // need to check if a project is both a C# Script and running v1
-        // https://github.com/Microsoft/vscode-azurefunctions/issues/684
-        if (projectLanguage !== ProjectLanguage.CSharpScript) {
-            // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
-            // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-            appSettings.push({
-                name: 'WEBSITE_RUN_FROM_PACKAGE',
-                value: '1'
-            });
-        }
     }
 
+    // These settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
     if (context.os === 'windows') {
         appSettings.push({
             name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
@@ -168,6 +157,16 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
         appSettings.push({
             name: 'FUNCTIONS_WORKER_RUNTIME',
             value: context.runtime
+        });
+    }
+
+    // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+    // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
+    // It also doesn't apply for Python, which has its own custom deploy logic in the the vscode-azureappservice package
+    if (projectLanguage !== ProjectLanguage.Python && !(projectLanguage === ProjectLanguage.CSharpScript && projectRuntime === ProjectRuntime.v1)) {
+        appSettings.push({
+            name: 'WEBSITE_RUN_FROM_PACKAGE',
+            value: '1'
         });
     }
 
