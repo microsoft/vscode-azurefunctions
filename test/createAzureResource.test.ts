@@ -67,16 +67,27 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
     test('createFunctionApp API', async () => {
-        const resourceName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
-        resourceGroupsToDelete.push(resourceName);
-
-        const testInputs: string[] = [resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
-        ext.ui = new TestUserInput(testInputs);
-        const apiResult: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceName);
+        const resourceGroupName: string = fsUtil.getRandomHexString();
+        const storageAccountName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        resourceGroupsToDelete.push(resourceGroupName);
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
-        const createdApp: Site = await client.webApps.get(resourceName, resourceName);
-        assert.ok(createdApp);
-        assert.equal(apiResult, createdApp.id);
+
+        const functionAppName1: string = fsUtil.getRandomHexString();
+        const testInputs1: string[] = [functionAppName1, '$(plus) Create new storage account', storageAccountName, 'West US'];
+        ext.ui = new TestUserInput(testInputs1);
+        const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
+        const createdApp1: Site = await client.webApps.get(resourceGroupName, functionAppName1);
+        assert.ok(createdApp1, 'Function app with new rg/sa failed.');
+        assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
+
+        // Create another function app, but use the existing resource group and storage account
+        const functionAppName2: string = fsUtil.getRandomHexString();
+        const testInputs2: string[] = [functionAppName2, storageAccountName];
+        ext.ui = new TestUserInput(testInputs2);
+        const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
+        const createdApp2: Site = await client.webApps.get(resourceGroupName, functionAppName2);
+        assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
+        assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
 
         // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });
