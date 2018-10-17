@@ -46,7 +46,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     }
 
     const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
-    await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
+    const workspaceFspath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
 
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: FunctionAppTreeItem) => {
         // event is fired from azure-extensionui if node was created during deployment
@@ -101,7 +101,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
-        deployFsPath = await removeSubDeployFromFsPath(deployFsPath);
+        // preDeploy tasks are not required for LocalGit so subpath may not exist
+        deployFsPath = workspaceFspath;
     }
 
     await node.runWithTemporaryDescription(
@@ -180,11 +181,6 @@ async function getDeployFsPath(): Promise<string> {
 
     const workspaceMessage: string = localize('azFunc.selectZipDeployFolder', 'Select the folder to zip and deploy');
     return await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, (f: vscode.WorkspaceFolder) => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
-}
-
-async function removeSubDeployFromFsPath(deployFsPath: string): Promise<string> {
-    const deploySubpath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, deployFsPath);
-    return deploySubpath ? path.normalize(deployFsPath).replace(path.normalize(deploySubpath), '') : deployFsPath;
 }
 
 /**

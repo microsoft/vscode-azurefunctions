@@ -80,7 +80,7 @@ const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 /**
  * If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
  */
-export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext, message?: string, allowSubFolder: boolean = false): Promise<void> {
+export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext, message?: string, allowSubFolder: boolean = false): Promise<string> {
     // tslint:disable-next-line:strict-boolean-expressions
     const openFolders: vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders || [];
     const folder: vscode.WorkspaceFolder | undefined = openFolders.find((f: vscode.WorkspaceFolder): boolean => {
@@ -154,4 +154,5 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             throw new Error(message);
         }
     }
+    return fsPath;
 }
