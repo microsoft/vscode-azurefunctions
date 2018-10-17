@@ -76,6 +76,7 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         );
     });
 
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
         // Intentionally testing IoTHub trigger since a partner team plans to use that
         const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
