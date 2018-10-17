@@ -46,7 +46,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     }
 
     const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
-    const workspaceFspath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
+    const workspaceFsPath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
 
     const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: FunctionAppTreeItem) => {
         // event is fired from azure-extensionui if node was created during deployment
@@ -102,7 +102,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
-        deployFsPath = workspaceFspath;
+        deployFsPath = workspaceFsPath;
     }
 
     await node.runWithTemporaryDescription(
