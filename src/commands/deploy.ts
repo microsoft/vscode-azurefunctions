@@ -360,7 +360,7 @@ async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProp
         const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
         const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
         if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {
-            telemetryProperties.webContentSettingsRemoved = 'false ';
+            telemetryProperties.webContentSettingsRemoved = 'false';
             await ext.ui.showWarningMessage(
                 localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
                 { modal: true },
