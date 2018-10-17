@@ -4,6 +4,25 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.12.0 - 2018-10-22
+
+### Added
+
+- Improved debugging
+  - Functions host will be stopped after you detach
+  - Terminal (where Http Triggers are listed) will be the default view rather than Debug Console
+- Improved Python projects
+  - Deploying will automatically sync triggers
+  - Users will be warned if deploying to Windows
+  - pylint will be added to the local virtual environment by default
+  - "pip install" will be run before debugging
+- Added Cosmos DB trigger to "Verified" category for C#
+- JavaScript and Python projects will hide 'obj' and 'bin' folder by default (used for Functions extensions). NOTE: extensions.csproj will not be hidden and should still be checked in to source control
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.12.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.11.0 - 2018-09-24
 
 ### Added
