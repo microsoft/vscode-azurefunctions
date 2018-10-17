@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient } from 'azure-arm-website';
-import { AppServicePlan, Site, WebAppCollection } from "azure-arm-website/lib/models";
-import { createFunctionApp, IAppCreateOptions, SiteClient } from 'vscode-azureappservice';
+import { AppServicePlan, NameValuePair, Site, WebAppCollection } from "azure-arm-website/lib/models";
+import { createFunctionApp, IAppCreateOptions, IAppSettingsContext, SiteClient } from 'vscode-azureappservice';
 import { AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -73,9 +73,11 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
-        const functionAppSettings: { [key: string]: string } = await getCliFeedAppSettings(runtime);
         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
-        const createOptions: IAppCreateOptions = { functionAppSettings, resourceGroup };
+        const createOptions: IAppCreateOptions = {
+            resourceGroup,
+            createFunctionAppSettings: async (context: IAppSettingsContext): Promise<NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
+        };
 
         // There are two things in preview right now:
         // 1. Python support
@@ -86,13 +88,6 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             createOptions.runtime = 'python';
         } else {
             createOptions.os = 'windows';
-            // need to check if a project is both a C# Script and running v1
-            // https://github.com/Microsoft/vscode-azurefunctions/issues/684
-            if (language !== ProjectLanguage.CSharpScript || runtime !== ProjectRuntime.v1) {
-                // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
-                // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-                functionAppSettings.WEBSITE_RUN_FROM_PACKAGE = '1';
-            }
         }
 
         const site: Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
@@ -120,4 +115,61 @@ async function getDefaultRuntime(actionContext: IActionContext): Promise<Project
     actionContext.properties.projectRuntime = runtime;
 
     return <ProjectRuntime>runtime;
+}
+
+async function createFunctionAppSettings(context: IAppSettingsContext, projectRuntime: ProjectRuntime, projectLanguage: string | undefined): Promise<NameValuePair[]> {
+    const appSettings: NameValuePair[] = [];
+
+    const cliFeedAppSettings: { [key: string]: string } = await getCliFeedAppSettings(projectRuntime);
+    for (const key of Object.keys(cliFeedAppSettings)) {
+        appSettings.push({
+            name: key,
+            value: cliFeedAppSettings[key]
+        });
+    }
+
+    appSettings.push({
+        name: 'AzureWebJobsStorage',
+        value: context.storageConnectionString
+    });
+
+    if (projectRuntime === ProjectRuntime.v1) {
+        // this setting is only for v1
+        // https://github.com/Microsoft/vscode-azurefunctions/issues/640
+        appSettings.push({
+            name: 'AzureWebJobsDashboard',
+            value: context.storageConnectionString
+        });
+    } else {
+        // need to check if a project is both a C# Script and running v1
+        // https://github.com/Microsoft/vscode-azurefunctions/issues/684
+        if (projectLanguage !== ProjectLanguage.CSharpScript) {
+            // WEBSITE_RUN_FROM_PACKAGE has several benefits, so make that the default
+            // https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+            appSettings.push({
+                name: 'WEBSITE_RUN_FROM_PACKAGE',
+                value: '1'
+            });
+        }
+    }
+
+    if (context.os === 'windows') {
+        appSettings.push({
+            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
+            value: context.storageConnectionString
+        });
+        appSettings.push({
+            name: 'WEBSITE_CONTENTSHARE',
+            value: context.fileShareName
+        });
+    }
+
+    if (context.runtime) {
+        appSettings.push({
+            name: 'FUNCTIONS_WORKER_RUNTIME',
+            value: context.runtime
+        });
+    }
+
+    return appSettings;
 }
