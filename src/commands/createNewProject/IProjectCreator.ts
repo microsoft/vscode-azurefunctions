@@ -11,6 +11,7 @@ import { promptForProjectRuntime } from "../../ProjectSettings";
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
     public preDeployTask: string = '';
+    public excludedFiles: string | string[] = '';
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;
@@ -34,7 +35,7 @@ export abstract class ProjectCreatorBase {
     /**
      * Add all project files not included in the '.vscode' folder
      */
-    public abstract addNonVSCodeFiles(): Promise<void>;
+    public abstract addNonVSCodeFiles(runtime: ProjectRuntime | undefined): Promise<void>;
     public abstract getTasksJson(runtime: string): {} | Promise<{}>;
     public getRecommendedExtensions(): string[] {
         return ['ms-azuretools.vscode-azurefunctions'];

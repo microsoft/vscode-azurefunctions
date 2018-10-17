@@ -45,15 +45,20 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
     });
 }
 
-export function getFeedRuntime(runtime: ProjectRuntime): string {
+export function getFeedRuntime(runtime: ProjectRuntime, useStagingTemplates: boolean = false): string {
+    let result: string;
     switch (runtime) {
         case ProjectRuntime.v2:
-            return 'v2';
+            result = 'v2';
+            break;
         case ProjectRuntime.v1:
-            return 'v1';
+            result = 'v1';
+            break;
         default:
             throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
     }
+
+    return useStagingTemplates ? `${result}-prerelease` : result;
 }
 
 /**

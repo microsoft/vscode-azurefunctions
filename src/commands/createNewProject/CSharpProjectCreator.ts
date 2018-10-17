@@ -31,7 +31,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
 
     private _hasDetectedRuntime: boolean = false;
 
-    public async addNonVSCodeFiles(): Promise<void> {
+    public async addNonVSCodeFiles(runtime: ProjectRuntime | undefined): Promise<void> {
         await dotnetUtils.validateDotnetInstalled();
 
         const projectName: string = path.basename(this.functionAppPath);
@@ -39,7 +39,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
 
         // tslint:disable-next-line:strict-boolean-expressions
-        this._runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        this._runtime = runtime || await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
         const functionsVersion: string = this._runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
         await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);

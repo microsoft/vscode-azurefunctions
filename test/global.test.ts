@@ -9,6 +9,7 @@ import { FunctionTemplates, getFunctionTemplates } from '../src/templates/Functi
 
 export let backupTemplates: FunctionTemplates;
 export let latestTemplates: FunctionTemplates;
+export let stagingTemplates: FunctionTemplates;
 export let longRunningTestsEnabled: boolean;
 
 // Runs before all tests
@@ -18,10 +19,10 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 
     backupTemplates = await getFunctionTemplates('backup');
     latestTemplates = await getFunctionTemplates('cliFeed');
+    stagingTemplates = await getFunctionTemplates('stagingCliFeed');
     if (process.env.ENABLE_LONG_RUNNING_TESTS === undefined) {
         longRunningTestsEnabled = process.env.TRAVIS_EVENT_TYPE === 'cron';
     } else {
         longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS);
     }
-    // stagingTemplates https://github.com/Microsoft/vscode-azurefunctions/issues/334
 });

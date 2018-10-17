@@ -69,7 +69,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return false;
     }
 
-    public async refreshLabel(): Promise<void> {
+    public async refreshLabelImpl(): Promise<void> {
         try {
             this._state = await this.root.client.getState();
         } catch {

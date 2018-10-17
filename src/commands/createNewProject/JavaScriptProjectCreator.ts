@@ -11,11 +11,14 @@ import { ITaskOptions } from "./ITasksJson";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export const funcNodeDebugArgs: string = '--inspect=5858';
-export const funcNodeDebugEnvVar: string = 'languageWorkers:node:arguments';
+export const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
 
 export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     public readonly deploySubpath: string = '.';
+    // "func extensions install" task creates C# build artifacts that should be hidden
+    // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
+    public readonly excludedFiles: string | string[] = ['obj', 'bin'];
 
     public readonly functionsWorkerRuntime: string | undefined = 'node';
 

@@ -97,7 +97,8 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
             const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
-            if (!rawTasksData.includes(funcNodeDebugEnvVar)) {
+            const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
+            if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
                 const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
                 const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => funcHostNameRegEx.test(t.label));
