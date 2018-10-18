@@ -672,6 +672,11 @@
                         "type": "boolean",
                         "description": "%azFunc.enablePythonDescription%",
                         "default": false
+                    },
+                    "azureFunctions.pythonVenv": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azFunc.pythonVenvDescription%"
                     }
                 }
             }

@@ -12,6 +12,7 @@ export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
     public preDeployTask: string = '';
     public excludedFiles: string | string[] = '';
+    public otherSettings: { [key: string]: string } = {};
     public abstract templateFilter: TemplateFilter;
 
     protected readonly functionAppPath: string;

@@ -102,6 +102,10 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
                 data[filesExcludeSetting] = addToFilesExcludeSetting(projectCreator.excludedFiles, data);
             }
 
+            for (const key of Object.keys(projectCreator.otherSettings)) {
+                data[key] = projectCreator.otherSettings[key];
+            }
+
             // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
             data['debug.internalConsoleOptions'] = 'neverOpen';
 

@@ -7,9 +7,9 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, window } from 'vscode';
-import { DialogResponses, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
+import { MessageItem, QuickPickItem, window } from 'vscode';
+import { IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
+import { extensionPrefix, funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -20,13 +20,14 @@ import * as fsUtil from '../../utils/fs';
 import { funcWatchProblemMatcher } from "./IProjectCreator";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export const funcEnvName: string = 'func_env';
-
 export enum PythonAlias {
     python = 'python',
     python3 = 'python3',
     py = 'py'
 }
+
+export const pythonVenvSetting: string = 'pythonVenv';
+const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
 
 const minPythonVersion: string = '3.6.0';
 const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the label to make it more clear that any patch version is allowed
@@ -37,6 +38,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     // "func extensions install" task creates C# build artifacts that should be hidden
     // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
     public readonly excludedFiles: string | string[] = ['obj', 'bin'];
+
+    private _venvName: string | undefined;
 
     public getLaunchJson(): {} {
         return {
@@ -65,33 +68,29 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             throw new UserCancelledError();
         }
 
-        let createVenv: boolean = false;
-        if (await fse.pathExists(path.join(this.functionAppPath, funcEnvName))) {
-            const input: MessageItem = await ext.ui.showWarningMessage(localize('funcEnvExists', 'Python virtual environment "{0}" already exists. Overwrite?', funcEnvName), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
-            createVenv = input === DialogResponses.yes;
-        } else {
-            createVenv = true;
-        }
+        this._venvName = await this.ensureVenv();
 
-        if (createVenv) {
-            await createVirtualEnviornment(this.functionAppPath);
-        }
-
-        await runPythonCommandInVenv(this.functionAppPath, 'func init ./ --worker-runtime python');
+        await runPythonCommandInVenv(this._venvName, this.functionAppPath, 'func init ./ --worker-runtime python');
     }
 
     public async getTasksJson(): Promise<{}> {
         // The code in getTasksJson occurs for createNewProject _and_ initProjectForVSCode, which is why the next few lines are here even if they're only somewhat related to 'getting the tasks.json'
         // We should probably refactor this eventually to make it more clear what's going on.
         this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
-        await makeVenvDebuggable(this.functionAppPath);
-        await this.ensureVenvInFuncIgnore();
-        await this.ensureGitIgnoreContents();
+
+        if (!this._venvName) {
+            this._venvName = await this.ensureVenv();
+        }
+
+        await makeVenvDebuggable(this._venvName, this.functionAppPath);
+        await this.ensureVenvInFuncIgnore(this._venvName);
+        await this.ensureGitIgnoreContents(this._venvName);
         await this.ensureAzureWebJobsStorage();
 
         const funcPackCommand: string = 'func pack';
         const funcExtensionsCommand: string = 'func extensions install';
         const pipInstallCommand: string = 'pip install -r requirements.txt';
+        const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
         return {
             version: '2.0.0',
             tasks: [
@@ -99,13 +98,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     label: funcHostTaskLabel,
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     windows: {
-                        command: convertToVenvCommand(Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     linux: {
-                        command: convertToVenvCommand(Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -122,13 +121,13 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     label: funcPackId,
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(Platform.MacOS, funcPackCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, funcPackCommand)
                     },
                     windows: {
-                        command: convertToVenvCommand(Platform.Windows, funcPackCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, funcPackCommand)
                     },
                     linux: {
-                        command: convertToVenvCommand(Platform.Linux, funcPackCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcPackCommand)
                     },
                     isBackground: true,
                     presentation: {
@@ -143,7 +142,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         return super.getRecommendedExtensions().concat(['ms-python.python']);
     }
 
-    private async ensureGitIgnoreContents(): Promise<void> {
+    private async ensureGitIgnoreContents(venvName: string): Promise<void> {
         // .gitignore is created by `func init`
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
@@ -158,7 +157,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 }
             }
 
-            esnureInGitIgnore(funcEnvName);
+            esnureInGitIgnore(venvName);
             esnureInGitIgnore('.python_packages');
             esnureInGitIgnore('__pycache__');
             esnureInGitIgnore(`${path.basename(this.functionAppPath)}.zip`);
@@ -182,21 +181,57 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         }
     }
 
-    private async ensureVenvInFuncIgnore(): Promise<void> {
+    private async ensureVenvInFuncIgnore(venvName: string): Promise<void> {
         const funcIgnorePath: string = path.join(this.functionAppPath, '.funcignore');
         let funcIgnoreContents: string | undefined;
         if (await fse.pathExists(funcIgnorePath)) {
             funcIgnoreContents = (await fse.readFile(funcIgnorePath)).toString();
-            if (funcIgnoreContents && !funcIgnoreContents.includes(funcEnvName)) {
-                funcIgnoreContents = funcIgnoreContents.concat(`${os.EOL}${funcEnvName}`);
+            if (funcIgnoreContents && !funcIgnoreContents.includes(venvName)) {
+                funcIgnoreContents = funcIgnoreContents.concat(`${os.EOL}${venvName}`);
             }
         }
 
         if (!funcIgnoreContents) {
-            funcIgnoreContents = funcEnvName;
+            funcIgnoreContents = venvName;
         }
 
         await fse.writeFile(funcIgnorePath, funcIgnoreContents);
+    }
+
+    /**
+     * Checks for an existing venv (based on the existence of the activate script). Creates one if none exists and prompts the user if multiple exist
+     * @returns the venv name
+     */
+    private async ensureVenv(): Promise<string> {
+        const venvs: string[] = [];
+        const fsPaths: string[] = await fse.readdir(this.functionAppPath);
+        await Promise.all(fsPaths.map(async (venvName: string) => {
+            const stat: fse.Stats = await fse.stat(path.join(this.functionAppPath, venvName));
+            if (stat.isDirectory()) {
+                const venvActivatePath: string = getVenvActivatePath(venvName);
+                if (await fse.pathExists(path.join(this.functionAppPath, venvActivatePath))) {
+                    venvs.push(venvName);
+                }
+            }
+        }));
+
+        let result: string;
+        if (venvs.length === 0) {
+            result = 'func_env';
+            await createVirtualEnviornment(result, this.functionAppPath);
+        } else if (venvs.length === 1) {
+            result = venvs[0];
+        } else {
+            const picks: QuickPickItem[] = venvs.map((venv: string) => { return { label: venv }; });
+            const options: IAzureQuickPickOptions = {
+                placeHolder: localize('multipleVenv', 'Detected multiple virtual environments. Select one to use for your project.'),
+                suppressPersistence: true
+            };
+            result = (await ext.ui.showQuickPick(picks, options)).label;
+        }
+
+        this.otherSettings[fullPythonVenvSetting] = result;
+        return result;
     }
 }
 
@@ -226,16 +261,26 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
     }
 }
 
-function convertToVenvCommand(platform: NodeJS.Platform, ...commands: string[]): string {
-    return cpUtils.joinCommands(platform, getVenvActivateCommand(platform), ...commands);
+function convertToVenvCommand(venvName: string, platform: NodeJS.Platform, ...commands: string[]): string {
+    return cpUtils.joinCommands(platform, getVenvActivateCommand(venvName, platform), ...commands);
 }
 
-function getVenvActivateCommand(platform: NodeJS.Platform): string {
+function getVenvActivatePath(venvName: string, platform: NodeJS.Platform = process.platform): string {
     switch (platform) {
         case Platform.Windows:
-            return `${path.join('.', funcEnvName, 'Scripts', 'activate')}`;
+            return path.join('.', venvName, 'Scripts', 'activate');
         default:
-            return `. ${path.join('.', funcEnvName, 'bin', 'activate')}`;
+            return path.join('.', venvName, 'bin', 'activate');
+    }
+}
+
+function getVenvActivateCommand(venvName: string, platform: NodeJS.Platform): string {
+    const venvActivatePath: string = getVenvActivatePath(venvName, platform);
+    switch (platform) {
+        case Platform.Windows:
+            return venvActivatePath;
+        default:
+            return `. ${venvActivatePath}`;
     }
 }
 
@@ -259,20 +304,20 @@ async function getPythonAlias(): Promise<string> {
     }
 }
 
-export async function createVirtualEnviornment(functionAppPath: string): Promise<void> {
+export async function createVirtualEnviornment(venvName: string, functionAppPath: string): Promise<void> {
     const pythonAlias: string = await getPythonAlias();
-    await cpUtils.executeCommand(ext.outputChannel, functionAppPath, pythonAlias, '-m', 'venv', funcEnvName);
+    await cpUtils.executeCommand(ext.outputChannel, functionAppPath, pythonAlias, '-m', 'venv', venvName);
 }
 
-export async function makeVenvDebuggable(functionAppPath: string): Promise<void> {
+export async function makeVenvDebuggable(venvName: string, functionAppPath: string): Promise<void> {
     // install ptvsd - required for debugging in VS Code
-    await runPythonCommandInVenv(functionAppPath, 'pip install ptvsd');
+    await runPythonCommandInVenv(venvName, functionAppPath, 'pip install ptvsd');
     // install pylint - helpful for debugging in VS Code
-    await runPythonCommandInVenv(functionAppPath, 'pip install pylint');
+    await runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
 }
 
-export async function runPythonCommandInVenv(folderPath: string, command: string): Promise<void> {
+export async function runPythonCommandInVenv(venvName: string, folderPath: string, command: string): Promise<void> {
     // executeCommand always uses Linux '&&' separator, even on Windows
-    const fullCommand: string = cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(process.platform), command);
+    const fullCommand: string = cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(venvName, process.platform), command);
     await cpUtils.executeCommand(ext.outputChannel, folderPath, fullCommand);
 }
