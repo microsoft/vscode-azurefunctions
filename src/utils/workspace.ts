@@ -89,6 +89,7 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
 
     if (folder) {
         actionContext.properties.openBehavior = 'AlreadyOpen';
+        return folder.uri.fsPath;
     } else {
         if (message) {
             const open: vscode.MessageItem = { title: localize('open', 'Open Folder') };
@@ -153,6 +154,6 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             actionContext.suppressErrorDisplay = true;
             throw new Error(message);
         }
+        return uri.fsPath;
     }
-    return fsPath;
 }
