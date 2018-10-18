@@ -17,11 +17,11 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public readonly contextValue: string = FunctionAppTreeItem.contextValue;
     public logStreamPath: string = '';
     public readonly isLinuxPreview: boolean;
+    public readonly appSettingsTreeItem: AppSettingsTreeItem;
 
     private readonly _root: ISiteTreeRoot;
     private _state?: string;
     private readonly _functionsTreeItem: FunctionsTreeItem;
-    private readonly _appSettingsTreeItem: AppSettingsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient, isLinuxPreview: boolean) {
@@ -29,7 +29,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
         this._functionsTreeItem = new FunctionsTreeItem(this);
-        this._appSettingsTreeItem = new AppSettingsTreeItem(this);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(this);
         this._proxiesTreeItem = new ProxiesTreeItem(this);
         this.isLinuxPreview = isLinuxPreview;
     }
@@ -78,7 +78,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
-        return [this._functionsTreeItem, this._appSettingsTreeItem, this._proxiesTreeItem];
+        return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem];
     }
 
     public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem<ISiteTreeRoot> | undefined {
@@ -88,7 +88,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
                 return this._functionsTreeItem;
             case AppSettingsTreeItem.contextValue:
             case AppSettingTreeItem.contextValue:
-                return this._appSettingsTreeItem;
+                return this.appSettingsTreeItem;
             case ProxiesTreeItem.contextValue:
             case ProxyTreeItem.contextValue:
                 return this._proxiesTreeItem;
