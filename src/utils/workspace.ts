@@ -152,13 +152,6 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
                 throw new UserCancelledError();
             }
         }
-
-        if (message) {
-            // After we've opened the folder, throw the error message for the sake of telemetry
-            actionContext.suppressErrorDisplay = true;
-            throw new Error(message);
-        } else {
-            return uri.fsPath;
-        }
+        return uri.fsPath;
     }
 }
