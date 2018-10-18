@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { isBoolean } from 'util';
 import * as vscode from 'vscode';
-import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput } from 'vscode-azureextensionui';
+import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput, UserCancelledError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -80,7 +80,7 @@ const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 /**
  * If the selected folder is not open in a workspace, open it now. NOTE: This may restart the extension host
  */
-export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext, message?: string, allowSubFolder: boolean = false): Promise<void> {
+export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionContext, message?: string, allowSubFolder: boolean = false): Promise<string> {
     // tslint:disable-next-line:strict-boolean-expressions
     const openFolders: vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders || [];
     const folder: vscode.WorkspaceFolder | undefined = openFolders.find((f: vscode.WorkspaceFolder): boolean => {
@@ -89,6 +89,7 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
 
     if (folder) {
         actionContext.properties.openBehavior = 'AlreadyOpen';
+        return folder.uri.fsPath;
     } else {
         if (message) {
             const open: vscode.MessageItem = { title: localize('open', 'Open Folder') };
@@ -146,12 +147,11 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
         } else {
             await vscode.commands.executeCommand('vscode.openFolder', uri, openBehavior === OpenBehavior.OpenInNewWindow /* forceNewWindow */);
+            if (openBehavior === OpenBehavior.OpenInNewWindow) {
+                // extension host will not be restarted since a new instance of VS Code is opened, but we don't want deploy to continue
+                throw new UserCancelledError();
+            }
         }
-
-        if (message) {
-            // After we've opened the folder, throw the error message for the sake of telemetry
-            actionContext.suppressErrorDisplay = true;
-            throw new Error(message);
-        }
+        return uri.fsPath;
     }
 }
