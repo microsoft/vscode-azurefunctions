@@ -128,12 +128,14 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath, false);
     });
 
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~1', false /* openFolder */);
         await validateVSCodeProjectFiles(projectPath);
     });
 
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API C#', async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();

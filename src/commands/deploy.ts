@@ -81,7 +81,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     if (language === ProjectLanguage.Python && !node.isLinuxPreview) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function apps.  Deploy to a Linux Consumption app.'));
     }
-
+    await verifyWebContentSettings(node, telemetryProperties);
     if (language === ProjectLanguage.Java) {
         deployFsPath = await getJavaFolderPath(this, ext.outputChannel, deployFsPath, ext.ui, telemetryProperties);
     }
@@ -353,6 +353,31 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
         } else {
             ext.outputChannel.show(true);
             ext.outputChannel.appendLine(fullMessage);
+        }
+    }
+}
+
+async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProperties: TelemetryProperties): Promise<void> {
+    if (node.isLinuxPreview) {
+        // we need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
+        const client: SiteClient = node.root.client;
+        const applicationSettings: StringDictionary = await client.listApplicationSettings();
+        const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
+        const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
+        if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {
+            telemetryProperties.webContentSettingsRemoved = 'false';
+            await ext.ui.showWarningMessage(
+                localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
+                { modal: true },
+                DialogResponses.yes,
+                DialogResponses.cancel
+            );
+            delete applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
+            delete applicationSettings.properties[WEBSITE_CONTENTSHARE];
+            telemetryProperties.webContentSettingsRemoved = 'true';
+            await client.updateApplicationSettings(applicationSettings);
+            // if the user cancels the deployment, the app settings node doesn't reflect the deleted settings
+            await node.appSettingsTreeItem.refresh();
         }
     }
 }
