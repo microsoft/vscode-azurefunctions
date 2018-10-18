@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { isBoolean } from 'util';
 import * as vscode from 'vscode';
-import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput } from 'vscode-azureextensionui';
+import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput, UserCancelledError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
@@ -147,13 +147,18 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
         } else {
             await vscode.commands.executeCommand('vscode.openFolder', uri, openBehavior === OpenBehavior.OpenInNewWindow /* forceNewWindow */);
+            if (openBehavior === OpenBehavior.OpenInNewWindow) {
+                // extension host will not be restarted since a new instance of VS Code is opened, but we don't want deploy to continue
+                throw new UserCancelledError();
+            }
         }
 
         if (message) {
             // After we've opened the folder, throw the error message for the sake of telemetry
             actionContext.suppressErrorDisplay = true;
             throw new Error(message);
+        } else {
+            return uri.fsPath;
         }
-        return uri.fsPath;
     }
 }
