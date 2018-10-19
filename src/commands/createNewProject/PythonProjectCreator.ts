@@ -311,7 +311,7 @@ export async function createVirtualEnviornment(venvName: string, functionAppPath
 
 export async function makeVenvDebuggable(venvName: string, functionAppPath: string): Promise<void> {
     // install ptvsd - required for debugging in VS Code
-    // await runPythonCommandInVenv(venvName, functionAppPath, 'pip install ptvsd');
+    await runPythonCommandInVenv(venvName, functionAppPath, 'pip install ptvsd');
     // install pylint - helpful for debugging in VS Code
     await runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
 }
