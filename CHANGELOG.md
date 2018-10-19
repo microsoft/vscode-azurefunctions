@@ -23,6 +23,9 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.12.0%22+label%3Abug+is%3Aclosed)
 
+### Known Issues
+- Python Functions projects that have "ptvsd v4.1.4" installed must alter the `"languageWorkers__python__arguments"` setting in the `.vscode/tasks.json` to `"-m ptvsd --host 127.0.0.1 --port 9091"` in order to locally debug
+
 ## 0.11.0 - 2018-09-24
 
 ### Added
