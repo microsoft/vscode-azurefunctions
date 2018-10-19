@@ -112,7 +112,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     },
                     options: {
                         env: {
-                            languageWorkers__python__arguments: '-m ptvsd --server --port 9091 --file'
+                            languageWorkers__python__arguments: '-m ptvsd --host 127.0.0.1 --port 9091'
                         }
                     },
                     problemMatcher: funcWatchProblemMatcher
