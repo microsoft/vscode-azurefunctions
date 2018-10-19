@@ -24,7 +24,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.12.0%22+label%3Abug+is%3Aclosed)
 
 ### Known Issues
-- Local debugging for Python projects fail with "python.exe -m ptvsd: error: the following arguments are required: --host.". Can be resolved by changing the `"languageWorkers__python__arguments"` setting in the `.vscode/tasks.json` to `"-m ptvsd --host 127.0.0.1 --port 9091"`
+- Local debugging for Python projects may fail with "python.exe -m ptvsd: error: the following arguments are required: --host.". Can be resolved by changing the `"languageWorkers__python__arguments"` setting in the `.vscode/tasks.json` to `"-m ptvsd --host 127.0.0.1 --port 9091"`
 
 ## 0.11.0 - 2018-09-24
 
