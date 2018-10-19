@@ -149,7 +149,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             let writeFile: boolean = false;
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
 
-            function esnureInGitIgnore(newLine: string): void {
+            function ensureInGitIgnore(newLine: string): void {
                 if (!gitignoreContents.includes(newLine)) {
                     ext.outputChannel.appendLine(localize('gitAddNewLine', 'Adding "{0}" to .gitignore...', newLine));
                     gitignoreContents = gitignoreContents.concat(`${os.EOL}${newLine}`);
@@ -157,10 +157,10 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 }
             }
 
-            esnureInGitIgnore(venvName);
-            esnureInGitIgnore('.python_packages');
-            esnureInGitIgnore('__pycache__');
-            esnureInGitIgnore(`${path.basename(this.functionAppPath)}.zip`);
+            ensureInGitIgnore(venvName);
+            ensureInGitIgnore('.python_packages');
+            ensureInGitIgnore('__pycache__');
+            ensureInGitIgnore(`${path.basename(this.functionAppPath)}.zip`);
 
             if (writeFile) {
                 await fse.writeFile(gitignorePath, gitignoreContents);
