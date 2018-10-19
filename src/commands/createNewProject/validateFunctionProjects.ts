@@ -19,7 +19,7 @@ import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { ITask, ITasksJson } from './ITasksJson';
 import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
-import { createVirtualEnviornment, funcEnvName, makeVenvDebuggable } from './PythonProjectCreator';
+import { createVirtualEnviornment, makeVenvDebuggable, pythonVenvSetting } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -152,19 +152,20 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
 
 async function verifyPythonVenv(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
     if (projectLanguage === ProjectLanguage.Python) {
-        if (!await fse.pathExists(path.join(folderPath, funcEnvName))) {
+        const venvName: string | undefined = getFuncExtensionSetting(pythonVenvSetting, folderPath);
+        if (venvName && !await fse.pathExists(path.join(folderPath, venvName))) {
             actionContext.properties.pythonVenvExists = 'false';
 
             const settingKey: string = 'showPythonVenvWarning';
             if (getFuncExtensionSetting<boolean>(settingKey)) {
                 const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
-                const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment, which is required to debug and deploy your Azure Functions project.');
+                const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is required to debug and deploy your Azure Functions project.', venvName);
                 const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
                 if (result === createVenv) {
                     await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                         // create venv
-                        await createVirtualEnviornment(folderPath);
-                        await makeVenvDebuggable(folderPath);
+                        await createVirtualEnviornment(venvName, folderPath);
+                        await makeVenvDebuggable(venvName, folderPath);
                     });
 
                     actionContext.properties.createdPythonVenv = 'true';
