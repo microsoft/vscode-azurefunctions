@@ -63,7 +63,7 @@ export class FunctionTemplates {
                 const jsTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.JavaScript.toLowerCase());
                 const csharpTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.CSharp.toLowerCase());
                 for (const csharpTemplate of csharpTemplates) {
-                    const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeName(t.name) === normalizeName(csharpTemplate.name));
+                    const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
                     if (jsTemplate) {
                         for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
                             const jsSetting: IFunctionSetting | undefined = jsTemplate.userPromptedSettings.find((t: IFunctionSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
@@ -77,6 +77,14 @@ export class FunctionTemplates {
             }
         }
     }
+}
+
+/**
+ * Converts ids like "Azure.Function.CSharp.QueueTrigger.2.x" or "QueueTrigger-JavaScript" to "queuetrigger"
+ */
+function normalizeId(id: string): string {
+    const match: RegExpMatchArray | null = id.match(/[a-z]+Trigger/i);
+    return normalizeName(match ? match[0] : id);
 }
 
 function normalizeName(name: string): string {
