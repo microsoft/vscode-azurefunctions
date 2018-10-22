@@ -160,7 +160,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         } else {
             const targetFramework: string = matches[1];
             this.telemetryProperties.cSharpTargetFramework = targetFramework;
-            if (targetFramework.startsWith('netstandard')) {
+            if (/net(standard|coreapp)/i.test(targetFramework)) {
                 this._runtime = ProjectRuntime.v2;
             } else {
                 this._runtime = ProjectRuntime.v1;

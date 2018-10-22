@@ -66,7 +66,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateVSCodeProjectFiles(projectPath);
         const projectName: string = path.basename(projectPath);
         assert.equal(await fse.pathExists(path.join(projectPath, `${projectName}.csproj`)), true, 'csproj does not exist');
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
     });
 
     const bashProject: string = 'BashProject';
@@ -150,7 +150,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
+        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
     });
 
     async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
