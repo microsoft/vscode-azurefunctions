@@ -7,8 +7,7 @@ import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as path from 'path';
-import { MessageItem, QuickPickItem, QuickPickOptions, WorkspaceConfiguration } from "vscode";
-import * as vscode from 'vscode';
+import { ConfigurationTarget, MessageItem, QuickPickItem, QuickPickOptions, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { DialogResponses, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
 import { ext } from './extensionVariables';
@@ -17,12 +16,12 @@ import { localize } from "./localize";
 const previewDescription: string = localize('previewDescription', '(Preview)');
 
 export async function updateGlobalSetting<T = string>(section: string, value: T): Promise<void> {
-    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
-    await projectConfiguration.update(section, value, vscode.ConfigurationTarget.Global);
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix);
+    await projectConfiguration.update(section, value, ConfigurationTarget.Global);
 }
 
 export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
-    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, vscode.Uri.file(fsPath));
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, Uri.file(fsPath));
     await projectConfiguration.update(section, value);
 }
 
@@ -80,13 +79,13 @@ export async function selectTemplateFilter(projectPath: string, ui: IAzureUserIn
 }
 
 export function getGlobalFuncExtensionSetting<T>(key: string): T | undefined {
-    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix);
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix);
     const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
     return result && result.globalValue;
 }
 
 export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | undefined {
-    const projectConfiguration: WorkspaceConfiguration = vscode.workspace.getConfiguration(extensionPrefix, fsPath ? vscode.Uri.file(fsPath) : undefined);
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, fsPath ? Uri.file(fsPath) : undefined);
     return projectConfiguration.get<T>(key);
 }
 

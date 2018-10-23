@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource, StringDictionary, User } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as portfinder from 'portfinder';
@@ -24,7 +24,7 @@ export async function remoteDebugFunctionApp(node?: FunctionAppTreeItem): Promis
     }
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();
-    const publishCredential: User = await client.getWebAppPublishCredential();
+    const publishCredential: WebSiteManagementModels.User = await client.getWebAppPublishCredential();
     const debugProxy: DebugProxy = new DebugProxy(ext.outputChannel, client, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
@@ -36,8 +36,8 @@ export async function remoteDebugFunctionApp(node?: FunctionAppTreeItem): Promis
         // tslint:disable-next-line:no-any
         return new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
             try {
-                const siteConfig: SiteConfigResource = await client.getSiteConfig();
-                const appSettings: StringDictionary = await client.listApplicationSettings();
+                const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
+                const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
@@ -82,7 +82,7 @@ export async function remoteDebugFunctionApp(node?: FunctionAppTreeItem): Promis
 
 }
 
-async function updateSiteConfig(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, siteConfig: SiteConfigResource): Promise<void> {
+async function updateSiteConfig(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, siteConfig: WebSiteManagementModels.SiteConfigResource): Promise<void> {
     p.report({ message: 'Fetching site configuration...' });
     outputChannel.appendLine('Fetching site configuration...');
     if (needUpdateSiteConfig(siteConfig)) {
@@ -96,7 +96,7 @@ async function updateSiteConfig(outputChannel: vscode.OutputChannel, client: Sit
     }
 }
 
-async function updateAppSettings(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, appSettings: StringDictionary): Promise<void> {
+async function updateAppSettings(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, appSettings: WebSiteManagementModels.StringDictionary): Promise<void> {
     p.report({ message: 'Fetching application settings...' });
     outputChannel.appendLine('Fetching application settings...');
     if (appSettings.properties && needUpdateAppSettings(appSettings.properties)) {
@@ -110,7 +110,7 @@ async function updateAppSettings(outputChannel: vscode.OutputChannel, client: Si
     }
 }
 
-function needUpdateSiteConfig(siteConfig: SiteConfigResource): boolean {
+function needUpdateSiteConfig(siteConfig: WebSiteManagementModels.SiteConfigResource): boolean {
     return siteConfig.use32BitWorkerProcess || !siteConfig.webSocketsEnabled;
 }
 

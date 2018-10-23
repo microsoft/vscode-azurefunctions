@@ -16,20 +16,20 @@ const v2DefaultNodeVersion: string = '8.11.1';
 export type cliFeedJsonResponse = {
     tags: {
         [tag: string]: {
-            release: string,
-            displayName: string,
-            hidden: boolean
-        }
-    },
+            release: string;
+            displayName: string;
+            hidden: boolean;
+        };
+    };
     releases: {
         [release: string]: {
-            templateApiZip: string,
-            itemTemplates: string,
-            projectTemplates: string,
-            FUNCTIONS_EXTENSION_VERSION: string,
-            nodeVersion: string
-        }
-    }
+            templateApiZip: string;
+            itemTemplates: string;
+            projectTemplates: string;
+            FUNCTIONS_EXTENSION_VERSION: string;
+            nodeVersion: string;
+        };
+    };
 };
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient } from 'azure-arm-website';
-import { AppServicePlan, NameValuePair, Site, WebAppCollection } from "azure-arm-website/lib/models";
+import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { createFunctionApp, IAppCreateOptions, IAppSettingsContext, SiteClient } from 'vscode-azureappservice';
 import { AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
@@ -29,7 +28,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         }
 
         const client: WebSiteManagementClient = createAzureClient(this.root, WebSiteManagementClient);
-        let webAppCollection: WebAppCollection;
+        let webAppCollection: WebSiteManagementModels.WebAppCollection;
         try {
             webAppCollection = this._nextLink === undefined ?
                 await client.webApps.list() :
@@ -51,22 +50,22 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             this,
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            async (site: Site) => {
+            async (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    const asp: AppServicePlan | undefined = await siteClient.getAppServicePlan();
+                    const asp: WebSiteManagementModels.AppServicePlan | undefined = await siteClient.getAppServicePlan();
                     const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
                     return new FunctionAppTreeItem(this, siteClient, isLinuxPreview);
                 }
                 return undefined;
             },
-            (site: Site) => {
+            (site: WebSiteManagementModels.Site) => {
                 return site.name;
             }
         );
     }
 
-    public async createChildImpl(showCreatingTreeItem: (label: string) => void, userOptions?: { actionContext: IActionContext, resourceGroup?: string }): Promise<AzureTreeItem> {
+    public async createChildImpl(showCreatingTreeItem: (label: string) => void, userOptions?: { actionContext: IActionContext; resourceGroup?: string }): Promise<AzureTreeItem> {
         // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
         // https://github.com/Microsoft/vscode-azuretools/issues/120
         // tslint:disable-next-line:strict-boolean-expressions
@@ -76,7 +75,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
         const createOptions: IAppCreateOptions = {
             resourceGroup,
-            createFunctionAppSettings: async (context: IAppSettingsContext): Promise<NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
+            createFunctionAppSettings: async (context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
         };
 
         // There are two things in preview right now:
@@ -90,7 +89,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             createOptions.os = 'windows';
         }
 
-        const site: Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
+        const site: WebSiteManagementModels.Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
         return new FunctionAppTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
     }
 }
@@ -117,8 +116,8 @@ async function getDefaultRuntime(actionContext: IActionContext): Promise<Project
     return <ProjectRuntime>runtime;
 }
 
-async function createFunctionAppSettings(context: IAppSettingsContext, projectRuntime: ProjectRuntime, projectLanguage: string | undefined): Promise<NameValuePair[]> {
-    const appSettings: NameValuePair[] = [];
+async function createFunctionAppSettings(context: IAppSettingsContext, projectRuntime: ProjectRuntime, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
+    const appSettings: WebSiteManagementModels.NameValuePair[] = [];
 
     const cliFeedAppSettings: { [key: string]: string } = await getCliFeedAppSettings(projectRuntime);
     for (const key of Object.keys(cliFeedAppSettings)) {

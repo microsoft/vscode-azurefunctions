@@ -64,7 +64,7 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
         }
     }
 
-    public async createFunction(userSettings: { [propertyName: string]: string; }): Promise<string | undefined> {
+    public async createFunction(userSettings: { [propertyName: string]: string }): Promise<string | undefined> {
         const functionPath: string = path.join(this._functionAppPath, this._functionName);
         await fse.ensureDir(functionPath);
         await Promise.all(Object.keys(this._template.templateFiles).map(async (fileName: string) => {

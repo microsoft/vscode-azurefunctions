@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import { URL } from 'url';
 import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
@@ -22,7 +22,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     private readonly _name: string;
     private _triggerUrl: string;
 
-    public constructor(parent: AzureParentTreeItem, func: FunctionEnvelope) {
+    public constructor(parent: AzureParentTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
         super(parent);
         if (!func.id) {
             throw new ArgumentError(func);

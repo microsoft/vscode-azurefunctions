@@ -6,8 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { isString } from 'util';
-import { QuickPickItem } from 'vscode';
-import * as vscode from 'vscode';
+import { InputBoxOptions, MessageItem, QuickPickItem, Uri, window, workspace } from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -57,7 +56,7 @@ async function promptForBooleanSetting(setting: IFunctionSetting): Promise<strin
 }
 
 async function promptForStringSetting(setting: IFunctionSetting): Promise<string> {
-    const options: vscode.InputBoxOptions = {
+    const options: InputBoxOptions = {
         placeHolder: setting.label,
         prompt: setting.description || localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
         validateInput: (s: string): string | undefined => setting.validateSetting(s),
@@ -72,11 +71,11 @@ export async function createFunction(
     functionAppPath?: string,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; },
+    caseSensitiveFunctionSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     runtime?: ProjectRuntime): Promise<void> {
 
-    const functionSettings: { [key: string]: string | undefined; } = {};
+    const functionSettings: { [key: string]: string | undefined } = {};
     if (caseSensitiveFunctionSettings) {
         Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => functionSettings[key.toLowerCase()] = caseSensitiveFunctionSettings[key]);
     }
@@ -90,7 +89,7 @@ export async function createFunction(
     let templateFilter: TemplateFilter;
     if (!await isFunctionProject(functionAppPath)) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
-        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
+        const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
             isNewProject = true;
@@ -161,8 +160,8 @@ export async function createFunction(
 
     const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, runtime);
     if (newFilePath && (await fse.pathExists(newFilePath))) {
-        const newFileUri: vscode.Uri = vscode.Uri.file(newFilePath);
-        vscode.window.showTextDocument(await vscode.workspace.openTextDocument(newFileUri));
+        const newFileUri: Uri = Uri.file(newFilePath);
+        window.showTextDocument(await workspace.openTextDocument(newFileUri));
     }
 
     if (!template.isHttpTrigger) {

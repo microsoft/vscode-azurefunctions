@@ -15,7 +15,7 @@
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
 
-// tslint:disable-next-line:no-require-imports
+// tslint:disable-next-line:no-require-imports no-submodule-imports
 import testRunner = require('vscode/lib/testrunner');
 
 const options: { [key: string]: string | boolean | number } = {

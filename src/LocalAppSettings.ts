@@ -12,7 +12,6 @@ import { ext } from './extensionVariables';
 import { localize } from './localize';
 import { getResourceTypeLabel, ResourceType } from './templates/IFunctionSetting';
 import * as azUtil from './utils/azure';
-import { IResourceResult } from './utils/azure';
 import * as fsUtil from './utils/fs';
 
 export interface ILocalAppSettings {
@@ -40,7 +39,7 @@ export async function promptForAppSetting(actionContext: IActionContext, localSe
         }
     }
 
-    let resourceResult: IResourceResult | undefined;
+    let resourceResult: azUtil.IResourceResult | undefined;
     try {
         switch (resourceType) {
             case ResourceType.DocumentDB:
@@ -108,7 +107,7 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
         let connectionString: string;
 
         try {
-            const resourceResult: IResourceResult = await azUtil.promptForStorageAccount(
+            const resourceResult: azUtil.IResourceResult = await azUtil.promptForStorageAccount(
                 actionContext,
                 {
                     kind: [

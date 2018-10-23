@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from "azure-arm-website/lib/models";
+import { WebSiteManagementModels } from "azure-arm-website";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
@@ -41,7 +41,7 @@ export async function uploadAppSettings(node?: AppSettingsTreeItem): Promise<voi
         }
 
         if (localSettings.Values) {
-            const remoteSettings: StringDictionary = await client.listApplicationSettings();
+            const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
             if (!remoteSettings.properties) {
                 remoteSettings.properties = {};
             }

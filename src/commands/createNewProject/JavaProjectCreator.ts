@@ -6,8 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
-import { InputBoxOptions } from 'vscode';
+import { InputBoxOptions, window } from 'vscode';
 import { IActionContext } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -134,7 +133,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomFilePath);
             if (!functionAppName) {
                 this._javaTargetPath = '<function_build_path>';
-                vscode.window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
+                window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
             } else {
                 this._javaTargetPath = `target/azure-functions/${functionAppName}/`;
             }

@@ -79,7 +79,7 @@ function getVariableValue(resources: IResources, variables: IVariables, data: st
     const matches: RegExpMatchArray | null = data.match(/\[variables\(\'(.*)\'\)\]/);
     data = matches !== null ? variables[matches[1]] : data;
 
-    return getResourceValue(resources, <string>data);
+    return getResourceValue(resources, data);
 }
 
 export function getResourceValue(resources: IResources, data: string): string {

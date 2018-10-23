@@ -52,6 +52,17 @@
                 "keyIndex": 0,
                 "messageIndex": 1
             }
-        ]
+        ],
+        "no-implicit-dependencies": [
+            true,
+            [
+                "vscode"
+            ]
+        ],
+        "switch-final-break": false,
+        "prefer-object-spread": false,
+        "no-return-await": false,
+        "no-parameter-reassignment": false,
+        "no-object-literal-type-assertion": false
     }
 }

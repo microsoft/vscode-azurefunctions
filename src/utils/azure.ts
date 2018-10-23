@@ -3,13 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CosmosDBManagementClient } from 'azure-arm-cosmosdb';
-import { DatabaseAccount, DatabaseAccountListKeysResult } from 'azure-arm-cosmosdb/lib/models';
-import { ServiceBusManagementClient } from 'azure-arm-sb';
-import { AccessKeys, SBAuthorizationRule, SBNamespace } from 'azure-arm-sb/lib/models';
-// tslint:disable-next-line:no-require-imports
-import StorageClient = require('azure-arm-storage');
-import { StorageAccount, StorageAccountListKeysResult } from 'azure-arm-storage/lib/models';
+import { CosmosDBManagementClient, CosmosDBManagementModels } from 'azure-arm-cosmosdb';
+import { ServiceBusManagementClient, ServiceBusManagementModels } from 'azure-arm-sb';
+import { StorageManagementClient, StorageManagementModels } from 'azure-arm-storage';
 import { BaseResource } from 'ms-rest-azure';
 import { QuickPickOptions } from 'vscode';
 import { AzureTreeItem, AzureWizard, createAzureClient, IActionContext, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
@@ -68,13 +64,13 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
     const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
     const client: CosmosDBManagementClient = createAzureClient(node.root, CosmosDBManagementClient);
-    const dbAccount: DatabaseAccount = await promptForResource<DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
+    const dbAccount: CosmosDBManagementModels.DatabaseAccount = await promptForResource<CosmosDBManagementModels.DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
 
     if (!dbAccount.id || !dbAccount.name) {
         throw new ArgumentError(dbAccount);
     } else {
         const resourceGroup: string = getResourceGroupFromId(dbAccount.id);
-        const keys: DatabaseAccountListKeysResult = await client.databaseAccounts.listKeys(resourceGroup, dbAccount.name);
+        const keys: CosmosDBManagementModels.DatabaseAccountListKeysResult = await client.databaseAccounts.listKeys(resourceGroup, dbAccount.name);
         return {
             name: dbAccount.name,
             connectionString: `AccountEndpoint=${dbAccount.documentEndpoint};AccountKey=${keys.primaryMasterKey};`
@@ -95,15 +91,15 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);
 
-    const client: StorageClient = createAzureClient(node.root, StorageClient);
+    const client: StorageManagementClient = createAzureClient(node.root, StorageManagementClient);
     // tslint:disable-next-line:no-non-null-assertion
-    const storageAccount: StorageAccount = wizardContext.storageAccount!;
+    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>wizardContext.storageAccount!;
 
     if (!storageAccount.id || !storageAccount.name) {
         throw new ArgumentError(storageAccount);
     } else {
         const resourceGroup: string = getResourceGroupFromId(storageAccount.id);
-        const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, storageAccount.name);
+        const result: StorageManagementModels.StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, storageAccount.name);
         if (!result.keys || result.keys.length === 0) {
             throw new ArgumentError(result);
         }
@@ -120,17 +116,17 @@ export async function promptForServiceBus(): Promise<IResourceResult> {
     const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
     const client: ServiceBusManagementClient = createAzureClient(node.root, ServiceBusManagementClient);
-    const resource: SBNamespace = await promptForResource<SBNamespace>(ext.ui, resourceTypeLabel, client.namespaces.list());
+    const resource: ServiceBusManagementModels.SBNamespace = await promptForResource<ServiceBusManagementModels.SBNamespace>(ext.ui, resourceTypeLabel, client.namespaces.list());
     const id: string = nonNullProp(resource, 'id');
     const name: string = nonNullProp(resource, 'name');
 
     const resourceGroup: string = getResourceGroupFromId(id);
-    const authRules: SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
-    const authRule: SBAuthorizationRule | undefined = authRules.find((ar: SBAuthorizationRule) => ar.rights.some((r: string) => r.toLowerCase() === 'listen'));
+    const authRules: ServiceBusManagementModels.SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
+    const authRule: ServiceBusManagementModels.SBAuthorizationRule | undefined = authRules.find((ar: ServiceBusManagementModels.SBAuthorizationRule) => ar.rights.some((r: string) => r.toLowerCase() === 'listen'));
     if (!authRule) {
         throw new Error(localize('noAuthRule', 'Failed to get connection string for Service Bus namespace "{0}".', name));
     }
-    const keys: AccessKeys = await client.namespaces.listKeys(resourceGroup, name, nonNullProp(authRule, 'name'));
+    const keys: ServiceBusManagementModels.AccessKeys = await client.namespaces.listKeys(resourceGroup, name, nonNullProp(authRule, 'name'));
     return {
         name: name,
         connectionString: nonNullProp(keys, 'primaryConnectionString')

@@ -52,7 +52,7 @@ async function getScriptLanguage(functionAppPath: string): Promise<ProjectLangua
                 const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
                 if (functionFileName && await fse.pathExists(path.join(functionDirPath, functionFileName))) {
                     if (projectLanguage === undefined) {
-                        projectLanguage = <ProjectLanguage>language;
+                        projectLanguage = language;
                     } else if (projectLanguage !== language) {
                         return undefined;
                     }

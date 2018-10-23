@@ -51,7 +51,7 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
     const templates: IFunctionTemplate[] = [];
     for (const template of embeddedTemplates.templates) {
         try {
-            templates.push(parseJavaTemplate(<IRawTemplate>template, <IResources>embeddedResources, <IConfig>embeddedConfig));
+            templates.push(parseJavaTemplate(template, <IResources>embeddedResources, <IConfig>embeddedConfig));
         } catch (error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
