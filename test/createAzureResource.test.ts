@@ -5,8 +5,7 @@
 
 import * as assert from 'assert';
 import { ResourceManagementClient } from 'azure-arm-resource';
-import { WebSiteManagementClient } from 'azure-arm-website';
-import { Site } from 'azure-arm-website/lib/models';
+import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, TestAzureAccount, TestUserInput } from 'vscode-azureextensionui';
@@ -56,12 +55,12 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         ext.ui = new TestUserInput(testInputs);
         await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
-        const createdApp: Site = await client.webApps.get(resourceName, resourceName);
+        const createdApp: WebSiteManagementModels.Site = await client.webApps.get(resourceName, resourceName);
         assert.ok(createdApp);
 
         ext.ui = new TestUserInput([resourceName, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
         await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
-        const deletedApp: Site | undefined = await client.webApps.get(resourceName, resourceName);
+        const deletedApp: WebSiteManagementModels.Site | undefined = await client.webApps.get(resourceName, resourceName);
         assert.ifError(deletedApp); // if app was deleted, get() returns null.  assert.ifError throws if the value passed is not null/undefined
     });
 
@@ -76,7 +75,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const testInputs1: string[] = [functionAppName1, '$(plus) Create new storage account', storageAccountName, 'West US'];
         ext.ui = new TestUserInput(testInputs1);
         const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp1: Site = await client.webApps.get(resourceGroupName, functionAppName1);
+        const createdApp1: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName1);
         assert.ok(createdApp1, 'Function app with new rg/sa failed.');
         assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
 
@@ -85,7 +84,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const testInputs2: string[] = [functionAppName2, storageAccountName];
         ext.ui = new TestUserInput(testInputs2);
         const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp2: Site = await client.webApps.get(resourceGroupName, functionAppName2);
+        const createdApp2: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName2);
         assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
         assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
 

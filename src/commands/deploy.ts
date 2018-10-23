@@ -3,16 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource, StringDictionary } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { MessageItem } from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { SiteClient } from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
@@ -72,7 +70,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
     const confirmDeployment: boolean = !newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
 
-    const client: SiteClient = node.root.client;
+    const client: appservice.SiteClient = node.root.client;
     const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ext.ui);
     telemetryProperties.projectLanguage = language;
     const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ext.ui);
@@ -88,7 +86,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     await verifyRuntimeIsCompatible(runtime, ext.ui, ext.outputChannel, client, telemetryProperties);
 
-    const siteConfig: SiteConfigResource = await client.getSiteConfig();
+    const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (confirmDeployment && isZipDeploy) {
         const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
@@ -127,11 +125,11 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', client.fullName);
     ext.outputChannel.appendLine(deployComplete);
-    const viewOutput: MessageItem = { title: localize('viewOutput', 'View Output') };
-    const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream Logs') };
+    const viewOutput: vscode.MessageItem = { title: localize('viewOutput', 'View Output') };
+    const streamLogs: vscode.MessageItem = { title: localize('streamLogs', 'Stream Logs') };
 
     // Don't wait
-    vscode.window.showInformationMessage(deployComplete, streamLogs, viewOutput).then(async (result: MessageItem | undefined) => {
+    vscode.window.showInformationMessage(deployComplete, streamLogs, viewOutput).then(async (result: vscode.MessageItem | undefined) => {
         if (result === viewOutput) {
             ext.outputChannel.show();
         } else if (result === streamLogs) {
@@ -204,7 +202,7 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
                             const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}". Use "{2}.{3}" to change this behavior.', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
                             // don't wait
                             // tslint:disable-next-line:no-floating-promises
-                            ext.ui.showWarningMessage(message, { title: localize('ok', 'OK') }, DialogResponses.dontWarnAgain).then(async (result: MessageItem) => {
+                            ext.ui.showWarningMessage(message, { title: localize('ok', 'OK') }, DialogResponses.dontWarnAgain).then(async (result: vscode.MessageItem) => {
                                 if (result === DialogResponses.dontWarnAgain) {
                                     await updateGlobalSetting(settingKey, false);
                                 }
@@ -243,8 +241,8 @@ async function getJavaFolderPath(actionContext: IActionContext, outputChannel: v
     }
 }
 
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
-    const appSettings: StringDictionary = await client.listApplicationSettings();
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: appservice.SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
+    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
     if (!appSettings.properties) {
         throw new ArgumentError(appSettings);
     } else {
@@ -360,8 +358,8 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
 async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProperties: TelemetryProperties): Promise<void> {
     if (node.isLinuxPreview) {
         // we need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
-        const client: SiteClient = node.root.client;
-        const applicationSettings: StringDictionary = await client.listApplicationSettings();
+        const client: appservice.SiteClient = node.root.client;
+        const applicationSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
         const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
         const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
         if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {

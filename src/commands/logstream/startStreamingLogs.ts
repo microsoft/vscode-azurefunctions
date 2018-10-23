@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteLogsConfig } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import * as appservice from 'vscode-azureappservice';
-import { SiteClient } from 'vscode-azureappservice';
 import { DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -17,9 +16,9 @@ export async function startStreamingLogs(treeItem?: FunctionAppTreeItem | Functi
         treeItem = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
-    const client: SiteClient = treeItem.root.client;
+    const client: appservice.SiteClient = treeItem.root.client;
     const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
-        const logsConfig: SiteLogsConfig = await client.getLogsConfig();
+        const logsConfig: WebSiteManagementModels.SiteLogsConfig = await client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
             const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
             await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
@@ -38,7 +37,7 @@ export async function startStreamingLogs(treeItem?: FunctionAppTreeItem | Functi
     await appservice.startStreamingLogs(treeItem.root.client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
 }
 
-function isApplicationLoggingEnabled(config: SiteLogsConfig): boolean {
+function isApplicationLoggingEnabled(config: WebSiteManagementModels.SiteLogsConfig): boolean {
     if (config.applicationLogs) {
         if (config.applicationLogs.fileSystem) {
             return config.applicationLogs.fileSystem.level !== undefined && config.applicationLogs.fileSystem.level.toLowerCase() !== 'off';

@@ -25,7 +25,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         super(functionAppPath, template);
     }
 
-    public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined; }): Promise<void> {
+    public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined }): Promise<void> {
         if (!functionName) {
             const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(this._functionAppPath, this._template.defaultFunctionName, '.cs');
             this._functionName = await ui.showInputBox({
@@ -39,7 +39,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
         }
 
         if (functionSettings.namespace !== undefined) {
-            this._namespace = <string>functionSettings.namespace;
+            this._namespace = functionSettings.namespace;
         } else {
             this._namespace = await ui.showInputBox({
                 placeHolder: localize('azFunc.namespacePlaceHolder', 'Namespace'),

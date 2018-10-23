@@ -8,8 +8,7 @@ import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { ILocalAppSettings } from '../../LocalAppSettings';
-import { confirmOverwriteFile } from "../../utils/fs";
-import * as fsUtil from '../../utils/fs';
+import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
 import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
 
 // tslint:disable-next-line:no-multiline-string
@@ -71,7 +70,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
             const hostJson: {} = {
                 version: '2.0'
             };
-            await fsUtil.writeFormattedJson(hostJsonPath, hostJson);
+            await writeFormattedJson(hostJsonPath, hostJson);
         }
 
         const localSettingsJsonPath: string = path.join(this.functionAppPath, localSettingsFileName);
@@ -88,7 +87,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                 localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = this.functionsWorkerRuntime;
             }
 
-            await fsUtil.writeFormattedJson(localSettingsJsonPath, localSettingsJson);
+            await writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
         const proxiesJsonPath: string = path.join(this.functionAppPath, proxiesFileName);
@@ -98,7 +97,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                 $schema: 'http://json.schemastore.org/proxies',
                 proxies: {}
             };
-            await fsUtil.writeFormattedJson(proxiesJsonPath, proxiesJson);
+            await writeFormattedJson(proxiesJsonPath, proxiesJson);
         }
 
         const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);

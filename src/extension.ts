@@ -6,7 +6,6 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { WorkspaceFoldersChangeEvent } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
 import { decryptLocalSettings } from './commands/appSettings/decryptLocalSettings';
@@ -68,7 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
         callWithTelemetryAndErrorHandling(validateEventId, async function (this: IActionContext): Promise<void> {
             await validateFunctionProjects(this, vscode.workspace.workspaceFolders);
         });
-        registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: WorkspaceFoldersChangeEvent): Promise<void> {
+        registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: vscode.WorkspaceFoldersChangeEvent): Promise<void> {
             await validateFunctionProjects(this, event.added);
         });
 

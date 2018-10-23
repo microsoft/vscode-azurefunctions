@@ -5,11 +5,9 @@
 
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { Task } from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, isWindows } from '../constants';
-import { funcHostTaskLabel, stopFuncHostPromise } from "../funcCoreTools/funcHostTask";
-import { isFuncHostTask } from '../funcCoreTools/funcHostTask';
+import { funcHostTaskLabel, isFuncHostTask, stopFuncHostPromise } from '../funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
@@ -22,8 +20,8 @@ export async function pickFuncProcess(this: IActionContext): Promise<string | un
 
     await stopFuncHostPromise;
 
-    const tasks: Task[] = await vscode.tasks.fetchTasks();
-    const funcTask: Task | undefined = tasks.find(isFuncHostTask);
+    const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
+    const funcTask: vscode.Task | undefined = tasks.find(isFuncHostTask);
     if (!funcTask) {
         throw new Error(localize('noFuncTask', 'Failed to find task with label "{0}".', funcHostTaskLabel));
     }
@@ -41,7 +39,7 @@ export async function pickFuncProcess(this: IActionContext): Promise<string | un
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
 }
 
-async function startFuncTask(funcTask: Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+async function startFuncTask(funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
     const waitForStartPromise: Promise<string> = new Promise((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
         const listener: vscode.Disposable = vscode.tasks.onDidStartTaskProcess((e: vscode.TaskProcessStartEvent) => {
             if (isFuncHostTask(e.execution.task)) {

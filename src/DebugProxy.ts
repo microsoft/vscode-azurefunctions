@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { User } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
 import { OutputChannel } from 'vscode';
@@ -16,11 +16,11 @@ export class DebugProxy extends EventEmitter {
     private _wsconnection: websocket.connection | undefined;
     private _client: SiteClient;
     private _port: number;
-    private _publishCredential: User;
+    private _publishCredential: WebSiteManagementModels.User;
     private _keepAlive: boolean;
     private _outputChannel: OutputChannel;
 
-    constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: User) {
+    constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: WebSiteManagementModels.User) {
         super();
         this._client = client;
         this._port = port;

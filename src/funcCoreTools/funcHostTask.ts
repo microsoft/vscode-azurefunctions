@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { Task, TaskExecution } from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 
@@ -16,7 +15,7 @@ export const funcHostNameRegEx: RegExp = /run\s*functions\s*host/i;
 
 export let stopFuncHostPromise: Promise<void> = Promise.resolve();
 
-export function isFuncHostTask(task: Task): boolean {
+export function isFuncHostTask(task: vscode.Task): boolean {
     // task.name resolves to the task's id (deprecated https://github.com/Microsoft/vscode/issues/57707), then label
     return funcHostNameRegEx.test(task.name);
 }
@@ -45,7 +44,7 @@ async function stopFuncTaskIfRunning(this: IActionContext): Promise<void> {
     this.suppressErrorDisplay = true;
     this.suppressTelemetry = true;
 
-    const funcExecution: TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: TaskExecution) => isFuncHostTask(te.task));
+    const funcExecution: vscode.TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: vscode.TaskExecution) => isFuncHostTask(te.task));
     if (funcExecution && isFuncHostRunning) {
         this.suppressTelemetry = false; // only track telemetry if it's actually the func task
         stopFuncHostPromise = new Promise((resolve: () => void, reject: (e: Error) => void): void => {

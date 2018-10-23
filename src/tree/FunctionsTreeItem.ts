@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionEnvelope, FunctionEnvelopeCollection } from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import { isArray } from 'util';
 import { ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
@@ -36,7 +36,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             this._nextLink = undefined;
         }
 
-        const funcs: FunctionEnvelopeCollection = this._nextLink ? await this.root.client.listFunctionsNext(this._nextLink) : await this.root.client.listFunctions();
+        const funcs: WebSiteManagementModels.FunctionEnvelopeCollection = this._nextLink ? await this.root.client.listFunctionsNext(this._nextLink) : await this.root.client.listFunctions();
 
         // https://github.com/Azure/azure-functions-host/issues/3502
         if (!isArray(funcs)) {
@@ -49,7 +49,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             this,
             funcs,
             'azFuncInvalidFunction',
-            async (fe: FunctionEnvelope) => {
+            async (fe: WebSiteManagementModels.FunctionEnvelope) => {
                 const treeItem: FunctionTreeItem = new FunctionTreeItem(this, fe);
                 if (treeItem.config.isHttpTrigger) {
                     // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
@@ -58,7 +58,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
                 }
                 return treeItem;
             },
-            (fe: FunctionEnvelope) => {
+            (fe: WebSiteManagementModels.FunctionEnvelope) => {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }
         );

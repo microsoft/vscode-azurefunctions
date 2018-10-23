@@ -31,7 +31,7 @@ export async function createNewProject(
     openFolder: boolean = true,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined; }): Promise<void> {
+    caseSensitiveFunctionSettings?: { [key: string]: string | undefined }): Promise<void> {
 
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));

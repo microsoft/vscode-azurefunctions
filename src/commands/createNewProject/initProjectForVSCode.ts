@@ -10,8 +10,7 @@ import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFi
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
-import { confirmOverwriteFile } from '../../utils/fs';
-import * as fsUtil from '../../utils/fs';
+import { confirmEditJsonFile, confirmOverwriteFile, writeFormattedJson } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getProjectCreator } from './createNewProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
@@ -71,21 +70,21 @@ export async function initProjectForVSCode(actionContext: IActionContext, functi
 async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, runtime: string): Promise<void> {
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
-        await fsUtil.writeFormattedJson(tasksJsonPath, await projectCreator.getTasksJson(runtime));
+        await writeFormattedJson(tasksJsonPath, await projectCreator.getTasksJson(runtime));
     }
 
     const launchJson: {} | undefined = projectCreator.getLaunchJson();
     if (launchJson) {
         const launchJsonPath: string = path.join(vscodePath, 'launch.json');
         if (await confirmOverwriteFile(launchJsonPath)) {
-            await fsUtil.writeFormattedJson(launchJsonPath, launchJson);
+            await writeFormattedJson(launchJsonPath, launchJson);
         }
     }
 }
 
 async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePath: string, runtime: string, language: string, templateFilter: string): Promise<void> {
     const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
-    await fsUtil.confirmEditJsonFile(
+    await confirmEditJsonFile(
         settingsJsonPath,
         (data: {}): {} => {
             data[`${extensionPrefix}.${projectRuntimeSetting}`] = runtime;
@@ -116,7 +115,7 @@ async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePat
 
 async function writeExtensionRecommendations(projectCreator: ProjectCreatorBase, vscodePath: string): Promise<void> {
     const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
-    await fsUtil.confirmEditJsonFile(
+    await confirmEditJsonFile(
         extensionsJsonPath,
         (data: IRecommendations): {} => {
             let recommendations: string[] = projectCreator.getRecommendedExtensions();

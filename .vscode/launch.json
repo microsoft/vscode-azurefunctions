@@ -8,14 +8,17 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceRoot}"
+                "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceRoot}/out/src/**/*.js"
+                "${workspaceFolder}/out/src/**/*.js"
             ],
-            "preLaunchTask": "npm"
+            "preLaunchTask": "npm: compile",
+            "env": {
+                "DEBUGTELEMETRY": "1"
+            }
         },
         {
             "name": "Launch Tests",
@@ -23,20 +26,21 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceRoot}",
-                "--extensionTestsPath=${workspaceRoot}/out/test"
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionTestsPath=${workspaceFolder}/out/test"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceRoot}/out/test/**/*.js"
+                "${workspaceFolder}/out/test/**/*.js"
             ],
-            "preLaunchTask": "npm",
+            "preLaunchTask": "npm: compile",
             "env": {
                 "MOCHA_grep": "", // RegExp of tests to run (empty for all)
                 "MOCHA_enableTimeouts": "0", // Disable time-outs
                 "DEBUGTELEMETRY": "1",
-                "NODE_DEBUG": ""
+                "NODE_DEBUG": "",
+                "ENABLE_LONG_RUNNING_TESTS": ""
             }
         }
     ]
