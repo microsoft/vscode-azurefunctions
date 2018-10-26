@@ -5,6 +5,9 @@
 
 'use strict';
 
+const loadStartTime: number = Date.now();
+let loadEndTime: number;
+
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
@@ -53,6 +56,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
+        this.measurements.mainFileLoad = (loadEndTime - loadStartTime) / 1000;
+
         ext.ui = new AzureUserInput(context.globalState);
 
         // tslint:disable-next-line:no-floating-promises
@@ -120,3 +125,5 @@ export function activate(context: vscode.ExtensionContext): void {
 // tslint:disable-next-line:no-empty
 export function deactivate(): void {
 }
+
+loadEndTime = Date.now();
