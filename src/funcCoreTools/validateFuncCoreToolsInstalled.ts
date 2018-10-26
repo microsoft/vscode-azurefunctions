@@ -81,7 +81,7 @@ export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = fals
 
 export async function funcToolsInstalled(): Promise<boolean> {
     try {
-        await cpUtils.executeCommand(undefined, undefined, 'func', '--version');
+        await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, '--version');
         return true;
     } catch (error) {
         return false;

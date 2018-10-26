@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IHookCallbackContext } from 'mocha';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
+import { ext } from '../src/extensionVariables';
 import { FunctionTemplates, getFunctionTemplates } from '../src/templates/FunctionTemplates';
 
 export let backupTemplates: FunctionTemplates;
@@ -17,12 +20,12 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(120 * 1000);
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
 
+    // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
+    ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
+
     backupTemplates = await getFunctionTemplates('backup');
     latestTemplates = await getFunctionTemplates('cliFeed');
     stagingTemplates = await getFunctionTemplates('stagingCliFeed');
-    if (process.env.ENABLE_LONG_RUNNING_TESTS === undefined) {
-        longRunningTestsEnabled = process.env.TRAVIS_EVENT_TYPE === 'cron';
-    } else {
-        longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS);
-    }
+    // tslint:disable-next-line:strict-boolean-expressions
+    longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });

@@ -1,0 +1,17 @@
+steps:
+- task: Npm@1
+  displayName: 'Package'
+  inputs:
+    command: custom
+    customCommand: run package
+
+- task: Gulp@0
+  displayName: 'Set vsixName'
+  inputs:
+    targets: 'set-vsix-name'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish artifacts: vsix'
+  inputs:
+    PathtoPublish: '$(vsixName)'
+    ArtifactName: vsix
