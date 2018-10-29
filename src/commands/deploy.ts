@@ -342,7 +342,7 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
         }
 
         messageLines.push(localize('howToAddPreDeploy1', '1. Open Command Palette (View -> Command Palette...)'));
-        messageLines.push(localize('howToAddPreDeploy2', '2. Search for "Azure Functions" and run command "Initialize project for use with VS Code"'));
+        messageLines.push(localize('howToAddPreDeploy2', '2. Search for "Azure Functions" and run command "Initialize Project for Use with VS Code"'));
         messageLines.push(localize('howToAddPreDeploy3', '3. Select "Yes" to overwrite your tasks.json file when prompted'));
 
         const fullMessage: string = messageLines.join(os.EOL);

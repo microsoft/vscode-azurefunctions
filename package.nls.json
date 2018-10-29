@@ -3,7 +3,7 @@
     "azFunc.refresh": "Refresh",
     "azFunc.loadMore": "Load More",
     "azFunc.createNewProject": "Create New Project...",
-    "azFunc.initProjectForVSCode": "Initialize project for use with VS Code...",
+    "azFunc.initProjectForVSCode": "Initialize Project for Use with VS Code...",
     "azFunc.createFunction": "Create Function...",
     "azFunc.createFunctionApp": "Create Function App in Azure...",
     "azFunc.openInPortal": "Open in Portal",
