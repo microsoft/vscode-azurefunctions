@@ -34,7 +34,7 @@ export async function validateFunctionProjects(actionContext: IActionContext, fo
                     actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
 
                     const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
-                    actionContext.properties.projectLanguage = String(projectLanguage);
+                    actionContext.properties.projectLanguage = projectLanguage;
                     await verifyDebugConfigIsValid(projectLanguage, folderPath, actionContext);
                     await verifyPythonVenv(projectLanguage, folderPath, actionContext);
                 } else {

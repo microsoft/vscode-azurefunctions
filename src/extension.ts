@@ -46,7 +46,7 @@ import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
     ext.context = context;
@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
     context.subscriptions.push(ext.outputChannel);
 
-    callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
+    await callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
         this.measurements.mainFileLoad = (loadEndTime - loadStartTime) / 1000;
 
