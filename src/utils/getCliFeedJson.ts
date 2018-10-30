@@ -33,7 +33,6 @@ export type cliFeedJsonResponse = {
 };
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
-    // tslint:disable-next-line:no-unsafe-any
     return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async function (this: IActionContext): Promise<cliFeedJsonResponse> {
         this.properties.isActivationEvent = 'true';
         this.suppressErrorDisplay = true;
