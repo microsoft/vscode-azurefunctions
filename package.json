@@ -683,8 +683,9 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "tsc -p ./",
+        "build": "tsc -p ./",
         "compile": "tsc -watch -p ./",
+        "package": "vsce package",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
@@ -702,11 +703,13 @@
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "azure-arm-resource": "^3.0.0-preview",
-        "azure-storage": "^2.8.1",
         "gulp": "^3.9.1",
+        "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.1",
         "gulp-download": "^0.0.1",
+        "gulp-filter": "^5.1.0",
         "mocha": "^2.3.3",
+        "mocha-junit-reporter": "^1.18.0",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.2.1",
         "typescript": "^3.1.3",

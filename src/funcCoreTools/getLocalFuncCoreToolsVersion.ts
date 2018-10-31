@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
+import { ext } from '../extensionVariables';
 import { cpUtils } from '../utils/cpUtils';
 
 export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
-    const output: string = await cpUtils.executeCommand(undefined, undefined, 'func', '--version');
+    const output: string = await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, '--version');
     const version: string | null = semver.clean(output);
     if (version) {
         return version;

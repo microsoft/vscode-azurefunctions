@@ -17,4 +17,5 @@ export namespace ext {
     export let ui: IAzureUserInput;
     export let functionTemplates: FunctionTemplates;
     export let reporter: ITelemetryReporter;
+    export let funcCliPath: string = 'func';
 }
