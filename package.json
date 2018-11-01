@@ -687,7 +687,8 @@
         "compile": "tsc -watch -p ./",
         "package": "vsce package",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
-        "postinstall": "node ./node_modules/vscode/bin/install"
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "gulp test"
     },
     "devDependencies": {
         "@types/clipboardy": "^1.1.0",

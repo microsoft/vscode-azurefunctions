@@ -17,10 +17,7 @@
         {
             "type": "npm",
             "script": "lint",
-            "problemMatcher": {
-                "base": "$tslint5",
-                "fileLocation": "absolute"
-            }
+            "problemMatcher": "$tslint5"
         }
     ]
 }
