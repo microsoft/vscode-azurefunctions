@@ -5,13 +5,14 @@ steps:
     command: custom
     customCommand: run package
 
-- task: Gulp@0
-  displayName: 'Set vsixName'
+- task: CopyFiles@2
+  displayName: 'Copy vsix to staging directory'
   inputs:
-    targets: 'set-vsix-name'
+    Contents: '**/*.vsix'
+    TargetFolder: '$(build.artifactstagingdirectory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish artifacts: vsix'
   inputs:
-    PathtoPublish: '$(vsixName)'
+    PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: vsix

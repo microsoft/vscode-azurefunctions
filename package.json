@@ -687,7 +687,8 @@
         "compile": "tsc -watch -p ./",
         "package": "vsce package",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
-        "postinstall": "node ./node_modules/vscode/bin/install"
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "gulp test"
     },
     "devDependencies": {
         "@types/clipboardy": "^1.1.0",
@@ -703,6 +704,7 @@
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "azure-arm-resource": "^3.0.0-preview",
+        "glob": "^7.1.3",
         "gulp": "^3.9.1",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.1",
