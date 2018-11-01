@@ -10,15 +10,9 @@ const path = require('path');
 const os = require('os');
 const fse = require('fs-extra');
 const cp = require('child_process');
-const packageJson = require('./package.json');
 const request = require('request');
 const chmod = require('gulp-chmod');
 const filter = require('gulp-filter');
-
-gulp.task('set-vsix-name', () => {
-    const vsixName = `${packageJson.name}-${packageJson.version}.vsix`;
-    console.log(`##vso[task.setvariable variable=vsixName]${vsixName}`);
-});
 
 gulp.task('test', ['install-azure-account', 'install-func-cli'], (cb) => {
     const env = process.env;
