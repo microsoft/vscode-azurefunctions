@@ -13,6 +13,7 @@ const cp = require('child_process');
 const request = require('request');
 const chmod = require('gulp-chmod');
 const filter = require('gulp-filter');
+const glob = require('glob');
 
 gulp.task('test', ['install-azure-account', 'install-func-cli'], (cb) => {
     const env = process.env;
@@ -26,10 +27,15 @@ gulp.task('test', ['install-azure-account', 'install-func-cli'], (cb) => {
     });
 });
 
+/**
+ * Installs the azure account extension before running tests (otherwise our extension would fail to activate)
+ * NOTE: The version isn't super important since we don't actually use the account extension in tests
+ */
 gulp.task('install-azure-account', () => {
-    const version = '0.3.0';
+    const version = '0.4.3';
     const extensionPath = path.join(os.homedir(), `.vscode/extensions/ms-vscode.azure-account-${version}`);
-    if (!fse.pathExistsSync(extensionPath)) {
+    const existingExtensions = glob.sync(extensionPath.replace(version, '*'));
+    if (existingExtensions.length === 0) {
         return download(`http://ms-vscode.gallery.vsassets.io/_apis/public/gallery/publisher/ms-vscode/extension/azure-account/${version}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`)
             .pipe(decompress({
                 filter: file => file.path.startsWith('extension/'),
