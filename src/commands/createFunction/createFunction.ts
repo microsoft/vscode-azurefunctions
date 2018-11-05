@@ -16,6 +16,7 @@ import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProj
 import { IEnumValue, IFunctionSetting, ValueType } from '../../templates/IFunctionSetting';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
+import { TemplateProvider } from '../../templates/TemplateProvider';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { isFunctionProject } from '../createNewProject/validateFunctionProjects';
@@ -116,7 +117,8 @@ export async function createFunction(
         [template, language, runtime, templateFilter] = await promptForTemplate(functionAppPath, language, runtime, templateFilter, actionContext.properties);
     } else {
         templateFilter = TemplateFilter.All;
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, TemplateFilter.All, actionContext.properties);
+        const templateProvider: TemplateProvider = await ext.templateProviderTask;
+        const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, functionAppPath, TemplateFilter.All, actionContext.properties);
         const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === templateId);
         if (foundTemplate) {
             template = foundTemplate;
@@ -180,7 +182,8 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
 
     let template: IFunctionTemplate | undefined;
     while (!template) {
-        const templates: IFunctionTemplate[] = await ext.functionTemplates.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
+        const templateProvider: TemplateProvider = await ext.templateProviderTask;
+        const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
         let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
         picks = picks.concat([
             { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },

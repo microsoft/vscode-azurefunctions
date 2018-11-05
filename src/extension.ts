@@ -40,7 +40,7 @@ import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { FunctionTemplates, getFunctionTemplates } from './templates/FunctionTemplates';
+import { getTemplateProvider } from './templates/TemplateProvider';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
@@ -76,9 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             await validateFunctionProjects(this, event.added);
         });
 
-        const templatesTask: Promise<void> = getFunctionTemplates().then((templates: FunctionTemplates) => {
-            ext.functionTemplates = templates;
-        });
+        ext.templateProviderTask = getTemplateProvider();
 
         registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
         registerCommand('azureFunctions.refresh', async (node?: AzureTreeItem) => await ext.tree.refresh(node));
@@ -86,11 +84,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         registerCommand('azureFunctions.loadMore', async (node: AzureTreeItem) => await ext.tree.loadMore(node));
         registerCommand('azureFunctions.openInPortal', openInPortal);
         registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await templatesTask;
             await createFunction(this, functionAppPath, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await templatesTask;
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this); });

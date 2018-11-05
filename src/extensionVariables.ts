@@ -5,7 +5,7 @@
 
 import { ExtensionContext, OutputChannel } from "vscode";
 import { AzureTreeDataProvider, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
-import { FunctionTemplates } from "./templates/FunctionTemplates";
+import { TemplateProvider } from "./templates/TemplateProvider";
 
 /**
  * Namespace for common variables used throughout the extension. They must be initialized in the activate() method of extension.ts
@@ -15,7 +15,7 @@ export namespace ext {
     export let tree: AzureTreeDataProvider;
     export let outputChannel: OutputChannel;
     export let ui: IAzureUserInput;
-    export let functionTemplates: FunctionTemplates;
+    export let templateProviderTask: Promise<TemplateProvider>;
     export let reporter: ITelemetryReporter;
     export let funcCliPath: string = 'func';
     export let templateSource: TemplateSource | undefined;

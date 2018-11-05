@@ -6,9 +6,9 @@
 import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
 import { mavenUtils } from "../utils/mavenUtils";
-import { removeLanguageFromId } from "./FunctionTemplates";
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { IConfig, IRawTemplate, IResources, parseScriptTemplate as parseJavaTemplate } from './parseScriptTemplates';
+import { removeLanguageFromId } from "./TemplateProvider";
 
 /**
  * Describes templates output before it has been parsed

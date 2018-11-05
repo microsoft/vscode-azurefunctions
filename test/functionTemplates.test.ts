@@ -7,13 +7,13 @@ import * as assert from 'assert';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { ext } from '../src/extensionVariables';
-import { FunctionTemplates } from '../src/templates/FunctionTemplates';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
+import { TemplateProvider } from '../src/templates/TemplateProvider';
 import { runForAllTemplateSources } from './global.test';
 
 suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
-        await validateTemplateCounts(ext.functionTemplates, 'defaultOnExtensionActivation');
+        await validateTemplateCounts(await ext.templateProviderTask, 'defaultOnExtensionActivation');
 
         await runForAllTemplateSources(async (source, templates) => {
             await validateTemplateCounts(templates, source);
@@ -21,7 +21,7 @@ suite('Template Count Tests', async () => {
     });
 });
 
-async function validateTemplateCounts(templates: FunctionTemplates, source: string): Promise<void> {
+async function validateTemplateCounts(templates: TemplateProvider, source: string): Promise<void> {
     const jsTemplatesv1: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v1, TemplateFilter.Verified);
     assert.equal(jsTemplatesv1.length, 8, `Unexpected JavaScript v1 ${source} templates count.`);
 

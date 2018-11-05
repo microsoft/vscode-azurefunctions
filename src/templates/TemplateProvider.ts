@@ -17,7 +17,7 @@ import { parseJavaTemplates } from './parseJavaTemplates';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
 import { TemplateRetriever } from './TemplateRetriever';
 
-export class FunctionTemplates {
+export class TemplateProvider {
     private readonly _templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     // if there are no templates, then there is likely no internet or a problem with the clifeed url
     private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
@@ -91,7 +91,7 @@ function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '');
 }
 
-export async function getFunctionTemplates(): Promise<FunctionTemplates> {
+export async function getTemplateProvider(): Promise<TemplateProvider> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
@@ -147,7 +147,7 @@ export async function getFunctionTemplates(): Promise<FunctionTemplates> {
         }
     }
 
-    return new FunctionTemplates(templatesMap);
+    return new TemplateProvider(templatesMap);
 }
 
 export function removeLanguageFromId(id: string): string {
