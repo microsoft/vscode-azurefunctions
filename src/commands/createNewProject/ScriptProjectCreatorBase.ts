@@ -9,7 +9,7 @@ import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime,
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
-import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './ProjectCreatorBase';
 
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
@@ -46,7 +46,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
     public readonly functionsWorkerRuntime: string | undefined;
 
-    public getTasksJson(_runtime: string): {} {
+    public getTasksJson(): {} {
         return {
             version: '2.0.0',
             tasks: [
@@ -64,7 +64,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
         };
     }
 
-    public async addNonVSCodeFiles(): Promise<void> {
+    public async onCreateNewProject(): Promise<void> {
         const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
             const hostJson: {} = {
@@ -104,5 +104,9 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
         if (await confirmOverwriteFile(gitignorePath)) {
             await fse.writeFile(gitignorePath, gitignore);
         }
+    }
+
+    public async onInitProjectForVSCode(): Promise<void> {
+        // nothing to do here
     }
 }

@@ -6,8 +6,8 @@
 import { installExtensionsId, ProjectRuntime, TemplateFilter } from "../../constants";
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
-import { funcWatchProblemMatcher } from "./IProjectCreator";
 import { ITaskOptions } from "./ITasksJson";
+import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export const funcNodeDebugArgs: string = '--inspect=5858';
@@ -37,7 +37,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
-    public getTasksJson(runtime: string): {} {
+    public getTasksJson(): {} {
         let options: ITaskOptions | undefined;
         // tslint:disable-next-line:no-any
         const funcTask: any = {
@@ -63,7 +63,7 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
         // tslint:disable-next-line:no-unsafe-any
         const tasks: {}[] = [funcTask];
 
-        if (runtime !== ProjectRuntime.v1) {
+        if (this.runtime !== ProjectRuntime.v1) {
             options = {};
             options.env = {};
             options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;

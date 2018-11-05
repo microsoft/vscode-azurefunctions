@@ -17,9 +17,9 @@ import { createFunction } from '../createFunction/createFunction';
 import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { CSharpScriptProjectCreator } from './CSharpScriptProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
-import { ProjectCreatorBase } from './IProjectCreator';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { ProjectCreatorBase } from './ProjectCreatorBase';
 import { PythonProjectCreator } from './PythonProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
@@ -65,16 +65,16 @@ export async function createNewProject(
         // tslint:disable-next-line:no-non-null-assertion
         language = language!;
 
-        const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext);
-        await projectCreator.addNonVSCodeFiles(convertStringToRuntime(runtime));
+        const projectCreator: ProjectCreatorBase = getProjectCreator(language, functionAppPath, actionContext, convertStringToRuntime(runtime));
+        await projectCreator.onCreateNewProject();
 
-        await initProjectForVSCode(actionContext, functionAppPath, language, runtime, projectCreator);
+        await initProjectForVSCode(actionContext, functionAppPath, language, projectCreator);
         if (await gitUtils.isGitInstalled(functionAppPath) && !await gitUtils.isInsideRepo(functionAppPath)) {
             await gitUtils.gitInit(ext.outputChannel, functionAppPath);
         }
 
         if (templateId) {
-            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, <ProjectRuntime>runtime);
+            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, projectCreator.runtime);
         }
     });
     // don't wait
@@ -89,19 +89,28 @@ export async function createNewProject(
     }
 }
 
-export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext): ProjectCreatorBase {
+export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined): ProjectCreatorBase {
+    let projectCreatorType: { new(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined): ProjectCreatorBase };
     switch (language) {
         case ProjectLanguage.Java:
-            return new JavaProjectCreator(functionAppPath, actionContext);
+            projectCreatorType = JavaProjectCreator;
+            break;
         case ProjectLanguage.JavaScript:
-            return new JavaScriptProjectCreator(functionAppPath, actionContext.properties);
+            projectCreatorType = JavaScriptProjectCreator;
+            break;
         case ProjectLanguage.CSharp:
-            return new CSharpProjectCreator(functionAppPath, actionContext.properties);
+            projectCreatorType = CSharpProjectCreator;
+            break;
         case ProjectLanguage.CSharpScript:
-            return new CSharpScriptProjectCreator(functionAppPath, actionContext.properties);
+            projectCreatorType = CSharpScriptProjectCreator;
+            break;
         case ProjectLanguage.Python:
-            return new PythonProjectCreator(functionAppPath, actionContext.properties);
+            projectCreatorType = PythonProjectCreator;
+            break;
         default:
-            return new ScriptProjectCreatorBase(functionAppPath, actionContext.properties);
+            projectCreatorType = ScriptProjectCreatorBase;
+            break;
     }
+
+    return new projectCreatorType(functionAppPath, actionContext, runtime);
 }

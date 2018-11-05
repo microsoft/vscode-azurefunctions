@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
 import { MessageItem, QuickPickItem, window } from 'vscode';
-import { IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
+import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
@@ -17,7 +18,7 @@ import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../
 import { localize } from "../../localize";
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
-import { funcWatchProblemMatcher } from "./IProjectCreator";
+import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export enum PythonAlias {
@@ -41,6 +42,12 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     private _venvName: string | undefined;
 
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
+        super(functionAppPath, actionContext, runtime);
+        assert.notEqual(runtime, ProjectRuntime.v1, localize('noV1', 'Python does not support runtime "{0}".', ProjectRuntime.v1));
+        this.runtime = ProjectRuntime.v2;
+    }
+
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
@@ -57,12 +64,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         };
     }
 
-    public async getRuntime(): Promise<ProjectRuntime> {
-        // Python only works on v2
-        return ProjectRuntime.v2;
-    }
-
-    public async addNonVSCodeFiles(): Promise<void> {
+    public async onCreateNewProject(): Promise<void> {
         const funcCoreRequired: string = localize('funcCoreRequired', 'Azure Functions Core Tools must be installed to create, debug, and deploy local Python Functions projects.');
         if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
             throw new UserCancelledError();
@@ -73,9 +75,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await runPythonCommandInVenv(this._venvName, this.functionAppPath, 'func init ./ --worker-runtime python');
     }
 
-    public async getTasksJson(): Promise<{}> {
-        // The code in getTasksJson occurs for createNewProject _and_ initProjectForVSCode, which is why the next few lines are here even if they're only somewhat related to 'getting the tasks.json'
-        // We should probably refactor this eventually to make it more clear what's going on.
+    public async onInitProjectForVSCode(): Promise<void> {
         this.deploySubpath = `${path.basename(this.functionAppPath)}.zip`;
 
         if (!this._venvName) {
@@ -86,7 +86,9 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await this.ensureVenvInFuncIgnore(this._venvName);
         await this.ensureGitIgnoreContents(this._venvName);
         await this.ensureAzureWebJobsStorage();
+    }
 
+    public getTasksJson(): {} {
         const funcPackCommand: string = 'func pack';
         const funcExtensionsCommand: string = 'func extensions install';
         const pipInstallCommand: string = 'pip install -r requirements.txt';
