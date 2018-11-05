@@ -6,15 +6,18 @@
 import * as assert from 'assert';
 import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
+import { ext } from '../src/extensionVariables';
 import { FunctionTemplates } from '../src/templates/FunctionTemplates';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
-import { backupTemplates, latestTemplates, stagingTemplates } from './global.test';
+import { runForAllTemplateSources } from './global.test';
 
 suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
-        await validateTemplateCounts(latestTemplates, 'latest');
-        await validateTemplateCounts(backupTemplates, 'backup');
-        await validateTemplateCounts(stagingTemplates, 'staging');
+        await validateTemplateCounts(ext.functionTemplates, 'defaultOnExtensionActivation');
+
+        await runForAllTemplateSources(async (source, templates) => {
+            await validateTemplateCounts(templates, source);
+        });
     });
 });
 

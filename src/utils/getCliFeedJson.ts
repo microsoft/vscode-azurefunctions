@@ -7,6 +7,7 @@
 import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
+import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
@@ -44,7 +45,7 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
     });
 }
 
-export function getFeedRuntime(runtime: ProjectRuntime, useStagingTemplates: boolean = false): string {
+export function getFeedRuntime(runtime: ProjectRuntime): string {
     let result: string;
     switch (runtime) {
         case ProjectRuntime.v2:
@@ -57,7 +58,7 @@ export function getFeedRuntime(runtime: ProjectRuntime, useStagingTemplates: boo
             throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
     }
 
-    return useStagingTemplates ? `${result}-prerelease` : result;
+    return ext.templateSource === TemplateSource.StagingCliFeed ? `${result}-prerelease` : result;
 }
 
 /**

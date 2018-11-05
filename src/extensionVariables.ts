@@ -18,4 +18,11 @@ export namespace ext {
     export let functionTemplates: FunctionTemplates;
     export let reporter: ITelemetryReporter;
     export let funcCliPath: string = 'func';
+    export let templateSource: TemplateSource | undefined;
+}
+
+export enum TemplateSource {
+    Backup = 'Backup',
+    CliFeed = 'CliFeed',
+    StagingCliFeed = 'StagingCliFeed'
 }

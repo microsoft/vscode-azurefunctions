@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { JavaScriptProjectCreator } from '../../src/commands/createNewProject/JavaScriptProjectCreator';
 import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
+import { runForAllTemplateSources } from '../global.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {
@@ -141,11 +142,14 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
-        const templateId: string = 'HttpTrigger-JavaScript';
-        const functionName: string = 'createFunctionApi';
-        const authLevel: string = 'Anonymous';
-        // Intentionally testing weird casing for authLevel
-        await vscode.commands.executeCommand('azureFunctions.createFunction', jsTester.funcPortalTestFolder, templateId, functionName, { aUtHLevel: authLevel });
-        await jsTester.validateFunction(jsTester.funcPortalTestFolder, functionName);
+        await runForAllTemplateSources(async (source) => {
+            const templateId: string = 'HttpTrigger-JavaScript';
+            const functionName: string = 'createFunctionApi';
+            const authLevel: string = 'Anonymous';
+            const projectPath: string = path.join(jsTester.baseTestFolder, source);
+            // Intentionally testing weird casing for authLevel
+            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
+            await jsTester.validateFunction(projectPath, functionName);
+        });
     });
 });
