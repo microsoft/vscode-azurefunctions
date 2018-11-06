@@ -5,19 +5,22 @@
 
 import * as assert from 'assert';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
-import { FunctionTemplates } from '../src/templates/FunctionTemplates';
+import { ext } from '../src/extensionVariables';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
-import { backupTemplates, latestTemplates, stagingTemplates } from './global.test';
+import { TemplateProvider } from '../src/templates/TemplateProvider';
+import { runForAllTemplateSources } from './global.test';
 
 suite('Template Count Tests', async () => {
     test('Valid templates count', async () => {
-        await validateTemplateCounts(latestTemplates, 'latest');
-        await validateTemplateCounts(backupTemplates, 'backup');
-        await validateTemplateCounts(stagingTemplates, 'staging');
+        await validateTemplateCounts(await ext.templateProviderTask, 'defaultOnExtensionActivation');
+
+        await runForAllTemplateSources(async (source, templates) => {
+            await validateTemplateCounts(templates, source);
+        });
     });
 });
 
-async function validateTemplateCounts(templates: FunctionTemplates, source: string): Promise<void> {
+async function validateTemplateCounts(templates: TemplateProvider, source: string): Promise<void> {
     const jsTemplatesv1: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v1, TemplateFilter.Verified);
     assert.equal(jsTemplatesv1.length, 8, `Unexpected JavaScript v1 ${source} templates count.`);
 

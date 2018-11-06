@@ -13,28 +13,21 @@ import { createFunction } from '../../src/commands/createFunction/createFunction
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
-import { FunctionTemplates } from '../../src/templates/FunctionTemplates';
 import * as fsUtil from '../../src/utils/fs';
-import { backupTemplates, latestTemplates, stagingTemplates } from '../global.test';
+import { runForAllTemplateSources } from '../global.test';
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
-    public backupTestFolder: string;
-    public funcPortalTestFolder: string;
-    public funcStagingPortalTestFolder: string;
+    public readonly baseTestFolder: string;
 
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
 
-    private _testFolder: string;
     private _oldTemplateFilter: string | undefined;
     private _oldProjectLanguage: string | undefined;
     private _oldProjectRuntime: string | undefined;
 
     constructor() {
-        this._testFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
-        this.backupTestFolder = path.join(this._testFolder, 'backup');
-        this.funcPortalTestFolder = path.join(this._testFolder, 'funcPortal');
-        this.funcStagingPortalTestFolder = path.join(this._testFolder, 'funcStagingPortal');
+        this.baseTestFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
     }
 
     public async initAsync(): Promise<void> {
@@ -42,9 +35,9 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         this._oldProjectLanguage = getGlobalFuncExtensionSetting(projectLanguageSetting);
         this._oldProjectRuntime = getGlobalFuncExtensionSetting(projectRuntimeSetting);
 
-        await this.initializeTestFolder(this.backupTestFolder);
-        await this.initializeTestFolder(this.funcPortalTestFolder);
-        await this.initializeTestFolder(this.funcStagingPortalTestFolder);
+        await runForAllTemplateSources(async (source) => {
+            await this.initializeTestFolder(path.join(this.baseTestFolder, source));
+        });
 
         await updateGlobalSetting(templateFilterSetting, TemplateFilter.All);
         await updateGlobalSetting(projectLanguageSetting, this._language);
@@ -52,7 +45,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     }
 
     public async dispose(): Promise<void> {
-        await fse.remove(this._testFolder);
+        await fse.remove(this.baseTestFolder);
 
         await updateGlobalSetting(templateFilterSetting, this._oldTemplateFilter);
         await updateGlobalSetting(projectLanguageSetting, this._oldProjectLanguage);
@@ -60,9 +53,9 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
-        await this.testCreateFunctionInternal(latestTemplates, this.funcPortalTestFolder, templateName, inputs.slice());
-        await this.testCreateFunctionInternal(backupTemplates, this.backupTestFolder, templateName, inputs.slice());
-        await this.testCreateFunctionInternal(stagingTemplates, this.funcStagingPortalTestFolder, templateName, inputs.slice());
+        await runForAllTemplateSources(async (source) => {
+            await this.testCreateFunctionInternal(path.join(this.baseTestFolder, source), templateName, inputs.slice());
+        });
     }
 
     public abstract async validateFunction(testFolder: string, funcName: string): Promise<void>;
@@ -77,7 +70,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         ]);
     }
 
-    private async testCreateFunctionInternal(templates: FunctionTemplates, testFolder: string, templateName: string, inputs: (string | undefined)[]): Promise<void> {
+    private async testCreateFunctionInternal(testFolder: string, templateName: string, inputs: (string | undefined)[]): Promise<void> {
         // Setup common inputs
         const funcName: string = templateName.replace(/ /g, '');
         inputs.unshift(funcName); // Specify the function name
@@ -88,7 +81,6 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         }
 
         ext.ui = new TestUserInput(inputs);
-        ext.functionTemplates = templates;
         await createFunction(<IActionContext>{ properties: {}, measurements: {} });
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 

@@ -14,7 +14,7 @@ import { createNewProject } from '../src/commands/createNewProject/createNewProj
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import * as fsUtil from '../src/utils/fs';
-import { longRunningTestsEnabled } from './global.test';
+import { longRunningTestsEnabled, runForAllTemplateSources } from './global.test';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -61,12 +61,14 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     const csharpProject: string = 'CSharpProject';
     test(csharpProject, async () => {
-        const projectPath: string = path.join(testFolderPath, csharpProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.CSharp, false);
-        await validateVSCodeProjectFiles(projectPath);
-        const projectName: string = path.basename(projectPath);
-        assert.equal(await fse.pathExists(path.join(projectPath, `${projectName}.csproj`)), true, 'csproj does not exist');
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
+        await runForAllTemplateSources(async (source) => {
+            const projectPath: string = path.join(testFolderPath, source, csharpProject);
+            await testCreateNewProject(projectPath, ProjectLanguage.CSharp, false);
+            await validateVSCodeProjectFiles(projectPath);
+            const projectName: string = path.basename(projectPath);
+            assert.equal(await fse.pathExists(path.join(projectPath, `${projectName}.csproj`)), true, 'csproj does not exist');
+            await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
+        });
     });
 
     const bashProject: string = 'BashProject';

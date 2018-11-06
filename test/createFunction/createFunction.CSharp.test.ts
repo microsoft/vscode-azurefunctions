@@ -9,6 +9,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
+import { runForAllTemplateSources } from '../global.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -78,13 +79,16 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
-        // Intentionally testing IoTHub trigger since a partner team plans to use that
-        const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
-        const functionName: string = 'createFunctionApi';
-        const namespace: string = 'Company.Function';
-        const iotPath: string = 'messages/events';
-        const connection: string = 'IoTHub_Setting';
-        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.funcPortalTestFolder, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        await csTester.validateFunction(csTester.funcPortalTestFolder, functionName);
+        await runForAllTemplateSources(async (source) => {
+            // Intentionally testing IoTHub trigger since a partner team plans to use that
+            const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
+            const functionName: string = 'createFunctionApi';
+            const namespace: string = 'Company.Function';
+            const iotPath: string = 'messages/events';
+            const connection: string = 'IoTHub_Setting';
+            const projectPath: string = path.join(csTester.baseTestFolder, source);
+            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
+            await csTester.validateFunction(projectPath, functionName);
+        });
     });
 });

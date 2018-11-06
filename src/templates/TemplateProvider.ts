@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext, parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
-import { ext } from '../extensionVariables';
+import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
@@ -17,7 +17,7 @@ import { parseJavaTemplates } from './parseJavaTemplates';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
 import { TemplateRetriever } from './TemplateRetriever';
 
-export class FunctionTemplates {
+export class TemplateProvider {
     private readonly _templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     // if there are no templates, then there is likely no internet or a problem with the clifeed url
     private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
@@ -91,7 +91,7 @@ function normalizeName(name: string): string {
     return name.toLowerCase().replace(/\s/g, '');
 }
 
-export async function getFunctionTemplates(source?: 'backup' | 'cliFeed' | 'stagingCliFeed'): Promise<FunctionTemplates> {
+export async function getTemplateProvider(): Promise<TemplateProvider> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
@@ -105,30 +105,33 @@ export async function getFunctionTemplates(source?: 'backup' | 'cliFeed' | 'stag
                 this.properties.isActivationEvent = 'true';
                 this.properties.runtime = runtime;
                 this.properties.templateType = templateRetriever.templateType;
-                const useStagingTemplates: boolean = source === 'stagingCliFeed';
-                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime, useStagingTemplates);
+                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime);
                 let templates: IFunctionTemplate[] | undefined;
 
                 // 1. Use the cached templates if they match templateVersion
-                if (!source && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
+                // tslint:disable-next-line:strict-boolean-expressions
+                if (!ext.templateSource && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'matchingCache';
                 }
 
                 // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
-                if ((!source || source === 'cliFeed' || source === 'stagingCliFeed') && !templates && cliFeedJson && templateVersion) {
+                // tslint:disable-next-line:strict-boolean-expressions
+                if ((!ext.templateSource || ext.templateSource === TemplateSource.CliFeed || ext.templateSource === TemplateSource.StagingCliFeed) && !templates && cliFeedJson && templateVersion) {
                     templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, templateVersion, runtime);
                     this.properties.templateSource = 'cliFeed';
                 }
 
                 // 3. Use the cached templates, even if they don't match templateVersion
-                if (!source && !templates) {
+                // tslint:disable-next-line:strict-boolean-expressions
+                if (!ext.templateSource && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
                     this.properties.templateSource = 'mismatchCache';
                 }
 
                 // 4. Use backup templates shipped with the extension
-                if ((!source || source === 'backup') && !templates) {
+                // tslint:disable-next-line:strict-boolean-expressions
+                if ((!ext.templateSource || ext.templateSource === TemplateSource.Backup) && !templates) {
                     templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
                     this.properties.templateSource = 'backupFromExtension';
                 }
@@ -144,15 +147,15 @@ export async function getFunctionTemplates(source?: 'backup' | 'cliFeed' | 'stag
         }
     }
 
-    return new FunctionTemplates(templatesMap);
+    return new TemplateProvider(templatesMap);
 }
 
 export function removeLanguageFromId(id: string): string {
     return id.split('-')[0];
 }
 
-async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime, useStagingTemplates: boolean): Promise<string | undefined> {
-    const feedRuntime: string = getFeedRuntime(runtime, useStagingTemplates);
+async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
+    const feedRuntime: string = getFeedRuntime(runtime);
     const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
     try {
         if (userTemplateVersion) {

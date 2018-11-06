@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
+import { runForAllTemplateSources } from '../global.test';
 import { validateVSCodeProjectFiles } from '../initProjectForVSCode.test';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
@@ -53,17 +54,21 @@ suite('Create C# Script Function Tests', async () => {
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
-        // Intentionally testing IoTHub trigger since a partner team plans to use that
-
-        await vscode.commands.executeCommand('azureFunctions.createFunction', tester.funcPortalTestFolder, iotTemplateId, iotFunctionName, iotFunctionSettings);
-        await tester.validateFunction(tester.funcPortalTestFolder, iotFunctionName);
+        await runForAllTemplateSources(async (source) => {
+            // Intentionally testing IoTHub trigger since a partner team plans to use that
+            const projectPath: string = path.join(tester.baseTestFolder, source);
+            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotFunctionSettings);
+            await tester.validateFunction(projectPath, iotFunctionName);
+        });
     });
 
     test('createNewProjectAndFunction API', async () => {
-        const projectPath: string = path.join(tester.funcPortalTestFolder, 'createNewProjectAndFunction');
-        ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotFunctionSettings);
-        await tester.validateFunction(projectPath, iotFunctionName);
-        await validateVSCodeProjectFiles(projectPath);
+        await runForAllTemplateSources(async (source) => {
+            const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
+            ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
+            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotFunctionSettings);
+            await tester.validateFunction(projectPath, iotFunctionName);
+            await validateVSCodeProjectFiles(projectPath);
+        });
     });
 });
