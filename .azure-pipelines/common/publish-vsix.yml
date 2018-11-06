@@ -16,3 +16,4 @@ steps:
   inputs:
     PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: vsix
+  condition: not(variables['System.PullRequest.IsFork'])
