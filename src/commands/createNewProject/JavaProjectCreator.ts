@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
@@ -15,26 +16,21 @@ import { localize } from "../../localize";
 import * as fsUtil from '../../utils/fs';
 import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNameUtils';
 import { mavenUtils } from '../../utils/mavenUtils';
-import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './ProjectCreatorBase';
 
 export class JavaProjectCreator extends ProjectCreatorBase {
-    public static defaultRuntime: ProjectRuntime = ProjectRuntime.v2;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
 
     private _javaTargetPath: string;
-    private _actionContext: IActionContext;
 
-    constructor(functionAppPath: string, actionContext: IActionContext) {
-        super(functionAppPath, actionContext.properties);
-        this._actionContext = actionContext;
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
+        super(functionAppPath, actionContext, runtime);
+        assert.notEqual(runtime, ProjectRuntime.v1, localize('noV1', 'Java does not support runtime "{0}".', ProjectRuntime.v1));
+        this.runtime = ProjectRuntime.v2;
     }
 
-    public async getRuntime(): Promise<ProjectRuntime> {
-        return JavaProjectCreator.defaultRuntime;
-    }
-
-    public async addNonVSCodeFiles(): Promise<void> {
-        await mavenUtils.validateMavenInstalled(this._actionContext, this.functionAppPath);
+    public async onCreateNewProject(): Promise<void> {
+        await mavenUtils.validateMavenInstalled(this.actionContext, this.functionAppPath);
 
         const groupOptions: InputBoxOptions = {
             placeHolder: localize('azFunc.java.groupIdPlaceholder', 'Group ID'),
@@ -80,7 +76,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
             // Use maven command to init Java function project.
             ext.outputChannel.show();
             await mavenUtils.executeMvnCommand(
-                this.telemetryProperties,
+                this.actionContext.properties,
                 ext.outputChannel,
                 tempFolder,
                 'archetype:generate',
@@ -100,31 +96,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
         this._javaTargetPath = `target/azure-functions/${appName}/`;
     }
 
-    public async getTasksJson(): Promise<{}> {
-        let tasksJson: {} = {
-            version: '2.0.0',
-            tasks: [
-                {
-                    label: funcHostTaskLabel,
-                    linux: {
-                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
-                    },
-                    osx: {
-                        command: 'sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
-                    },
-                    windows: {
-                        command: 'powershell -command "mvn clean package -B; func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"%path%\\\""'
-                    },
-                    type: 'shell',
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: funcWatchProblemMatcher
-                }
-            ]
-        };
-        let tasksJsonString: string = JSON.stringify(tasksJson);
+    public async onInitProjectForVSCode(): Promise<void> {
         if (!this._javaTargetPath) {
             const pomFilePath: string = path.join(this.functionAppPath, 'pom.xml');
             if (!await fse.pathExists(pomFilePath)) {
@@ -138,10 +110,32 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                 this._javaTargetPath = `target/azure-functions/${functionAppName}/`;
             }
         }
-        tasksJsonString = tasksJsonString.replace(/%path%/g, this._javaTargetPath);
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        tasksJson = JSON.parse(tasksJsonString);
-        return tasksJson;
+    }
+
+    public getTasksJson(): {} {
+        return {
+            version: '2.0.0',
+            tasks: [
+                {
+                    label: funcHostTaskLabel,
+                    linux: {
+                        command: `sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"${this._javaTargetPath}\\\""`
+                    },
+                    osx: {
+                        command: `sh -c "mvn clean package -B && func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"${this._javaTargetPath}\\\""`
+                    },
+                    windows: {
+                        command: `powershell -command "mvn clean package -B; func host start --language-worker -- \\\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005\\\" --script-root \\\"${this._javaTargetPath}\\\""`
+                    },
+                    type: 'shell',
+                    isBackground: true,
+                    presentation: {
+                        reveal: 'always'
+                    },
+                    problemMatcher: funcWatchProblemMatcher
+                }
+            ]
+        };
     }
 
     public getLaunchJson(): {} {

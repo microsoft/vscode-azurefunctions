@@ -19,7 +19,7 @@ import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting }
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcWatchProblemMatcher, ProjectCreatorBase } from './IProjectCreator';
+import { funcWatchProblemMatcher, ProjectCreatorBase } from './ProjectCreatorBase';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
@@ -27,11 +27,8 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     public preDeployTask: string = publishTaskId;
 
     private _debugSubpath: string;
-    private _runtime: ProjectRuntime;
 
-    private _hasDetectedRuntime: boolean = false;
-
-    public async addNonVSCodeFiles(runtime: ProjectRuntime | undefined): Promise<void> {
+    public async onCreateNewProject(): Promise<void> {
         await dotnetUtils.validateDotnetInstalled();
 
         const projectName: string = path.basename(this.functionAppPath);
@@ -39,22 +36,10 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
         await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
 
         // tslint:disable-next-line:strict-boolean-expressions
-        this._runtime = runtime || await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this._runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
-        const functionsVersion: string = this._runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
-        await executeDotnetTemplateCommand(this._runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
-
-        if (!this._hasDetectedRuntime) {
-            await this.detectRuntime();
-        }
-    }
-
-    public async getRuntime(): Promise<ProjectRuntime> {
-        if (!this._hasDetectedRuntime) {
-            await this.detectRuntime();
-        }
-
-        return this._runtime;
+        this.runtime = this.runtime || await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this.runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
+        const functionsVersion: string = this.runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(this.runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
     }
 
     public getTasksJson(): {} {
@@ -127,7 +112,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             configurations: [
                 {
                     name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
-                    type: this._runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
+                    type: this.runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
@@ -143,7 +128,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
      * Detects the runtime based on the targetFramework from the csproj file
      * Also performs a few validations and sets a few properties based on that targetFramework
      */
-    private async detectRuntime(): Promise<void> {
+    public async onInitProjectForVSCode(): Promise<void> {
         const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
         if (!csProjName) {
             throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
@@ -159,11 +144,11 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
         } else {
             const targetFramework: string = matches[1];
-            this.telemetryProperties.cSharpTargetFramework = targetFramework;
+            this.actionContext.properties.cSharpTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
-                this._runtime = ProjectRuntime.v2;
+                this.runtime = ProjectRuntime.v2;
             } else {
-                this._runtime = ProjectRuntime.v1;
+                this.runtime = ProjectRuntime.v1;
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
@@ -185,8 +170,6 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             this.deploySubpath = `bin/Release/${targetFramework}/publish`;
             this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
-
-        this._hasDetectedRuntime = true;
     }
 
     /**
@@ -203,7 +186,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     const versionMatches: RegExpMatchArray | null = /Version=(?:"([^"]+)"|'([^']+)')/g.exec(line);
                     if (versionMatches !== null && versionMatches.length > 2) {
                         const version: SemVer = new SemVer(versionMatches[1] || versionMatches[2]);
-                        this.telemetryProperties.cSharpFuncSdkVersion = version.raw;
+                        this.actionContext.properties.cSharpFuncSdkVersion = version.raw;
                         if (version.compare(minVersion) < 0) {
                             const newContents: string = csprojContents.replace(line, line.replace(version.raw, minVersion));
                             await fse.writeFile(csprojPath, newContents);
@@ -211,7 +194,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     }
                 }
             } catch (err) {
-                this.telemetryProperties.cSharpFuncSdkError = parseError(err).message;
+                this.actionContext.properties.cSharpFuncSdkError = parseError(err).message;
                 // ignore errors and assume the version of the templates installed on the user's machine works for them
             }
         }

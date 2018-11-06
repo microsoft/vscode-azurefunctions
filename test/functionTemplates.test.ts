@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { JavaProjectCreator } from '../src/commands/createNewProject/JavaProjectCreator';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
 import { FunctionTemplates } from '../src/templates/FunctionTemplates';
 import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
@@ -25,7 +24,7 @@ async function validateTemplateCounts(templates: FunctionTemplates, source: stri
     const jsTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v2, TemplateFilter.Verified);
     assert.equal(jsTemplatesv2.length, 7, `Unexpected JavaScript v2 ${source} templates count.`);
 
-    const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, JavaProjectCreator.defaultRuntime, TemplateFilter.Verified);
+    const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, ProjectRuntime.v2, TemplateFilter.Verified);
     assert.equal(javaTemplates.length, 4, `Unexpected Java ${source} templates count.`);
 
     const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);

@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TelemetryProperties } from "vscode-azureextensionui";
+import { IActionContext } from "vscode-azureextensionui";
 import { ProjectRuntime, TemplateFilter } from "../../constants";
-import { tryGetLocalRuntimeVersion } from "../../funcCoreTools/tryGetLocalRuntimeVersion";
-import { promptForProjectRuntime } from "../../ProjectSettings";
 
 export abstract class ProjectCreatorBase {
     public deploySubpath: string = '';
@@ -14,18 +12,15 @@ export abstract class ProjectCreatorBase {
     public excludedFiles: string | string[] = '';
     public otherSettings: { [key: string]: string } = {};
     public abstract templateFilter: TemplateFilter;
+    public runtime: ProjectRuntime | undefined;
 
     protected readonly functionAppPath: string;
-    protected readonly telemetryProperties: TelemetryProperties;
+    protected readonly actionContext: IActionContext;
 
-    constructor(functionAppPath: string, telemetryProperties: TelemetryProperties) {
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
         this.functionAppPath = functionAppPath;
-        this.telemetryProperties = telemetryProperties;
-    }
-
-    public async getRuntime(): Promise<ProjectRuntime> {
-        // tslint:disable-next-line:strict-boolean-expressions
-        return await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        this.actionContext = actionContext;
+        this.runtime = runtime;
     }
 
     public getLaunchJson(): {} | undefined {
@@ -34,10 +29,17 @@ export abstract class ProjectCreatorBase {
     }
 
     /**
-     * Add all project files not included in the '.vscode' folder
+     * Generic place to put any language-specific code that applies to "Create New Project", but _not_ "Init Project For VS Code"
      */
-    public abstract addNonVSCodeFiles(runtime: ProjectRuntime | undefined): Promise<void>;
-    public abstract getTasksJson(runtime: string): {} | Promise<{}>;
+    public abstract onCreateNewProject(): Promise<void>;
+
+    /**
+     * Generic place to put any language-specific code that applies to "Init Project For VS Code" (which is also a part of "Create New Project")
+     */
+    public abstract onInitProjectForVSCode(): Promise<void>;
+
+    public abstract getTasksJson(): {};
+
     public getRecommendedExtensions(): string[] {
         return ['ms-azuretools.vscode-azurefunctions'];
     }

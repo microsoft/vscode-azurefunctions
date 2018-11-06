@@ -6,7 +6,7 @@
 import { TemplateFilter } from "../../constants";
 import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
-import { funcWatchProblemMatcher } from "./IProjectCreator";
+import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
