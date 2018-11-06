@@ -7,4 +7,4 @@ steps:
 
 - task: ComponentGovernanceComponentDetection@0
   displayName: 'Component Detection'
-  condition: not(variables['System.PullRequest.IsFork'])
+  condition: ne(variables['System.PullRequest.IsFork'], 'True')
