@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, QuickPickItem, window } from 'vscode';
+import { QuickPickItem } from 'vscode';
 import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
@@ -20,12 +20,6 @@ import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
-
-export enum PythonAlias {
-    python = 'python',
-    python3 = 'python3',
-    py = 'py'
-}
 
 export const pythonVenvSetting: string = 'pythonVenv';
 const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
@@ -240,7 +234,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 /**
  * Returns undefined if valid or an error message if not
  */
-async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undefined> {
+async function validatePythonAlias(pyAlias: string): Promise<string | undefined> {
     try {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
         if (result.code !== 0) {
@@ -287,23 +281,17 @@ function getVenvActivateCommand(venvName: string, platform: NodeJS.Platform): st
 }
 
 async function getPythonAlias(): Promise<string> {
-    for (const key of Object.keys(PythonAlias)) {
-        const alias: PythonAlias = <PythonAlias>PythonAlias[key];
+    let defaultAlias: string | undefined;
+    for (const alias of ['python3.6', 'python3', 'python', 'py']) {
         const errorMessage: string | undefined = await validatePythonAlias(alias);
         if (!errorMessage) {
-            return alias;
+            defaultAlias = alias;
+            break;
         }
     }
 
-    const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
-    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project and was not found.', minPythonVersionLabel);
-    const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
-    if (!result) {
-        throw new UserCancelledError();
-    } else {
-        const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
-        return await ext.ui.showInputBox({ placeHolder, validateInput: validatePythonAlias });
-    }
+    const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python "{0}" executable to use.', minPythonVersionLabel);
+    return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias, value: defaultAlias });
 }
 
 export async function createVirtualEnviornment(venvName: string, functionAppPath: string): Promise<void> {
