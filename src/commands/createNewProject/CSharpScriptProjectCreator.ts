@@ -11,6 +11,7 @@ import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Core;
+    public readonly deploySubpath: string = '.';
 
     public getTasksJson(): {} {
         return {
