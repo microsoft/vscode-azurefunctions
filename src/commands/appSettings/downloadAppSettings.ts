@@ -30,7 +30,7 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLine(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
-        let localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
+        let localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath, true /* allowOverwrite */);
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
         if (localSettings.IsEncrypted) {

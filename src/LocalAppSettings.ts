@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IAzureQuickPickItem, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from './constants';
 import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
@@ -155,11 +155,22 @@ async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: str
     await fsUtil.writeFormattedJson(localSettingsPath, settings);
 }
 
-export async function getLocalSettings(localSettingsPath: string): Promise<ILocalAppSettings> {
+export async function getLocalSettings(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalAppSettings> {
     if (await fse.pathExists(localSettingsPath)) {
         const data: string = (await fse.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
-            return <ILocalAppSettings>JSON.parse(data);
+            try {
+                return <ILocalAppSettings>JSON.parse(data);
+            } catch (error) {
+                if (allowOverwrite) {
+                    const message: string = localize('failedToParse', 'Failed to parse local settings: {0}. Overwrite?', parseError(error).message);
+                    const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };
+                    // Overwrite is the only button and cancel automatically throws, so no need to check result
+                    await ext.ui.showWarningMessage(message, { modal: true }, overwriteButton, DialogResponses.cancel);
+                } else {
+                    throw error;
+                }
+            }
         }
     }
 
