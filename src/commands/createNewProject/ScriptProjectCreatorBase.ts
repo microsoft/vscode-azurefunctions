@@ -35,6 +35,8 @@ project.lock.json
 .secrets
 appsettings.json
 local.settings.json
+
+node_modules
 `;
 
 /**
