@@ -13,14 +13,15 @@ import { DialogResponses } from 'vscode-azureextensionui';
 import { DebugProxy } from '../DebugProxy';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugFunctionApp(node?: FunctionAppTreeItem): Promise<void> {
+export async function remoteDebugFunctionApp(node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();

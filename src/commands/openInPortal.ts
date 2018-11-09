@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureTreeItem } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 
-export async function openInPortal(node?: FunctionAppTreeItem): Promise<void> {
+export async function openInPortal(node?: AzureTreeItem): Promise<void> {
     if (!node) {
-        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
 
     node.openInPortal();

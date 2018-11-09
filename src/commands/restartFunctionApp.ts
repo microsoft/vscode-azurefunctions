@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 
-export async function restartFunctionApp(node?: FunctionAppTreeItem): Promise<void> {
+export async function restartFunctionApp(node?: SlotTreeItemBase): Promise<void> {
     await stopFunctionApp(node);
     await startFunctionApp(node);
 }

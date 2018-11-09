@@ -12,12 +12,13 @@ import { FunctionTreeItem } from './FunctionTreeItem';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 import { ProxyTreeItem } from './ProxyTreeItem';
 
-export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
-    public static contextValue: string = 'azFuncFunctionApp';
-    public readonly contextValue: string = FunctionAppTreeItem.contextValue;
+export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot> {
     public logStreamPath: string = '';
     public readonly isLinuxPreview: boolean;
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
+
+    public abstract readonly contextValue: string;
+    public abstract readonly label: string;
 
     private readonly _root: ISiteTreeRoot;
     private _state?: string;
@@ -47,10 +48,6 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this.root.client.id;
     }
 
-    public get label(): string {
-        return this.root.client.fullName;
-    }
-
     public get description(): string | undefined {
         const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
         const previewDescription: string | undefined = this.isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
@@ -62,7 +59,7 @@ export class FunctionAppTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionAppTreeItem.contextValue);
+        return nodeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {
