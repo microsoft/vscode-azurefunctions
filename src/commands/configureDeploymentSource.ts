@@ -13,7 +13,7 @@ export async function configureDeploymentSource(this: IActionContext, node?: Fun
         node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
     }
 
-    const updatedScmType: string | undefined = await editScmType(node.root.client, node);
+    const updatedScmType: string | undefined = await editScmType(node.root.client, node, this);
     if (updatedScmType !== undefined) {
         this.properties.updatedScmType = updatedScmType;
     }
