@@ -47,18 +47,18 @@ import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    registerUIExtensionVariables(ext);
-    registerAppServiceExtensionVariables(ext);
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
     context.subscriptions.push(ext.outputChannel);
+    ext.ui = new AzureUserInput(context.globalState);
+
+    registerUIExtensionVariables(ext);
+    registerAppServiceExtensionVariables(ext);
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
         this.measurements.mainFileLoad = (loadEndTime - loadStartTime) / 1000;
-
-        ext.ui = new AzureUserInput(context.globalState);
 
         // tslint:disable-next-line:no-floating-promises
         validateFuncCoreToolsIsLatest();
