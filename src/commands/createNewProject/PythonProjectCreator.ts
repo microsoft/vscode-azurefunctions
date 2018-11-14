@@ -16,6 +16,7 @@ import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHost
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
+import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
@@ -25,6 +26,7 @@ export const pythonVenvSetting: string = 'pythonVenv';
 const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
 
 const minPythonVersion: string = '3.6.0';
+const maxPythonVersion: string = '3.7.0';
 const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the label to make it more clear that any patch version is allowed
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
@@ -234,7 +236,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 /**
  * Returns undefined if valid or an error message if not
  */
-async function validatePythonAlias(pyAlias: string): Promise<string | undefined> {
+async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean = false): Promise<string | undefined> {
     try {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
         if (result.code !== 0) {
@@ -246,10 +248,12 @@ async function validatePythonAlias(pyAlias: string): Promise<string | undefined>
             return localize('failedParse', 'Failed to parse version: {0}', result.cmdOutputIncludingStderr);
         } else {
             const pyVersion: string = matches[1];
-            if (semver.gte(pyVersion, minPythonVersion)) {
-                return undefined;
-            } else {
+            if (semver.lt(pyVersion, minPythonVersion)) {
                 return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            } else if (validateMaxVersion && semver.gte(pyVersion, maxPythonVersion)) {
+                return localize('tooHighVersion', 'Python version "{0}" is greater than or equal to the maximum version of "{1}".', pyVersion, maxPythonVersion);
+            } else {
+                return undefined;
             }
         }
     } catch (error) {
@@ -281,17 +285,23 @@ function getVenvActivateCommand(venvName: string, platform: NodeJS.Platform): st
 }
 
 async function getPythonAlias(): Promise<string> {
-    let defaultAlias: string | undefined;
-    for (const alias of ['python3.6', 'python3', 'python', 'py']) {
-        const errorMessage: string | undefined = await validatePythonAlias(alias);
+    const aliasesToTry: string[] = ['python3.6', 'py -3.6', 'python3', 'python', 'py'];
+    const globalPythonPathSetting: string | undefined = getGlobalFuncExtensionSetting('pythonPath', 'python');
+    if (globalPythonPathSetting) {
+        aliasesToTry.unshift(globalPythonPathSetting);
+    }
+
+    for (const alias of aliasesToTry) {
+        // Validate max version when silently picking the alias for the user
+        const errorMessage: string | undefined = await validatePythonAlias(alias, true /* validateMaxVersion */);
         if (!errorMessage) {
-            defaultAlias = alias;
-            break;
+            return alias;
         }
     }
 
     const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python "{0}" executable to use.', minPythonVersionLabel);
-    return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias, value: defaultAlias });
+    // Don't validate max version when prompting (because the Functions team will assumably support 3.7+ at some point and we don't want to block people from using that)
+    return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias });
 }
 
 export async function createVirtualEnviornment(venvName: string, functionAppPath: string): Promise<void> {
