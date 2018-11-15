@@ -72,7 +72,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
         this._venvName = await this.ensureVenv();
 
-        await runPythonCommandInVenv(this._venvName, this.functionAppPath, 'func init ./ --worker-runtime python');
+        await runPythonCommandInVenv(this._venvName, this.functionAppPath, `${ext.funcCliPath} init ./ --worker-runtime python`);
     }
 
     public async onInitProjectForVSCode(): Promise<void> {
