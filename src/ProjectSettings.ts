@@ -78,8 +78,8 @@ export async function selectTemplateFilter(projectPath: string, ui: IAzureUserIn
     return <TemplateFilter>result;
 }
 
-export function getGlobalFuncExtensionSetting<T>(key: string): T | undefined {
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix);
+export function getGlobalFuncExtensionSetting<T>(key: string, prefix: string = extensionPrefix): T | undefined {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
     const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
     return result && result.globalValue;
 }

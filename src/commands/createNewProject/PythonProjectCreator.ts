@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as semver from 'semver';
-import { MessageItem, QuickPickItem, window } from 'vscode';
+import { QuickPickItem } from 'vscode';
 import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { ext } from '../../extensionVariables';
@@ -16,21 +16,17 @@ import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHost
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
+import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
 import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export enum PythonAlias {
-    python = 'python',
-    python3 = 'python3',
-    py = 'py'
-}
-
 export const pythonVenvSetting: string = 'pythonVenv';
 const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
 
 const minPythonVersion: string = '3.6.0';
+const maxPythonVersion: string = '3.7.0';
 const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the label to make it more clear that any patch version is allowed
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
@@ -240,7 +236,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 /**
  * Returns undefined if valid or an error message if not
  */
-async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undefined> {
+async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean = false): Promise<string | undefined> {
     try {
         const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
         if (result.code !== 0) {
@@ -252,10 +248,12 @@ async function validatePythonAlias(pyAlias: PythonAlias): Promise<string | undef
             return localize('failedParse', 'Failed to parse version: {0}', result.cmdOutputIncludingStderr);
         } else {
             const pyVersion: string = matches[1];
-            if (semver.gte(pyVersion, minPythonVersion)) {
-                return undefined;
-            } else {
+            if (semver.lt(pyVersion, minPythonVersion)) {
                 return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
+            } else if (validateMaxVersion && semver.gte(pyVersion, maxPythonVersion)) {
+                return localize('tooHighVersion', 'Python version "{0}" is greater than or equal to the maximum version of "{1}".', pyVersion, maxPythonVersion);
+            } else {
+                return undefined;
             }
         }
     } catch (error) {
@@ -287,23 +285,23 @@ function getVenvActivateCommand(venvName: string, platform: NodeJS.Platform): st
 }
 
 async function getPythonAlias(): Promise<string> {
-    for (const key of Object.keys(PythonAlias)) {
-        const alias: PythonAlias = <PythonAlias>PythonAlias[key];
-        const errorMessage: string | undefined = await validatePythonAlias(alias);
+    const aliasesToTry: string[] = ['python3.6', 'py -3.6', 'python3', 'python', 'py'];
+    const globalPythonPathSetting: string | undefined = getGlobalFuncExtensionSetting('pythonPath', 'python');
+    if (globalPythonPathSetting) {
+        aliasesToTry.unshift(globalPythonPathSetting);
+    }
+
+    for (const alias of aliasesToTry) {
+        // Validate max version when silently picking the alias for the user
+        const errorMessage: string | undefined = await validatePythonAlias(alias, true /* validateMaxVersion */);
         if (!errorMessage) {
             return alias;
         }
     }
 
-    const enterPython: MessageItem = { title: localize('enterPython', 'Enter Python Path') };
-    const pythonMsg: string = localize('pythonVersionRequired', 'Python {0} is required to create a Python Function project and was not found.', minPythonVersionLabel);
-    const result: MessageItem | undefined = await window.showErrorMessage(pythonMsg, { modal: true }, enterPython);
-    if (!result) {
-        throw new UserCancelledError();
-    } else {
-        const placeHolder: string = localize('pyAliasPlaceholder', 'Enter the Python alias (if its in your PATH) or the full path to your Python executable.');
-        return await ext.ui.showInputBox({ placeHolder, validateInput: validatePythonAlias });
-    }
+    const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python "{0}" executable to use.', minPythonVersionLabel);
+    // Don't validate max version when prompting (because the Functions team will assumably support 3.7+ at some point and we don't want to block people from using that)
+    return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias });
 }
 
 export async function createVirtualEnviornment(venvName: string, functionAppPath: string): Promise<void> {
