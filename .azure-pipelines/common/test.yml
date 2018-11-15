@@ -1,4 +1,6 @@
 steps:
+- template: before-test.yml
+
 - task: Gulp@0
   displayName: 'Test'
   inputs:
