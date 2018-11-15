@@ -18,9 +18,10 @@ import { ext } from '../extensionVariables';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { mavenUtils } from '../utils/mavenUtils';
@@ -28,11 +29,11 @@ import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
-export async function deploy(this: IActionContext, target?: vscode.Uri | string | FunctionAppTreeItem, functionAppId?: string | {}): Promise<void> {
+export async function deploy(this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
     const telemetryProperties: TelemetryProperties = this.properties;
     let deployFsPath: string;
-    const newNodes: FunctionAppTreeItem[] = [];
-    let node: FunctionAppTreeItem | undefined;
+    const newNodes: SlotTreeItemBase[] = [];
+    let node: SlotTreeItemBase | undefined;
 
     if (target instanceof vscode.Uri) {
         deployFsPath = await appendDeploySubpathSetting(target.fsPath);
@@ -46,18 +47,18 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
     const workspaceFsPath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
 
-    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: FunctionAppTreeItem) => {
+    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => {
         // event is fired from azure-extensionui if node was created during deployment
         newNodes.push(newNode);
     });
     try {
         if (!node) {
             if (!functionAppId || typeof functionAppId !== 'string') {
-                node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+                node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
             } else {
                 const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId);
                 if (functionAppNode) {
-                    node = <FunctionAppTreeItem>functionAppNode;
+                    node = <SlotTreeItemBase>functionAppNode;
                 } else {
                     throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
                 }
@@ -140,7 +141,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     await listHttpTriggerUrls(node, this);
 }
 
-async function listHttpTriggerUrls(node: FunctionAppTreeItem, actionContext: IActionContext): Promise<void> {
+async function listHttpTriggerUrls(node: SlotTreeItemBase, actionContext: IActionContext): Promise<void> {
     try {
         const children: AzureTreeItem[] = await node.getCachedChildren();
         const functionsNode: FunctionsTreeItem = <FunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof FunctionsTreeItem);
@@ -355,7 +356,7 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
     }
 }
 
-async function verifyWebContentSettings(node: FunctionAppTreeItem, telemetryProperties: TelemetryProperties): Promise<void> {
+async function verifyWebContentSettings(node: SlotTreeItemBase, telemetryProperties: TelemetryProperties): Promise<void> {
     if (node.isLinuxPreview) {
         // we need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
         const client: appservice.SiteClient = node.root.client;

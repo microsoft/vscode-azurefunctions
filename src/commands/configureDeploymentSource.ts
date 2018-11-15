@@ -6,11 +6,12 @@
 import { editScmType } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
-export async function configureDeploymentSource(this: IActionContext, node?: FunctionAppTreeItem): Promise<void> {
+export async function configureDeploymentSource(this: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
 
     const updatedScmType: string | undefined = await editScmType(node.root.client, node, this);

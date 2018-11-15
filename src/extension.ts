@@ -42,8 +42,8 @@ import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getTemplateProvider } from './templates/TemplateProvider';
 import { FunctionAppProvider } from './tree/FunctionAppProvider';
-import { FunctionAppTreeItem } from './tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
+import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -94,7 +94,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         registerCommand('azureFunctions.startFunctionApp', startFunctionApp);
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
-        registerCommand('azureFunctions.deleteFunctionApp', async (node?: AzureParentTreeItem) => await deleteNode(FunctionAppTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deleteFunctionApp', async (node?: AzureParentTreeItem) => await deleteNode(ProductionSlotTreeItem.contextValue, node));
         registerCommand('azureFunctions.deploy', deploy);
         registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
         registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);

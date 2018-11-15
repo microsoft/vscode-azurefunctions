@@ -8,12 +8,13 @@ import * as appservice from 'vscode-azureappservice';
 import { DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionAppTreeItem } from '../../tree/FunctionAppTreeItem';
 import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
+import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
-export async function startStreamingLogs(treeItem?: FunctionAppTreeItem | FunctionTreeItem): Promise<void> {
+export async function startStreamingLogs(treeItem?: SlotTreeItemBase | FunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+        treeItem = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
 
     const client: appservice.SiteClient = treeItem.root.client;

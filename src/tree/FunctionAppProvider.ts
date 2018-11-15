@@ -11,7 +11,7 @@ import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVe
 import { localize } from "../localize";
 import { convertStringToRuntime, getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
-import { FunctionAppTreeItem } from "./FunctionAppTreeItem";
+import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
@@ -55,7 +55,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
                 if (siteClient.isFunctionApp) {
                     const asp: WebSiteManagementModels.AppServicePlan | undefined = await siteClient.getAppServicePlan();
                     const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
-                    return new FunctionAppTreeItem(this, siteClient, isLinuxPreview);
+                    return new ProductionSlotTreeItem(this, siteClient, isLinuxPreview);
                 }
                 return undefined;
             },
@@ -90,7 +90,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         }
 
         const site: WebSiteManagementModels.Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
-        return new FunctionAppTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
+        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
     }
 }
 

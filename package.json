@@ -305,58 +305,63 @@
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncProductionSlot",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@3"
                 },
                 {
                     "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@4"
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "4@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "4@2"
                 },
                 {
                     "command": "azureFunctions.debugFunctionAppOnAzure",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp && config.azureFunctions.enableRemoteDebugging == true",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctionApp",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "6@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlots",
+                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
@@ -677,6 +682,11 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "%azFunc.pythonVenvDescription%"
+                    },
+                    "azureFunctions.enableSlots": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableSlotsDescription%",
+                        "default": false
                     }
                 }
             }

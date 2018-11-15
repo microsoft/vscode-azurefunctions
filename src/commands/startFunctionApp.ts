@@ -6,11 +6,12 @@
 import { SiteClient } from 'vscode-azureappservice';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { FunctionAppTreeItem } from '../tree/FunctionAppTreeItem';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
-export async function startFunctionApp(node?: FunctionAppTreeItem): Promise<void> {
+export async function startFunctionApp(node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <FunctionAppTreeItem>await ext.tree.showTreeItemPicker(FunctionAppTreeItem.contextValue);
+        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
 
     const client: SiteClient = node.root.client;
