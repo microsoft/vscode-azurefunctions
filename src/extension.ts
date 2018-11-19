@@ -10,7 +10,9 @@ let loadEndTime: number;
 
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+// tslint:disable-next-line:no-submodule-imports
+import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { decryptLocalSettings } from './commands/appSettings/decryptLocalSettings';
 import { downloadAppSettings } from './commands/appSettings/downloadAppSettings';
 import { encryptLocalSettings } from './commands/appSettings/encryptLocalSettings';
@@ -46,7 +48,7 @@ import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(context: vscode.ExtensionContext): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
@@ -116,6 +118,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         registerFuncHostTaskEvents();
     });
+
+    return createApiProvider([]);
 }
 
 // tslint:disable-next-line:no-empty
