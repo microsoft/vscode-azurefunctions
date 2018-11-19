@@ -8,6 +8,7 @@ import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscod
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
@@ -32,6 +33,7 @@ export async function createNewProject(
     templateId?: string,
     functionName?: string,
     caseSensitiveFunctionSettings?: { [key: string]: string | undefined }): Promise<void> {
+    addLocalFuncTelemetry(actionContext);
 
     if (functionAppPath === undefined) {
         functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));

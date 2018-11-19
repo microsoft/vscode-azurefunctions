@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { cpUtils } from '../utils/cpUtils';
 
@@ -25,4 +26,16 @@ export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
         }
         return null;
     }
+}
+
+export function addLocalFuncTelemetry(actionContext: IActionContext): void {
+    actionContext.properties.funcCliVersion = 'unknown';
+
+    // tslint:disable-next-line:no-floating-promises
+    getLocalFuncCoreToolsVersion().then((version: string) => {
+        // tslint:disable-next-line:strict-boolean-expressions
+        actionContext.properties.funcCliVersion = version || 'none';
+    }).catch(() => {
+        actionContext.properties.funcCliVersion = 'none';
+    });
 }
