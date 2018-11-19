@@ -10,6 +10,7 @@ import { InputBoxOptions, MessageItem, QuickPickItem, Uri, window, workspace } f
 import { DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
@@ -75,6 +76,7 @@ export async function createFunction(
     caseSensitiveFunctionSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     runtime?: ProjectRuntime): Promise<void> {
+    addLocalFuncTelemetry(actionContext);
 
     const functionSettings: { [key: string]: string | undefined } = {};
     if (caseSensitiveFunctionSettings) {

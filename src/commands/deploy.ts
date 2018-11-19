@@ -15,6 +15,7 @@ import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, Teleme
 import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
+import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
@@ -30,6 +31,8 @@ import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
 export async function deploy(this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+    addLocalFuncTelemetry(this);
+
     const telemetryProperties: TelemetryProperties = this.properties;
     let deployFsPath: string;
     const newNodes: SlotTreeItemBase[] = [];
