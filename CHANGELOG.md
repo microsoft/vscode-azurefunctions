@@ -4,6 +4,11 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.12.1 - 2018-11-26
+
+### Fixed
+- Bumped minimum version of "ps-tree" due to [event-stream#116](https://github.com/dominictarr/event-stream/issues/116)
+
 ## 0.12.0 - 2018-10-22
 
 ### Added
