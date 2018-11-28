@@ -130,7 +130,6 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 ### Python
 
 * [Python 3.6.x](https://www.python.org/downloads/)
-* To enable project creation and debugging, set `azureFunctions.enablePython` to true. **IMPORTANT**: Python support in Azure is still in private preview.
 
 ## Managing Azure Subscriptions
 
