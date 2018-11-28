@@ -438,17 +438,17 @@
                 {
                     "command": "azureFunctions.deploy",
                     "when": "explorerResourceIsFolder == true",
-                    "group": "zzz_@1"
+                    "group": "zzz_deploy@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.decrypt",
                     "when": "resourceFilename==local.settings.json",
-                    "group": "zzz_@1"
+                    "group": "zzz_appSettings@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.encrypt",
                     "when": "resourceFilename==local.settings.json",
-                    "group": "zzz_@2"
+                    "group": "zzz_appSettings@2"
                 }
             ],
             "commandPalette": [
