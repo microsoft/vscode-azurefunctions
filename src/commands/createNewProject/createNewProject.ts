@@ -11,7 +11,7 @@ import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { convertStringToRuntime, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
@@ -44,16 +44,14 @@ export async function createNewProject(
         language = getGlobalFuncExtensionSetting(projectLanguageSetting);
 
         if (!language) {
+            const previewDescription: string = localize('previewDescription', '(Preview)');
             // Only display 'supported' languages that can be debugged in VS Code
             const languagePicks: QuickPickItem[] = [
                 { label: ProjectLanguage.JavaScript, description: '' },
                 { label: ProjectLanguage.CSharp, description: '' },
-                { label: ProjectLanguage.Java, description: '' }
+                { label: ProjectLanguage.Python, description: previewDescription },
+                { label: ProjectLanguage.Java, description: previewDescription }
             ];
-
-            if (getFuncExtensionSetting('enablePython')) {
-                languagePicks.push({ label: ProjectLanguage.Python, description: '(Preview)' });
-            }
 
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
             language = (await ext.ui.showQuickPick(languagePicks, options)).label;

@@ -673,11 +673,6 @@
                         "type": "string",
                         "description": "%azFunc.preDeployTaskDescription%"
                     },
-                    "azureFunctions.enablePython": {
-                        "type": "boolean",
-                        "description": "%azFunc.enablePythonDescription%",
-                        "default": false
-                    },
                     "azureFunctions.pythonVenv": {
                         "scope": "resource",
                         "type": "string",
