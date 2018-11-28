@@ -215,7 +215,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
         let result: string;
         if (venvs.length === 0) {
-            result = 'func_env';
+            result = '.env'; // default name
             await createVirtualEnviornment(result, this.functionAppPath);
         } else if (venvs.length === 1) {
             result = venvs[0];
