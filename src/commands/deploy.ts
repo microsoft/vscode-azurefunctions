@@ -324,11 +324,15 @@ async function runPreDeployTask(deployFsPath: string, telemetryProperties: Telem
     if (preDeployTask) {
         telemetryProperties.foundPreDeployTask = 'true';
         await vscode.tasks.executeTask(preDeployTask);
-        await new Promise((resolve: () => void): void => {
-            const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
+        await new Promise((resolve: () => void, reject: (error: Error) => void): void => {
+            const listener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
                 if (e.execution.task === preDeployTask) {
-                    resolve();
                     listener.dispose();
+                    if (e.exitCode === 0) {
+                        resolve();
+                    } else {
+                        reject(new Error(localize('taskFailed', 'Failed to deploy. Pre-deploy task "{0}" failed with exit code "{1}".', e.execution.task.name, e.exitCode)));
+                    }
                 }
             });
         });
