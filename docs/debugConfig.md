@@ -9,8 +9,7 @@ The first option is to add `languageWorkers__node__arguments` to your `runFuncti
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Run Functions Host",
-      "identifier": "runFunctionsHost",
+      "label": "runFunctionsHost",
       "type": "shell",
       "command": "func host start",
       "options": {
@@ -19,27 +18,7 @@ The first option is to add `languageWorkers__node__arguments` to your `runFuncti
         }
       },
       "isBackground": true,
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": [
-        {
-          "owner": "azureFunctions",
-          "pattern": [
-            {
-              "regexp": "\\b\\B",
-              "file": 1,
-              "location": 2,
-              "message": 3
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^.*Stopping host.*",
-            "endsPattern": "^.*Job host started.*"
-          }
-        }
-      ]
+      "problemMatcher": "$func-watch"
     }
   ]
 }
@@ -50,37 +29,16 @@ The second option requires two steps:
 1. Pass the `--language-worker` parameter to `func host start` in your `runFunctionsHost` task in `.vscode\tasks.json` as seen below:
     ```json
     {
-    "version": "2.0.0",
-    "tasks": [
+      "version": "2.0.0",
+      "tasks": [
         {
-        "label": "Run Functions Host",
-        "identifier": "runFunctionsHost",
-        "type": "shell",
-        "command": "func host start --language-worker -- \"--inspect=5858\"",
-        "isBackground": true,
-        "presentation": {
-            "reveal": "always"
-        },
-        "problemMatcher": [
-            {
-            "owner": "azureFunctions",
-            "pattern": [
-                {
-                "regexp": "\\b\\B",
-                "file": 1,
-                "location": 2,
-                "message": 3
-                }
-            ],
-            "background": {
-                "activeOnStart": true,
-                "beginsPattern": "^.*Stopping host.*",
-                "endsPattern": "^.*Job host started.*"
-            }
-            }
-        ]
+          "label": "runFunctionsHost",
+          "type": "shell",
+          "command": "func host start --language-worker -- \"--inspect=5858\"",
+          "isBackground": true,
+          "problemMatcher": "$func-watch"
         }
-    ]
+      ]
     }
     ```
 

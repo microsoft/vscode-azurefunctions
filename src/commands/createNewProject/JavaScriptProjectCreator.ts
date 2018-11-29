@@ -45,19 +45,13 @@ export class JavaScriptProjectCreator extends ScriptProjectCreatorBase {
             type: 'shell',
             command: funcHostCommand,
             isBackground: true,
-            presentation: {
-                reveal: 'always'
-            },
             problemMatcher: funcWatchProblemMatcher
         };
 
         const installExtensionsTask: {} = {
             label: installExtensionsId,
             command: 'func extensions install',
-            type: 'shell',
-            presentation: {
-                reveal: 'always'
-            }
+            type: 'shell'
         };
 
         // tslint:disable-next-line:no-unsafe-any

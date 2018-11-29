@@ -105,9 +105,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                         command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
                     },
                     isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
                     options: {
                         env: {
                             languageWorkers__python__arguments: '-m ptvsd --host 127.0.0.1 --port 9091'
@@ -127,10 +124,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     linux: {
                         command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcPackCommand)
                     },
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    }
+                    isBackground: true
                 }
             ]
         };
