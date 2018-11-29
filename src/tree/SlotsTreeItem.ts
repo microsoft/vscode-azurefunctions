@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
+import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -61,5 +61,11 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
                 return site.name;
             }
         );
+    }
+
+    public async createChildImpl(showCreatingTreeItem: (label: string) => void): Promise<AzureTreeItem<ISiteTreeRoot>> {
+        const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren();
+        const newSite: WebSiteManagementModels.Site = await createSlot(this.root, existingSlots, showCreatingTreeItem);
+        return new SlotTreeItem(this, new SiteClient(newSite, this.root), this.parent.isLinuxPreview);
     }
 }

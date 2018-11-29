@@ -37,6 +37,7 @@ import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
+import { swapSlot } from './commands/swapSlot';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
@@ -47,6 +48,7 @@ import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { FunctionTreeItem } from './tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
+import { SlotsTreeItem } from './tree/SlotsTreeItem';
 
 export async function activate(context: vscode.ExtensionContext): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -115,6 +117,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
         registerCommand('azureFunctions.deleteProxy', async (node?: AzureTreeItem) => await deleteNode(ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
+        registerCommand('azureFunctions.swapSlot', swapSlot);
+        registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
 
         registerFuncHostTaskEvents();
     });
