@@ -698,7 +698,7 @@
     "devDependencies": {
         "@types/clipboardy": "^1.1.0",
         "@types/fs-extra": "^4.0.3",
-        "@types/mocha": "^2.2.32",
+        "@types/mocha": "^5.2.5",
         "@types/node": "^8.0.28",
         "@types/opn": "^5.1.0",
         "@types/ps-tree": "^1.1.0",
@@ -715,7 +715,7 @@
         "gulp-decompress": "^2.0.1",
         "gulp-download": "^0.0.1",
         "gulp-filter": "^5.1.0",
-        "mocha": "^2.3.3",
+        "mocha": "^5.2.0",
         "mocha-junit-reporter": "^1.18.0",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.2.1",
