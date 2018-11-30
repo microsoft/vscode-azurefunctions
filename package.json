@@ -63,6 +63,8 @@
         "onCommand:azureFunctions.redeploy",
         "onCommand:azureFunctions.disconnectRepo",
         "onCommand:appService.ConnectToGithub",
+        "onCommand:azureFunctions.createSlot",
+        "onCommand:azureFunctions.swapSlot",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
         "onView:azureFunctionsExplorer"
@@ -267,6 +269,16 @@
                 "command": "azureFunctions.disconnectRepo",
                 "title": "%azFunc.disconnectRepo%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.createSlot",
+                "title": "%azFunc.createSlot%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.swapSlot",
+                "title": "%azFunc.swapSlot%",
+                "category": "Azure Functions"
             }
         ],
         "viewsContainers": {
@@ -352,9 +364,14 @@
                     "group": "2@3"
                 },
                 {
+                    "command": "azureFunctions.swapSlot",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlot",
+                    "group": "2@4"
+                },
+                {
                     "command": "azureFunctions.deleteFunctionApp",
                     "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "2@4"
+                    "group": "2@5"
                 },
                 {
                     "command": "azureFunctions.deploy",
@@ -387,9 +404,14 @@
                     "group": "6@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureFunctions.createSlot",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncSlots",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlots",
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
@@ -524,6 +546,14 @@
                 {
                     "command": "azureFunctions.debugFunctionAppOnAzure",
                     "when": "config.azureFunctions.enableRemoteDebugging == true"
+                },
+                {
+                    "command": "azureFunctions.createSlot",
+                    "when": "config.azureFunctions.enableSlots == true"
+                },
+                {
+                    "command": "azureFunctions.swapSlot",
+                    "when": "config.azureFunctions.enableSlots == true"
                 }
             ]
         },
@@ -791,10 +821,10 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.25.5",
+        "vscode-azureappservice": "^0.25.6",
         "vscode-azureextensionui": "^0.19.0",
         "vscode-azurekudu": "^0.1.8",
-        "vscode-nls": "^2.0.2",
+        "vscode-nls": "^4.0.0",
         "websocket": "^1.0.25",
         "xml2js": "^0.4.19",
         "xregexp": "^4.0.0"

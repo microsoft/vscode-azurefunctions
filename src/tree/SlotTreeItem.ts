@@ -3,11 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { SiteClient } from 'vscode-azureappservice';
+import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class SlotTreeItem extends SlotTreeItemBase {
     public static contextValue: string = 'azFuncSlot';
     public readonly contextValue: string = SlotTreeItem.contextValue;
+    public readonly parent: SlotsTreeItem;
+
+    public constructor(parent: SlotsTreeItem, client: SiteClient, isLinuxPreview: boolean) {
+        super(parent, client, isLinuxPreview);
+    }
 
     public get label(): string {
         // tslint:disable-next-line:no-non-null-assertion
