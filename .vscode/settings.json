@@ -14,5 +14,6 @@
     "tslint.ignoreDefinitionFiles": true,
     "files.exclude": {
         "tools/JsonCli/src/**": true
-    }
+    },
+    "typescript.preferences.importModuleSpecifier": "relative"
 }
