@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
+// tslint:disable-next-line:no-submodule-imports
+import * as WebSiteModels from 'azure-arm-website/lib/models';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
@@ -16,6 +18,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public logStreamPath: string = '';
     public readonly isLinuxPreview: boolean;
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
+    public deploymentsNode: DeploymentsTreeItem | undefined;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
@@ -75,7 +78,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
-        return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem];
+        const siteConfig: WebSiteModels.SiteConfig = await this.root.client.getSiteConfig();
+        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig);
+        return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }
 
     public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem<ISiteTreeRoot> | undefined {
@@ -89,6 +94,10 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             case ProxiesTreeItem.contextValue:
             case ProxyTreeItem.contextValue:
                 return this._proxiesTreeItem;
+            case DeploymentsTreeItem.contextValueConnected:
+            case DeploymentsTreeItem.contextValueUnconnected:
+            case DeploymentTreeItem.contextValue:
+                return this.deploymentsNode;
             default:
                 return undefined;
         }
