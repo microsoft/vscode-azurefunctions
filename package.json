@@ -493,6 +493,14 @@
                 {
                     "command": "azureFunctions.debugFunctionAppOnAzure",
                     "when": "config.azureFunctions.enableRemoteDebugging == true"
+                },
+                {
+                    "command": "azureFunctions.createSlot",
+                    "when": "config.azureFunctions.enableSlots == true"
+                },
+                {
+                    "command": "azureFunctions.swapSlot",
+                    "when": "config.azureFunctions.enableSlots == true"
                 }
             ]
         },
