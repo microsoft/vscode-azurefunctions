@@ -20,3 +20,5 @@ export class ArgumentError extends Error {
 export class NoSubscriptionError extends Error {
     public message: string = localize('azFunc.noSubscriptionError', 'You must be signed in to Azure to perform this operation.');
 }
+
+export class SkipForNowError extends Error { }
