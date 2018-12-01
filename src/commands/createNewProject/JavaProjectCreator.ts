@@ -129,9 +129,6 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     },
                     type: 'shell',
                     isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: funcWatchProblemMatcher
                 }
             ]

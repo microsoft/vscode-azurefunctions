@@ -4,32 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TemplateFilter } from "../../constants";
-import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { localize } from "../../localize";
-import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class CSharpScriptProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Core;
     public readonly deploySubpath: string = '.';
-
-    public getTasksJson(): {} {
-        return {
-            version: '2.0.0',
-            tasks: [
-                {
-                    label: funcHostTaskLabel,
-                    type: 'shell',
-                    command: funcHostCommand,
-                    isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
-                    problemMatcher: funcWatchProblemMatcher
-                }
-            ]
-        };
-    }
 
     public getLaunchJson(): {} {
         return {

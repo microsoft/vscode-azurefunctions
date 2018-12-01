@@ -50,9 +50,6 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     label: 'clean',
                     command: 'dotnet clean',
                     type: 'shell',
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: '$msCompile'
                 },
                 {
@@ -64,18 +61,12 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                         kind: 'build',
                         isDefault: true
                     },
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: '$msCompile'
                 },
                 {
                     label: 'clean release',
                     command: 'dotnet clean --configuration Release',
                     type: 'shell',
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: '$msCompile'
                 },
                 {
@@ -83,9 +74,6 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: '$msCompile'
                 },
                 {
@@ -97,9 +85,6 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     },
                     command: funcHostCommand,
                     isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: funcWatchProblemMatcher
                 }
             ]

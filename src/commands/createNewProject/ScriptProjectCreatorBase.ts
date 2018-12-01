@@ -57,9 +57,6 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                     type: 'shell',
                     command: funcHostCommand,
                     isBackground: true,
-                    presentation: {
-                        reveal: 'always'
-                    },
                     problemMatcher: funcWatchProblemMatcher
                 }
             ]
