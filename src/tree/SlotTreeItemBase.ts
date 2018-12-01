@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-submodule-imports
-import * as WebSiteModels from 'azure-arm-website/lib/models';
+import { WebSiteManagementModels } from 'azure-arm-website';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
@@ -78,7 +77,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
-        const siteConfig: WebSiteModels.SiteConfig = await this.root.client.getSiteConfig();
+        const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
         this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig);
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }

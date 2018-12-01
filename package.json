@@ -262,7 +262,7 @@
             },
             {
                 "command": "appService.ConnectToGithub",
-                "title": "%azFunc.ConnectToGithub%",
+                "title": "%azFunc.ConnectToGitHub%",
                 "category": "Azure Functions"
             },
             {
