@@ -9,6 +9,7 @@ import { isString } from 'util';
 import { InputBoxOptions, MessageItem, QuickPickItem, Uri, window, workspace } from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
+import { SkipForNowError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
@@ -152,14 +153,20 @@ export async function createFunction(
 
     const userSettings: { [propertyName: string]: string } = {};
     for (const setting of template.userPromptedSettings) {
-        let settingValue: string | undefined;
-        if (functionSettings[setting.name.toLowerCase()] !== undefined) {
-            settingValue = functionSettings[setting.name.toLowerCase()];
-        } else {
-            settingValue = await promptForSetting(actionContext, localSettingsPath, setting);
-        }
+        try {
+            let settingValue: string | undefined;
+            if (functionSettings[setting.name.toLowerCase()] !== undefined) {
+                settingValue = functionSettings[setting.name.toLowerCase()];
+            } else {
+                settingValue = await promptForSetting(actionContext, localSettingsPath, setting);
+            }
 
-        userSettings[setting.name] = settingValue ? settingValue : '';
+            userSettings[setting.name] = settingValue ? settingValue : '';
+        } catch (error) {
+            if (!(error instanceof SkipForNowError)) { // ignore error if user wants to skip this app setting
+                throw error;
+            }
+        }
     }
 
     const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, runtime);

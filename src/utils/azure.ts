@@ -7,9 +7,10 @@ import { CosmosDBManagementClient, CosmosDBManagementModels } from 'azure-arm-co
 import { ServiceBusManagementClient, ServiceBusManagementModels } from 'azure-arm-sb';
 import { StorageManagementClient, StorageManagementModels } from 'azure-arm-storage';
 import { BaseResource } from 'ms-rest-azure';
+import { isArray } from 'util';
 import { QuickPickOptions } from 'vscode';
 import { AzureTreeItem, AzureWizard, createAzureClient, IActionContext, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
-import { ArgumentError } from '../errors';
+import { ArgumentError, SkipForNowError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/IFunctionSetting';
@@ -42,15 +43,26 @@ interface IBaseResourceWithName extends BaseResource {
 }
 
 async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUserInput, resourceType: string, resourcesTask: Promise<T[]>): Promise<T> {
-    const picksTask: Promise<IAzureQuickPickItem<T>[]> = resourcesTask.then((resources: T[]) => {
-        return <IAzureQuickPickItem<T>[]>(resources
+    const picksTask: Promise<IAzureQuickPickItem<T | undefined>[]> = resourcesTask.then((resources: T[]) => {
+        const picks: IAzureQuickPickItem<T | undefined>[] = !isArray(resources) ? [] : <IAzureQuickPickItem<T>[]>(resources
             .map((r: T) => r.name ? { data: r, label: r.name } : undefined)
             .filter((p: IAzureQuickPickItem<T> | undefined) => p));
+        picks.push({
+            label: localize('skipForNow', '$(clock) Skip for now'),
+            data: undefined,
+            suppressPersistence: true
+        });
+        return picks;
     });
 
     const options: QuickPickOptions = { placeHolder: localize('azFunc.resourcePrompt', 'Select a \'{0}\'', resourceType) };
 
-    return (await ui.showQuickPick(picksTask, options)).data;
+    const result: T | undefined = (await ui.showQuickPick(picksTask, options)).data;
+    if (!result) {
+        throw new SkipForNowError();
+    } else {
+        return result;
+    }
 }
 
 export interface IResourceResult {
