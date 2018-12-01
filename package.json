@@ -59,6 +59,10 @@
         "onCommand:azureFunctions.deleteProxy",
         "onCommand:azureFunctions.uninstallFuncCoreTools",
         "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
+        "onCommand:azureFunctions.viewDeploymentLogs",
+        "onCommand:azureFunctions.redeploy",
+        "onCommand:azureFunctions.disconnectRepo",
+        "onCommand:appService.ConnectToGithub",
         "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.swapSlot",
         "workspaceContains:local.settings.json",
@@ -240,6 +244,30 @@
             {
                 "command": "azureFunctions.installOrUpdateFuncCoreTools",
                 "title": "%azFunc.installOrUpdateFuncCoreTools%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.redeploy",
+                "title": "%azFunc.redeploy%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.viewDeploymentLogs",
+                "title": "%azFunc.viewDeploymentLogs%",
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/Log_16x.svg",
+                    "dark": "resources/dark/Log_16x.svg"
+                }
+            },
+            {
+                "command": "appService.ConnectToGithub",
+                "title": "%azFunc.ConnectToGitHub%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.disconnectRepo",
+                "title": "%azFunc.disconnectRepo%",
                 "category": "Azure Functions"
             },
             {
@@ -454,6 +482,31 @@
                     "command": "azureFunctions.deleteProxy",
                     "when": "view == azureFunctionsExplorer && viewItem == azFuncProxy",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.disconnectRepo",
+                    "when": "view == azureFunctionsExplorer && viewItem == deploymentsConnected",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^deployments(C|Unc)onnected$/",
+                    "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.redeploy",
+                    "when": "view == azureFunctionsExplorer && viewItem == deployment",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.openInPortal",
+                    "when": "view == azureFunctionsExplorer && viewItem == deployment",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureFunctions.viewDeploymentLogs",
+                    "when": "view == azureFunctionsExplorer && viewItem == deployment",
+                    "group": "inline"
                 }
             ],
             "explorer/context": [

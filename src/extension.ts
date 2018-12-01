@@ -27,6 +27,10 @@ import { initProjectForVSCode } from './commands/createNewProject/initProjectFor
 import { validateFunctionProjects } from './commands/createNewProject/validateFunctionProjects';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy';
+import { connectToGitHub } from './commands/deployments/connectToGitHub';
+import { disconnectRepo } from './commands/deployments/disconnectRepo';
+import { redeployDeployment } from './commands/deployments/redeployDeployment';
+import { viewDeploymentLogs } from './commands/deployments/viewDeploymentLogs';
 import { editAppSetting } from './commands/editAppSetting';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
@@ -117,9 +121,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
         registerCommand('azureFunctions.deleteProxy', async (node?: AzureTreeItem) => await deleteNode(ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
+        registerCommand('azureFunctions.redeploy', redeployDeployment);
+        registerCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
+        registerCommand('appService.ConnectToGitHub', connectToGitHub);
+        registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
-
         registerFuncHostTaskEvents();
     });
 
