@@ -4,6 +4,27 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.13.0 - 2018-12-04
+
+### Added
+
+- Deployments node for Function Apps that are connected to a GitHub or LocalGit repository
+  - View deployment logs
+  - Redeploy previous deployments
+- Preview support for deployment slots (feature flag `azureFunctions.enableSlots` must be set to `true`)
+  - Deploy
+  - Stream logs
+  - Start/stop/restart
+  - Create/delete/swap
+
+### Changed
+
+- Feature flag no longer required for creating Python projects
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.13.0%22+label%3Abug+is%3Aclosed)
+
 ## 0.12.1 - 2018-11-26
 
 ### Fixed

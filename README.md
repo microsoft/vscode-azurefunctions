@@ -33,8 +33,10 @@ Install the prerequisites for your desired language:
 * View, edit, upload, and download application settings
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 * Stream logs from your remote Function Apps
+* View and manage deployment slots
+    > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
 * Debug Java Function App on Azure (experimental)
-    > **NOTE**: To enable it, you can set `azureFunctions.enableRemoteDebugging` to true.
+    > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
 
 ### Create New Project
 
