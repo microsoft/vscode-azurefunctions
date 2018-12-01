@@ -48,7 +48,7 @@ async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUser
             .map((r: T) => r.name ? { data: r, label: r.name } : undefined)
             .filter((p: IAzureQuickPickItem<T> | undefined) => p));
         picks.push({
-            label: localize('skipForNow', '<Skip for now>'),
+            label: localize('skipForNow', '$(clock) Skip for now'),
             data: undefined,
             suppressPersistence: true
         });
