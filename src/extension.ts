@@ -123,7 +123,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
         registerCommand('azureFunctions.redeploy', redeployDeployment);
         registerCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
-        registerCommand('appService.ConnectToGitHub', connectToGitHub);
+        registerCommand('azureFunctions.connectToGitHub', connectToGitHub);
         registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
