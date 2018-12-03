@@ -78,7 +78,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
-        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig);
+        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, 'azureFunctions.connectToGitHub');
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }
 
