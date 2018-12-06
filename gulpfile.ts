@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Grandfathered in
 // tslint:disable:no-console
-// tslint:disable:no-implicit-dependencies
+// tslint:disable:no-implicit-dependencies (this allows the use of dev dependencies)
+
+// Grandfathered in
 // tslint:disable:typedef
 // tslint:disable:no-unsafe-any
 
