@@ -12,3 +12,4 @@ tools/**
 .github/**
 test-results.xml
 .azure-pipelines/**
+gulp*
