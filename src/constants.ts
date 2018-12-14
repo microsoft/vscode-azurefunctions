@@ -50,6 +50,7 @@ export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const proxiesFileName: string = 'proxies.json';
 export const tasksFileName: string = 'tasks.json';
+export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 
