@@ -4,6 +4,13 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.13.1 - 2018-12-17
+
+### Fixed
+
+- Provide option to "Deploy Anyway" if pre-deploy task fails
+- If "azureFunctions.preDeployTask" is not set, do not run any task
+
 ## 0.13.0 - 2018-12-04
 
 ### Added
