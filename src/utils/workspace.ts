@@ -143,12 +143,13 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
         }
 
         const uri: vscode.Uri = vscode.Uri.file(fsPath);
+
+        if (!openFolders.length && openBehavior === OpenBehavior.AddToWorkspace) {
+            openBehavior = OpenBehavior.OpenInCurrentWindow;
+        }
+
         if (openBehavior === OpenBehavior.AddToWorkspace) {
-            if (openFolders.length) {
-                vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
-            } else {
-                await vscode.commands.executeCommand('vscode.openFolder', uri);
-            }
+            vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
         } else {
             await vscode.commands.executeCommand('vscode.openFolder', uri, openBehavior === OpenBehavior.OpenInNewWindow /* forceNewWindow */);
             if (openBehavior === OpenBehavior.OpenInNewWindow) {
