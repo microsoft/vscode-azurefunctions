@@ -765,6 +765,11 @@
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",
                         "default": false
+                    },
+                    "azureFunctions.advancedCreation": {
+                        "type": "boolean",
+                        "description": "%azFunc.advancedCreationDescription%",
+                        "default": false
                     }
                 }
             }
