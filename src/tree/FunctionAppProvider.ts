@@ -78,19 +78,32 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             createFunctionAppSettings: async (context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
         };
 
-        // There are two things in preview right now:
-        // 1. Python support
-        // 2. Linux support
-        // Python only works on Linux, so we have to use Linux when creating a function app. For other languages, we will stick with Windows until Linux GA's
-        if (language === ProjectLanguage.Python) {
-            createOptions.os = 'linux';
-            createOptions.runtime = 'python';
-        } else {
-            createOptions.os = 'windows';
+        if (!getFuncExtensionSetting('advancedCreation')) {
+            setCreateOptionDefaults(createOptions, language);
         }
 
         const site: WebSiteManagementModels.Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
+    }
+}
+
+function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: string | undefined): void {
+    createOptions.os = 'windows';
+    switch (language) {
+        case ProjectLanguage.JavaScript:
+            createOptions.runtime = 'node';
+            break;
+        case ProjectLanguage.CSharp:
+            createOptions.runtime = 'dotnet';
+            break;
+        case ProjectLanguage.Java:
+            createOptions.runtime = 'java';
+            break;
+        case ProjectLanguage.Python:
+            createOptions.runtime = 'python';
+            createOptions.os = 'linux';
+            break;
+        default:
     }
 }
 

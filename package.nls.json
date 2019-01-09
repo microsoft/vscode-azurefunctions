@@ -59,5 +59,6 @@
     "azFunc.ConnectToGitHub": "Connect to GitHub Repository...",
     "azFunc.disconnectRepo": "Disconnect from Repo...",
     "azFunc.createSlot": "Create Slot...",
-    "azFunc.swapSlot": "Swap Slot..."
+    "azFunc.swapSlot": "Swap Slot...",
+    "azFunc.advancedCreationDescription": "Enables advanced creation of function apps, which bypasses several defaults and prompts instead."
 }
