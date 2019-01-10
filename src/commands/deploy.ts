@@ -12,7 +12,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType, settingsFileName, vscodeFolderName } from '../constants';
+import { deploySubpathSetting, extensionPrefix, funcPackId, installExtensionsId, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, publishTaskId, ScmType } from '../constants';
 import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -100,7 +100,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         telemetryProperties.cancelStep = '';
     }
 
-    await runPreDeployTask(deployFsPath, telemetryProperties, language, isZipDeploy, runtime);
+    const preDeployResult: appservice.IPreDeployTaskResult = await appservice.runPreDeployTask(this, deployFsPath, siteConfig.scmType, extensionPrefix);
+    await handlePreDeployTaskResult(preDeployResult, language, runtime);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
@@ -274,62 +275,21 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
     }
 }
 
-async function runPreDeployTask(deployFsPath: string, telemetryProperties: TelemetryProperties, language: ProjectLanguage, isZipDeploy: boolean, runtime: ProjectRuntime): Promise<void> {
-    const taskName: string | undefined = getFuncExtensionSetting(preDeployTaskSetting, deployFsPath);
-    if (!isZipDeploy) {
-        // We don't run pre deploy tasks for non-zipdeploy since that stuff should be handled by kudu
-
-        if (taskName) {
-            // We only need to warn if they have the setting defined
-            ext.outputChannel.appendLine(localize('ignoringPreDeployTask', 'WARNING: Ignoring preDeployTask "{0}" for non-zip deploy.', taskName));
-        }
-
-        return;
-    }
-
-    telemetryProperties.preDeployTask = taskName;
-
-    let workspaceFolderPath: string | undefined;
-    let preDeployTask: vscode.Task | undefined;
-    if (taskName) {
-        const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
-        for (const task of tasks) {
-            if (task.name.toLowerCase() === taskName.toLowerCase() && task.scope !== undefined) {
-                const workspaceFolder: vscode.WorkspaceFolder = <vscode.WorkspaceFolder>task.scope;
-                if (<vscode.Uri | undefined>workspaceFolder.uri && (isPathEqual(workspaceFolder.uri.fsPath, deployFsPath) || isSubpath(workspaceFolder.uri.fsPath, deployFsPath))) {
-                    preDeployTask = task;
-                    workspaceFolderPath = workspaceFolder.uri.fsPath;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (preDeployTask) {
-        telemetryProperties.foundPreDeployTask = 'true';
-        await vscode.tasks.executeTask(preDeployTask);
-        // tslint:disable-next-line:no-non-null-assertion
-        await waitForPreDeployTask(preDeployTask, telemetryProperties, workspaceFolderPath!);
-    } else {
-        telemetryProperties.foundPreDeployTask = 'false';
-
-        const messageLines: string[] = [];
-        // If the task name was specified in the user's settings, we will throw an error and block the user's deploy if we can't find that task
-        // If the task name was _not_ specified, we will display a warning and let the deployment continue. (The preDeployTask isn't _always_ necessary and we don't want to block old projects that never had this setting)
-        if (taskName) {
-            messageLines.push(localize('noPreDeployTaskError', 'Did not find preDeploy task "{0}". Change the "{1}.{2}" setting, manually edit your task.json, or re-initialize your VS Code config with the following steps:', taskName, extensionPrefix, preDeployTaskSetting));
+async function handlePreDeployTaskResult(result: appservice.IPreDeployTaskResult, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
+    const messageLines: string[] = [];
+    if (!result.taskName) {
+        const recommendedTaskName: string | undefined = getRecommendedTaskName(language, runtime);
+        if (recommendedTaskName) {
+            messageLines.push(localize('noPreDeployTaskWarning', 'WARNING: Did not find recommended preDeploy task "{0}". The deployment will continue, but the selected folder may not reflect your latest changes.', recommendedTaskName));
+            messageLines.push(localize('howToAddPreDeploy', 'In order to ensure that you always deploy your latest changes, add a preDeploy task with the following steps:'));
             const fullMessage: string = getFullPreDeployMessage(messageLines);
-            throw new Error(fullMessage);
-        } else {
-            const recommendedTaskName: string | undefined = getRecommendedTaskName(language, runtime);
-            if (recommendedTaskName) {
-                messageLines.push(localize('noPreDeployTaskWarning', 'WARNING: Did not find recommended preDeploy task "{0}". The deployment will continue, but the selected folder may not reflect your latest changes.', recommendedTaskName));
-                messageLines.push(localize('howToAddPreDeploy', 'In order to ensure that you always deploy your latest changes, add a preDeploy task with the following steps:'));
-                const fullMessage: string = getFullPreDeployMessage(messageLines);
-                ext.outputChannel.show(true);
-                ext.outputChannel.appendLine(fullMessage);
-            }
+            ext.outputChannel.show(true);
+            ext.outputChannel.appendLine(fullMessage);
         }
+    } else if (result.failedToFindTask) {
+        messageLines.push(localize('noPreDeployTaskError', 'Did not find preDeploy task "{0}". Change the "{1}.{2}" setting, manually edit your task.json, or re-initialize your VS Code config with the following steps:', result.taskName, extensionPrefix, preDeployTaskSetting));
+        const fullMessage: string = getFullPreDeployMessage(messageLines);
+        throw new Error(fullMessage);
     }
 }
 
@@ -351,36 +311,6 @@ function getRecommendedTaskName(language: ProjectLanguage, runtime: ProjectRunti
             return funcPackId;
         default:
             return undefined; // preDeployTask not needed
-    }
-}
-
-async function waitForPreDeployTask(preDeployTask: vscode.Task, telemetryProperties: TelemetryProperties, workspaceFolderPath: string): Promise<void> {
-    const exitCode: number = await new Promise((resolve: (exitCode: number) => void): void => {
-        const listener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
-            if (e.execution.task === preDeployTask) {
-                listener.dispose();
-                resolve(e.exitCode);
-            }
-        });
-    });
-
-    telemetryProperties.preDeployTaskExitCode = String(exitCode);
-    if (exitCode !== 0) {
-        const message: string = localize('taskFailed', 'Pre-deploy task "{0}" failed with exit code "{1}".', preDeployTask.name, exitCode);
-        const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
-        const viewSettings: vscode.MessageItem = { title: localize('viewSettings', 'View Settings') };
-        const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, deployAnyway, viewSettings);
-        if (result === deployAnyway) {
-            telemetryProperties.preDeployTaskResponse = 'deployAnyway';
-        } else if (result === viewSettings) {
-            telemetryProperties.preDeployTaskResponse = 'viewSettings';
-            const settingsJsonPath: string = path.join(workspaceFolderPath, vscodeFolderName, settingsFileName);
-            await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(settingsJsonPath)));
-            throw new UserCancelledError();
-        } else {
-            telemetryProperties.preDeployTaskResponse = 'cancel';
-            throw new UserCancelledError();
-        }
     }
 }
 
