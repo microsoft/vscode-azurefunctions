@@ -142,6 +142,10 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             await updateGlobalSetting(projectOpenBehaviorSetting, openBehavior);
         }
 
+        if (openBehavior === OpenBehavior.AddToWorkspace && openFolders.length === 0) {
+            openBehavior = OpenBehavior.OpenInCurrentWindow;
+        }
+
         const uri: vscode.Uri = vscode.Uri.file(fsPath);
         if (openBehavior === OpenBehavior.AddToWorkspace) {
             vscode.workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
