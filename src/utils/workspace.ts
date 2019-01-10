@@ -142,7 +142,7 @@ export async function ensureFolderIsOpen(fsPath: string, actionContext: IActionC
             await updateGlobalSetting(projectOpenBehaviorSetting, openBehavior);
         }
 
-        if (openBehavior === OpenBehavior.AddToWorkspace && 0 === openFolders.length) {
+        if (openBehavior === OpenBehavior.AddToWorkspace && openFolders.length === 0) {
             openBehavior = OpenBehavior.OpenInCurrentWindow;
         }
 
