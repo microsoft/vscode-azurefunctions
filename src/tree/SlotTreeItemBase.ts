@@ -32,7 +32,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
         this._functionsTreeItem = new FunctionsTreeItem(this);
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(this, 'azureFunctions.toggleAppSettingVisibility');
         this._proxiesTreeItem = new ProxiesTreeItem(this);
         this.isLinuxPreview = isLinuxPreview;
     }

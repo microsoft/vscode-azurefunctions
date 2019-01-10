@@ -127,6 +127,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
         registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
+        registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
     });
 
