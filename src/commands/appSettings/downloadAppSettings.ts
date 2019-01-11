@@ -7,7 +7,6 @@ import { WebSiteManagementModels } from "azure-arm-website";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
-import { UserCancelledError } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { getLocalSettings, ILocalAppSettings } from "../../LocalAppSettings";
@@ -58,11 +57,13 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
         }
     });
 
-    const result: string | undefined = await vscode.window.showInformationMessage(localize('downloadedSettings', `Successfully downloaded settings from "{0}".`, client.fullName), localize('openFile', 'Open File'));
-    if (!result) {
-        throw new UserCancelledError();
-    } else {
-        const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
-        await vscode.window.showTextDocument(doc);
-    }
+    const downloadedMessage: string = localize('downloadedSettings', `Successfully downloaded settings from "{0}".`, client.fullName);
+    const openFile: string = localize('openFile', 'Open File');
+    // don't wait
+    vscode.window.showInformationMessage(downloadedMessage, openFile).then(async (result: string | undefined) => {
+        if (result === openFile) {
+            const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
+            await vscode.window.showTextDocument(doc);
+        }
+    });
 }

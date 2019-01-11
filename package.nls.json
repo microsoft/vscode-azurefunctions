@@ -60,6 +60,6 @@
     "azFunc.disconnectRepo": "Disconnect from Repo...",
     "azFunc.createSlot": "Create Slot...",
     "azFunc.swapSlot": "Swap Slot...",
-    "azFunc.advancedCreationDescription": "Enables advanced creation of function apps, which bypasses several defaults and prompts instead.",
+    "azFunc.advancedCreationDescription": "Enables advanced creation of function apps, which will prompt for several additional values instead of using a default.",
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility."
 }
