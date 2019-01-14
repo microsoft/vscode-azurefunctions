@@ -57,6 +57,13 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
         }
     });
 
-    const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
-    await vscode.window.showTextDocument(doc);
+    const downloadedMessage: string = localize('downloadedSettings', `Successfully downloaded settings from "{0}".`, client.fullName);
+    const openFile: string = localize('openFile', 'Open File');
+    // don't wait
+    vscode.window.showInformationMessage(downloadedMessage, openFile).then(async (result: string | undefined) => {
+        if (result === openFile) {
+            const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
+            await vscode.window.showTextDocument(doc);
+        }
+    });
 }
