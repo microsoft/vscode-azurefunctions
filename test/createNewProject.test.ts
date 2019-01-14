@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
 import { createNewProject } from '../src/commands/createNewProject/createNewProject';
-import { deploySubpathSetting, extensionPrefix, ProjectLanguage } from '../src/constants';
+import { deploySubpathSetting, extensionPrefix, Platform, ProjectLanguage } from '../src/constants';
 import { ext } from '../src/extensionVariables';
 import * as fsUtil from '../src/utils/fs';
 import { longRunningTestsEnabled, runForAllTemplateSources } from './global.test';
@@ -115,7 +115,9 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
     const pythonProject: string = 'PythonProject';
     test(pythonProject, async function (this: IHookCallbackContext): Promise<void> {
-        if (!longRunningTestsEnabled) {
+        // Temporarily disable this test on Linux due to inconsistent failures
+        // https://github.com/Microsoft/vscode-azurefunctions/issues/910
+        if (!longRunningTestsEnabled || os.platform() === Platform.Linux) {
             this.skip();
         }
         this.timeout(5 * 60 * 1000);
