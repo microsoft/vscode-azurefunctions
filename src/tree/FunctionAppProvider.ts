@@ -174,8 +174,8 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
 
     // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
     // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
-    // It also doesn't apply for Python, which has its own custom deploy logic in the the vscode-azureappservice package
-    if (projectLanguage !== ProjectLanguage.Python && !(projectLanguage === ProjectLanguage.CSharpScript && projectRuntime === ProjectRuntime.v1)) {
+    // It also doesn't apply for Linux Consumption, which has its own custom deploy logic in the the vscode-azureappservice package
+    if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && projectRuntime === ProjectRuntime.v1)) {
         appSettings.push({
             name: 'WEBSITE_RUN_FROM_PACKAGE',
             value: '1'
