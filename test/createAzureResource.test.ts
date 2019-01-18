@@ -9,7 +9,9 @@ import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-webs
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, TestAzureAccount, TestUserInput } from 'vscode-azureextensionui';
+import { ProjectLanguage, projectLanguageSetting } from '../src/constants';
 import { ext } from '../src/extensionVariables';
+import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../src/ProjectSettings';
 import { FunctionAppProvider } from '../src/tree/FunctionAppProvider';
 import * as fsUtil from '../src/utils/fs';
 import { longRunningTestsEnabled } from './global.test';
@@ -18,11 +20,17 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     this.timeout(1200 * 1000);
     const resourceGroupsToDelete: string[] = [];
     const testAccount: TestAzureAccount = new TestAzureAccount();
+    let oldProjectLanguage: ProjectLanguage | undefined;
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }
+
+        // set project language so that test isn't prompted for runtime
+        oldProjectLanguage = getGlobalFuncExtensionSetting(projectLanguageSetting);
+        await updateGlobalSetting(projectLanguageSetting, ProjectLanguage.JavaScript);
+
         this.timeout(120 * 1000);
         await testAccount.signIn();
         ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
@@ -33,6 +41,9 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             this.skip();
         }
         this.timeout(1200 * 1000);
+
+        await updateGlobalSetting(projectLanguageSetting, oldProjectLanguage);
+
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
         for (const resourceGroup of resourceGroupsToDelete) {
             if (await client.resourceGroups.checkExistence(resourceGroup)) {
