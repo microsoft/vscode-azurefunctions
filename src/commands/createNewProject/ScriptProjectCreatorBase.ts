@@ -5,11 +5,10 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
-import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
+import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
-import { funcWatchProblemMatcher, ProjectCreatorBase } from './ProjectCreatorBase';
+import { ProjectCreatorBase } from './ProjectCreatorBase';
 
 // tslint:disable-next-line:no-multiline-string
 const gitignore: string = `bin
@@ -53,11 +52,10 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
             version: '2.0.0',
             tasks: [
                 {
-                    label: funcHostTaskLabel,
-                    type: 'shell',
-                    command: funcHostCommand,
-                    isBackground: true,
-                    problemMatcher: funcWatchProblemMatcher
+                    type: func,
+                    command: hostStartCommand,
+                    problemMatcher: funcWatchProblemMatcher,
+                    isBackground: true
                 }
             ]
         };

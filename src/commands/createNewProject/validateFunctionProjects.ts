@@ -9,16 +9,16 @@ import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { funcHostNameRegEx } from "../../funcCoreTools/funcHostTask";
+import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
+import { isFunctionProject } from './isFunctionProject';
 import { ITask, ITasksJson } from './ITasksJson';
-import { funcNodeDebugArgs, funcNodeDebugEnvVar } from './JavaScriptProjectCreator';
 import { createVirtualEnviornment, makeVenvDebuggable, pythonVenvSetting } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
@@ -70,16 +70,6 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
     return false;
 }
 
-export async function isFunctionProject(folderPath: string): Promise<boolean> {
-    const gitignorePath: string = path.join(folderPath, gitignoreFileName);
-    let gitignoreContents: string = '';
-    if (await fse.pathExists(gitignorePath)) {
-        gitignoreContents = (await fse.readFile(gitignorePath)).toString();
-    }
-
-    return await fse.pathExists(path.join(folderPath, hostFileName)) && (await fse.pathExists(path.join(folderPath, localSettingsFileName)) || gitignoreContents.includes(localSettingsFileName));
-}
-
 function isInitializedProject(folderPath: string): boolean {
     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
     const runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, folderPath);
@@ -97,11 +87,13 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
             const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
+            const funcNodeDebugArgs: string = '--inspect=5858';
+            const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
             const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
             if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
                 const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
-                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => funcHostNameRegEx.test(t.label));
+                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => oldFuncHostNameRegEx.test(t.label));
                 if (funcTask) {
                     actionContext.properties.debugConfigValid = 'false';
 

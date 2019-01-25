@@ -44,5 +44,3 @@ export abstract class ProjectCreatorBase {
         return ['ms-azuretools.vscode-azurefunctions'];
     }
 }
-
-export const funcWatchProblemMatcher: string = '$func-watch';

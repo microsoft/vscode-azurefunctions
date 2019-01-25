@@ -21,7 +21,7 @@ import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
-import { isFunctionProject } from '../createNewProject/validateFunctionProjects';
+import { isFunctionProject } from '../createNewProject/isFunctionProject';
 import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';

@@ -68,5 +68,16 @@ export enum ScmType {
 }
 
 export const publishTaskId: string = 'publish';
-export const installExtensionsId: string = 'installExtensions';
 export const funcPackId: string = 'funcPack';
+
+export const func: string = 'func';
+export const extInstallCommand: string = 'extensions install';
+export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;
+
+export const hostStartCommand: string = 'host start';
+export const hostStartTaskName: string = `${func}: ${hostStartCommand}`;
+export const funcHostStartCommand: string = `${func} ${hostStartCommand}`;
+
+export const funcWatchProblemMatcher: string = '$func-watch';
+
+export const localhost: string = '127.0.0.1';
