@@ -9,10 +9,11 @@ import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, TestUserInput } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
 import { runForAllTemplateSources } from '../global.test';
 import { validateVSCodeProjectFiles } from '../initProjectForVSCode.test';
+import { runWithSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
@@ -57,7 +58,11 @@ suite('Create C# Script Function Tests', async () => {
         await runForAllTemplateSources(async (source) => {
             // Intentionally testing IoTHub trigger since a partner team plans to use that
             const projectPath: string = path.join(tester.baseTestFolder, source);
-            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotFunctionSettings);
+            await runWithSetting(projectLanguageSetting, ProjectLanguage.CSharpScript, async () => {
+                await runWithSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotFunctionSettings);
+                });
+            });
             await tester.validateFunction(projectPath, iotFunctionName);
         });
     });
