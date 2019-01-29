@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as clipboardy from 'clipboardy';
+import * as vscode from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
@@ -14,7 +14,7 @@ export async function copyFunctionUrl(node?: FunctionTreeItem): Promise<void> {
     }
 
     if (node.config.isHttpTrigger) {
-        await clipboardy.write(node.triggerUrl);
+        await vscode.env.clipboard.writeText(node.triggerUrl);
     } else {
         throw new Error(localize('CopyFailedForNonHttp', 'Function URLs can only be used for HTTP triggers.'));
     }
