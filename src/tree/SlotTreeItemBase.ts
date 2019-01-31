@@ -15,7 +15,6 @@ import { ProxyTreeItem } from './ProxyTreeItem';
 
 export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot> {
     public logStreamPath: string = '';
-    public readonly isLinuxPreview: boolean;
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
 
@@ -27,14 +26,13 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private readonly _functionsTreeItem: FunctionsTreeItem;
     private readonly _proxiesTreeItem: ProxiesTreeItem;
 
-    public constructor(parent: AzureParentTreeItem, client: SiteClient, isLinuxPreview: boolean) {
+    public constructor(parent: AzureParentTreeItem, client: SiteClient) {
         super(parent);
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
         this._functionsTreeItem = new FunctionsTreeItem(this);
         this.appSettingsTreeItem = new AppSettingsTreeItem(this, 'azureFunctions.toggleAppSettingVisibility');
         this._proxiesTreeItem = new ProxiesTreeItem(this);
-        this.isLinuxPreview = isLinuxPreview;
     }
 
     // overrides ISubscriptionRoot with an object that also has SiteClient
@@ -52,7 +50,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public get description(): string | undefined {
         const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
-        const previewDescription: string | undefined = this.isLinuxPreview ? localize('linuxPreview', 'Linux Preview') : undefined;
+        const previewDescription: string | undefined = this.root.client.isLinux ? localize('linuxPreview', 'Linux Preview') : undefined;
         if (stateDescription && previewDescription) {
             return `${previewDescription} - ${stateDescription}`;
         } else {

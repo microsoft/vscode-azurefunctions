@@ -50,12 +50,10 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             this,
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            async (site: WebSiteManagementModels.Site) => {
+            (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    const asp: WebSiteManagementModels.AppServicePlan | undefined = await siteClient.getAppServicePlan();
-                    const isLinuxPreview: boolean = siteClient.kind.toLowerCase().includes('linux') && !!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic';
-                    return new ProductionSlotTreeItem(this, siteClient, isLinuxPreview);
+                    return new ProductionSlotTreeItem(this, siteClient);
                 }
                 return undefined;
             },
@@ -83,7 +81,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         }
 
         const site: WebSiteManagementModels.Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
-        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root), createOptions.os === 'linux' /* isLinuxPreview */);
+        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
     }
 }
 

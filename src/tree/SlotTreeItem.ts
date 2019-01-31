@@ -12,8 +12,8 @@ export class SlotTreeItem extends SlotTreeItemBase {
     public readonly contextValue: string = SlotTreeItem.contextValue;
     public readonly parent: SlotsTreeItem;
 
-    public constructor(parent: SlotsTreeItem, client: SiteClient, isLinuxPreview: boolean) {
-        super(parent, client, isLinuxPreview);
+    public constructor(parent: SlotsTreeItem, client: SiteClient) {
+        super(parent, client);
     }
 
     public get label(): string {
