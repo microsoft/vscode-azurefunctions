@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, ProcessExecution, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
+import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/isFunctionProject';
-import { extInstallCommand, func, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { JavaDebugProvider } from './JavaDebugProvider';
@@ -86,6 +86,6 @@ function getExtensionInstallTask(folder: WorkspaceFolder): Task {
         folder,
         extInstallCommand,
         func,
-        new ProcessExecution(func, ['extensions', 'install'])
+        new ShellExecution(funcExtInstallCommand)
     );
 }
