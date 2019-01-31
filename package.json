@@ -70,7 +70,7 @@
         "onView:azureFunctionsExplorer",
         "onDebugInitialConfigurations"
     ],
-    "main": "./out/src/extension",
+    "main": "./main.js",
     "contributes": {
         "commands": [
             {
@@ -808,12 +808,17 @@
         ]
     },
     "scripts": {
+        "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc -p ./",
         "compile": "tsc -watch -p ./",
         "package": "vsce package",
         "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
         "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "gulp test"
+        "pretest": "npm run webpack-prod",
+        "test": "gulp test",
+        "webpack": "npm run build && gulp webpack-dev",
+        "webpack-prod": "npm run build && gulp webpack-prod",
+        "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats"
     },
     "devDependencies": {
         "@types/fs-extra": "^4.0.3",
@@ -831,7 +836,7 @@
         "@types/xml2js": "^0.4.2",
         "@types/xregexp": "^3.0.29",
         "azure-arm-resource": "^3.0.0-preview",
-        "glob": "^7.1.3",
+        "copy-webpack-plugin": "^4.6.0",
         "gulp": "^4.0.0",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.1",
@@ -842,11 +847,14 @@
         "mocha-multi-reporters": "^1.1.7",
         "tslint": "^5.7.0",
         "tslint-microsoft-contrib": "5.2.1",
+        "ts-loader": "^5.3.3",
         "ts-node": "^7.0.1",
         "typescript": "^3.1.3",
+        "vsce": "^1.37.5",
         "vscode": "^1.0.0",
-        "vscode-azureextensiondev": "^0.1.1",
-        "vsce": "^1.37.5"
+        "vscode-azureextensiondev": "0.1.3",
+        "webpack": "^4.25.1",
+        "webpack-cli": "^3.1.2"
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.1.2",
@@ -861,7 +869,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.29.0",
+        "vscode-azureappservice": "^0.29.1",
         "vscode-azureextensionui": "^0.20.0",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.0.0",

@@ -1,11 +1,10 @@
 .vscode/**
 .vscode-test/**
-out/test/**
+out/**
 test/**
 src/**
 **/*.map
 .gitignore
-package-lock.json
 tsconfig.json
 tslint.json
 tools/**
@@ -13,3 +12,14 @@ tools/**
 test-results.xml
 .azure-pipelines/**
 gulp*
+build/**
+node_modules/**
+dist/test/**
+testOutput/**
+typings/**
+**/*.ts
+webpack.config*
+stats.json
+*.tgz
+docs/**
+**/*.gif

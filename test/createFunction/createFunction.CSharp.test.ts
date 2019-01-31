@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../src/constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';

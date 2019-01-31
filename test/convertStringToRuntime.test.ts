@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { ProjectRuntime } from '../src/constants';
-import { convertStringToRuntime } from '../src/ProjectSettings';
+import { convertStringToRuntime, ProjectRuntime } from '../extension.bundle';
 
 suite('convertStringToRuntime Tests', () => {
     const specificOne: string = '1.0.0';

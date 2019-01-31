@@ -9,9 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestUserInput } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
-import { ext } from '../../src/extensionVariables';
-import * as fsUtil from '../../src/utils/fs';
+import { ext, getRandomHexString, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithSetting } from '../runWithSetting';
 
@@ -22,7 +20,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     protected abstract _runtime: ProjectRuntime;
 
     constructor() {
-        this.baseTestFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
+        this.baseTestFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${getRandomHexString()}`);
     }
 
     public async initAsync(): Promise<void> {

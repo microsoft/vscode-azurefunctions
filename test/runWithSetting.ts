@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../src/ProjectSettings';
+import { getGlobalFuncExtensionSetting, updateGlobalSetting } from "../extension.bundle";
 
 export async function runWithSetting(key: string, value: string, callback: () => Promise<void>): Promise<void> {
     const oldValue: string | undefined = getGlobalFuncExtensionSetting(key);

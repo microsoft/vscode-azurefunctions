@@ -4,10 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../src/constants';
-import { ext } from '../src/extensionVariables';
-import { IFunctionTemplate } from '../src/templates/IFunctionTemplate';
-import { TemplateProvider } from '../src/templates/TemplateProvider';
+import { ext, IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter, TemplateProvider } from '../extension.bundle';
 import { runForAllTemplateSources } from './global.test';
 
 suite('Template Count Tests', async () => {

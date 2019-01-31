@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { FunctionConfig, HttpAuthLevel } from '../src/FunctionConfig';
+import { FunctionConfig, HttpAuthLevel } from '../extension.bundle';
 
 // tslint:disable-next-line:max-func-body-length
 suite('Function Config Tests', () => {

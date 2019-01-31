@@ -14,13 +14,15 @@ export namespace nodeUtils {
     }
 
     export function getIconPath(iconName: string): string {
-        return path.join(__filename, '..', '..', '..', '..', 'resources', `${iconName}.svg`);
+        // (relative to dist folder)
+        return path.join(__dirname, '..', 'resources', `${iconName}.svg`);
     }
 
     export function getThemedIconPath(iconName: string): IThemedIconPath {
+        // (relative to dist folder)
         return {
-            light: path.join(__filename, '..', '..', '..', '..', 'resources', 'light', `${iconName}.svg`),
-            dark: path.join(__filename, '..', '..', '..', '..', 'resources', 'dark', `${iconName}.svg`)
+            light: path.join(__dirname, '..', 'resources', 'light', `${iconName}.svg`),
+            dark: path.join(__dirname, '..', 'resources', 'dark', `${iconName}.svg`)
         };
     }
 
