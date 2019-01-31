@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { QuickPickItem } from 'vscode';
 import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcPackId, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
 import { pythonDebugConfig } from '../../debug/PythonDebugProvider';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -19,6 +19,7 @@ import { localize } from "../../localize";
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
+import { venvUtils } from '../../utils/venvUtils';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export const pythonVenvSetting: string = 'pythonVenv';
@@ -30,7 +31,7 @@ const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the labe
 
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public preDeployTask: string = funcPackId;
+    public preDeployTask: string = packTaskName;
     // "func extensions install" task creates C# build artifacts that should be hidden
     // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
     public readonly excludedFiles: string | string[] = ['obj', 'bin'];
@@ -58,7 +59,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
         this._venvName = await this.ensureVenv();
 
-        await runPythonCommandInVenv(this._venvName, this.functionAppPath, `${ext.funcCliPath} init ./ --worker-runtime python`);
+        await venvUtils.runPythonCommandInVenv(this._venvName, this.functionAppPath, `${ext.funcCliPath} init ./ --worker-runtime python`);
     }
 
     public async onInitProjectForVSCode(): Promise<void> {
@@ -75,10 +76,14 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     }
 
     public getTasksJson(): {} {
-        const funcPackCommand: string = 'func pack';
-        const pipInstallCommand: string = 'pip install -r requirements.txt';
         const pipInstallLabel: string = 'pipInstall';
         const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
+
+        function getPipInstallCommand(platform: NodeJS.Platform): string {
+            const subFolder: string = platform === Platform.Windows ? 'Scripts' : 'bin';
+            return `${path.join('.', venvSettingReference, subFolder, 'python')} -m pip install -r requirements.txt`;
+        }
+
         return {
             version: '2.0.0',
             tasks: [
@@ -92,33 +97,22 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                 {
                     type: func,
                     command: extInstallCommand,
-                    dependsOn: pipInstallLabel
+                    dependsOn: pipInstallLabel,
+                    problemMatcher: []
                 },
                 {
                     label: pipInstallLabel,
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, pipInstallCommand)
+                        command: getPipInstallCommand(Platform.MacOS)
                     },
                     windows: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, pipInstallCommand)
+                        command: getPipInstallCommand(Platform.Windows)
                     },
                     linux: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, pipInstallCommand)
-                    }
-                },
-                {
-                    label: funcPackId,
-                    type: 'shell',
-                    osx: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, funcPackCommand)
+                        command: getPipInstallCommand(Platform.Linux)
                     },
-                    windows: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, funcPackCommand)
-                    },
-                    linux: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcPackCommand)
-                    }
+                    problemMatcher: []
                 }
             ]
         };
@@ -194,7 +188,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         await Promise.all(fsPaths.map(async (venvName: string) => {
             const stat: fse.Stats = await fse.stat(path.join(this.functionAppPath, venvName));
             if (stat.isDirectory()) {
-                const venvActivatePath: string = getVenvActivatePath(venvName);
+                const venvActivatePath: string = venvUtils.getVenvActivatePath(venvName);
                 if (await fse.pathExists(path.join(this.functionAppPath, venvActivatePath))) {
                     venvs.push(venvName);
                 }
@@ -249,29 +243,6 @@ async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean 
     }
 }
 
-export function convertToVenvCommand(venvName: string, platform: NodeJS.Platform, ...commands: string[]): string {
-    return cpUtils.joinCommands(platform, getVenvActivateCommand(venvName, platform), ...commands);
-}
-
-function getVenvActivatePath(venvName: string, platform: NodeJS.Platform = process.platform): string {
-    switch (platform) {
-        case Platform.Windows:
-            return path.join('.', venvName, 'Scripts', 'activate');
-        default:
-            return path.join('.', venvName, 'bin', 'activate');
-    }
-}
-
-function getVenvActivateCommand(venvName: string, platform: NodeJS.Platform): string {
-    const venvActivatePath: string = getVenvActivatePath(venvName, platform);
-    switch (platform) {
-        case Platform.Windows:
-            return venvActivatePath;
-        default:
-            return `. ${venvActivatePath}`;
-    }
-}
-
 async function getPythonAlias(): Promise<string> {
     const aliasesToTry: string[] = ['python3.6', 'py -3.6', 'python3', 'python', 'py'];
     const globalPythonPathSetting: string | undefined = getGlobalFuncExtensionSetting('pythonPath', 'python');
@@ -299,11 +270,5 @@ export async function createVirtualEnviornment(venvName: string, functionAppPath
 
 export async function makeVenvDebuggable(venvName: string, functionAppPath: string): Promise<void> {
     // install pylint - helpful for debugging in VS Code
-    await runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
-}
-
-export async function runPythonCommandInVenv(venvName: string, folderPath: string, command: string): Promise<void> {
-    // executeCommand always uses Linux '&&' separator, even on Windows
-    const fullCommand: string = cpUtils.joinCommands(Platform.Linux, getVenvActivateCommand(venvName, process.platform), command);
-    await cpUtils.executeCommand(ext.outputChannel, folderPath, fullCommand);
+    await venvUtils.runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
 }

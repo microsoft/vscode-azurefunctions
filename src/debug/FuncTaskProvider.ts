@@ -8,6 +8,7 @@ import { isFunctionProject } from '../commands/createNewProject/isFunctionProjec
 import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { getPythonTasks } from './getPythonTasks';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
 import { PythonDebugProvider } from './PythonDebugProvider';
@@ -29,9 +30,14 @@ export class FuncTaskProvider implements TaskProvider {
             for (const folder of workspace.workspaceFolders) {
                 if (await isFunctionProject(folder.uri.fsPath)) {
                     result.push(getExtensionInstallTask(folder));
-                    const hostStartTask: Task | undefined = await this.getHostStartTask(folder);
+                    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
+                    const hostStartTask: Task | undefined = await this.getHostStartTask(folder, language);
                     if (hostStartTask) {
                         result.push(hostStartTask);
+                    }
+
+                    if (language === ProjectLanguage.Python) {
+                        result.push(...getPythonTasks(folder));
                     }
                 }
             }
@@ -46,8 +52,7 @@ export class FuncTaskProvider implements TaskProvider {
         return undefined;
     }
 
-    private async getHostStartTask(folder: WorkspaceFolder): Promise<Task | undefined> {
-        const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
+    private async getHostStartTask(folder: WorkspaceFolder, language: string | undefined): Promise<Task | undefined> {
         let debugProvider: FuncDebugProviderBase | undefined;
         switch (language) {
             case ProjectLanguage.Python:
