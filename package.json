@@ -816,7 +816,6 @@
         "test": "gulp test"
     },
     "devDependencies": {
-        "@types/clipboardy": "^1.1.0",
         "@types/fs-extra": "^4.0.3",
         "@types/glob": "^7.1.1",
         "@types/gulp": "^4.0.5",
@@ -854,7 +853,6 @@
         "azure-arm-sb": "^2.3.0-preview",
         "azure-arm-storage": "^4.0.0",
         "azure-arm-website": "^5.3.0",
-        "clipboardy": "^1.2.2",
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
         "ms-rest-azure": "^2.3.1",
