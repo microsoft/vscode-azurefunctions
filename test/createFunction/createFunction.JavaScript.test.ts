@@ -9,8 +9,9 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { JavaScriptProjectCreator } from '../../src/commands/createNewProject/JavaScriptProjectCreator';
-import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../src/constants';
 import { runForAllTemplateSources } from '../global.test';
+import { runWithSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {
@@ -148,7 +149,11 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
             const authLevel: string = 'Anonymous';
             const projectPath: string = path.join(jsTester.baseTestFolder, source);
             // Intentionally testing weird casing for authLevel
-            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
+            await runWithSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
+                await runWithSetting(projectRuntimeSetting, JavaScriptProjectCreator.defaultRuntime, async () => {
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
+                });
+            });
             await jsTester.validateFunction(projectPath, functionName);
         });
     });

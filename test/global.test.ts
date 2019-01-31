@@ -8,6 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel } from 'vscode-azureextensiondev';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../src/extensionVariables';
 import { getTemplateProvider, TemplateProvider } from '../src/templates/TemplateProvider';
 
@@ -21,6 +22,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     await ext.templateProviderTask; // make sure default templates are loaded before setting up templates from other sources
     ext.outputChannel = new TestOutputChannel();
+    ext.ui = new TestUserInput([]);
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');

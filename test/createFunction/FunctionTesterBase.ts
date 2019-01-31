@@ -8,13 +8,12 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IActionContext, TestUserInput } from 'vscode-azureextensionui';
-import { createFunction } from '../../src/commands/createFunction/createFunction';
+import { TestUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../src/constants';
 import { ext } from '../../src/extensionVariables';
-import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../../src/ProjectSettings';
 import * as fsUtil from '../../src/utils/fs';
 import { runForAllTemplateSources } from '../global.test';
+import { runWithSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase implements vscode.Disposable {
     public readonly baseTestFolder: string;
@@ -22,34 +21,18 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
 
-    private _oldTemplateFilter: string | undefined;
-    private _oldProjectLanguage: string | undefined;
-    private _oldProjectRuntime: string | undefined;
-
     constructor() {
         this.baseTestFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${fsUtil.getRandomHexString()}`);
     }
 
     public async initAsync(): Promise<void> {
-        this._oldTemplateFilter = getGlobalFuncExtensionSetting(templateFilterSetting);
-        this._oldProjectLanguage = getGlobalFuncExtensionSetting(projectLanguageSetting);
-        this._oldProjectRuntime = getGlobalFuncExtensionSetting(projectRuntimeSetting);
-
         await runForAllTemplateSources(async (source) => {
             await this.initializeTestFolder(path.join(this.baseTestFolder, source));
         });
-
-        await updateGlobalSetting(templateFilterSetting, TemplateFilter.All);
-        await updateGlobalSetting(projectLanguageSetting, this._language);
-        await updateGlobalSetting(projectRuntimeSetting, this._runtime);
     }
 
     public async dispose(): Promise<void> {
         await fse.remove(this.baseTestFolder);
-
-        await updateGlobalSetting(templateFilterSetting, this._oldTemplateFilter);
-        await updateGlobalSetting(projectLanguageSetting, this._oldProjectLanguage);
-        await updateGlobalSetting(projectRuntimeSetting, this._oldProjectRuntime);
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
@@ -81,7 +64,13 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
         }
 
         ext.ui = new TestUserInput(inputs);
-        await createFunction(<IActionContext>{ properties: {}, measurements: {} });
+        await runWithSetting(templateFilterSetting, TemplateFilter.All, async () => {
+            await runWithSetting(projectLanguageSetting, this._language, async () => {
+                await runWithSetting(projectRuntimeSetting, this._runtime, async () => {
+                    await vscode.commands.executeCommand('azureFunctions.createFunction');
+                });
+            });
+        });
         assert.equal(inputs.length, 0, 'Not all inputs were used.');
 
         await this.validateFunction(testFolder, funcName);
