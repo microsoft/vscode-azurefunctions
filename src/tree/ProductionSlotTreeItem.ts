@@ -16,8 +16,8 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    public constructor(parent: AzureParentTreeItem, client: SiteClient, isLinuxPreview: boolean) {
-        super(parent, client, isLinuxPreview);
+    public constructor(parent: AzureParentTreeItem, client: SiteClient) {
+        super(parent, client);
         this._slotsTreeItem = new SlotsTreeItem(this);
     }
 
