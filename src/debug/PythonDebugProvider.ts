@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration, Extension, extensions, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
-import { convertToVenvCommand } from '../commands/createNewProject/PythonProjectCreator';
 import { funcHostStartCommand, hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { venvUtils } from '../utils/venvUtils';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
 export const defaultPythonDebugPort: number = 9091;
@@ -25,12 +24,8 @@ export class PythonDebugProvider extends FuncDebugProviderBase {
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        let command: string = funcHostStartCommand;
+        const command: string = venvUtils.convertToVenvTask(folder, funcHostStartCommand);
         const port: number = this.getDebugPort(folder);
-        const venvName: string | undefined = getFuncExtensionSetting<string>('pythonVenv', folder.uri.fsPath);
-        if (venvName) {
-            command = convertToVenvCommand(venvName, process.platform, command);
-        }
         const options: ShellExecutionOptions = { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
         return new ShellExecution(command, options);
     }
