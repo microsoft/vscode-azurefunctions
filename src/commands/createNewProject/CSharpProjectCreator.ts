@@ -10,16 +10,15 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { funcHostCommand, funcHostTaskLabel } from '../../funcCoreTools/funcHostTask';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
 import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { funcWatchProblemMatcher, ProjectCreatorBase } from './ProjectCreatorBase';
+import { ProjectCreatorBase } from './ProjectCreatorBase';
 
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
@@ -77,13 +76,12 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: funcHostTaskLabel,
-                    type: 'shell',
+                    type: func,
                     dependsOn: 'build',
                     options: {
                         cwd: `\${workspaceFolder}/${this._debugSubpath}`
                     },
-                    command: funcHostCommand,
+                    command: hostStartCommand,
                     isBackground: true,
                     problemMatcher: funcWatchProblemMatcher
                 }

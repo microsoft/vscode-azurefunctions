@@ -5,19 +5,19 @@
 
 import * as vscode from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
+import { hostStartCommand } from '../constants';
 import { localize } from '../localize';
 
 let isFuncHostRunning: boolean = false;
 
-export const funcHostTaskLabel: string = 'runFunctionsHost';
-export const funcHostCommand: string = 'func host start';
-export const funcHostNameRegEx: RegExp = /run\s*functions\s*host/i;
+// The name of the task before we started providing it in FuncTaskProvider.ts
+export const oldFuncHostNameRegEx: RegExp = /run\s*functions\s*host/i;
 
 export let stopFuncHostPromise: Promise<void> = Promise.resolve();
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     // task.name resolves to the task's id (deprecated https://github.com/Microsoft/vscode/issues/57707), then label
-    return funcHostNameRegEx.test(task.name);
+    return oldFuncHostNameRegEx.test(task.name) || task.name === hostStartCommand;
 }
 
 export function registerFuncHostTaskEvents(): void {

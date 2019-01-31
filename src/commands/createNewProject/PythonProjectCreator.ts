@@ -10,16 +10,15 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { QuickPickItem } from 'vscode';
 import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, funcPackId, gitignoreFileName, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcPackId, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
+import { pythonDebugConfig } from '../../debug/PythonDebugProvider';
 import { ext } from '../../extensionVariables';
-import { funcHostCommand, funcHostTaskLabel } from "../../funcCoreTools/funcHostTask";
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
 import * as fsUtil from '../../utils/fs';
-import { funcWatchProblemMatcher } from "./ProjectCreatorBase";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export const pythonVenvSetting: string = 'pythonVenv';
@@ -47,16 +46,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public getLaunchJson(): {} {
         return {
             version: '0.2.0',
-            configurations: [
-                {
-                    name: localize('azFunc.attachToJavaScriptFunc', 'Attach to Python Functions'),
-                    type: 'python',
-                    request: 'attach',
-                    port: 9091,
-                    host: 'localhost',
-                    preLaunchTask: funcHostTaskLabel
-                }
-            ]
+            configurations: [pythonDebugConfig]
         };
     }
 
@@ -86,31 +76,36 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     public getTasksJson(): {} {
         const funcPackCommand: string = 'func pack';
-        const funcExtensionsCommand: string = 'func extensions install';
         const pipInstallCommand: string = 'pip install -r requirements.txt';
+        const pipInstallLabel: string = 'pipInstall';
         const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
         return {
             version: '2.0.0',
             tasks: [
                 {
-                    label: funcHostTaskLabel,
+                    type: func,
+                    command: hostStartCommand,
+                    problemMatcher: funcWatchProblemMatcher,
+                    isBackground: true,
+                    dependsOn: extInstallTaskName
+                },
+                {
+                    type: func,
+                    command: extInstallCommand,
+                    dependsOn: pipInstallLabel
+                },
+                {
+                    label: pipInstallLabel,
                     type: 'shell',
                     osx: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.MacOS, pipInstallCommand)
                     },
                     windows: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
+                        command: convertToVenvCommand(venvSettingReference, Platform.Windows, pipInstallCommand)
                     },
                     linux: {
-                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcExtensionsCommand, pipInstallCommand, funcHostCommand)
-                    },
-                    isBackground: true,
-                    options: {
-                        env: {
-                            languageWorkers__python__arguments: '-m ptvsd --host 127.0.0.1 --port 9091'
-                        }
-                    },
-                    problemMatcher: funcWatchProblemMatcher
+                        command: convertToVenvCommand(venvSettingReference, Platform.Linux, pipInstallCommand)
+                    }
                 },
                 {
                     label: funcPackId,
@@ -123,8 +118,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
                     },
                     linux: {
                         command: convertToVenvCommand(venvSettingReference, Platform.Linux, funcPackCommand)
-                    },
-                    isBackground: true
+                    }
                 }
             ]
         };
@@ -255,7 +249,7 @@ async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean 
     }
 }
 
-function convertToVenvCommand(venvName: string, platform: NodeJS.Platform, ...commands: string[]): string {
+export function convertToVenvCommand(venvName: string, platform: NodeJS.Platform, ...commands: string[]): string {
     return cpUtils.joinCommands(platform, getVenvActivateCommand(venvName, platform), ...commands);
 }
 
@@ -304,8 +298,6 @@ export async function createVirtualEnviornment(venvName: string, functionAppPath
 }
 
 export async function makeVenvDebuggable(venvName: string, functionAppPath: string): Promise<void> {
-    // install ptvsd - required for debugging in VS Code
-    await runPythonCommandInVenv(venvName, functionAppPath, 'pip install ptvsd');
     // install pylint - helpful for debugging in VS Code
     await runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
 }

@@ -42,6 +42,11 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
+import { func } from './constants';
+import { FuncTaskProvider } from './debug/FuncTaskProvider';
+import { JavaDebugProvider } from './debug/JavaDebugProvider';
+import { NodeDebugProvider } from './debug/NodeDebugProvider';
+import { PythonDebugProvider } from './debug/PythonDebugProvider';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
@@ -129,6 +134,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
         registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
+
+        const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
+        const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();
+        const javaDebugProvider: JavaDebugProvider = new JavaDebugProvider();
+        // These don't actually overwrite "node", "python", etc. - they just add to it
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', nodeDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('python', pythonDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
+        context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider)));
     });
 
     return createApiProvider([]);
