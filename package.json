@@ -67,7 +67,8 @@
         "onCommand:azureFunctions.swapSlot",
         "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
-        "onView:azureFunctionsExplorer"
+        "onView:azureFunctionsExplorer",
+        "onDebugInitialConfigurations"
     ],
     "main": "./out/src/extension",
     "contributes": {
