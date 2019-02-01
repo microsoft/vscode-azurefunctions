@@ -10,15 +10,12 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
-import { initProjectForVSCode } from '../src/commands/createNewProject/initProjectForVSCode';
-import { deploySubpathSetting, extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../src/constants';
-import { ext } from '../src/extensionVariables';
-import * as fsUtil from '../src/utils/fs';
+import { deploySubpathSetting, ext, extensionPrefix, getRandomHexString, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../extension.bundle';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${fsUtil.getRandomHexString()}`);
+    const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${getRandomHexString()}`);
 
     suiteSetup(async () => {
         await fse.ensureDir(testFolderPath);

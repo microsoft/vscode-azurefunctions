@@ -11,7 +11,7 @@ import { isFuncHostTask, stopFuncHostPromise } from '../funcCoreTools/funcHostTa
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
-import { tryFetchNodeModule } from '../utils/tryFetchNodeModule';
+import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
 
 export async function pickFuncProcess(this: IActionContext): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
@@ -83,12 +83,7 @@ async function getInnermostUnixPid(pid: string): Promise<string> {
  * We also need to delay to make sure the func process has been started within the PowerShell process.
  */
 async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
-    const moduleName: string = 'windows-process-tree';
-    const windowsProcessTree: IWindowsProcessTree | undefined = await tryFetchNodeModule<IWindowsProcessTree>(moduleName);
-    if (!windowsProcessTree) {
-        throw new Error(localize('noWindowsProcessTree', 'Failed to find dependency "{0}".', moduleName));
-    }
-
+    const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
         let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
@@ -111,18 +106,6 @@ async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, tim
     }
 
     throw timeoutError;
-}
-
-interface IProcessTreeNode {
-    pid: number;
-    name: string;
-    memory?: number;
-    commandLine?: string;
-    children: IProcessTreeNode[];
-}
-
-interface IWindowsProcessTree {
-    getProcessTree(rootPid: number, callback: (tree: IProcessTreeNode | undefined) => void): void;
 }
 
 async function delay(ms: number): Promise<void> {

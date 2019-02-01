@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { validateCSharpNamespace } from '../src/commands/createFunction/CSharpFunctionCreator';
+import { validateCSharpNamespace } from '../extension.bundle';
 
 suite('validateCSharpNamespace', () => {
     test('Valid values', async () => {

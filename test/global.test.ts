@@ -9,8 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel } from 'vscode-azureextensiondev';
 import { TestUserInput } from 'vscode-azureextensionui';
-import { ext, TemplateSource } from '../src/extensionVariables';
-import { getTemplateProvider, TemplateProvider } from '../src/templates/TemplateProvider';
+import { ext, getTemplateProvider, TemplateProvider, TemplateSource } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
 

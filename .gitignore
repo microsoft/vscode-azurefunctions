@@ -64,6 +64,8 @@ obj
 *.vsix
 .vscode-test
 test-results.xml
+dist
+stats.json
 
 # debugging artifacts
 resources/dotnetTemplates

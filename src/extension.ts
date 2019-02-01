@@ -5,9 +5,6 @@
 
 'use strict';
 
-const loadStartTime: number = Date.now();
-let loadEndTime: number;
-
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
@@ -59,7 +56,7 @@ import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { SlotsTreeItem } from './tree/SlotsTreeItem';
 
-export async function activate(context: vscode.ExtensionContext): Promise<AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
@@ -71,7 +68,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
         this.properties.isActivationEvent = 'true';
-        this.measurements.mainFileLoad = (loadEndTime - loadStartTime) / 1000;
+        this.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         // tslint:disable-next-line:no-floating-promises
         validateFuncCoreToolsIsLatest();
@@ -149,7 +146,5 @@ export async function activate(context: vscode.ExtensionContext): Promise<AzureE
 }
 
 // tslint:disable-next-line:no-empty
-export function deactivate(): void {
+export function deactivateInternal(): void {
 }
-
-loadEndTime = Date.now();

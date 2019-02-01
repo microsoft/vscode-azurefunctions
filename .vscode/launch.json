@@ -13,11 +13,12 @@
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceFolder}/out/src/**/*.js"
+                "${workspaceFolder}/**/*.js"
             ],
-            "preLaunchTask": "npm: compile",
+            "preLaunchTask": "npm: webpack",
             "env": {
-                "DEBUGTELEMETRY": "1"
+                "DEBUGTELEMETRY": "1",
+                "NODE_DEBUG": ""
             }
         },
         {
@@ -27,14 +28,14 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test"
+                "--extensionTestsPath=${workspaceFolder}/dist/test"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": [
-                "${workspaceFolder}/out/test/**/*.js"
+                "${workspaceFolder}/dist/**/*.js"
             ],
-            "preLaunchTask": "npm: compile",
+            "preLaunchTask": "npm: webpack",
             "env": {
                 "MOCHA_grep": "", // RegExp of tests to run (empty for all)
                 "MOCHA_enableTimeouts": "0", // Disable time-outs

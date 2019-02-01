@@ -7,8 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
-import { ScriptProjectCreatorBase } from '../../src/commands/createNewProject/ScriptProjectCreatorBase';
-import { ProjectLanguage, ProjectRuntime } from '../../src/constants';
+import { ProjectLanguage, ProjectRuntime, ScriptProjectCreatorBase } from '../../extension.bundle';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class BashFunctionTester extends FunctionTesterBase {

@@ -9,11 +9,7 @@ import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-webs
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, TestAzureAccount, TestUserInput } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting } from '../src/constants';
-import { ext } from '../src/extensionVariables';
-import { getGlobalFuncExtensionSetting, updateGlobalSetting } from '../src/ProjectSettings';
-import { FunctionAppProvider } from '../src/tree/FunctionAppProvider';
-import * as fsUtil from '../src/utils/fs';
+import { ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -59,7 +55,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     });
 
     test('Create and Delete New Function App', async () => {
-        const resourceName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        const resourceName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         resourceGroupsToDelete.push(resourceName);
 
         const testInputs: string[] = [resourceName, '$(plus) Create new resource group', resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
@@ -77,12 +73,12 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
     test('createFunctionApp API', async () => {
-        const resourceGroupName: string = fsUtil.getRandomHexString();
-        const storageAccountName: string = fsUtil.getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        const resourceGroupName: string = getRandomHexString();
+        const storageAccountName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         resourceGroupsToDelete.push(resourceGroupName);
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
 
-        const functionAppName1: string = fsUtil.getRandomHexString();
+        const functionAppName1: string = getRandomHexString();
         const testInputs1: string[] = [functionAppName1, '$(plus) Create new storage account', storageAccountName, 'West US'];
         ext.ui = new TestUserInput(testInputs1);
         const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
@@ -91,7 +87,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
 
         // Create another function app, but use the existing resource group and storage account
-        const functionAppName2: string = fsUtil.getRandomHexString();
+        const functionAppName2: string = getRandomHexString();
         const testInputs2: string[] = [functionAppName2, storageAccountName];
         ext.ui = new TestUserInput(testInputs2);
         const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
