@@ -49,15 +49,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             this,
             funcs,
             'azFuncInvalidFunction',
-            async (fe: WebSiteManagementModels.FunctionEnvelope) => {
-                const treeItem: FunctionTreeItem = new FunctionTreeItem(this, fe);
-                if (treeItem.config.isHttpTrigger) {
-                    // We want to cache the trigger url so that it is instantaneously copied when the user performs the copy action
-                    // (Otherwise there might be a second or two delay which could lead to confusion)
-                    await treeItem.initializeTriggerUrl();
-                }
-                return treeItem;
-            },
+            async (fe: WebSiteManagementModels.FunctionEnvelope) => await FunctionTreeItem.createFunctionTreeItem(this, fe),
             (fe: WebSiteManagementModels.FunctionEnvelope) => {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }

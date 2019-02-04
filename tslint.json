@@ -63,6 +63,12 @@
         "prefer-object-spread": false,
         "no-return-await": false,
         "no-parameter-reassignment": false,
-        "no-object-literal-type-assertion": false
+        "no-object-literal-type-assertion": false,
+        "function-name": [
+            true,
+            {
+                "static-method-regex": "^[a-z][\\w_]+$"
+            }
+        ]
     }
 }
