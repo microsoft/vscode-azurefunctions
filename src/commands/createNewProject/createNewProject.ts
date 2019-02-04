@@ -9,7 +9,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { convertStringToRuntime, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { gitUtils } from '../../utils/gitUtils';
@@ -79,10 +78,6 @@ export async function createNewProject(
     });
     // don't wait
     window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
-
-    // don't wait
-    // tslint:disable-next-line:no-floating-promises
-    validateFuncCoreToolsInstalled();
 
     if (openFolder) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);

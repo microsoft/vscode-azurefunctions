@@ -10,61 +10,41 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } fr
 import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { cpUtils } from '../utils/cpUtils';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(forcePrompt: boolean = false, customMessage?: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(customMessage?: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
 
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async function (this: IActionContext): Promise<void> {
         this.suppressErrorDisplay = true;
-        this.properties.forcePrompt = String(forcePrompt);
 
-        const settingKey: string = 'showFuncInstallation';
-        if (forcePrompt || getFuncExtensionSetting<boolean>(settingKey)) {
-            if (await funcToolsInstalled()) {
-                installed = true;
+        if (await funcToolsInstalled()) {
+            installed = true;
+        } else {
+            const items: MessageItem[] = [];
+            const message: string = customMessage ? customMessage : localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
+            const packageManager: PackageManager | undefined = await getFuncPackageManager(false /* isFuncInstalled */);
+            if (packageManager !== undefined) {
+                items.push(install);
             } else {
-                const items: MessageItem[] = [];
-                const message: string = customMessage ? customMessage : localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
-                const packageManager: PackageManager | undefined = await getFuncPackageManager(false /* isFuncInstalled */);
-                if (packageManager !== undefined) {
-                    items.push(install);
-                    if (!forcePrompt) {
-                        items.push(DialogResponses.skipForNow);
-                    } else {
-                        items.push(DialogResponses.cancel);
-                    }
-                } else {
-                    items.push(DialogResponses.learnMore);
-                }
+                items.push(DialogResponses.learnMore);
+            }
 
-                if (!forcePrompt) {
-                    items.push(DialogResponses.dontWarnAgain);
-                }
+            // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
+            input = await ext.ui.showWarningMessage(message, { modal: true }, ...items);
 
-                if (forcePrompt) {
-                    // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
-                    input = await ext.ui.showWarningMessage(message, { modal: true }, ...items);
-                } else {
-                    input = await ext.ui.showWarningMessage(message, ...items);
-                }
+            this.properties.dialogResult = input.title;
 
-                this.properties.dialogResult = input.title;
-
-                if (input === install) {
-                    // tslint:disable-next-line:no-non-null-assertion
-                    await installFuncCoreTools(packageManager!);
-                    installed = true;
-                } else if (input === DialogResponses.dontWarnAgain) {
-                    await updateGlobalSetting(settingKey, false);
-                } else if (input === DialogResponses.learnMore) {
-                    await opn('https://aka.ms/Dqur4e');
-                }
+            if (input === install) {
+                // tslint:disable-next-line:no-non-null-assertion
+                await installFuncCoreTools(packageManager!);
+                installed = true;
+            } else if (input === DialogResponses.learnMore) {
+                await opn('https://aka.ms/Dqur4e');
             }
         }
     });

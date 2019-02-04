@@ -53,7 +53,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
     public async onCreateNewProject(): Promise<void> {
         const funcCoreRequired: string = localize('funcCoreRequired', 'Azure Functions Core Tools must be installed to create, debug, and deploy local Python Functions projects.');
-        if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */, funcCoreRequired)) {
+        if (!await validateFuncCoreToolsInstalled(funcCoreRequired)) {
             throw new UserCancelledError();
         }
 
