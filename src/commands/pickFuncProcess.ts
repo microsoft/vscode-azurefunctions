@@ -14,7 +14,7 @@ import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
 
 export async function pickFuncProcess(this: IActionContext): Promise<string | undefined> {
-    if (!await validateFuncCoreToolsInstalled(true /* forcePrompt */)) {
+    if (!await validateFuncCoreToolsInstalled()) {
         throw new UserCancelledError();
     }
 

@@ -5,6 +5,8 @@
 
 import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, ShellExecution, WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/isFunctionProject';
+import { hostStartTaskName } from '../constants';
+import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     protected abstract defaultPort: number;
@@ -25,8 +27,14 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
         return result;
     }
 
-    public async resolveDebugConfiguration?(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, _token?: CancellationToken): Promise<DebugConfiguration> {
+    public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, _token?: CancellationToken): Promise<DebugConfiguration | undefined> {
         this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
+        if (debugConfiguration.preLaunchTask === hostStartTaskName) {
+            if (!await validateFuncCoreToolsInstalled()) {
+                return undefined;
+            }
+        }
+
         return debugConfiguration;
     }
 
