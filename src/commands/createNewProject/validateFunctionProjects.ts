@@ -15,7 +15,6 @@ import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
-import * as fsUtil from '../../utils/fs';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { isFunctionProject } from './isFunctionProject';
 import { ITask, ITasksJson } from './ITasksJson';
@@ -77,7 +76,7 @@ function isInitializedProject(folderPath: string): boolean {
 }
 
 /**
- * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30. This verifies users are up-to-date with the latest working debug config.
+ * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
 async function verifyDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
@@ -87,31 +86,20 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
             const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
             const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
-            const funcNodeDebugArgs: string = '--inspect=5858';
             const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
             const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
             if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
                 const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
+                // NOTE: Only checking against oldFuncHostNameRegEx (where label looks like "runFunctionsHost")
+                // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
                 const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => oldFuncHostNameRegEx.test(t.label));
                 if (funcTask) {
                     actionContext.properties.debugConfigValid = 'false';
 
                     if (await promptToUpdateDebugConfiguration(folderPath)) {
-                        // tslint:disable-next-line:strict-boolean-expressions
-                        funcTask.options = funcTask.options || {};
-                        // tslint:disable-next-line:strict-boolean-expressions
-                        funcTask.options.env = funcTask.options.env || {};
-                        funcTask.options.env[funcNodeDebugEnvVar] = funcNodeDebugArgs;
-                        await fsUtil.writeFormattedJson(tasksJsonPath, tasksContent);
-
+                        await initProjectForVSCode(actionContext, folderPath, projectLanguage);
                         actionContext.properties.updatedDebugConfig = 'true';
-
-                        const viewFile: vscode.MessageItem = { title: 'View file' };
-                        const result: vscode.MessageItem | undefined = await vscode.window.showInformationMessage(localize('tasksUpdated', 'Your "tasks.json" file has been updated.'), viewFile);
-                        if (result === viewFile) {
-                            await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(tasksJsonPath)));
-                        }
                     }
                 }
             }
@@ -122,7 +110,7 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
 async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean> {
     const settingKey: string = 'showDebugConfigWarning';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
-        const updateConfig: vscode.MessageItem = { title: localize('updateTasks', 'Update tasks.json') };
+        const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
         const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
         let result: vscode.MessageItem;
         do {
