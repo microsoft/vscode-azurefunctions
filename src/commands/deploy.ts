@@ -322,11 +322,11 @@ function getRecommendedTaskName(language: ProjectLanguage, runtime: ProjectRunti
 }
 
 async function promptToBuildNativeDeps(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined): Promise<appservice.IPreDeployTaskResult> {
-    const flag: string = '--build-native-deps';
-    const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?', flag);
+    const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?');
     const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
     if (result === DialogResponses.yes) {
         actionContext.properties.preDeployTaskResponse = 'packNativeDeps';
+        const flag: string = '--build-native-deps';
         await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${flag}`, deployFsPath);
         return await appservice.tryRunPreDeployTask(actionContext, deployFsPath, scmType, extensionPrefix);
     } else if (result === DialogResponses.learnMore) {
