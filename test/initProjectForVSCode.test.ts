@@ -9,8 +9,7 @@ import { ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
-import { deploySubpathSetting, ext, extensionPrefix, getRandomHexString, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../extension.bundle';
+import { deploySubpathSetting, DialogResponses, ext, extensionPrefix, getRandomHexString, IActionContext, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../extension.bundle';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {

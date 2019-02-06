@@ -9,8 +9,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, TestUserInput } from 'vscode-azureextensionui';
-import { createNewProject, deploySubpathSetting, ext, extensionPrefix, getRandomHexString, Platform, ProjectLanguage } from '../extension.bundle';
+import { createNewProject, deploySubpathSetting, DialogResponses, ext, extensionPrefix, getRandomHexString, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources } from './global.test';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 

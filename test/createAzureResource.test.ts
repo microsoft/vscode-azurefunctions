@@ -8,8 +8,7 @@ import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, TestAzureAccount, TestUserInput } from 'vscode-azureextensionui';
-import { ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, updateGlobalSetting } from '../extension.bundle';
+import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
