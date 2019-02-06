@@ -8,8 +8,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestUserInput } from 'vscode-azureextensionui';
-import { ext, getRandomHexString, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
+import { ext, getRandomHexString, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithSetting } from '../runWithSetting';
 
