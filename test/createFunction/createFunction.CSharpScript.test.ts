@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../../extension.bundle';
@@ -30,12 +29,6 @@ suite('Create C# Script Function Tests', async () => {
 
     suiteSetup(async () => {
         await tester.initAsync();
-    });
-
-    // tslint:disable-next-line:no-function-expression
-    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(15 * 1000);
-        await tester.dispose();
     });
 
     const httpTrigger: string = 'HTTP trigger';

@@ -5,31 +5,23 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ext, getRandomHexString, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestUserInput } from '../../extension.bundle';
-import { runForAllTemplateSources } from '../global.test';
+import { ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestUserInput } from '../../extension.bundle';
+import { runForAllTemplateSources, testFolderPath } from '../global.test';
 import { runWithSetting } from '../runWithSetting';
 
-export abstract class FunctionTesterBase implements vscode.Disposable {
-    public readonly baseTestFolder: string;
+export abstract class FunctionTesterBase {
+    public baseTestFolder: string;
 
     protected abstract _language: ProjectLanguage;
     protected abstract _runtime: ProjectRuntime;
 
-    constructor() {
-        this.baseTestFolder = path.join(os.tmpdir(), `azFunc.createFuncTests${getRandomHexString()}`);
-    }
-
     public async initAsync(): Promise<void> {
+        this.baseTestFolder = path.join(testFolderPath, `createFunction${this._language}${this._runtime}`);
         await runForAllTemplateSources(async (source) => {
             await this.initializeTestFolder(path.join(this.baseTestFolder, source));
         });
-    }
-
-    public async dispose(): Promise<void> {
-        await fse.remove(this.baseTestFolder);
     }
 
     public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
@@ -68,7 +60,7 @@ export abstract class FunctionTesterBase implements vscode.Disposable {
                 });
             });
         });
-        assert.equal(inputs.length, 0, 'Not all inputs were used.');
+        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
 
         await this.validateFunction(testFolder, funcName);
     }

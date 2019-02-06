@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { JavaScriptProjectCreator, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
@@ -26,18 +26,10 @@ class JSFunctionTester extends FunctionTesterBase {
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
 suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
-    this.timeout(6 * 1000);
-
     const jsTester: JSFunctionTester = new JSFunctionTester();
 
     suiteSetup(async () => {
         await jsTester.initAsync();
-    });
-
-    // tslint:disable-next-line:no-function-expression
-    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(15 * 1000);
-        await jsTester.dispose();
     });
 
     const blobTrigger: string = 'Blob trigger';

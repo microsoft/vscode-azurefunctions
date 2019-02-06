@@ -34,12 +34,6 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         await csTester.initAsync();
     });
 
-    // tslint:disable-next-line:no-function-expression
-    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-        this.timeout(15 * 1000);
-        await csTester.dispose();
-    });
-
     const blobTrigger: string = 'BlobTrigger';
     test(blobTrigger, async () => {
         await csTester.testCreateFunction(

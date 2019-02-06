@@ -9,22 +9,13 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createNewProject, deploySubpathSetting, DialogResponses, ext, extensionPrefix, getRandomHexString, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
-import { longRunningTestsEnabled, runForAllTemplateSources } from './global.test';
+import { createNewProject, deploySubpathSetting, DialogResponses, ext, extensionPrefix, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
+import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
 import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
-    const testFolderPath: string = path.join(os.tmpdir(), `azFunc.createNewProjectTests${getRandomHexString()}`);
-
-    suiteSetup(async () => {
-        await fse.ensureDir(testFolderPath);
-    });
-
-    suiteTeardown(async () => {
-        await fse.remove(testFolderPath);
-    });
 
     const javaProject: string = 'JavaProject';
     test(javaProject, async function (this: IHookCallbackContext): Promise<void> {
@@ -168,7 +159,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const ui: TestUserInput = new TestUserInput(inputs);
         ext.ui = ui;
         await createNewProject(<IActionContext>{ properties: {}, measurements: {} }, undefined, previewLanguage ? language : undefined, undefined, false);
-        assert.equal(inputs.length, 0, 'Not all inputs were used.');
+        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
 
         assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
         assert.equal(await fse.pathExists(path.join(projectPath, 'host.json')), true, 'host.json does not exist');
