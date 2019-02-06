@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import * as fse from 'fs-extra';
 // tslint:disable-next-line:no-require-imports
 import opn = require("opn");
 import * as os from 'os';
@@ -25,7 +24,6 @@ import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
-import { mavenUtils } from '../utils/mavenUtils';
 import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
@@ -84,9 +82,6 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows function apps.  Deploy to a Linux function app instead.'));
     }
     await verifyWebContentSettings(node, telemetryProperties);
-    if (language === ProjectLanguage.Java) {
-        deployFsPath = await getJavaFolderPath(this, ext.outputChannel, deployFsPath, ext.ui, telemetryProperties);
-    }
 
     await verifyRuntimeIsCompatible(runtime, ext.ui, ext.outputChannel, client, telemetryProperties);
 
@@ -222,28 +217,6 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
     }
 
     return targetPath;
-}
-
-async function getJavaFolderPath(actionContext: IActionContext, outputChannel: vscode.OutputChannel, basePath: string, ui: IAzureUserInput, telemetryProperties: TelemetryProperties): Promise<string> {
-    await mavenUtils.validateMavenInstalled(actionContext, basePath);
-    outputChannel.show();
-    await mavenUtils.executeMvnCommand(telemetryProperties, outputChannel, basePath, 'clean', 'package', '-B');
-    const pomLocation: string = path.join(basePath, 'pom.xml');
-    const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomLocation);
-    const targetFolder: string = functionAppName ? path.join(basePath, 'target', 'azure-functions', functionAppName) : '';
-    if (functionAppName && await fse.pathExists(targetFolder)) {
-        return targetFolder;
-    } else {
-        const message: string = localize('azFunc.cannotFindPackageFolder', 'Cannot find the packaged function folder, would you like to specify the folder location?');
-        await ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.cancel);
-        return (await ui.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            defaultUri: vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 ? vscode.workspace.workspaceFolders[0].uri : undefined,
-            openLabel: localize('select', 'Select')
-        }))[0].fsPath;
-    }
 }
 
 async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: appservice.SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {

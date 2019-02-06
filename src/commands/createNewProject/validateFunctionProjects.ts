@@ -9,7 +9,7 @@ import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
+import { deploySubpathSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -34,7 +34,8 @@ export async function validateFunctionProjects(actionContext: IActionContext, fo
 
                     const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
                     actionContext.properties.projectLanguage = projectLanguage;
-                    await verifyDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                    await verifyJSDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                    await verifyJavaDeployConfigIsValid(projectLanguage, folderPath, actionContext);
                     await verifyPythonVenv(projectLanguage, folderPath, actionContext);
                 } else {
                     actionContext.properties.isInitialized = 'false';
@@ -79,7 +80,7 @@ function isInitializedProject(folderPath: string): boolean {
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-async function verifyDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
     if (projectLanguage === ProjectLanguage.JavaScript) {
         const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
         if (localProjectRuntime === ProjectRuntime.v2) {
@@ -97,7 +98,10 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
                 if (funcTask) {
                     actionContext.properties.debugConfigValid = 'false';
 
-                    if (await promptToUpdateDebugConfiguration(folderPath)) {
+                    const settingKey: string = 'showDebugConfigWarning';
+                    const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
+                    const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
+                    if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
                         await initProjectForVSCode(actionContext, folderPath, projectLanguage);
                         actionContext.properties.updatedDebugConfig = 'true';
                     }
@@ -107,11 +111,28 @@ async function verifyDebugConfigIsValid(projectLanguage: string | undefined, fol
     }
 }
 
-async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean> {
-    const settingKey: string = 'showDebugConfigWarning';
+async function verifyJavaDeployConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    if (projectLanguage === ProjectLanguage.Java) {
+        const preDeployTask: string | undefined = getFuncExtensionSetting<string>(preDeployTaskSetting, folderPath);
+        const deploySubPath: string | undefined = getFuncExtensionSetting<string>(deploySubpathSetting, folderPath);
+
+        if (!preDeployTask && !deploySubPath) {
+            actionContext.properties.javaDeployConfigValid = 'false';
+
+            const settingKey: string = 'showJavaDeployConfigWarning';
+            const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
+            const learnMoreLink: string = 'https://aka.ms/AA41zno';
+            if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+                await initProjectForVSCode(actionContext, folderPath, projectLanguage);
+                actionContext.properties.updatedJavaDebugConfig = 'true';
+            }
+        }
+    }
+}
+
+async function promptToUpdateProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string): Promise<boolean> {
     if (getFuncExtensionSetting<boolean>(settingKey)) {
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
-        const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
         let result: vscode.MessageItem;
         do {
             result = await ext.ui.showWarningMessage(message, updateConfig, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
@@ -120,7 +141,7 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
             } else if (result === DialogResponses.learnMore) {
                 // don't wait to re-show dialog
                 // tslint:disable-next-line:no-floating-promises
-                opn('https://aka.ms/AA1vrxa');
+                opn(learnMoreLink);
             } else {
                 return true;
             }

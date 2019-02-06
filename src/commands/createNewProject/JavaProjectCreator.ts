@@ -18,8 +18,11 @@ import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNa
 import { mavenUtils } from '../../utils/mavenUtils';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 
+const packageTaskLabel: string = 'package';
+
 export class JavaProjectCreator extends ProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public preDeployTask: string = packageTaskLabel;
 
     private _javaTargetPath: string;
 
@@ -110,10 +113,11 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                 this._javaTargetPath = `target/azure-functions/${functionAppName}/`;
             }
         }
+
+        this.deploySubpath = this._javaTargetPath;
     }
 
     public getTasksJson(): {} {
-        const packageTaskLabel: string = 'package';
         return {
             version: '2.0.0',
             tasks: [
