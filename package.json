@@ -750,6 +750,11 @@
                         "description": "%azFunc.showDebugConfigWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showJavaDeployConfigWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showJavaDeployConfigWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.showPythonVenvWarning": {
                         "type": "boolean",
                         "description": "%azFunc.showPythonVenvWarningDescription%",

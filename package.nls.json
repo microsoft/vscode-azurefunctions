@@ -34,6 +34,7 @@
     "azFunc.show64BitWarningDescription": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
     "azFunc.showProjectWarningDescription": "Show a warning when an Azure Functions project was detected that has not been initialized for use in VS Code.",
     "azFunc.showDebugConfigWarningDescription": "Show a warning when an Azure Functions project was detected that has an out-of-date debug configuration.",
+    "azFunc.showJavaDeployConfigWarningDescription": "Show a warning when an Azure Functions Java project was detected that has an out-of-date deploy configuration.",
     "azFunc.showPythonVenvWarningDescription": "Show a warning when an Azure Functions Python project was detected that does not have a virtual environment.",
     "azFunc.showDeploySubpathWarningDescription": "Show a warning when the \"deploySubpath\" setting does not match the selected folder for deploying.",
     "azFunc.startStreamingLogs": "Start Streaming Logs",

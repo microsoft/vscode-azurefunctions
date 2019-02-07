@@ -9,7 +9,7 @@ import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
+import { deploySubpathSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -34,8 +34,18 @@ export async function validateFunctionProjects(actionContext: IActionContext, fo
 
                     const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
                     actionContext.properties.projectLanguage = projectLanguage;
-                    await verifyDebugConfigIsValid(projectLanguage, folderPath, actionContext);
-                    await verifyPythonVenv(projectLanguage, folderPath, actionContext);
+                    switch (projectLanguage) {
+                        case ProjectLanguage.JavaScript:
+                            await verifyJSDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                            break;
+                        case ProjectLanguage.Java:
+                            await verifyJavaDeployConfigIsValid(projectLanguage, folderPath, actionContext);
+                            break;
+                        case ProjectLanguage.Python:
+                            await verifyPythonVenv(folderPath, actionContext);
+                            break;
+                        default:
+                    }
                 } else {
                     actionContext.properties.isInitialized = 'false';
                     if (await promptToInitializeProject(folderPath)) {
@@ -79,39 +89,57 @@ function isInitializedProject(folderPath: string): boolean {
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-async function verifyDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
-    if (projectLanguage === ProjectLanguage.JavaScript) {
-        const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
-        if (localProjectRuntime === ProjectRuntime.v2) {
-            const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
-            const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
+async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
+    if (localProjectRuntime === ProjectRuntime.v2) {
+        const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
+        const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
-            const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
-            const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
-            if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
-                const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
+        const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
+        const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
+        if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
+            const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
 
-                // NOTE: Only checking against oldFuncHostNameRegEx (where label looks like "runFunctionsHost")
-                // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
-                const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => oldFuncHostNameRegEx.test(t.label));
-                if (funcTask) {
-                    actionContext.properties.debugConfigValid = 'false';
+            // NOTE: Only checking against oldFuncHostNameRegEx (where label looks like "runFunctionsHost")
+            // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
+            const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => oldFuncHostNameRegEx.test(t.label));
+            if (funcTask) {
+                actionContext.properties.debugConfigValid = 'false';
 
-                    if (await promptToUpdateDebugConfiguration(folderPath)) {
-                        await initProjectForVSCode(actionContext, folderPath, projectLanguage);
-                        actionContext.properties.updatedDebugConfig = 'true';
-                    }
+                const settingKey: string = 'showDebugConfigWarning';
+                const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
+                const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
+                if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+                    actionContext.suppressErrorDisplay = false;
+                    await initProjectForVSCode(actionContext, folderPath, projectLanguage);
+                    actionContext.properties.updatedDebugConfig = 'true';
                 }
             }
         }
     }
 }
 
-async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean> {
-    const settingKey: string = 'showDebugConfigWarning';
+async function verifyJavaDeployConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+    const preDeployTask: string | undefined = getFuncExtensionSetting<string>(preDeployTaskSetting, folderPath);
+    const deploySubPath: string | undefined = getFuncExtensionSetting<string>(deploySubpathSetting, folderPath);
+
+    if (!preDeployTask && !deploySubPath) {
+        actionContext.properties.javaDeployConfigValid = 'false';
+
+        const settingKey: string = 'showJavaDeployConfigWarning';
+        const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
+        const learnMoreLink: string = 'https://aka.ms/AA41zno';
+        if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+            actionContext.suppressErrorDisplay = false;
+            await initProjectForVSCode(actionContext, folderPath, projectLanguage);
+            actionContext.properties.updatedJavaDebugConfig = 'true';
+        }
+    }
+}
+
+async function promptToUpdateProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string): Promise<boolean> {
     if (getFuncExtensionSetting<boolean>(settingKey)) {
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
-        const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
         let result: vscode.MessageItem;
         do {
             result = await ext.ui.showWarningMessage(message, updateConfig, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
@@ -120,7 +148,7 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
             } else if (result === DialogResponses.learnMore) {
                 // don't wait to re-show dialog
                 // tslint:disable-next-line:no-floating-promises
-                opn('https://aka.ms/AA1vrxa');
+                opn(learnMoreLink);
             } else {
                 return true;
             }
@@ -130,30 +158,29 @@ async function promptToUpdateDebugConfiguration(fsPath: string): Promise<boolean
     return false;
 }
 
-async function verifyPythonVenv(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
-    if (projectLanguage === ProjectLanguage.Python) {
-        const venvName: string | undefined = getFuncExtensionSetting(pythonVenvSetting, folderPath);
-        if (venvName && !await fse.pathExists(path.join(folderPath, venvName))) {
-            actionContext.properties.pythonVenvExists = 'false';
+async function verifyPythonVenv(folderPath: string, actionContext: IActionContext): Promise<void> {
+    const venvName: string | undefined = getFuncExtensionSetting(pythonVenvSetting, folderPath);
+    if (venvName && !await fse.pathExists(path.join(folderPath, venvName))) {
+        actionContext.properties.pythonVenvExists = 'false';
 
-            const settingKey: string = 'showPythonVenvWarning';
-            if (getFuncExtensionSetting<boolean>(settingKey)) {
-                const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
-                const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is required to debug and deploy your Azure Functions project.', venvName);
-                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
-                if (result === createVenv) {
-                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
-                        // create venv
-                        await createVirtualEnviornment(venvName, folderPath);
-                        await makeVenvDebuggable(venvName, folderPath);
-                    });
+        const settingKey: string = 'showPythonVenvWarning';
+        if (getFuncExtensionSetting<boolean>(settingKey)) {
+            const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
+            const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is required to debug and deploy your Azure Functions project.', venvName);
+            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
+            if (result === createVenv) {
+                actionContext.suppressErrorDisplay = false;
+                await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
+                    // create venv
+                    await createVirtualEnviornment(venvName, folderPath);
+                    await makeVenvDebuggable(venvName, folderPath);
+                });
 
-                    actionContext.properties.createdPythonVenv = 'true';
-                    // don't wait
-                    vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
-                } else if (result === DialogResponses.dontWarnAgain) {
-                    await updateGlobalSetting(settingKey, false);
-                }
+                actionContext.properties.createdPythonVenv = 'true';
+                // don't wait
+                vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
+            } else if (result === DialogResponses.dontWarnAgain) {
+                await updateGlobalSetting(settingKey, false);
             }
         }
     }
