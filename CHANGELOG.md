@@ -4,6 +4,29 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.14.0 - 2018-02-11
+
+### Added
+
+- Improved startup and installation performance
+- Improved reliability of Python projects
+  - Leverages ptvsd module shipped with Python extension for VS Code instead of installing ptvsd in your virtual environment
+  - Removed terminal specific separators from debug config
+  - Allow deployment to dedicated App Service plans
+  - Added retry logic to handle momentary issues while deploying
+- Added `azureFunctions.advancedCreation` setting. When set to true, this allows you to manually select several properties (i.e. OS and runtime) when creating a function app
+- App setting values are hidden by default
+
+### Changed
+
+- Java projects now leverage common settings for deploy. See [our wiki](https://aka.ms/AA41zno) for more info
+  - Projects will no longer run `mvn clean package` unless `azureFunctions.preDeployTask` is set
+  - Projects will no longer deploy a subpath of the workspace unless `azureFunctions.deploySubpath` is set
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.14.0%22+is%3Aclosed)
+
 ## 0.13.1 - 2018-12-17
 
 ### Fixed
