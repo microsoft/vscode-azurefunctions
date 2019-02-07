@@ -19,7 +19,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 ### Changed
 
-- Java projects now leverage common settings for deploy. See https://aka.ms/AA41zno for more info
+- Java projects now leverage common settings for deploy. See [our wiki](https://aka.ms/AA41zno) for more info
   - Projects will no longer run `mvn clean package` unless `azureFunctions.preDeployTask` is set
   - Projects will no longer deploy a subpath of the workspace unless `azureFunctions.deploySubpath` is set
 
