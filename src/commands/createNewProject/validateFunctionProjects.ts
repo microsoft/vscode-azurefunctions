@@ -110,6 +110,7 @@ async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, f
                 const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
                 const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
                 if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+                    actionContext.suppressErrorDisplay = false;
                     await initProjectForVSCode(actionContext, folderPath, projectLanguage);
                     actionContext.properties.updatedDebugConfig = 'true';
                 }
@@ -129,6 +130,7 @@ async function verifyJavaDeployConfigIsValid(projectLanguage: string | undefined
         const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
         const learnMoreLink: string = 'https://aka.ms/AA41zno';
         if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+            actionContext.suppressErrorDisplay = false;
             await initProjectForVSCode(actionContext, folderPath, projectLanguage);
             actionContext.properties.updatedJavaDebugConfig = 'true';
         }
@@ -167,6 +169,7 @@ async function verifyPythonVenv(folderPath: string, actionContext: IActionContex
             const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is required to debug and deploy your Azure Functions project.', venvName);
             const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
             if (result === createVenv) {
+                actionContext.suppressErrorDisplay = false;
                 await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                     // create venv
                     await createVirtualEnviornment(venvName, folderPath);
