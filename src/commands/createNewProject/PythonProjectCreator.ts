@@ -80,8 +80,16 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
 
         function getPipInstallCommand(platform: NodeJS.Platform): string {
-            const subFolder: string = platform === Platform.Windows ? 'Scripts' : 'bin';
-            return `${path.join('.', venvSettingReference, subFolder, 'python')} -m pip install -r requirements.txt`;
+            let subFolder: string;
+            let osPathJoin: (...p: string[]) => string;
+            if (platform === Platform.Windows) {
+                subFolder = 'Scripts';
+                osPathJoin = path.win32.join;
+            } else {
+                subFolder = 'bin';
+                osPathJoin = path.posix.join;
+            }
+            return `${osPathJoin('.', venvSettingReference, subFolder, 'python')} -m pip install -r requirements.txt`;
         }
 
         return {
