@@ -18,7 +18,7 @@ import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting, updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
@@ -100,8 +100,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         telemetryProperties.cancelStep = '';
     }
 
-    const preDeployResult: appservice.IPreDeployTaskResult = await appservice.runPreDeployTask(this, deployFsPath, siteConfig.scmType, extensionPrefix);
-    await handlePreDeployTaskResult(preDeployResult, language, runtime);
+    const preDeployResult: appservice.IPreDeployTaskResult = await appservice.tryRunPreDeployTask(this, deployFsPath, siteConfig.scmType, extensionPrefix);
+    await handlePreDeployTaskResult(this, deployFsPath, siteConfig.scmType, preDeployResult, language, runtime);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
@@ -275,7 +275,12 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
     }
 }
 
-async function handlePreDeployTaskResult(result: appservice.IPreDeployTaskResult, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
+async function handlePreDeployTaskResult(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined, result: appservice.IPreDeployTaskResult, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
+    // https://github.com/Microsoft/vscode-azurefunctions/issues/826
+    if (result.taskName === packTaskName && result.exitCode === 4) {
+        result = await promptToBuildNativeDeps(actionContext, deployFsPath, scmType);
+    }
+
     const messageLines: string[] = [];
     if (!result.taskName) {
         const recommendedTaskName: string | undefined = getRecommendedTaskName(language, runtime);
@@ -290,6 +295,8 @@ async function handlePreDeployTaskResult(result: appservice.IPreDeployTaskResult
         messageLines.push(localize('noPreDeployTaskError', 'Did not find preDeploy task "{0}". Change the "{1}.{2}" setting, manually edit your task.json, or re-initialize your VS Code config with the following steps:', result.taskName, extensionPrefix, preDeployTaskSetting));
         const fullMessage: string = getFullPreDeployMessage(messageLines);
         throw new Error(fullMessage);
+    } else if (result.exitCode !== undefined && result.exitCode !== 0) {
+        await appservice.handleFailedPreDeployTask(actionContext, result);
     }
 }
 
@@ -311,6 +318,25 @@ function getRecommendedTaskName(language: ProjectLanguage, runtime: ProjectRunti
             return packTaskName;
         default:
             return undefined; // preDeployTask not needed
+    }
+}
+
+async function promptToBuildNativeDeps(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined): Promise<appservice.IPreDeployTaskResult> {
+    const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?');
+    const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
+    if (result === DialogResponses.yes) {
+        actionContext.properties.preDeployTaskResponse = 'packNativeDeps';
+        const flag: string = '--build-native-deps';
+        await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${flag}`, deployFsPath);
+        return await appservice.tryRunPreDeployTask(actionContext, deployFsPath, scmType, extensionPrefix);
+    } else if (result === DialogResponses.learnMore) {
+        actionContext.properties.preDeployTaskResponse = 'packLearnMore';
+        // tslint:disable-next-line:no-floating-promises
+        opn('https://aka.ms/func-python-publish');
+        throw new UserCancelledError();
+    } else {
+        actionContext.properties.preDeployTaskResponse = 'cancel';
+        throw new UserCancelledError();
     }
 }
 

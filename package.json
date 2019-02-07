@@ -863,7 +863,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
-        "vscode-azureappservice": "^0.29.1",
+        "vscode-azureappservice": "^0.30.0",
         "vscode-azureextensionui": "^0.20.0",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.0.0",
