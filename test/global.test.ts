@@ -3,20 +3,26 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel } from 'vscode-azureextensiondev';
-import { ext, getTemplateProvider, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
+import { ext, getRandomHexString, getTemplateProvider, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
+export let testFolderPath: string;
 
 let templatesMap: Map<TemplateSource, TemplateProvider>;
 
 // Runs before all tests
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(120 * 1000);
+
+    testFolderPath = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
+    await fse.ensureDir(testFolderPath);
+
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     await ext.templateProviderTask; // make sure default templates are loaded before setting up templates from other sources
     ext.outputChannel = new TestOutputChannel();
@@ -38,6 +44,10 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 
     // tslint:disable-next-line:strict-boolean-expressions
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
+});
+
+suiteTeardown(async () => {
+    await fse.remove(testFolderPath);
 });
 
 export async function runForAllTemplateSources(callback: (source: TemplateSource, templates: TemplateProvider) => Promise<void>): Promise<void> {

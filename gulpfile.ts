@@ -25,7 +25,7 @@ import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev
 function test() {
     const env = process.env;
     env.DEBUGTELEMETRY = '1';
-    env.MOCHA_timeout = String(10 * 1000);
+    env.MOCHA_timeout = String(20 * 1000);
     env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
     return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
 }

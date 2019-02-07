@@ -6,23 +6,14 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
-import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, DialogResponses, ext, extensionPrefix, getRandomHexString, IActionContext, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../extension.bundle';
+import { deploySubpathSetting, DialogResponses, ext, extensionPrefix, IActionContext, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../extension.bundle';
+import { testFolderPath } from './global.test';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
-    const testFolderPath: string = path.join(os.tmpdir(), `azFunc.initProjectForVSCodeTests${getRandomHexString()}`);
-
-    suiteSetup(async () => {
-        await fse.ensureDir(testFolderPath);
-    });
-
-    suiteTeardown(async () => {
-        await fse.remove(testFolderPath);
-    });
 
     const javaScriptProject: string = 'AutoDetectJavaScriptProject';
     test(javaScriptProject, async () => {
@@ -168,7 +159,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         ext.ui = new TestUserInput(inputs);
         const actionContext: IActionContext = <IActionContext>{ properties: { isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, measurements: {} };
         await initProjectForVSCode(actionContext);
-        assert.equal(inputs.length, 0, 'Not all inputs were used.');
+        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
     }
 });
 
