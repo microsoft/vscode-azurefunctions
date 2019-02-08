@@ -8,7 +8,7 @@ import { func, funcPackCommand, packCommand } from '../constants';
 import { venvUtils } from '../utils/venvUtils';
 
 export function getPythonTasks(folder: WorkspaceFolder): Task[] {
-    const commandLine: string = venvUtils.convertToVenvTask(folder, funcPackCommand);
+    const commandLine: string = venvUtils.convertToVenvCommand(funcPackCommand, folder.uri.fsPath);
     const basicPack: Task = new Task(
         {
             type: func,

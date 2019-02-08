@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { JavaScriptProjectCreator, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
-import { runWithSetting } from '../runWithSetting';
+import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {
@@ -140,8 +140,8 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
             const authLevel: string = 'Anonymous';
             const projectPath: string = path.join(jsTester.baseTestFolder, source);
             // Intentionally testing weird casing for authLevel
-            await runWithSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
-                await runWithSetting(projectRuntimeSetting, JavaScriptProjectCreator.defaultRuntime, async () => {
+            await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
+                await runWithFuncSetting(projectRuntimeSetting, JavaScriptProjectCreator.defaultRuntime, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                 });
             });

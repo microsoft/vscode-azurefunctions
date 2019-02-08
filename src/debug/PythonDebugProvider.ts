@@ -24,7 +24,7 @@ export class PythonDebugProvider extends FuncDebugProviderBase {
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const command: string = venvUtils.convertToVenvTask(folder, funcHostStartCommand);
+        const command: string = venvUtils.convertToVenvCommand(funcHostStartCommand, folder.uri.fsPath);
         const port: number = this.getDebugPort(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
         return new ShellExecution(command, options);

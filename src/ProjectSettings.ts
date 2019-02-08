@@ -15,8 +15,8 @@ import { localize } from "./localize";
 
 const previewDescription: string = localize('previewDescription', '(Preview)');
 
-export async function updateGlobalSetting<T = string>(section: string, value: T): Promise<void> {
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix);
+export async function updateGlobalSetting<T = string>(section: string, value: T, prefix: string = extensionPrefix): Promise<void> {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
     await projectConfiguration.update(section, value, ConfigurationTarget.Global);
 }
 

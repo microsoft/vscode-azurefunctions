@@ -12,7 +12,7 @@ import { TestOutputChannel } from 'vscode-azureextensiondev';
 import { ext, getRandomHexString, getTemplateProvider, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
-export let testFolderPath: string;
+export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
 let templatesMap: Map<TemplateSource, TemplateProvider>;
 
@@ -20,7 +20,6 @@ let templatesMap: Map<TemplateSource, TemplateProvider>;
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(120 * 1000);
 
-    testFolderPath = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
     await fse.ensureDir(testFolderPath);
 
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
@@ -46,7 +45,8 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });
 
-suiteTeardown(async () => {
+suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+    this.timeout(40 * 1000);
     await fse.remove(testFolderPath);
 });
 
