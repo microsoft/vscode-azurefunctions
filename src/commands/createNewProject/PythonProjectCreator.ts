@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { QuickPickItem } from 'vscode';
 import { IActionContext, IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, ProjectRuntime, TemplateFilter } from "../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, ProjectRuntime, pythonVenvSetting, TemplateFilter } from "../../constants";
 import { pythonDebugConfig } from '../../debug/PythonDebugProvider';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -22,7 +22,6 @@ import * as fsUtil from '../../utils/fs';
 import { venvUtils } from '../../utils/venvUtils';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
-export const pythonVenvSetting: string = 'pythonVenv';
 const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
 
 const minPythonVersion: string = '3.6.0';
@@ -59,7 +58,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
 
         this._venvName = await this.ensureVenv();
 
-        await venvUtils.runPythonCommandInVenv(this._venvName, this.functionAppPath, `${ext.funcCliPath} init ./ --worker-runtime python`);
+        await venvUtils.runCommandInVenv(`${ext.funcCliPath} init ./ --worker-runtime python`, this._venvName, this.functionAppPath);
     }
 
     public async onInitProjectForVSCode(): Promise<void> {
@@ -69,7 +68,6 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             this._venvName = await this.ensureVenv();
         }
 
-        await makeVenvDebuggable(this._venvName, this.functionAppPath);
         await this.ensureVenvInFuncIgnore(this._venvName);
         await this.ensureGitIgnoreContents(this._venvName);
         await this.ensureAzureWebJobsStorage();
@@ -80,8 +78,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
 
         function getPipInstallCommand(platform: NodeJS.Platform): string {
-            const subFolder: string = platform === Platform.Windows ? 'Scripts' : 'bin';
-            return `${path.join('.', venvSettingReference, subFolder, 'python')} -m pip install -r requirements.txt`;
+            return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);
         }
 
         return {
@@ -186,12 +183,8 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
         const venvs: string[] = [];
         const fsPaths: string[] = await fse.readdir(this.functionAppPath);
         await Promise.all(fsPaths.map(async (venvName: string) => {
-            const stat: fse.Stats = await fse.stat(path.join(this.functionAppPath, venvName));
-            if (stat.isDirectory()) {
-                const venvActivatePath: string = venvUtils.getVenvActivatePath(venvName);
-                if (await fse.pathExists(path.join(this.functionAppPath, venvActivatePath))) {
-                    venvs.push(venvName);
-                }
+            if (await venvUtils.venvExists(venvName, this.functionAppPath)) {
+                venvs.push(venvName);
             }
         }));
 
@@ -266,9 +259,4 @@ async function getPythonAlias(): Promise<string> {
 export async function createVirtualEnviornment(venvName: string, functionAppPath: string): Promise<void> {
     const pythonAlias: string = await getPythonAlias();
     await cpUtils.executeCommand(ext.outputChannel, functionAppPath, pythonAlias, '-m', 'venv', venvName);
-}
-
-export async function makeVenvDebuggable(venvName: string, functionAppPath: string): Promise<void> {
-    // install pylint - helpful for debugging in VS Code
-    await venvUtils.runPythonCommandInVenv(venvName, functionAppPath, 'pip install pylint');
 }

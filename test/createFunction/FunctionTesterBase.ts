@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources, testFolderPath } from '../global.test';
-import { runWithSetting } from '../runWithSetting';
+import { runWithFuncSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase {
     public baseTestFolder: string;
@@ -53,9 +53,9 @@ export abstract class FunctionTesterBase {
         }
 
         ext.ui = new TestUserInput(inputs);
-        await runWithSetting(templateFilterSetting, TemplateFilter.All, async () => {
-            await runWithSetting(projectLanguageSetting, this._language, async () => {
-                await runWithSetting(projectRuntimeSetting, this._runtime, async () => {
+        await runWithFuncSetting(templateFilterSetting, TemplateFilter.All, async () => {
+            await runWithFuncSetting(projectLanguageSetting, this._language, async () => {
+                await runWithFuncSetting(projectRuntimeSetting, this._runtime, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction');
                 });
             });

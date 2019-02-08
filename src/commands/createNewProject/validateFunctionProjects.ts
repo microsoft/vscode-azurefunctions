@@ -9,7 +9,7 @@ import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { deploySubpathSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, tasksFileName, vscodeFolderName } from '../../constants';
+import { deploySubpathSetting, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, pythonVenvSetting, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -18,7 +18,7 @@ import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } 
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { isFunctionProject } from './isFunctionProject';
 import { ITask, ITasksJson } from './ITasksJson';
-import { createVirtualEnviornment, makeVenvDebuggable, pythonVenvSetting } from './PythonProjectCreator';
+import { createVirtualEnviornment } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
@@ -173,7 +173,6 @@ async function verifyPythonVenv(folderPath: string, actionContext: IActionContex
                 await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                     // create venv
                     await createVirtualEnviornment(venvName, folderPath);
-                    await makeVenvDebuggable(venvName, folderPath);
                 });
 
                 actionContext.properties.createdPythonVenv = 'true';

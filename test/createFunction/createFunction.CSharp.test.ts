@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
-import { runWithSetting } from '../runWithSetting';
+import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
@@ -82,8 +82,8 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
             const iotPath: string = 'messages/events';
             const connection: string = 'IoTHub_Setting';
             const projectPath: string = path.join(csTester.baseTestFolder, source);
-            await runWithSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
-                await runWithSetting(projectRuntimeSetting, ProjectRuntime.v2, async () => {
+            await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
+                await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v2, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
                 });
             });
