@@ -45,7 +45,8 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });
 
-suiteTeardown(async () => {
+suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+    this.timeout(40 * 1000);
     await fse.remove(testFolderPath);
 });
 
