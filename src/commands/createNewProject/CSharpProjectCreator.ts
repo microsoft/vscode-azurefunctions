@@ -10,7 +10,7 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectRuntime, publishTaskId, TemplateFilter } from '../../constants';
+import { cSharpPublishTaskLabel, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
@@ -23,7 +23,7 @@ import { ProjectCreatorBase } from './ProjectCreatorBase';
 export class CSharpProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public preDeployTask: string = publishTaskId;
+    public preDeployTask: string = cSharpPublishTaskLabel;
 
     private _debugSubpath: string;
 
@@ -69,7 +69,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: publishTaskId,
+                    label: cSharpPublishTaskLabel,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',

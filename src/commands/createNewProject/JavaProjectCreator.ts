@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { InputBoxOptions, window } from 'vscode';
 import { IActionContext } from "vscode-azureextensionui";
-import { func, funcWatchProblemMatcher, hostStartCommand, ProjectRuntime, TemplateFilter } from '../../constants';
+import { func, funcWatchProblemMatcher, hostStartCommand, javaPackageTaskLabel, ProjectRuntime, TemplateFilter } from '../../constants';
 import { javaDebugConfig } from '../../debug/JavaDebugProvider';
 import { ext } from '../../extensionVariables';
 import { localize } from "../../localize";
@@ -18,11 +18,9 @@ import { validateMavenIdentifier, validatePackageName } from '../../utils/javaNa
 import { mavenUtils } from '../../utils/mavenUtils';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 
-const packageTaskLabel: string = 'package';
-
 export class JavaProjectCreator extends ProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public preDeployTask: string = packageTaskLabel;
+    public preDeployTask: string = javaPackageTaskLabel;
 
     private _javaTargetPath: string;
 
@@ -129,10 +127,10 @@ export class JavaProjectCreator extends ProjectCreatorBase {
                     options: {
                         cwd: `\${workspaceFolder}/${this._javaTargetPath}`
                     },
-                    dependsOn: packageTaskLabel
+                    dependsOn: javaPackageTaskLabel
                 },
                 {
-                    label: packageTaskLabel,
+                    label: javaPackageTaskLabel,
                     command: 'mvn clean package',
                     type: 'shell'
                 }
