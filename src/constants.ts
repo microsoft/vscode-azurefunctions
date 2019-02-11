@@ -68,7 +68,8 @@ export enum ScmType {
     GitHub = 'GitHub'
 }
 
-export const publishTaskId: string = 'publish';
+export const cSharpPublishTaskLabel: string = 'publish';
+export const javaPackageTaskLabel: string = 'package';
 
 export const func: string = 'func';
 export const extInstallCommand: string = 'extensions install';
