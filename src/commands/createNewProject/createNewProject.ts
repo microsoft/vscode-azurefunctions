@@ -85,7 +85,7 @@ export async function createNewProject(
 }
 
 export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined): ProjectCreatorBase {
-    let projectCreatorType: { new(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined): ProjectCreatorBase };
+    let projectCreatorType: new (functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) => ProjectCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
             projectCreatorType = JavaProjectCreator;
