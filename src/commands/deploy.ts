@@ -48,25 +48,25 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
     const workspaceFsPath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
 
-    const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => {
-        // event is fired from azure-extensionui if node was created during deployment
-        newNodes.push(newNode);
-    });
-    try {
-        if (!node) {
-            if (!functionAppId || typeof functionAppId !== 'string') {
+    if (!node) {
+        if (!functionAppId || typeof functionAppId !== 'string') {
+            const onNodeCreatedFromQuickPickDisposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => {
+                // event is fired from azure-extensionui if node was created during deployment
+                newNodes.push(newNode);
+            });
+            try {
                 node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+            } finally {
+                onNodeCreatedFromQuickPickDisposable.dispose();
+            }
+        } else {
+            const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId);
+            if (functionAppNode) {
+                node = <SlotTreeItemBase>functionAppNode;
             } else {
-                const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId);
-                if (functionAppNode) {
-                    node = <SlotTreeItemBase>functionAppNode;
-                } else {
-                    throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
-                }
+                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
             }
         }
-    } finally {
-        onNodeCreatedFromQuickPickDisposable.dispose();
     }
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog

@@ -46,7 +46,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 });
 
 suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-    this.timeout(40 * 1000);
+    this.timeout(90 * 1000);
     await fse.remove(testFolderPath);
 });
 
