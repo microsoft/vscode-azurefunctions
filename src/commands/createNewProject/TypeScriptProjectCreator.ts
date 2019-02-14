@@ -13,7 +13,7 @@ const pruneTaskLabel: string = 'prune';
 
 // tslint:disable-next-line:no-multiline-string
 const funcignore: string = `*.ts
-dist/`;
+test/`;
 
 export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
     public readonly preDeployTask: string = pruneTaskLabel;
