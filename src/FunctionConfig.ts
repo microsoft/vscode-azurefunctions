@@ -6,8 +6,9 @@
 import { parseError } from 'vscode-azureextensionui';
 import { localize } from "./localize";
 
-interface IFunctionJson {
+export interface IFunctionJson {
     disabled?: boolean;
+    scriptFile?: string;
     bindings: IFunctionBinding[];
 }
 

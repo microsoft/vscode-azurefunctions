@@ -22,6 +22,7 @@ import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 import { PythonProjectCreator } from './PythonProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
+import { TypeScriptProjectCreator } from './TypeScriptProjectCreator';
 
 export async function createNewProject(
     actionContext: IActionContext,
@@ -48,6 +49,7 @@ export async function createNewProject(
             const languagePicks: QuickPickItem[] = [
                 { label: ProjectLanguage.JavaScript, description: '' },
                 { label: ProjectLanguage.CSharp, description: '' },
+                { label: ProjectLanguage.TypeScript, description: previewDescription },
                 { label: ProjectLanguage.Python, description: previewDescription },
                 { label: ProjectLanguage.Java, description: previewDescription }
             ];
@@ -101,6 +103,9 @@ export function getProjectCreator(language: string, functionAppPath: string, act
             break;
         case ProjectLanguage.Python:
             projectCreatorType = PythonProjectCreator;
+            break;
+        case ProjectLanguage.TypeScript:
+            projectCreatorType = TypeScriptProjectCreator;
             break;
         default:
             projectCreatorType = ScriptProjectCreatorBase;

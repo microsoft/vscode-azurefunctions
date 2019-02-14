@@ -87,3 +87,6 @@ export const funcPackCommand: string = `${func} ${packCommand}`;
 export const funcWatchProblemMatcher: string = '$func-watch';
 
 export const localhost: string = '127.0.0.1';
+
+export const tsDefaultOutDir: string = 'dist';
+export const tsConfigFileName: string = 'tsconfig.json';
