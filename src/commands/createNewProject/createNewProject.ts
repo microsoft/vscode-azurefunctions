@@ -47,9 +47,9 @@ export async function createNewProject(
             const previewDescription: string = localize('previewDescription', '(Preview)');
             // Only display 'supported' languages that can be debugged in VS Code
             const languagePicks: QuickPickItem[] = [
-                { label: ProjectLanguage.JavaScript, description: '' },
-                { label: ProjectLanguage.CSharp, description: '' },
-                { label: ProjectLanguage.TypeScript, description: previewDescription },
+                { label: ProjectLanguage.JavaScript },
+                { label: ProjectLanguage.TypeScript },
+                { label: ProjectLanguage.CSharp },
                 { label: ProjectLanguage.Python, description: previewDescription },
                 { label: ProjectLanguage.Java, description: previewDescription }
             ];
