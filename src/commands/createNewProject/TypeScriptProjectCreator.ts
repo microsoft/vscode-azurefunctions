@@ -3,28 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
 import * as path from 'path';
+import { IActionContext } from 'vscode-azureextensionui';
 import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand, ProjectRuntime, tsConfigFileName, tsDefaultOutDir } from '../../constants';
 import { confirmOverwriteFile, writeFormattedJson } from '../../utils/fs';
 import { JavaScriptProjectCreator } from "./JavaScriptProjectCreator";
 
 const pruneTaskLabel: string = 'prune';
 
-// tslint:disable-next-line:no-multiline-string
-const funcignore: string = `*.ts
-test/`;
-
 export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
     public readonly preDeployTask: string = pruneTaskLabel;
 
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
+        super(functionAppPath, actionContext, runtime);
+        this.funcignore = this.funcignore.concat('*.js.map', '*.ts', 'tsconfig.json');
+    }
+
     public async onCreateNewProject(): Promise<void> {
         await super.onCreateNewProject();
-
-        const funcIgnorePath: string = path.join(this.functionAppPath, '.funcignore');
-        if (await confirmOverwriteFile(funcIgnorePath)) {
-            await fse.writeFile(funcIgnorePath, funcignore);
-        }
 
         const tsconfigPath: string = path.join(this.functionAppPath, tsConfigFileName);
         if (await confirmOverwriteFile(tsconfigPath)) {
