@@ -37,7 +37,7 @@ export abstract class TemplateRetriever {
         try {
             context.properties.templateVersion = templateVersion;
             ext.outputChannel.appendLine(localize('updatingTemplates', 'Updating {0} templates for runtime "{1}" to version "{2}"...', this.templateType, runtime, templateVersion));
-            const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime);
+            const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime, context);
             await this.verifyTemplates(templates, runtime);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), templateVersion);
             await this.cacheTemplates(runtime);
@@ -85,7 +85,7 @@ export abstract class TemplateRetriever {
     }
 
     protected abstract getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined>;
-    protected abstract getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime): Promise<IFunctionTemplate[]>;
+    protected abstract getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, context: IActionContext): Promise<IFunctionTemplate[]>;
     protected abstract getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]>;
     protected abstract cacheTemplates(runtime: ProjectRuntime): Promise<void>;
     protected abstract getVerifiedTemplateIds(runtime: ProjectRuntime): string[];

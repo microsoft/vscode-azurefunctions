@@ -139,13 +139,13 @@ export async function createFunction(
     let functionCreator: FunctionCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(functionAppPath, template, ext.outputChannel, actionContext);
+            functionCreator = new JavaFunctionCreator(functionAppPath, template, actionContext);
             break;
         case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template);
+            functionCreator = new CSharpFunctionCreator(functionAppPath, template, actionContext);
             break;
         default:
-            functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, language);
+            functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, actionContext, language);
             break;
     }
 

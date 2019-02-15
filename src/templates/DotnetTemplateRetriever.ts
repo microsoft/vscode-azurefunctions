@@ -5,6 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -40,8 +41,8 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
         }
     }
 
-    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
-        await dotnetUtils.validateDotnetInstalled();
+    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, context: IActionContext): Promise<IFunctionTemplate[]> {
+        await dotnetUtils.validateDotnetInstalled(context);
 
         const projectFilePath: string = getDotnetProjectTemplatePath(runtime);
         await downloadFile(cliFeedJson.releases[templateVersion].projectTemplates, projectFilePath);

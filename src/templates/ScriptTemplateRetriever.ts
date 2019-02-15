@@ -7,6 +7,7 @@ import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { downloadFile } from '../utils/fs';
@@ -39,7 +40,7 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
         }
     }
 
-    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
+    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _runtime: ProjectRuntime, _context: IActionContext): Promise<IFunctionTemplate[]> {
         const templatesPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
         try {
             const filePath: string = path.join(templatesPath, `templates-${templateVersion}.zip`);

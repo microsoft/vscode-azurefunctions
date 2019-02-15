@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { IAzureUserInput } from 'vscode-azureextensionui';
+import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
 import { localize } from "../../localize";
 import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
@@ -45,8 +45,8 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
     private _language: string;
     private _functionName: string;
 
-    constructor(functionAppPath: string, template: IScriptFunctionTemplate, language: string) {
-        super(functionAppPath, template);
+    constructor(functionAppPath: string, template: IScriptFunctionTemplate, actionContext: IActionContext, language: string) {
+        super(functionAppPath, template, actionContext);
         this._language = language;
     }
 

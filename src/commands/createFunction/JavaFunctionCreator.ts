@@ -5,10 +5,9 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { OutputChannel } from "vscode";
-import { IActionContext, IAzureUserInput } from 'vscode-azureextensionui';
+import { IAzureUserInput } from 'vscode-azureextensionui';
+import { ext } from '../../extensionVariables';
 import { localize } from "../../localize";
-import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { removeLanguageFromId } from "../../templates/TemplateProvider";
 import * as fsUtil from '../../utils/fs';
 import { getFullClassName, parseJavaClassName, validatePackageName } from "../../utils/javaNameUtils";
@@ -20,16 +19,8 @@ function getNewJavaFunctionFilePath(functionAppPath: string, packageName: string
 }
 
 export class JavaFunctionCreator extends FunctionCreatorBase {
-    private _outputChannel: OutputChannel;
     private _packageName: string;
     private _functionName: string;
-    private _actionContext: IActionContext;
-
-    constructor(functionAppPath: string, template: IFunctionTemplate, outputChannel: OutputChannel, actionContext: IActionContext) {
-        super(functionAppPath, template);
-        this._outputChannel = outputChannel;
-        this._actionContext = actionContext;
-    }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined): Promise<void> {
         this._packageName = await ui.showInputBox({
@@ -58,10 +49,10 @@ export class JavaFunctionCreator extends FunctionCreatorBase {
             javaFuntionProperties.push(mavenUtils.formatMavenArg(`D${key}`, userSettings[key]));
         }
         await mavenUtils.validateMavenInstalled(this._actionContext, this._functionAppPath);
-        this._outputChannel.show();
+        ext.outputChannel.show();
         await mavenUtils.executeMvnCommand(
             this._actionContext.properties,
-            this._outputChannel,
+            ext.outputChannel,
             this._functionAppPath,
             'azure-functions:add',
             '-B',
