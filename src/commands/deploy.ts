@@ -103,6 +103,11 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         deployFsPath = workspaceFsPath;
     }
 
+    if (isZipDeploy) {
+        // tslint:disable-next-line:no-floating-promises
+        validateGlobSettings(this, deployFsPath);
+    }
+
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
         async () => {
@@ -113,7 +118,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
                     ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                await appservice.deploy(client, deployFsPath, extensionPrefix, telemetryProperties);
+                await appservice.deploy(client, deployFsPath, this);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
@@ -138,6 +143,18 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     });
 
     await listHttpTriggerUrls(node, this);
+}
+
+async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {
+    const includeKey: string = 'zipGlobPattern';
+    const excludeKey: string = 'zipIgnorePattern';
+    const includeSetting: string | undefined = getFuncExtensionSetting(includeKey, fsPath);
+    const excludeSetting: string | string[] | undefined = getFuncExtensionSetting(excludeKey, fsPath);
+    if (includeSetting || excludeSetting) {
+        actionContext.properties.hasOldGlobSettings = 'true';
+        const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
+        await ext.ui.showWarningMessage(message);
+    }
 }
 
 async function listHttpTriggerUrls(node: SlotTreeItemBase, actionContext: IActionContext): Promise<void> {
