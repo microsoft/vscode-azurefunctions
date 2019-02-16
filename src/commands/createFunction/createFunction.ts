@@ -26,6 +26,7 @@ import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
 import { ScriptFunctionCreator } from './ScriptFunctionCreator';
+import { TypeScriptFunctionCreator } from './TypeScriptFunctionCreator';
 
 async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: IFunctionSetting): Promise<string> {
     if (setting.resourceType !== undefined) {
@@ -68,7 +69,7 @@ async function promptForStringSetting(setting: IFunctionSetting): Promise<string
     return await ext.ui.showInputBox(options);
 }
 
-// tslint:disable-next-line:max-func-body-length
+// tslint:disable-next-line:max-func-body-length cyclomatic-complexity
 export async function createFunction(
     actionContext: IActionContext,
     functionAppPath?: string,
@@ -143,6 +144,9 @@ export async function createFunction(
             break;
         case ProjectLanguage.CSharp:
             functionCreator = new CSharpFunctionCreator(functionAppPath, template);
+            break;
+        case ProjectLanguage.TypeScript:
+            functionCreator = new TypeScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, language);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, language);

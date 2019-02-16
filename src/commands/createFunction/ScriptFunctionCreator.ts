@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IAzureUserInput } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
+import { IFunctionJson } from '../../FunctionConfig';
 import { localize } from "../../localize";
 import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import * as fsUtil from '../../utils/fs';
@@ -42,8 +43,8 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
  */
 export class ScriptFunctionCreator extends FunctionCreatorBase {
     protected _template: IScriptFunctionTemplate;
+    protected _functionName: string;
     private _language: string;
-    private _functionName: string;
 
     constructor(functionAppPath: string, template: IScriptFunctionTemplate, language: string) {
         super(functionAppPath, template);
@@ -74,7 +75,13 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
         for (const key of Object.keys(userSettings)) {
             this._template.functionConfig.inBinding[key] = userSettings[key];
         }
-        await fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), this._template.functionConfig.functionJson);
+
+        const functionJson: IFunctionJson = this._template.functionConfig.functionJson;
+        if (this.editFunctionJson) {
+            await this.editFunctionJson(functionJson);
+        }
+
+        await fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), functionJson);
 
         const mainFileName: string | undefined = getScriptFileNameFromLanguage(this._language);
         if (mainFileName) {
@@ -83,6 +90,8 @@ export class ScriptFunctionCreator extends FunctionCreatorBase {
             return undefined;
         }
     }
+
+    protected editFunctionJson?(functionJson: IFunctionJson): Promise<void>;
 
     private validateTemplateName(name: string | undefined): string | undefined {
         if (!name) {

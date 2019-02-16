@@ -59,6 +59,7 @@ export class FuncTaskProvider implements TaskProvider {
                 debugProvider = this._pythonDebugProvider;
                 break;
             case ProjectLanguage.JavaScript:
+            case ProjectLanguage.TypeScript:
                 debugProvider = this._nodeDebugProvider;
                 break;
             case ProjectLanguage.Java:

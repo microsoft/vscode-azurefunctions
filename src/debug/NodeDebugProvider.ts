@@ -11,7 +11,7 @@ import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 export const defaultNodeDebugPort: number = 9229;
 
 export const nodeDebugConfig: DebugConfiguration = {
-    name: localize('attachJS', 'Attach to JavaScript Functions'),
+    name: localize('attachNode', 'Attach to Node Functions'),
     type: 'node',
     request: 'attach',
     port: defaultNodeDebugPort,

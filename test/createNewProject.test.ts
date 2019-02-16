@@ -117,7 +117,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     const typeScriptProject: string = 'TypeScriptProject';
     test(typeScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, typeScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.TypeScript, true);
+        await testCreateNewProject(projectPath, ProjectLanguage.TypeScript, false);
         await validateVSCodeProjectFiles(projectPath, false);
     });
 
