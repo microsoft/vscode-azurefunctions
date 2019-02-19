@@ -146,7 +146,7 @@ export async function createFunction(
             functionCreator = new CSharpFunctionCreator(functionAppPath, template, actionContext);
             break;
         case ProjectLanguage.TypeScript:
-            functionCreator = new TypeScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, language);
+            functionCreator = new TypeScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, actionContext, language);
             break;
         default:
             functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, actionContext, language);
