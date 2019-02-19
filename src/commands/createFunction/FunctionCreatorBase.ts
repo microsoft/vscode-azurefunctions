@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureUserInput } from "vscode-azureextensionui";
+import { IActionContext, IAzureUserInput } from "vscode-azureextensionui";
 import { ProjectRuntime } from "../../constants";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 
@@ -11,10 +11,12 @@ export abstract class FunctionCreatorBase {
     protected readonly _functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
     protected _functionAppPath: string;
     protected _template: IFunctionTemplate;
+    protected _actionContext: IActionContext;
 
-    constructor(functionAppPath: string, template: IFunctionTemplate) {
+    constructor(functionAppPath: string, template: IFunctionTemplate, actionContext: IActionContext) {
         this._functionAppPath = functionAppPath;
         this._template = template;
+        this._actionContext = actionContext;
     }
 
     /**

@@ -11,7 +11,6 @@ import XRegExp = require('xregexp');
 import { ProjectRuntime } from '../../constants';
 import { localize } from "../../localize";
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
-import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import * as fsUtil from '../../utils/fs';
@@ -20,10 +19,6 @@ import { FunctionCreatorBase } from './FunctionCreatorBase';
 export class CSharpFunctionCreator extends FunctionCreatorBase {
     private _functionName: string;
     private _namespace: string;
-
-    constructor(functionAppPath: string, template: IFunctionTemplate) {
-        super(functionAppPath, template);
-    }
 
     public async promptForSettings(ui: IAzureUserInput, functionName: string | undefined, functionSettings: { [key: string]: string | undefined }): Promise<void> {
         if (!functionName) {
@@ -51,7 +46,7 @@ export class CSharpFunctionCreator extends FunctionCreatorBase {
     }
 
     public async createFunction(userSettings: { [propertyName: string]: string }, runtime: ProjectRuntime): Promise<string | undefined> {
-        await dotnetUtils.validateDotnetInstalled();
+        await dotnetUtils.validateDotnetInstalled(this._actionContext);
 
         const args: string[] = [];
         args.push('--arg:name');

@@ -28,7 +28,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     private _debugSubpath: string;
 
     public async onCreateNewProject(): Promise<void> {
-        await dotnetUtils.validateDotnetInstalled();
+        await dotnetUtils.validateDotnetInstalled(this.actionContext);
 
         const projectName: string = path.basename(this.functionAppPath);
         const csProjName: string = `${projectName}.csproj`;
