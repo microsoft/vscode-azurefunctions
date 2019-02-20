@@ -12,7 +12,6 @@ import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { cSharpPublishTaskLabel, deploySubpathSetting, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
-import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -236,14 +235,14 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
     return targetPath;
 }
 
+/**
+ * NOTE: If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
+ */
 async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: appservice.SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
-    if (!appSettings.properties) {
-        throw new ArgumentError(appSettings);
-    } else {
+    if (appSettings.properties) {
         const rawAzureRuntime: string = appSettings.properties.FUNCTIONS_EXTENSION_VERSION;
         const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
-        // If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
             const message: string = localize('incompatibleRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
