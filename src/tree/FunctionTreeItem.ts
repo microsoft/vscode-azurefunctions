@@ -9,12 +9,12 @@ import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
-import { ArgumentError } from '../errors';
 import { ext } from '../extensionVariables';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
 import { convertStringToRuntime } from '../ProjectSettings';
 import { nodeUtils } from '../utils/nodeUtils';
+import { nonNullProp } from '../utils/nonNull';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunction';
@@ -27,11 +27,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
 
     private constructor(parent: AzureParentTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
         super(parent);
-        if (!func.id) {
-            throw new ArgumentError(func);
-        }
-
-        this._name = getFunctionNameFromId(func.id);
+        this._name = getFunctionNameFromId(nonNullProp(func, 'id'));
 
         this.config = new FunctionConfig(func.config);
     }

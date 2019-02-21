@@ -10,11 +10,11 @@ import { BaseResource } from 'ms-rest-azure';
 import { isArray } from 'util';
 import { QuickPickOptions } from 'vscode';
 import { AzureTreeItem, AzureWizard, createAzureClient, IActionContext, IAzureQuickPickItem, IAzureUserInput, IStorageAccountFilters, IStorageAccountWizardContext, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
-import { ArgumentError, SkipForNowError } from '../errors';
+import { SkipForNowError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getResourceTypeLabel, ResourceType } from '../templates/IFunctionSetting';
-import { nonNullProp } from './nonNull';
+import { nonNullProp, nonNullValue } from './nonNull';
 
 function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
@@ -68,7 +68,6 @@ async function promptForResource<T extends IBaseResourceWithName>(ui: IAzureUser
 export interface IResourceResult {
     name: string;
     connectionString: string;
-    id?: string;
 }
 
 export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
@@ -77,17 +76,15 @@ export async function promptForCosmosDBAccount(): Promise<IResourceResult> {
 
     const client: CosmosDBManagementClient = createAzureClient(node.root, CosmosDBManagementClient);
     const dbAccount: CosmosDBManagementModels.DatabaseAccount = await promptForResource<CosmosDBManagementModels.DatabaseAccount>(ext.ui, resourceTypeLabel, client.databaseAccounts.list());
+    const name: string = nonNullProp(dbAccount, 'name');
 
-    if (!dbAccount.id || !dbAccount.name) {
-        throw new ArgumentError(dbAccount);
-    } else {
-        const resourceGroup: string = getResourceGroupFromId(dbAccount.id);
-        const keys: CosmosDBManagementModels.DatabaseAccountListKeysResult = await client.databaseAccounts.listKeys(resourceGroup, dbAccount.name);
-        return {
-            name: dbAccount.name,
-            connectionString: `AccountEndpoint=${dbAccount.documentEndpoint};AccountKey=${keys.primaryMasterKey};`
-        };
-    }
+    const resourceGroup: string = getResourceGroupFromId(nonNullProp(dbAccount, 'id'));
+    const csListResult: CosmosDBManagementModels.DatabaseAccountListConnectionStringsResult = await client.databaseAccounts.listConnectionStrings(resourceGroup, name);
+    const cs: CosmosDBManagementModels.DatabaseAccountConnectionString = nonNullValue(nonNullProp(csListResult, 'connectionStrings')[0], 'connectionString[0]');
+    return {
+        name: name,
+        connectionString: nonNullProp(cs, 'connectionString')
+    };
 }
 
 export async function promptForStorageAccount(actionContext: IActionContext, filterOptions: IStorageAccountFilters): Promise<IResourceResult> {
@@ -104,23 +101,23 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     await wizard.execute(actionContext);
 
     const client: StorageManagementClient = createAzureClient(node.root, StorageManagementClient);
-    // tslint:disable-next-line:no-non-null-assertion
-    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>wizardContext.storageAccount!;
+    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>nonNullProp(wizardContext, 'storageAccount');
+    const name: string = nonNullProp(storageAccount, 'name');
 
-    if (!storageAccount.id || !storageAccount.name) {
-        throw new ArgumentError(storageAccount);
-    } else {
-        const resourceGroup: string = getResourceGroupFromId(storageAccount.id);
-        const result: StorageManagementModels.StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, storageAccount.name);
-        if (!result.keys || result.keys.length === 0) {
-            throw new ArgumentError(result);
-        }
-        return {
-            name: storageAccount.name,
-            connectionString: `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${result.keys[0].value}`,
-            id: storageAccount.id
-        };
+    const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));
+    const result: StorageManagementModels.StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
+    const key: string = nonNullProp(nonNullValue(nonNullProp(result, 'keys')[0], 'key[0]'), 'value');
+
+    let endpointSuffix: string = nonNullProp(node.root.environment, 'storageEndpointSuffix');
+    // https://github.com/Azure/azure-sdk-for-node/issues/4706
+    if (endpointSuffix.startsWith('.')) {
+        endpointSuffix = endpointSuffix.substr(1);
     }
+
+    return {
+        name: name,
+        connectionString: `DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key};EndpointSuffix=${endpointSuffix}`
+    };
 }
 
 export async function promptForServiceBus(): Promise<IResourceResult> {

@@ -11,12 +11,6 @@ export class NoWorkspaceError extends Error {
     public message: string = localize('azFunc.noWorkspaceError', 'You must have a workspace open to perform this operation.');
 }
 
-export class ArgumentError extends Error {
-    constructor(obj: object) {
-        super(localize('azFunc.argumentError', 'Invalid {0}.', obj.constructor.name));
-    }
-}
-
 export class NoSubscriptionError extends Error {
     public message: string = localize('azFunc.noSubscriptionError', 'You must be signed in to Azure to perform this operation.');
 }

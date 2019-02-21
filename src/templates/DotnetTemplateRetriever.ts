@@ -81,9 +81,14 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
 
     if (runtime === ProjectRuntime.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
+            'EventGridTrigger',
             'GenericWebHook',
             'GitHubWebHook',
             'HttpTriggerWithParameters'
+        ]);
+    } else {
+        verifiedTemplateIds = verifiedTemplateIds.concat([
+            'DurableFunctionsOrchestration'
         ]);
     }
 

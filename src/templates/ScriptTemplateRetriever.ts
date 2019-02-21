@@ -102,20 +102,16 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
             'ManualTrigger-JavaScript'
         ]);
     } else {
-        // Python is only supported in v2
         // For JavaScript, only include triggers that require extensions in v2. v1 doesn't have the same support for 'func extensions install'
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'CosmosDBTrigger-JavaScript',
+            'EventGridTrigger-JavaScript',
             'ServiceBusQueueTrigger-JavaScript',
-            'ServiceBusTopicTrigger-JavaScript',
-            'BlobTrigger-Python',
-            'HttpTrigger-Python',
-            'QueueTrigger-Python',
-            'TimerTrigger-Python',
-            'CosmosDBTrigger-Python',
-            'ServiceBusQueueTrigger-Python',
-            'ServiceBusTopicTrigger-Python'
+            'ServiceBusTopicTrigger-JavaScript'
         ]);
+
+        // Python is only supported in v2 - same functions as JavaScript
+        verifiedTemplateIds = verifiedTemplateIds.concat(verifiedTemplateIds.map(t => t.replace('JavaScript', 'Python')));
     }
 
     return verifiedTemplateIds;
