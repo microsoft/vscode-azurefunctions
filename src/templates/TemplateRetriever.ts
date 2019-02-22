@@ -10,8 +10,8 @@ import { localize } from '../localize';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { IFunctionTemplate } from './IFunctionTemplate';
 
-const v2BackupTemplatesVersion: string = '2.3.3';
-const v1BackupTemplatesVersion: string = '1.3.0';
+const v2BackupTemplatesVersion: string = '2.18.1';
+const v1BackupTemplatesVersion: string = '1.8.0';
 
 export enum TemplateType {
     Script = 'Script',

@@ -110,8 +110,13 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
             'ServiceBusTopicTrigger-JavaScript'
         ]);
 
+        const javaScriptTemplateIds: string[] = verifiedTemplateIds;
+
         // Python is only supported in v2 - same functions as JavaScript
-        verifiedTemplateIds = verifiedTemplateIds.concat(verifiedTemplateIds.map(t => t.replace('JavaScript', 'Python')));
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'Python')));
+
+        // TypeScript is only supported in v2 - same functions as JavaScript
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
     }
 
     return verifiedTemplateIds;
