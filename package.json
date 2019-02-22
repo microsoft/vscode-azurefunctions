@@ -65,8 +65,8 @@
         "onCommand:azureFunctions.connectToGitHub",
         "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.swapSlot",
-        "workspaceContains:local.settings.json",
         "workspaceContains:host.json",
+        "workspaceContains:*/host.json",
         "onView:azureFunctionsExplorer",
         "onDebugInitialConfigurations"
     ],
