@@ -25,7 +25,7 @@ suite('venvUtils Tests', () => {
         if (longRunningTestsEnabled) {
             this.timeout(60 * 1000);
             await fse.ensureDir(testFolder);
-            const pyAlias: string = process.platform === Platform.Windows ? 'py' : 'python';
+            const pyAlias: string = process.platform === Platform.Windows ? 'py' : 'python3';
             await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, '-m', 'venv', venvName);
         }
     });

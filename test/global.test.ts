@@ -8,7 +8,7 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ext, getRandomHexString, getTemplateProvider, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
+import { ext, getRandomHexString, getTemplateProvider, parseError, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
 import { TestOutputChannel } from './TestOutputChannel';
 
 export let longRunningTestsEnabled: boolean;
@@ -47,7 +47,12 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 
 suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(90 * 1000);
-    await fse.remove(testFolderPath);
+    try {
+        await fse.remove(testFolderPath);
+    } catch (error) {
+        // Build machines fail pretty often with an EPERM error on Windows, but removing the temp test folder isn't worth failing the build
+        console.warn(`Failed to delete test folder path: ${parseError(error).message}`);
+    }
 });
 
 export async function runForAllTemplateSources(callback: (source: TemplateSource, templates: TemplateProvider) => Promise<void>): Promise<void> {
