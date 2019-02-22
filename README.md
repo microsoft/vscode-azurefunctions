@@ -17,6 +17,7 @@ Follow the OS-specific instructions to install the [Azure Functions Core Tools](
 Install the prerequisites for your desired language:
 
 * [JavaScript](#javascript)
+* [TypeScript](#javascript)
 * [C#](#c)
 * [Java](#java)
 * [Python (Preview)](#python)
