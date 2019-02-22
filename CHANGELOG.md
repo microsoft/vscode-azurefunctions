@@ -4,6 +4,22 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.15.0 - 2018-02-22
+
+### Added
+
+- Create, debug, and deploy TypeScript projects
+- Support for `.funcignore` file, which will exclude paths when deploying based on `.gitignore` syntax. This file is also used by the func cli.
+- Added templates to the "verified" category, including Event Grid for most languages
+
+### Changed
+
+- If using "zipGlobPattern" and "zipIgnorePattern" settings when deploying, you will be prompted to use `.funcignore` file instead
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.15.0%22+is%3Aclosed)
+
 ## 0.14.0 - 2018-02-11
 
 ### Added
