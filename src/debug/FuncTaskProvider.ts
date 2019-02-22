@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
-import { isFunctionProject } from '../commands/createNewProject/isFunctionProject';
+import { tryGetFunctionProjectRoot } from '../commands/createNewProject/isFunctionProject';
 import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
@@ -28,7 +28,7 @@ export class FuncTaskProvider implements TaskProvider {
         const result: Task[] = [];
         if (workspace.workspaceFolders) {
             for (const folder of workspace.workspaceFolders) {
-                if (await isFunctionProject(folder.uri.fsPath)) {
+                if (await tryGetFunctionProjectRoot(folder.uri.fsPath)) {
                     result.push(getExtensionInstallTask(folder));
                     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
                     const hostStartTask: Task | undefined = await this.getHostStartTask(folder, language);
