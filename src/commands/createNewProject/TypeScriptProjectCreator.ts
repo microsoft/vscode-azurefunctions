@@ -46,6 +46,10 @@ export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
                 scripts: {
                     build: 'tsc',
                     watch: 'tsc -w',
+                    prestart: 'npm run build && func extensions install',
+                    'start:host': 'func start',
+                    start: 'npm run start:host & npm run watch',
+                    'build:production': 'npm run prestart && npm prune --production',
                     test: 'echo \"No tests yet...\"'
                 },
                 dependencies: {},
