@@ -7,7 +7,7 @@ import { ShellExecution, Task, WorkspaceFolder } from 'vscode';
 import { func, funcPackCommand, packCommand } from '../constants';
 import { venvUtils } from '../utils/venvUtils';
 
-export function getPythonTasks(folder: WorkspaceFolder): Task[] {
+export function getPythonTasks(folder: WorkspaceFolder, projectRoot: string): Task[] {
     const commandLine: string = venvUtils.convertToVenvCommand(funcPackCommand, folder.uri.fsPath);
     const basicPack: Task = new Task(
         {
@@ -17,7 +17,7 @@ export function getPythonTasks(folder: WorkspaceFolder): Task[] {
         folder,
         packCommand,
         func,
-        new ShellExecution(commandLine)
+        new ShellExecution(commandLine, { cwd: projectRoot })
     );
 
     const buildNativeDeps: string = '--build-native-deps';
@@ -31,7 +31,7 @@ export function getPythonTasks(folder: WorkspaceFolder): Task[] {
         folder,
         advancedPackCommand,
         func,
-        new ShellExecution(advancedCommandLine)
+        new ShellExecution(advancedCommandLine, { cwd: projectRoot })
     );
 
     return [basicPack, advancedPack];

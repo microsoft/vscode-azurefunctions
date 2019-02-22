@@ -28,16 +28,17 @@ export class FuncTaskProvider implements TaskProvider {
         const result: Task[] = [];
         if (workspace.workspaceFolders) {
             for (const folder of workspace.workspaceFolders) {
-                if (await tryGetFunctionProjectRoot(folder.uri.fsPath)) {
-                    result.push(getExtensionInstallTask(folder));
+                const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath);
+                if (projectRoot) {
+                    result.push(getExtensionInstallTask(folder, projectRoot));
                     const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
-                    const hostStartTask: Task | undefined = await this.getHostStartTask(folder, language);
+                    const hostStartTask: Task | undefined = await this.getHostStartTask(folder, projectRoot, language);
                     if (hostStartTask) {
                         result.push(hostStartTask);
                     }
 
                     if (language === ProjectLanguage.Python) {
-                        result.push(...getPythonTasks(folder));
+                        result.push(...getPythonTasks(folder, projectRoot));
                     }
                 }
             }
@@ -52,7 +53,7 @@ export class FuncTaskProvider implements TaskProvider {
         return undefined;
     }
 
-    private async getHostStartTask(folder: WorkspaceFolder, language: string | undefined): Promise<Task | undefined> {
+    private async getHostStartTask(folder: WorkspaceFolder, projectRoot: string, language: string | undefined): Promise<Task | undefined> {
         let debugProvider: FuncDebugProviderBase | undefined;
         switch (language) {
             case ProjectLanguage.Python:
@@ -69,6 +70,11 @@ export class FuncTaskProvider implements TaskProvider {
         }
 
         const shellExecution: ShellExecution = debugProvider ? await debugProvider.getShellExecution(folder) : new ShellExecution(funcHostStartCommand);
+        if (!shellExecution.options) {
+            shellExecution.options = {};
+        }
+
+        shellExecution.options.cwd = projectRoot;
         return new Task(
             {
                 type: func,
@@ -83,7 +89,7 @@ export class FuncTaskProvider implements TaskProvider {
     }
 }
 
-function getExtensionInstallTask(folder: WorkspaceFolder): Task {
+function getExtensionInstallTask(folder: WorkspaceFolder, projectRoot: string): Task {
     return new Task(
         {
             type: func,
@@ -92,6 +98,6 @@ function getExtensionInstallTask(folder: WorkspaceFolder): Task {
         folder,
         extInstallCommand,
         func,
-        new ShellExecution(funcExtInstallCommand)
+        new ShellExecution(funcExtInstallCommand, { cwd: projectRoot })
     );
 }
