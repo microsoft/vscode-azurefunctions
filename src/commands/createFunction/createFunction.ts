@@ -21,7 +21,7 @@ import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
-import { isFunctionProject } from '../createNewProject/isFunctionProject';
+import { tryGetFunctionProjectRoot } from '../createNewProject/isFunctionProject';
 import { CSharpFunctionCreator } from './CSharpFunctionCreator';
 import { FunctionCreatorBase } from './FunctionCreatorBase';
 import { JavaFunctionCreator } from './JavaFunctionCreator';
@@ -72,7 +72,7 @@ async function promptForStringSetting(setting: IFunctionSetting): Promise<string
 // tslint:disable-next-line:max-func-body-length cyclomatic-complexity
 export async function createFunction(
     actionContext: IActionContext,
-    functionAppPath?: string,
+    folderPath?: string,
     templateId?: string,
     functionName?: string,
     caseSensitiveFunctionSettings?: { [key: string]: string | undefined },
@@ -85,24 +85,27 @@ export async function createFunction(
         Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => functionSettings[key.toLowerCase()] = caseSensitiveFunctionSettings[key]);
     }
 
-    if (functionAppPath === undefined) {
+    if (folderPath === undefined) {
         const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
-        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
+        folderPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 
     let isNewProject: boolean = false;
     let templateFilter: TemplateFilter;
-    if (!await isFunctionProject(functionAppPath)) {
+    let functionAppPath: string | undefined = await tryGetFunctionProjectRoot(folderPath);
+    if (!functionAppPath) {
         const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
-            await createNewProject(actionContext, functionAppPath, undefined, undefined, false);
+            await createNewProject(actionContext, folderPath, undefined, undefined, false);
             isNewProject = true;
             // Get the settings used to create the project
             language = <ProjectLanguage>actionContext.properties.projectLanguage;
             runtime = <ProjectRuntime>actionContext.properties.projectRuntime;
             templateFilter = <TemplateFilter>actionContext.properties.templateFilter;
         }
+
+        functionAppPath = folderPath;
     }
 
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
