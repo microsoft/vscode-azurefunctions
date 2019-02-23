@@ -35,4 +35,7 @@ async function validateTemplateCounts(templates: TemplateProvider, source: strin
 
     const pythonTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
     assert.equal(pythonTemplates.length, 8, `Unexpected Python ${source} templates count.`);
+
+    const tsTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
+    assert.equal(tsTemplates.length, 8, `Unexpected TypeScript ${source} templates count.`);
 }
