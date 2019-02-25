@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -80,6 +80,11 @@ export async function createNewProject(
     });
     // don't wait
     window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
+
+    // ensureFolderIsOpen sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
+    await callWithTelemetryAndErrorHandling('azureFunctions.createNewProject2', function (this: IActionContext): void {
+        Object.assign(this, actionContext);
+    });
 
     if (openFolder) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
