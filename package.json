@@ -702,7 +702,7 @@
                             "%azFunc.projectLanguage.previewDescription%",
                             "%azFunc.projectLanguage.previewDescription%",
                             "%azFunc.projectLanguage.previewDescription%",
-                            "%azFunc.projectLanguage.previewDescription%"
+                            ""
                         ]
                     },
                     "azureFunctions.deploySubpath": {

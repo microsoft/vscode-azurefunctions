@@ -27,17 +27,17 @@ export async function updateWorkspaceSetting<T = string>(section: string, value:
 
 export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<ProjectLanguage> {
     const picks: QuickPickItem[] = [
-        { label: ProjectLanguage.JavaScript, description: '' },
-        { label: ProjectLanguage.CSharp, description: '' },
-        { label: ProjectLanguage.CSharpScript, description: '' },
-        { label: ProjectLanguage.FSharpScript, description: '' },
+        { label: ProjectLanguage.JavaScript },
+        { label: ProjectLanguage.CSharp },
+        { label: ProjectLanguage.CSharpScript },
+        { label: ProjectLanguage.FSharpScript },
         { label: ProjectLanguage.Bash, description: previewDescription },
         { label: ProjectLanguage.Batch, description: previewDescription },
-        { label: ProjectLanguage.Java, description: previewDescription },
+        { label: ProjectLanguage.Java },
         { label: ProjectLanguage.PHP, description: previewDescription },
         { label: ProjectLanguage.PowerShell, description: previewDescription },
         { label: ProjectLanguage.Python, description: previewDescription },
-        { label: ProjectLanguage.TypeScript, description: previewDescription }
+        { label: ProjectLanguage.TypeScript }
     ];
 
     const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
