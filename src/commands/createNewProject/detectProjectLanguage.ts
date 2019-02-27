@@ -13,21 +13,21 @@ import { tryGetCsprojFile, tryGetFsprojFile } from './DotnetProjectCreator';
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(functionAppPath: string): Promise<ProjectLanguage | undefined> {
-    const detectedLangs: Set<ProjectLanguage> = await detectScriptLanguages(functionAppPath);
+    const detectedLangs: ProjectLanguage[] = await detectScriptLanguages(functionAppPath);
 
     if (await isJavaProject(functionAppPath)) {
-        detectedLangs.add(ProjectLanguage.Java);
+        detectedLangs.push(ProjectLanguage.Java);
     }
 
     if (await isCSharpProject(functionAppPath)) {
-        detectedLangs.add(ProjectLanguage.CSharp);
+        detectedLangs.push(ProjectLanguage.CSharp);
     }
 
     if (await isFSharpProject(functionAppPath)) {
-        detectedLangs.add(ProjectLanguage.FSharp);
+        detectedLangs.push(ProjectLanguage.FSharp);
     }
 
-    return detectedLangs.size === 1 ? detectedLangs.values().next().value : undefined;
+    return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
 }
 
 async function isJavaProject(functionAppPath: string): Promise<boolean> {
@@ -46,18 +46,26 @@ async function isFSharpProject(functionAppPath: string): Promise<boolean> {
  * Script projects will always be in the following structure: <Root project dir>/<function dir>/<function script file>
  * To detect the language, we can check for any "function script file" that matches the well-known filename for each language
  */
-async function detectScriptLanguages(functionAppPath: string): Promise<Set<ProjectLanguage>> {
-    const detectedLangs: Set<ProjectLanguage> = new Set();
-    const functionDirs: string[] = await fse.readdir(functionAppPath);
-    for (const functionDir of functionDirs) {
-        const functionDirPath: string = path.join(functionAppPath, functionDir);
-        const stats: fse.Stats = await fse.lstat(functionDirPath);
+async function detectScriptLanguages(functionAppPath: string): Promise<ProjectLanguage[]> {
+    const subDirs: string[] = [];
+    const subpaths: string[] = await fse.readdir(functionAppPath);
+    for (const subpath of subpaths) {
+        const fullPath: string = path.join(functionAppPath, subpath);
+        const stats: fse.Stats = await fse.lstat(fullPath);
         if (stats.isDirectory()) {
-            for (const key of Object.keys(ProjectLanguage)) {
-                const language: ProjectLanguage = <ProjectLanguage>ProjectLanguage[key];
-                const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
-                if (functionFileName && await fse.pathExists(path.join(functionDirPath, functionFileName))) {
-                    detectedLangs.add(language);
+            subDirs.push(fullPath);
+        }
+    }
+
+    const detectedLangs: ProjectLanguage[] = [];
+    for (const key of Object.keys(ProjectLanguage)) {
+        const language: ProjectLanguage = <ProjectLanguage>ProjectLanguage[key];
+        const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
+        if (functionFileName) {
+            for (const subDir of subDirs) {
+                if (await fse.pathExists(path.join(subDir, functionFileName))) {
+                    detectedLangs.push(language);
+                    break;
                 }
             }
         }

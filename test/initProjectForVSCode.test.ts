@@ -116,6 +116,15 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
+    const multiFunctionProject: string = 'MultiFunctionProject';
+    test(multiFunctionProject, async () => {
+        const projectPath: string = path.join(testFolderPath, multiFunctionProject);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS1', 'index.js'));
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS2', 'index.js'));
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
     const goodExtensionFile: string = 'Existing Extensions File';
     test(goodExtensionFile, async () => {
         const projectPath: string = path.join(testFolderPath, goodExtensionFile);
