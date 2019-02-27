@@ -187,7 +187,7 @@ export async function createFunction(
     }
 
     // ensureFolderIsOpen sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
-    await callWithTelemetryAndErrorHandling('azureFunctions.createFunction2', function (this: IActionContext): void {
+    await callWithTelemetryAndErrorHandling('azureFunctions.createFunctionStarted', function (this: IActionContext): void {
         Object.assign(this, actionContext);
     });
 

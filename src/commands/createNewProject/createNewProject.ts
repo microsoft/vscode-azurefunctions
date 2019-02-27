@@ -82,7 +82,7 @@ export async function createNewProject(
     window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
 
     // ensureFolderIsOpen sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
-    await callWithTelemetryAndErrorHandling('azureFunctions.createNewProject2', function (this: IActionContext): void {
+    await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', function (this: IActionContext): void {
         Object.assign(this, actionContext);
     });
 
