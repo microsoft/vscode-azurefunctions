@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { isString } from 'util';
 import { InputBoxOptions, MessageItem, QuickPickItem, Uri, window, workspace } from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { SkipForNowError } from '../../errors';
 import { ext } from '../../extensionVariables';
@@ -185,6 +185,11 @@ export async function createFunction(
     if (!template.isHttpTrigger) {
         await validateAzureWebJobsStorage(actionContext, localSettingsPath);
     }
+
+    // ensureFolderIsOpen sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
+    await callWithTelemetryAndErrorHandling('azureFunctions.createFunctionStarted', function (this: IActionContext): void {
+        Object.assign(this, actionContext);
+    });
 
     if (isNewProject) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
