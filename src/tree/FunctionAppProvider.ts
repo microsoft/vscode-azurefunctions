@@ -89,6 +89,7 @@ function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: str
     createOptions.os = 'windows';
     switch (language) {
         case ProjectLanguage.JavaScript:
+        case ProjectLanguage.TypeScript:
             createOptions.runtime = 'node';
             break;
         case ProjectLanguage.CSharp:
