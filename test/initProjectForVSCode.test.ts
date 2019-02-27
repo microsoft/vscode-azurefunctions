@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
+import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -77,6 +77,16 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         }
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getPythonValidateOptions(pythonProject, venvName));
+    });
+
+    const fsharpProject: string = 'AutoDetectFSharpProject';
+    test(fsharpProject, async () => {
+        const projectPath: string = path.join(testFolderPath, fsharpProject);
+        const fsProjPath: string = path.join(projectPath, 'test.fsproj');
+        await fse.ensureFile(fsProjPath);
+        await fse.writeFile(fsProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getFSharpValidateOptions('test', 'netstandard2.0'));
     });
 
     const javaProject: string = 'AutoDetectJavaProject';
