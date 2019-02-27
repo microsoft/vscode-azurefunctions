@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
-import { getCSharpScriptValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
+import { getCSharpScriptValidateOptions, getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -50,6 +50,15 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
             const projectPath: string = path.join(testFolderPath, source, csharpProject);
             await testCreateNewProject(projectPath, ProjectLanguage.CSharp);
             await validateProject(projectPath, getCSharpValidateOptions(csharpProject, 'netcoreapp2.1'));
+        });
+    });
+
+    const fsharpProject: string = 'FSharpProject';
+    test(fsharpProject, async () => {
+        await runForAllTemplateSources(async (source) => {
+            const projectPath: string = path.join(testFolderPath, source, fsharpProject);
+            await testCreateNewProject(projectPath, ProjectLanguage.FSharp, { hiddenLanguage: true });
+            await validateProject(projectPath, getFSharpValidateOptions(fsharpProject, 'netcoreapp2.1'));
         });
     });
 

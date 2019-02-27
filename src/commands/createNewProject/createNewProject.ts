@@ -14,8 +14,8 @@ import { convertStringToRuntime, getGlobalFuncExtensionSetting } from '../../Pro
 import { gitUtils } from '../../utils/gitUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createFunction } from '../createFunction/createFunction';
-import { CSharpProjectCreator } from './CSharpProjectCreator';
 import { CSharpScriptProjectCreator } from './CSharpScriptProjectCreator';
+import { DotnetProjectCreator } from './DotnetProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
@@ -92,7 +92,7 @@ export async function createNewProject(
 }
 
 export function getProjectCreator(language: string, functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined): ProjectCreatorBase {
-    let projectCreatorType: new (functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) => ProjectCreatorBase;
+    let projectCreatorType: new (functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined, language: string) => ProjectCreatorBase;
     switch (language) {
         case ProjectLanguage.Java:
             projectCreatorType = JavaProjectCreator;
@@ -101,7 +101,8 @@ export function getProjectCreator(language: string, functionAppPath: string, act
             projectCreatorType = JavaScriptProjectCreator;
             break;
         case ProjectLanguage.CSharp:
-            projectCreatorType = CSharpProjectCreator;
+        case ProjectLanguage.FSharp:
+            projectCreatorType = DotnetProjectCreator;
             break;
         case ProjectLanguage.CSharpScript:
             projectCreatorType = CSharpScriptProjectCreator;
@@ -117,5 +118,5 @@ export function getProjectCreator(language: string, functionAppPath: string, act
             break;
     }
 
-    return new projectCreatorType(functionAppPath, actionContext, runtime);
+    return new projectCreatorType(functionAppPath, actionContext, runtime, language);
 }

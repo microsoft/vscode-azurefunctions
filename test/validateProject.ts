@@ -63,6 +63,28 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
+export function getFSharpValidateOptions(projectName: string, targetFramework: string): IValidateProjectOptions {
+    return {
+        expectedSettings: {
+            projectLanguage: ProjectLanguage.FSharp,
+            projectRuntime: ProjectRuntime.v2,
+            preDeployTask: 'publish',
+            deploySubpath: `bin/Release/${targetFramework}/publish`,
+            templateFilter: 'Verified'
+        },
+        expectedPaths: [
+            `${projectName}.fsproj`
+        ],
+        expectedExtensionRecs: [
+            'ms-vscode.csharp',
+            'ionide.ionide-fsharp'
+        ],
+        excludedPaths: [
+            '.funcignore'
+        ]
+    };
+}
+
 export function getPythonValidateOptions(projectName: string, venvName: string): IValidateProjectOptions {
     return {
         expectedSettings: {

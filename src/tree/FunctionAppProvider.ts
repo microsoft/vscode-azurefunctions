@@ -93,6 +93,7 @@ function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: str
             createOptions.runtime = 'node';
             break;
         case ProjectLanguage.CSharp:
+        case ProjectLanguage.FSharp:
             createOptions.runtime = 'dotnet';
             break;
         case ProjectLanguage.Java:

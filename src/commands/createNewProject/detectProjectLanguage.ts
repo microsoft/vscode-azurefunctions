@@ -7,25 +7,27 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
 import { getScriptFileNameFromLanguage } from '../createFunction/ScriptFunctionCreator';
-import { tryGetCsprojFile } from './CSharpProjectCreator';
+import { tryGetCsprojFile, tryGetFsprojFile } from './DotnetProjectCreator';
 
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(functionAppPath: string): Promise<ProjectLanguage | undefined> {
-    const isJava: boolean = await isJavaProject(functionAppPath);
-    const isCSharp: boolean = await isCSharpProject(functionAppPath);
-    const scriptProjectLanguage: ProjectLanguage | undefined = await getScriptLanguage(functionAppPath);
+    const detectedLangs: ProjectLanguage[] = await detectScriptLanguages(functionAppPath);
 
-    if (scriptProjectLanguage !== undefined && !isJava && !isCSharp) {
-        return scriptProjectLanguage;
-    } else if (isJava && !isCSharp) {
-        return ProjectLanguage.Java;
-    } else if (isCSharp && !isJava) {
-        return ProjectLanguage.CSharp;
-    } else {
-        return undefined;
+    if (await isJavaProject(functionAppPath)) {
+        detectedLangs.push(ProjectLanguage.Java);
     }
+
+    if (await isCSharpProject(functionAppPath)) {
+        detectedLangs.push(ProjectLanguage.CSharp);
+    }
+
+    if (await isFSharpProject(functionAppPath)) {
+        detectedLangs.push(ProjectLanguage.FSharp);
+    }
+
+    return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
 }
 
 async function isJavaProject(functionAppPath: string): Promise<boolean> {
@@ -33,33 +35,41 @@ async function isJavaProject(functionAppPath: string): Promise<boolean> {
 }
 
 async function isCSharpProject(functionAppPath: string): Promise<boolean> {
-    return await tryGetCsprojFile(functionAppPath) !== undefined;
+    return !!await tryGetCsprojFile(functionAppPath);
+}
+
+async function isFSharpProject(functionAppPath: string): Promise<boolean> {
+    return !!await tryGetFsprojFile(functionAppPath);
 }
 
 /**
  * Script projects will always be in the following structure: <Root project dir>/<function dir>/<function script file>
  * To detect the language, we can check for any "function script file" that matches the well-known filename for each language
  */
-async function getScriptLanguage(functionAppPath: string): Promise<ProjectLanguage | undefined> {
-    let projectLanguage: ProjectLanguage | undefined;
-    const functionDirs: string[] = await fse.readdir(functionAppPath);
-    for (const functionDir of functionDirs) {
-        const functionDirPath: string = path.join(functionAppPath, functionDir);
-        const stats: fse.Stats = await fse.lstat(functionDirPath);
+async function detectScriptLanguages(functionAppPath: string): Promise<ProjectLanguage[]> {
+    const subDirs: string[] = [];
+    const subpaths: string[] = await fse.readdir(functionAppPath);
+    for (const subpath of subpaths) {
+        const fullPath: string = path.join(functionAppPath, subpath);
+        const stats: fse.Stats = await fse.lstat(fullPath);
         if (stats.isDirectory()) {
-            for (const key of Object.keys(ProjectLanguage)) {
-                const language: ProjectLanguage = <ProjectLanguage>ProjectLanguage[key];
-                const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
-                if (functionFileName && await fse.pathExists(path.join(functionDirPath, functionFileName))) {
-                    if (projectLanguage === undefined) {
-                        projectLanguage = language;
-                    } else if (projectLanguage !== language) {
-                        return undefined;
-                    }
+            subDirs.push(fullPath);
+        }
+    }
+
+    const detectedLangs: ProjectLanguage[] = [];
+    for (const key of Object.keys(ProjectLanguage)) {
+        const language: ProjectLanguage = <ProjectLanguage>ProjectLanguage[key];
+        const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
+        if (functionFileName) {
+            for (const subDir of subDirs) {
+                if (await fse.pathExists(path.join(subDir, functionFileName))) {
+                    detectedLangs.push(language);
+                    break;
                 }
             }
         }
     }
 
-    return projectLanguage;
+    return detectedLangs;
 }

@@ -13,14 +13,16 @@ export abstract class ProjectCreatorBase {
     public otherSettings: { [key: string]: string } = {};
     public abstract templateFilter: TemplateFilter;
     public runtime: ProjectRuntime | undefined;
+    public language: string;
 
     protected readonly functionAppPath: string;
     protected readonly actionContext: IActionContext;
 
-    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined, language: string) {
         this.functionAppPath = functionAppPath;
         this.actionContext = actionContext;
         this.runtime = runtime;
+        this.language = language;
     }
 
     public getLaunchJson(): {} | undefined {
