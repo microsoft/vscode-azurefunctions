@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createNewProject, deploySubpathSetting, DialogResponses, ext, extensionPrefix, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
+import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
-import { validateSetting, validateVSCodeProjectFiles } from './initProjectForVSCode.test';
+import { getCSharpScriptValidateOptions, getCSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -24,80 +23,76 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         }
         this.timeout(5 * 60 * 1000);
         const projectPath: string = path.join(testFolderPath, javaProject);
+        const appName: string = 'javaApp';
         await testCreateNewProject(
             projectPath,
             ProjectLanguage.Java,
-            false,
+            {},
             undefined,
             undefined,
             undefined,
             undefined,
-            undefined
+            appName
         );
-        await validateVSCodeProjectFiles(projectPath);
-        assert.equal(await fse.pathExists(path.join(projectPath, 'src')), true, 'src folder does not exist');
-        assert.equal(await fse.pathExists(path.join(projectPath, 'pom.xml')), true, 'pom.xml does not exist');
+        await validateProject(projectPath, getJavaValidateOptions(appName));
     });
 
     const javaScriptProject: string = 'JavaScriptProject';
     test(javaScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.JavaScript, false);
-        await validateVSCodeProjectFiles(projectPath);
+        await testCreateNewProject(projectPath, ProjectLanguage.JavaScript);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     const csharpProject: string = 'CSharpProject';
     test(csharpProject, async () => {
         await runForAllTemplateSources(async (source) => {
             const projectPath: string = path.join(testFolderPath, source, csharpProject);
-            await testCreateNewProject(projectPath, ProjectLanguage.CSharp, false);
-            await validateVSCodeProjectFiles(projectPath);
-            const projectName: string = path.basename(projectPath);
-            assert.equal(await fse.pathExists(path.join(projectPath, `${projectName}.csproj`)), true, 'csproj does not exist');
-            await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
+            await testCreateNewProject(projectPath, ProjectLanguage.CSharp);
+            await validateProject(projectPath, getCSharpValidateOptions(csharpProject, 'netcoreapp2.1'));
         });
     });
 
     const bashProject: string = 'BashProject';
     test(bashProject, async () => {
         const projectPath: string = path.join(testFolderPath, bashProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Bash, true);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.Bash, { hiddenLanguage: true });
+        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.Bash));
     });
 
     const batchProject: string = 'BatchProject';
     test(batchProject, async () => {
         const projectPath: string = path.join(testFolderPath, batchProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Batch, true);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.Batch, { hiddenLanguage: true });
+        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.Batch));
     });
 
     const csharpScriptProject: string = 'CSharpScriptProject';
     test(csharpScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, csharpScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.CSharpScript, true);
-        await validateVSCodeProjectFiles(projectPath);
+        await testCreateNewProject(projectPath, ProjectLanguage.CSharpScript, { hiddenLanguage: true });
+        await validateProject(projectPath, getCSharpScriptValidateOptions());
     });
 
     const fsharpScriptProject: string = 'FSharpScriptProject';
     test(fsharpScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, fsharpScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.FSharpScript, true);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.FSharpScript, { hiddenLanguage: true });
+        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.FSharpScript));
     });
 
     const phpProject: string = 'PHPProject';
     test(phpProject, async () => {
         const projectPath: string = path.join(testFolderPath, phpProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PHP, true);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.PHP, { hiddenLanguage: true });
+        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.PHP));
     });
 
     const powerShellProject: string = 'PowerShellProject';
     test(powerShellProject, async () => {
         const projectPath: string = path.join(testFolderPath, powerShellProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell, true);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell, { hiddenLanguage: true });
+        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.PowerShell));
     });
 
     const pythonProject: string = 'PythonProject';
@@ -110,22 +105,22 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         this.timeout(5 * 60 * 1000);
 
         const projectPath: string = path.join(testFolderPath, pythonProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Python, true);
-        await validateVSCodeProjectFiles(projectPath);
+        await testCreateNewProject(projectPath, ProjectLanguage.Python);
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject));
     });
 
     const typeScriptProject: string = 'TypeScriptProject';
     test(typeScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, typeScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.TypeScript, false);
-        await validateVSCodeProjectFiles(projectPath, false);
+        await testCreateNewProject(projectPath, ProjectLanguage.TypeScript);
+        await validateProject(projectPath, getTypeScriptValidateOptions());
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~1', false /* openFolder */);
-        await validateVSCodeProjectFiles(projectPath);
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
@@ -143,12 +138,13 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netcoreapp2.1/publish');
+        await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
 
-    async function testCreateNewProject(projectPath: string, language: string, previewLanguage: boolean, ...inputs: (string | undefined)[]): Promise<void> {
-        if (!previewLanguage) {
-            inputs.unshift(language); // Specify the function name
+    async function testCreateNewProject(projectPath: string, language: string, options?: { hiddenLanguage?: boolean }, ...inputs: (string | undefined)[]): Promise<void> {
+        const hiddenLanguage: boolean = !!options && !!options.hiddenLanguage;
+        if (!hiddenLanguage) {
+            inputs.unshift(language);
         }
 
         inputs.unshift(projectPath); // Select the test func app folder
@@ -156,14 +152,8 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
-        const ui: TestUserInput = new TestUserInput(inputs);
-        ext.ui = ui;
-        await createNewProject(<IActionContext>{ properties: {}, measurements: {} }, undefined, previewLanguage ? language : undefined, undefined, false);
+        ext.ui = new TestUserInput(inputs);
+        await createNewProject(<IActionContext>{ properties: {}, measurements: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
         assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
-
-        assert.equal(await fse.pathExists(path.join(projectPath, '.gitignore')), true, '.gitignore does not exist');
-        assert.equal(await fse.pathExists(path.join(projectPath, 'host.json')), true, 'host.json does not exist');
-        assert.equal(await fse.pathExists(path.join(projectPath, 'local.settings.json')), true, 'function.json does not exist');
-        assert.equal(await fse.pathExists(path.join(projectPath, '.git')), true, '.git folder does not exist');
     }
 });
