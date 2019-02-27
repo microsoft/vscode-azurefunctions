@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
-import { cSharpPublishTaskLabel, deploySubpathSetting, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
+import { deploySubpathSetting, dotnetPublishTaskLabel, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
@@ -299,7 +299,8 @@ function getFullPreDeployMessage(messageLines: string[]): string {
 function getRecommendedTaskName(language: ProjectLanguage, runtime: ProjectRuntime): string | undefined {
     switch (language) {
         case ProjectLanguage.CSharp:
-            return cSharpPublishTaskLabel;
+        case ProjectLanguage.FSharp:
+            return dotnetPublishTaskLabel;
         case ProjectLanguage.JavaScript:
             // "func extensions install" is only supported on v2
             return runtime === ProjectRuntime.v1 ? undefined : extInstallTaskName;

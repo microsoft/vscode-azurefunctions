@@ -7,33 +7,33 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
 import { getScriptFileNameFromLanguage } from '../createFunction/ScriptFunctionCreator';
-import { tryGetCsprojFile } from './CSharpProjectCreator';
+import { tryGetCsprojFile, tryGetFsprojFile } from './DotnetProjectCreator';
 
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(functionAppPath: string): Promise<ProjectLanguage | undefined> {
-    const isJava: boolean = await isJavaProject(functionAppPath);
-    const isCSharp: boolean = await isCSharpProject(functionAppPath);
-    const scriptProjectLanguage: ProjectLanguage | undefined = await getScriptLanguage(functionAppPath);
+    let matchingLanguages: (ProjectLanguage | undefined)[] = [
+        await isJavaProject(functionAppPath),
+        await isCSharpProject(functionAppPath),
+        await isFSharpProject(functionAppPath),
+        await getScriptLanguage(functionAppPath)
+    ];
 
-    if (scriptProjectLanguage !== undefined && !isJava && !isCSharp) {
-        return scriptProjectLanguage;
-    } else if (isJava && !isCSharp) {
-        return ProjectLanguage.Java;
-    } else if (isCSharp && !isJava) {
-        return ProjectLanguage.CSharp;
-    } else {
-        return undefined;
-    }
+    matchingLanguages = <ProjectLanguage[]>matchingLanguages.filter(p => p !== undefined);
+    return matchingLanguages.length === 1 ? matchingLanguages[0] : undefined;
 }
 
-async function isJavaProject(functionAppPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(functionAppPath, 'pom.xml'));
+async function isJavaProject(functionAppPath: string): Promise<ProjectLanguage | undefined> {
+    return await fse.pathExists(path.join(functionAppPath, 'pom.xml')) ? ProjectLanguage.Java : undefined;
 }
 
-async function isCSharpProject(functionAppPath: string): Promise<boolean> {
-    return await tryGetCsprojFile(functionAppPath) !== undefined;
+async function isCSharpProject(functionAppPath: string): Promise<ProjectLanguage | undefined> {
+    return await tryGetCsprojFile(functionAppPath) ? ProjectLanguage.CSharp : undefined;
+}
+
+async function isFSharpProject(functionAppPath: string): Promise<ProjectLanguage | undefined> {
+    return await tryGetFsprojFile(functionAppPath) ? ProjectLanguage.FSharp : undefined;
 }
 
 /**

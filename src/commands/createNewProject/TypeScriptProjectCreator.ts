@@ -14,8 +14,8 @@ const pruneTaskLabel: string = 'prune';
 export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
     public readonly preDeployTask: string = pruneTaskLabel;
 
-    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined) {
-        super(functionAppPath, actionContext, runtime);
+    constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined, language: string) {
+        super(functionAppPath, actionContext, runtime, language);
         this.funcignore = this.funcignore.concat('*.js.map', '*.ts', 'tsconfig.json');
     }
 

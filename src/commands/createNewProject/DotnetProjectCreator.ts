@@ -10,7 +10,7 @@ import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { cSharpPublishTaskLabel, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectRuntime, TemplateFilter } from '../../constants';
+import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
@@ -20,23 +20,28 @@ import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 
-export class CSharpProjectCreator extends ProjectCreatorBase {
+export class DotnetProjectCreator extends ProjectCreatorBase {
     public deploySubpath: string;
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public preDeployTask: string = cSharpPublishTaskLabel;
+    public preDeployTask: string = dotnetPublishTaskLabel;
 
     private _debugSubpath: string;
+
+    private get _projectExtension(): string {
+        return this.language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
+    }
 
     public async onCreateNewProject(): Promise<void> {
         await dotnetUtils.validateDotnetInstalled(this.actionContext);
 
         const projectName: string = path.basename(this.functionAppPath);
-        const csProjName: string = `${projectName}.csproj`;
-        await this.confirmOverwriteExisting(this.functionAppPath, csProjName);
+        const projName: string = projectName + this._projectExtension;
+        await this.confirmOverwriteExisting(this.functionAppPath, projName);
 
         // tslint:disable-next-line:strict-boolean-expressions
         this.runtime = this.runtime || await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.CSharp.${this.runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
+        const templateLanguage: string = this.language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${this.runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
         const functionsVersion: string = this.runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
         await executeDotnetTemplateCommand(this.runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
     }
@@ -69,7 +74,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
                     problemMatcher: '$msCompile'
                 },
                 {
-                    label: cSharpPublishTaskLabel,
+                    label: dotnetPublishTaskLabel,
                     command: 'dotnet publish --configuration Release',
                     type: 'shell',
                     dependsOn: 'clean release',
@@ -94,7 +99,7 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
             version: '0.2.0',
             configurations: [
                 {
-                    name: localize('azFunc.attachToNetCoreFunc', "Attach to C# Functions"),
+                    name: localize('attachToNetFunc', "Attach to .NET Functions"),
                     type: this.runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
@@ -104,30 +109,37 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     }
 
     public getRecommendedExtensions(): string[] {
-        return super.getRecommendedExtensions().concat(['ms-vscode.csharp']);
+        // The csharp extension is really a 'dotnet' extension because it provides debugging for both
+        const recs: string[] = super.getRecommendedExtensions().concat(['ms-vscode.csharp']);
+
+        if (this.language === ProjectLanguage.FSharp) {
+            recs.push('ionide.ionide-fsharp');
+        }
+
+        return recs;
     }
 
     /**
-     * Detects the runtime based on the targetFramework from the csproj file
+     * Detects the runtime based on the targetFramework from the proj file
      * Also performs a few validations and sets a few properties based on that targetFramework
      */
     public async onInitProjectForVSCode(): Promise<void> {
-        const csProjName: string | undefined = await tryGetCsprojFile(this.functionAppPath);
-        if (!csProjName) {
-            throw new Error(localize('csprojNotFound', 'Expected to find a single "csproj" file in folder "{0}", but found zero or multiple instead.', path.basename(this.functionAppPath)));
+        const projName: string | undefined = this.language === ProjectLanguage.FSharp ? await tryGetFsprojFile(this.functionAppPath) : await tryGetCsprojFile(this.functionAppPath);
+        if (!projName) {
+            throw new Error(localize('projNotFound', 'Expected to find a single "{0}" file in folder "{1}", but found zero or multiple instead.', this._projectExtension, path.basename(this.functionAppPath)));
         }
 
-        const csprojPath: string = path.join(this.functionAppPath, csProjName);
-        const csprojContents: string = (await fse.readFile(csprojPath)).toString();
+        const projPath: string = path.join(this.functionAppPath, projName);
+        const projContents: string = (await fse.readFile(projPath)).toString();
 
-        await this.validateFuncSdkVersion(csprojPath, csprojContents);
+        await this.validateFuncSdkVersion(projPath, projContents);
 
-        const matches: RegExpMatchArray | null = csprojContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
+        const matches: RegExpMatchArray | null = projContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
         if (matches === null || matches.length < 1) {
-            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', csProjName));
+            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projName));
         } else {
             const targetFramework: string = matches[1];
-            this.actionContext.properties.cSharpTargetFramework = targetFramework;
+            this.actionContext.properties.dotnetTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
                 this.runtime = ProjectRuntime.v2;
             } else {
@@ -159,32 +171,32 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
      * Validates the project has the minimum Functions SDK version that works on all OS's
      * See this bug for more info: https://github.com/Microsoft/vscode-azurefunctions/issues/164
      */
-    private async validateFuncSdkVersion(csprojPath: string, csprojContents: string): Promise<void> {
+    private async validateFuncSdkVersion(projPath: string, projContents: string): Promise<void> {
         if (!isWindows) { // No need to validate on Windows - it should work with previous versions
             try {
                 const minVersion: string = '1.0.8';
-                const lineMatches: RegExpMatchArray | null = /^.*Microsoft\.NET\.Sdk\.Functions.*$/gm.exec(csprojContents);
+                const lineMatches: RegExpMatchArray | null = /^.*Microsoft\.NET\.Sdk\.Functions.*$/gm.exec(projContents);
                 if (lineMatches !== null && lineMatches.length > 0) {
                     const line: string = lineMatches[0];
                     const versionMatches: RegExpMatchArray | null = /Version=(?:"([^"]+)"|'([^']+)')/g.exec(line);
                     if (versionMatches !== null && versionMatches.length > 2) {
                         const version: SemVer = new SemVer(versionMatches[1] || versionMatches[2]);
-                        this.actionContext.properties.cSharpFuncSdkVersion = version.raw;
+                        this.actionContext.properties.dotnetFuncSdkVersion = version.raw;
                         if (version.compare(minVersion) < 0) {
-                            const newContents: string = csprojContents.replace(line, line.replace(version.raw, minVersion));
-                            await fse.writeFile(csprojPath, newContents);
+                            const newContents: string = projContents.replace(line, line.replace(version.raw, minVersion));
+                            await fse.writeFile(projPath, newContents);
                         }
                     }
                 }
             } catch (err) {
-                this.actionContext.properties.cSharpFuncSdkError = parseError(err).message;
+                this.actionContext.properties.dotnetFuncSdkError = parseError(err).message;
                 // ignore errors and assume the version of the templates installed on the user's machine works for them
             }
         }
     }
 
-    private async confirmOverwriteExisting(functionAppPath: string, csProjName: string): Promise<boolean> {
-        const filesToCheck: string[] = [csProjName, gitignoreFileName, localSettingsFileName, hostFileName];
+    private async confirmOverwriteExisting(functionAppPath: string, projName: string): Promise<boolean> {
+        const filesToCheck: string[] = [projName, gitignoreFileName, localSettingsFileName, hostFileName];
         const existingFiles: string[] = [];
         for (const fileName of filesToCheck) {
             if (await fse.pathExists(path.join(functionAppPath, fileName))) {
@@ -201,12 +213,20 @@ export class CSharpProjectCreator extends ProjectCreatorBase {
     }
 }
 
+export async function tryGetCsprojFile(functionAppPath: string): Promise<string | undefined> {
+    return await tryGetProjFile(functionAppPath, /\.csproj$/i);
+}
+
+export async function tryGetFsprojFile(functionAppPath: string): Promise<string | undefined> {
+    return await tryGetProjFile(functionAppPath, /\.fsproj$/i);
+}
+
 /**
- * If a single csproj file is found at the root of this folder, returns the path to that file. Otherwise returns undefined
+ * If a single proj file is found at the root of this folder, returns the path to that file. Otherwise returns undefined
  * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
  */
-export async function tryGetCsprojFile(functionAppPath: string): Promise<string | undefined> {
+async function tryGetProjFile(functionAppPath: string, regexp: RegExp): Promise<string | undefined> {
     const files: string[] = await fse.readdir(functionAppPath);
-    const projectFiles: string[] = files.filter((f: string) => /\.csproj$/i.test(f) && !/extensions\.csproj$/i.test(f));
+    const projectFiles: string[] = files.filter((f: string) => regexp.test(f) && !/extensions\.csproj$/i.test(f));
     return projectFiles.length === 1 ? projectFiles[0] : undefined;
 }

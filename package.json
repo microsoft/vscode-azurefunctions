@@ -681,6 +681,7 @@
                             "Bash",
                             "Batch",
                             "C#",
+                            "F#",
                             "C#Script",
                             "F#Script",
                             "Java",
@@ -694,6 +695,7 @@
                         "enumDescriptions": [
                             "%azFunc.projectLanguage.previewDescription%",
                             "%azFunc.projectLanguage.previewDescription%",
+                            "",
                             "",
                             "%azFunc.projectLanguage.previewDescription%",
                             "%azFunc.projectLanguage.previewDescription%",

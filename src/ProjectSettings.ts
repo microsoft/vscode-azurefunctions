@@ -29,6 +29,7 @@ export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<Pro
     const picks: QuickPickItem[] = [
         { label: ProjectLanguage.JavaScript },
         { label: ProjectLanguage.CSharp },
+        { label: ProjectLanguage.FSharp },
         { label: ProjectLanguage.CSharpScript },
         { label: ProjectLanguage.FSharpScript },
         { label: ProjectLanguage.Bash, description: previewDescription },
