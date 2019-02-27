@@ -79,6 +79,10 @@
             "property-declaration",
             "variable-declaration",
             "member-variable-declaration"
+        ],
+        "prefer-template": [
+            true,
+            "allow-single-concat"
         ]
     }
 }

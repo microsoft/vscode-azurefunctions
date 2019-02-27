@@ -8,8 +8,9 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, DialogResponses, ext, extensionPrefix, IActionContext, initProjectForVSCode, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../extension.bundle';
+import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -18,24 +19,28 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
     const javaScriptProject: string = 'AutoDetectJavaScriptProject';
     test(javaScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProject);
-        const indexJsPath: string = path.join(projectPath, 'HttpTriggerJS', 'index.js');
-        await fse.ensureFile(indexJsPath);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS', 'index.js'));
         await testInitProjectForVSCode(projectPath);
-        await validateVSCodeProjectFiles(projectPath);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     const javaScriptProjectWithExtensions: string = 'AutoDetectJavaScriptProjectWithExtensions';
     test(javaScriptProjectWithExtensions, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProjectWithExtensions);
-        const indexJsPath: string = path.join(projectPath, 'HttpTriggerJS', 'index.js');
-        await fse.ensureFile(indexJsPath);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS', 'index.js'));
         await fse.ensureFile(path.join(projectPath, 'extensions.csproj'));
         await testInitProjectForVSCode(projectPath);
-        await validateVSCodeProjectFiles(projectPath);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const typeScriptProject: string = 'AutoDetectTypeScriptProject';
+    test(typeScriptProject, async () => {
+        const projectPath: string = path.join(testFolderPath, typeScriptProject);
+        await fse.ensureFile(path.join(projectPath, 'HttpTrigger', 'index.ts'));
+        await fse.ensureFile(path.join(projectPath, 'tsconfig.json'));
+        await fse.ensureFile(path.join(projectPath, 'package.json'));
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getTypeScriptValidateOptions());
     });
 
     const csharpProject: string = 'AutoDetectCSharpProject';
@@ -45,11 +50,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureFile(csProjPath);
         await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
         await testInitProjectForVSCode(projectPath);
-        await validateVSCodeProjectFiles(projectPath, true);
-        await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
+        await validateProject(projectPath, getCSharpValidateOptions('test', 'netstandard2.0'));
     });
 
     const csharpProjectWithExtensions: string = 'AutoDetectCSharpProjectWithExtensions';
@@ -60,37 +61,49 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
         await fse.ensureFile(path.join(projectPath, 'extensions.csproj'));
         await testInitProjectForVSCode(projectPath);
-        await validateVSCodeProjectFiles(projectPath, true);
-        await validateExtensionRecommendation(projectPath, 'ms-vscode.csharp');
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.CSharp);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
-        await validateSetting(projectPath, `${extensionPrefix}.${deploySubpathSetting}`, 'bin/Release/netstandard2.0/publish');
+        await validateProject(projectPath, getCSharpValidateOptions('test', 'netstandard2.0'));
+    });
+
+    const pythonProject: string = 'AutoDetectPythonProject';
+    test(pythonProject, async () => {
+        const projectPath: string = path.join(testFolderPath, pythonProject);
+        await fse.ensureFile(path.join(projectPath, 'HttpTrigger', '__init__.py'));
+        await fse.ensureFile(path.join(projectPath, 'requirements.txt'));
+        const venvName: string = 'testEnv';
+        if (process.platform === Platform.Windows) {
+            await fse.ensureFile(path.join(projectPath, venvName, 'Scripts', 'activate'));
+        } else {
+            await fse.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
+        }
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject, venvName));
     });
 
     const javaProject: string = 'AutoDetectJavaProject';
     test(javaProject, async () => {
+        const appName: string = 'javaApp1';
         const projectPath: string = path.join(testFolderPath, javaProject);
-        await fse.ensureFile(path.join(projectPath, 'pom.xml'));
+        const pomXmlPath: string = path.join(projectPath, 'pom.xml');
+        await fse.ensureFile(pomXmlPath);
+        await fse.writeFile(pomXmlPath, `<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <properties>
+        <functionAppName>${appName}</functionAppName>
+    </properties>
+</project>`);
+        await fse.ensureDir(path.join(projectPath, 'src'));
         await testInitProjectForVSCode(projectPath);
-        await validateVSCodeProjectFiles(projectPath, true);
-        await validateExtensionRecommendation(projectPath, 'vscjava.vscode-java-debug');
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.Java);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
+        await validateProject(projectPath, getJavaValidateOptions(appName));
     });
 
     const multiLanguageProject: string = 'MultiLanguageProject';
     test(multiLanguageProject, async () => {
         const projectPath: string = path.join(testFolderPath, multiLanguageProject);
-        const indexJsPath: string = path.join(projectPath, 'HttpTriggerTS', 'index.ts');
-        await fse.ensureFile(indexJsPath);
-        const runCsxPath: string = path.join(projectPath, 'HttpTriggerCSX', 'run.csx');
-        await fse.ensureFile(runCsxPath);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerTS', 'index.ts'));
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerCSX', 'run.csx'));
         // Since this project has multiple languages, the user should be prompted to select the language
         // (In this case the user will select JavaScript)
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
-        await validateVSCodeProjectFiles(projectPath, false);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectLanguageSetting}`, ProjectLanguage.JavaScript);
-        await validateSetting(projectPath, `${extensionPrefix}.${projectRuntimeSetting}`, ProjectRuntime.v2);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     const goodExtensionFile: string = 'Existing Extensions File';
@@ -100,9 +113,10 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureFile(extensionsJsonPath);
         await fse.writeFile(extensionsJsonPath, '{ "recommendations": [ "testid" ] }');
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
-        await validateVSCodeProjectFiles(projectPath);
+        const options: IValidateProjectOptions = getJavaScriptValidateOptions();
         // Verify the user's existing recommendations didn't get removed
-        await validateExtensionRecommendation(projectPath, 'testid');
+        options.expectedExtensionRecs.push('testid');
+        await validateProject(projectPath, options);
     });
 
     const badExtensionsFile: string = 'Poorly Formed Extensions File';
@@ -113,7 +127,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.writeFile(extensionsJsonPath, '{');
         // This should simply prompt the user to overwrite the file since we can't parse it
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
-        await validateVSCodeProjectFiles(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     const goodSettingsFile: string = 'Existing Settings File';
@@ -121,11 +135,11 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         const projectPath: string = path.join(testFolderPath, goodSettingsFile);
         const settingsJsonPath: string = path.join(projectPath, '.vscode', 'settings.json');
         await fse.ensureFile(settingsJsonPath);
-        await fse.writeFile(settingsJsonPath, '{ "testSetting": "testValue" }');
+        await fse.writeFile(settingsJsonPath, '{ "azureFunctions.testSetting": "testValue" }');
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
-        await validateVSCodeProjectFiles(projectPath);
-        // tslint:disable-next-line:no-any
-        await validateSetting(projectPath, 'testSetting', 'testValue');
+        const options: IValidateProjectOptions = getJavaScriptValidateOptions();
+        options.expectedSettings.testSetting = 'testValue';
+        await validateProject(projectPath, options);
     });
 
     const badSettingsFile: string = 'Poorly Formed Settings File';
@@ -136,7 +150,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.writeFile(settingsJson, '{');
         // This should simply prompt the user to overwrite the file since we can't parse it
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
-        await validateVSCodeProjectFiles(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     const badGitignoreFile: string = 'Bad gitignore File';
@@ -147,54 +161,24 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         // tslint:disable-next-line:no-multiline-string
         await fse.writeFile(gitignorePath, '.vscode');
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
-        await validateVSCodeProjectFiles(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
     async function testInitProjectForVSCode(projectPath: string, ...inputs: (string | undefined)[]): Promise<void> {
+        // create mock files
+        await fse.ensureFile(path.join(projectPath, 'local.settings.json'));
+        await fse.ensureFile(path.join(projectPath, 'host.json'));
+        await fse.ensureFile(path.join(projectPath, '.funcignore'));
+        await fse.ensureFile(path.join(projectPath, '.gitignore'));
+        await fse.ensureDir(path.join(projectPath, '.git'));
+
         inputs.unshift(projectPath); // Select the test func app folder
         if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
         }
 
         ext.ui = new TestUserInput(inputs);
-        const actionContext: IActionContext = <IActionContext>{ properties: { isActivationEvent: 'false', result: 'Succeeded', error: '', errorMessage: '', cancelStep: '' }, measurements: {} };
-        await initProjectForVSCode(actionContext);
+        await initProjectForVSCode({ properties: {}, measurements: {} });
         assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
     }
 });
-
-export async function validateVSCodeProjectFiles(projectPath: string, hasLaunchJson: boolean = true): Promise<void> {
-    const gitignorePath: string = path.join(projectPath, '.gitignore');
-    if (await fse.pathExists(gitignorePath)) {
-        const gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
-        assert.equal(gitignoreContents.indexOf('.vscode'), -1, 'The ".vscode" folder is being ignored.');
-    }
-
-    const vscodePath: string = path.join(projectPath, '.vscode');
-    assert.equal(await fse.pathExists(path.join(vscodePath, 'settings.json')), true, 'settings.json does not exist');
-
-    if (hasLaunchJson) {
-        assert.equal(await fse.pathExists(path.join(vscodePath, 'launch.json')), true, 'launch.json does not exist');
-    }
-
-    assert.equal(await fse.pathExists(path.join(vscodePath, 'tasks.json')), true, 'tasks.json does not exist');
-    await validateExtensionRecommendation(projectPath, 'ms-azuretools.vscode-azurefunctions');
-}
-
-async function validateExtensionRecommendation(projectPath: string, extensionId: string): Promise<void> {
-    const vscodePath: string = path.join(projectPath, '.vscode');
-    const extensionsPath: string = path.join(vscodePath, 'extensions.json');
-    assert.equal(await fse.pathExists(extensionsPath), true, 'extensions.json does not exist');
-    const extensionsContents: string = (await fse.readFile(extensionsPath)).toString();
-    assert.equal(extensionsContents.indexOf(extensionId) !== -1, true, `The extension ${extensionId} should be recommended.`);
-}
-
-export async function validateSetting(projectPath: string, key: string, value: string): Promise<void> {
-    const vscodePath: string = path.join(projectPath, '.vscode');
-    const settingsPath: string = path.join(vscodePath, 'settings.json');
-    assert.equal(await fse.pathExists(settingsPath), true, 'settings.json does not exist');
-    // tslint:disable-next-line:no-any
-    const settings: any = await fse.readJSON(settingsPath);
-    // tslint:disable-next-line:no-unsafe-any
-    assert.equal(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
-}
