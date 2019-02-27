@@ -63,14 +63,15 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getPythonValidateOptions(projectName: string): IValidateProjectOptions {
+export function getPythonValidateOptions(projectName: string, venvName: string): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Python,
             projectRuntime: ProjectRuntime.v2,
             preDeployTask: 'func: pack',
             deploySubpath: `${projectName}.zip`,
-            templateFilter: 'Verified'
+            templateFilter: 'Verified',
+            pythonVenv: venvName
         },
         expectedPaths: [
             'requirements.txt'

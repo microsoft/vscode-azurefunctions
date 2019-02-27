@@ -106,7 +106,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
 
         const projectPath: string = path.join(testFolderPath, pythonProject);
         await testCreateNewProject(projectPath, ProjectLanguage.Python);
-        await validateProject(projectPath, getPythonValidateOptions(pythonProject));
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject, '.env'));
     });
 
     const typeScriptProject: string = 'TypeScriptProject';

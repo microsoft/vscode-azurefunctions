@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, ext, initProjectForVSCode, ProjectLanguage, TestUserInput } from '../extension.bundle';
+import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
@@ -69,8 +69,14 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         const projectPath: string = path.join(testFolderPath, pythonProject);
         await fse.ensureFile(path.join(projectPath, 'HttpTrigger', '__init__.py'));
         await fse.ensureFile(path.join(projectPath, 'requirements.txt'));
+        const venvName: string = 'testEnv';
+        if (process.platform === Platform.Windows) {
+            await fse.ensureFile(path.join(projectPath, venvName, 'Scripts', 'activate'));
+        } else {
+            await fse.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
+        }
         await testInitProjectForVSCode(projectPath);
-        await validateProject(projectPath, getPythonValidateOptions(pythonProject));
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject, venvName));
     });
 
     const javaProject: string = 'AutoDetectJavaProject';
