@@ -37,6 +37,7 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
     return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async function (this: IActionContext): Promise<cliFeedJsonResponse> {
         this.properties.isActivationEvent = 'true';
         this.suppressErrorDisplay = true;
+        this.suppressTelemetry = true;
         const funcJsonOptions: request.OptionsWithUri = {
             method: 'GET',
             uri: funcCliFeedUrl
