@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, ShellExecution, WorkspaceFolder } from 'vscode';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { isFunctionProject } from '../commands/createNewProject/isFunctionProject';
 import { hostStartTaskName } from '../constants';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -17,24 +18,44 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     public abstract getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution>;
 
     public async provideDebugConfigurations(folder: WorkspaceFolder | undefined, _token?: CancellationToken): Promise<DebugConfiguration[]> {
-        const result: DebugConfiguration[] = [];
-        if (folder) {
-            if (await isFunctionProject(folder.uri.fsPath)) {
-                result.push(this.debugConfig);
-            }
-        }
+        // tslint:disable-next-line: no-this-assignment
+        const me: FuncDebugProviderBase = this;
+        const configs: DebugConfiguration[] | undefined = await callWithTelemetryAndErrorHandling('provideDebugConfigurations', async function (this: IActionContext): Promise<DebugConfiguration[]> {
+            this.properties.isActivationEvent = 'true';
+            this.suppressErrorDisplay = true;
+            this.suppressTelemetry = true;
 
-        return result;
+            const result: DebugConfiguration[] = [];
+            if (folder) {
+                if (await isFunctionProject(folder.uri.fsPath)) {
+                    result.push(me.debugConfig);
+                }
+            }
+
+            return result;
+        });
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        return configs || [];
     }
 
     public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, _token?: CancellationToken): Promise<DebugConfiguration | undefined> {
-        this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
-        if (debugConfiguration.preLaunchTask === hostStartTaskName) {
-            if (!await validateFuncCoreToolsInstalled()) {
-                return undefined;
-            }
-        }
+        // tslint:disable-next-line: no-this-assignment
+        const me: FuncDebugProviderBase = this;
+        await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async function (this: IActionContext): Promise<void> {
+            this.properties.isActivationEvent = 'true';
+            this.suppressErrorDisplay = true;
+            this.suppressTelemetry = true;
 
+            me._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
+            if (debugConfiguration.preLaunchTask === hostStartTaskName) {
+                if (!await validateFuncCoreToolsInstalled()) {
+                    return undefined;
+                }
+            }
+        });
+
+        // Always return the debugConfiguration passed in. If we return undefined we would block debugging and we don't want that.
         return debugConfiguration;
     }
 

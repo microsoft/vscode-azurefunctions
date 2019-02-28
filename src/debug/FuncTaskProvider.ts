@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/isFunctionProject';
 import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
@@ -25,29 +26,46 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     public async provideTasks(_token?: CancellationToken | undefined): Promise<Task[]> {
-        const result: Task[] = [];
-        if (workspace.workspaceFolders) {
-            for (const folder of workspace.workspaceFolders) {
-                const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath);
-                if (projectRoot) {
-                    result.push(getExtensionInstallTask(folder, projectRoot));
-                    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
-                    const hostStartTask: Task | undefined = await this.getHostStartTask(folder, projectRoot, language);
-                    if (hostStartTask) {
-                        result.push(hostStartTask);
-                    }
+        // tslint:disable-next-line: no-this-assignment
+        const me: FuncTaskProvider = this;
+        const tasks: Task[] | undefined = await callWithTelemetryAndErrorHandling('provideTasks', async function (this: IActionContext): Promise<Task[]> {
+            this.properties.isActivationEvent = 'true';
+            this.suppressErrorDisplay = true;
+            this.suppressTelemetry = true;
 
-                    if (language === ProjectLanguage.Python) {
-                        result.push(...getPythonTasks(folder, projectRoot));
+            const result: Task[] = [];
+            if (workspace.workspaceFolders) {
+                for (const folder of workspace.workspaceFolders) {
+                    const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath);
+                    if (projectRoot) {
+                        result.push(getExtensionInstallTask(folder, projectRoot));
+                        const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
+                        const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
+                        if (hostStartTask) {
+                            result.push(hostStartTask);
+                        }
+
+                        if (language === ProjectLanguage.Python) {
+                            result.push(...getPythonTasks(folder, projectRoot));
+                        }
                     }
                 }
             }
-        }
 
-        return result;
+            return result;
+        });
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        return tasks || [];
     }
 
     public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
+        await callWithTelemetryAndErrorHandling('resolveTask', async function (this: IActionContext): Promise<void> {
+            this.properties.isActivationEvent = 'true';
+            this.suppressErrorDisplay = true;
+            this.suppressTelemetry = true;
+        });
+
         // The resolveTask method returns undefined and is currently not called by VS Code. It is there to optimize task loading in the future.
         // https://code.visualstudio.com/docs/extensions/example-tasks
         return undefined;
