@@ -22,6 +22,7 @@ import { createVirtualEnviornment } from './PythonProjectCreator';
 
 export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
+    actionContext.properties.isActivationEvent = 'true';
     if (folders) {
         for (const folder of folders) {
             const folderPath: string = folder.uri.fsPath;
