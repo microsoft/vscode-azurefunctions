@@ -1307,7 +1307,7 @@
 		"aadreg_templateNeeds": "The template needs the following permission:",
 		"aadreg_thisIntegration": "This integration requires an AAD configuration for the function app.",
 		"aadreg_thisTemplate": "This template requires an AAD configuration for the function app.",
-		"aadreg_youMayNeed": "You may need to configure any additional permissions you function requires. Please see the documentation for this binding.",
+		"aadreg_youMayNeed": "You may need to configure any additional permissions your function requires. Please see the documentation for this binding.",
 		"asdreg_manageAppService": "Manage App Service Authentication / Authorization",
 		"aadreg_authConfRequired": "Auth configuration required",
 		"aadreg_identityRequirementsInfo": "Identity requirements",
