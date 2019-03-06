@@ -21,6 +21,8 @@ export class TemplateProvider {
     private readonly _templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     // if there are no templates, then there is likely no internet or a problem with the clifeed url
     private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
+    private _javaTemplates: IFunctionTemplate[] | undefined;
+
     constructor(templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined }) {
         this._templatesMap = templatesMap;
         this.copyCSharpSettingsFromJS();
@@ -33,7 +35,10 @@ export class TemplateProvider {
         }
 
         if (language === ProjectLanguage.Java) {
-            return await parseJavaTemplates(templates, functionAppPath, telemetryProperties);
+            if (!this._javaTemplates) {
+                this._javaTemplates = await parseJavaTemplates(templates, functionAppPath, telemetryProperties);
+            }
+            return this._javaTemplates;
         } else {
             let filterTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
             switch (templateFilter) {
