@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-// tslint:disable-next-line:no-require-imports
-import opn = require("opn");
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
@@ -15,6 +13,7 @@ import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
+import { openUrl } from '../../utils/openUrl';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { isFunctionProject } from './isFunctionProject';
 import { ITask, ITasksJson } from './ITasksJson';
@@ -70,7 +69,7 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
         } else if (result === DialogResponses.learnMore) {
-            await opn('https://aka.ms/azFuncProject');
+            await openUrl('https://aka.ms/azFuncProject');
             return await promptToInitializeProject(folderPath);
         } else {
             return true;
@@ -147,9 +146,7 @@ async function promptToUpdateProject(fsPath: string, settingKey: string, message
             if (result === DialogResponses.dontWarnAgain) {
                 await updateWorkspaceSetting(settingKey, false, fsPath);
             } else if (result === DialogResponses.learnMore) {
-                // don't wait to re-show dialog
-                // tslint:disable-next-line:no-floating-promises
-                opn(learnMoreLink);
+                await openUrl(learnMoreLink);
             } else {
                 return true;
             }

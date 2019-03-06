@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import opn = require("opn");
 import { MessageItem } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { openUrl } from '../utils/openUrl';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
@@ -44,7 +43,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
                 await installFuncCoreTools(packageManager!);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
-                await opn('https://aka.ms/Dqur4e');
+                await openUrl('https://aka.ms/Dqur4e');
             }
         }
     });
@@ -52,7 +51,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
         if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-            await opn('https://aka.ms/Dqur4e');
+            await openUrl('https://aka.ms/Dqur4e');
         }
     }
 

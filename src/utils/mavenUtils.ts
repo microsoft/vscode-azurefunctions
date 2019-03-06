@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-// tslint:disable-next-line:no-require-imports
-import opn = require("opn");
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
+import { openUrl } from './openUrl';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
@@ -21,7 +20,7 @@ export namespace mavenUtils {
             const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
             const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, DialogResponses.learnMore, DialogResponses.skipForNow);
             if (result === DialogResponses.learnMore) {
-                await opn('https://aka.ms/azurefunction_maven');
+                await openUrl('https://aka.ms/azurefunction_maven');
             }
             actionContext.suppressErrorDisplay = true; // Swallow errors in case show two error message
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
