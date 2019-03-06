@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeItem, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeItem, callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, dotnetPublishTaskLabel, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -134,11 +134,14 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     // Don't wait
     vscode.window.showInformationMessage(deployComplete, streamLogs, viewOutput).then(async (result: vscode.MessageItem | undefined) => {
-        if (result === viewOutput) {
-            ext.outputChannel.show();
-        } else if (result === streamLogs) {
-            await startStreamingLogs(node);
-        }
+        await callWithTelemetryAndErrorHandling('postDeploy', async function (this: IActionContext): Promise<void> {
+            this.properties.dialogResult = result && result.title;
+            if (result === viewOutput) {
+                ext.outputChannel.show();
+            } else if (result === streamLogs) {
+                await startStreamingLogs(node);
+            }
+        });
     });
 
     await listHttpTriggerUrls(node, this);
