@@ -36,7 +36,7 @@ export async function createNewProject(
     addLocalFuncTelemetry(actionContext);
 
     if (functionAppPath === undefined) {
-        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function app'));
+        functionAppPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, localize('azFunc.selectFunctionAppFolderNew', 'Select the folder that will contain your function project'));
     }
     await fse.ensureDir(functionAppPath);
 
