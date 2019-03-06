@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-// tslint:disable-next-line:no-require-imports
-import opn = require("opn");
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
@@ -15,6 +13,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { openInBrowser } from '../utils/openInBrowser';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
@@ -43,7 +42,7 @@ export async function remoteDebugFunctionApp(node?: SlotTreeItemBase): Promise<v
                     const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
                     if (result === DialogResponses.learnMore) {
-                        await opn('https://aka.ms/azfunc-remotedebug');
+                        await openInBrowser('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
                         await updateSiteConfig(ext.outputChannel, client, p, siteConfig);

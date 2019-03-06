@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-// tslint:disable-next-line:no-require-imports
-import opn = require("opn");
 import * as path from 'path';
 import { SemVer } from 'semver';
 import * as vscode from 'vscode';
@@ -18,6 +16,7 @@ import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting }
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { openInBrowser } from '../../utils/openInBrowser';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 
 export class DotnetProjectCreator extends ProjectCreatorBase {
@@ -150,7 +149,7 @@ export class DotnetProjectCreator extends ProjectCreatorBase {
                     try {
                         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            await opn('https://aka.ms/azFunc64bit');
+                            await openInBrowser('https://aka.ms/azFunc64bit');
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(settingKey, false);
                         }
