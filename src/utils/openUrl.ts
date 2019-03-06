@@ -5,6 +5,6 @@
 
 import * as vscode from 'vscode';
 
-export async function openInBrowser(url: string): Promise<void> {
+export async function openUrl(url: string): Promise<void> {
     await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
 }

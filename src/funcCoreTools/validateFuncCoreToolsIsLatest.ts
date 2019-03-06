@@ -12,7 +12,7 @@ import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
-import { openInBrowser } from '../utils/openInBrowser';
+import { openUrl } from '../utils/openUrl';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 import { getNpmDistTag } from "./getNpmDistTag";
@@ -56,7 +56,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                     result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
                         await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                     if (result === DialogResponses.learnMore) {
-                        await openInBrowser('https://aka.ms/azFuncOutdated');
+                        await openUrl('https://aka.ms/azFuncOutdated');
                     } else if (result === update) {
                         // tslint:disable-next-line:no-non-null-assertion
                         await updateFuncCoreTools(packageManager!, projectRuntime);

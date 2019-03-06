@@ -9,7 +9,7 @@ import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
-import { openInBrowser } from '../utils/openInBrowser';
+import { openUrl } from '../utils/openUrl';
 import { getFuncPackageManager } from './getFuncPackageManager';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
@@ -43,7 +43,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
                 await installFuncCoreTools(packageManager!);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
-                await openInBrowser('https://aka.ms/Dqur4e');
+                await openUrl('https://aka.ms/Dqur4e');
             }
         }
     });
@@ -51,7 +51,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
         if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-            await openInBrowser('https://aka.ms/Dqur4e');
+            await openUrl('https://aka.ms/Dqur4e');
         }
     }
 

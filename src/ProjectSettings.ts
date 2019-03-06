@@ -10,7 +10,7 @@ import { DialogResponses, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUse
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
 import { ext } from './extensionVariables';
 import { localize } from "./localize";
-import { openInBrowser } from './utils/openInBrowser';
+import { openUrl } from './utils/openUrl';
 
 const previewDescription: string = localize('previewDescription', '(Preview)');
 
@@ -56,7 +56,7 @@ export async function promptForProjectRuntime(message?: string): Promise<Project
     do {
         runtime = (await ext.ui.showQuickPick(picks, options)).data;
         if (runtime === undefined) {
-            await openInBrowser('https://aka.ms/AA1tpij');
+            await openUrl('https://aka.ms/AA1tpij');
         }
     }
     while (runtime === undefined);

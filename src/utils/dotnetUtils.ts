@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from "vscode-azureextensionui";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
-import { openInBrowser } from './openInBrowser';
+import { openUrl } from './openUrl';
 
 export namespace dotnetUtils {
     export async function validateDotnetInstalled(actionContext: IActionContext): Promise<void> {
@@ -20,7 +20,7 @@ export namespace dotnetUtils {
                 // don't wait
                 vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(async (result) => {
                     if (result === DialogResponses.learnMore) {
-                        await openInBrowser('https://aka.ms/AA4ac70');
+                        await openUrl('https://aka.ms/AA4ac70');
                     }
                 });
                 actionContext.suppressErrorDisplay = true;

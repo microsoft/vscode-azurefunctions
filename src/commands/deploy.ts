@@ -21,7 +21,7 @@ import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
-import { openInBrowser } from '../utils/openInBrowser';
+import { openUrl } from '../utils/openUrl';
 import * as workspaceUtil from '../utils/workspace';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
@@ -250,7 +250,7 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
             const result: vscode.MessageItem = await ui.showWarningMessage(message, { modal: true }, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
             if (result === DialogResponses.learnMore) {
-                await openInBrowser('https://aka.ms/azFuncRuntime');
+                await openUrl('https://aka.ms/azFuncRuntime');
                 telemetryProperties.cancelStep = 'learnMoreRuntime';
                 throw new UserCancelledError();
             } else {
@@ -325,7 +325,7 @@ async function promptToBuildNativeDeps(actionContext: IActionContext, deployFsPa
         return await appservice.tryRunPreDeployTask(actionContext, deployFsPath, scmType, extensionPrefix);
     } else if (result === DialogResponses.learnMore) {
         actionContext.properties.preDeployTaskResponse = 'packLearnMore';
-        await openInBrowser('https://aka.ms/func-python-publish');
+        await openUrl('https://aka.ms/func-python-publish');
         throw new UserCancelledError();
     } else {
         actionContext.properties.preDeployTaskResponse = 'cancel';

@@ -13,7 +13,7 @@ import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
-import { openInBrowser } from '../../utils/openInBrowser';
+import { openUrl } from '../../utils/openUrl';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { isFunctionProject } from './isFunctionProject';
 import { ITask, ITasksJson } from './ITasksJson';
@@ -69,7 +69,7 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
         } else if (result === DialogResponses.learnMore) {
-            await openInBrowser('https://aka.ms/azFuncProject');
+            await openUrl('https://aka.ms/azFuncProject');
             return await promptToInitializeProject(folderPath);
         } else {
             return true;
@@ -146,7 +146,7 @@ async function promptToUpdateProject(fsPath: string, settingKey: string, message
             if (result === DialogResponses.dontWarnAgain) {
                 await updateWorkspaceSetting(settingKey, false, fsPath);
             } else if (result === DialogResponses.learnMore) {
-                await openInBrowser(learnMoreLink);
+                await openUrl(learnMoreLink);
             } else {
                 return true;
             }
