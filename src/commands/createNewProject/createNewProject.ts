@@ -21,8 +21,9 @@ import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 import { PythonProjectCreator } from './PythonProjectCreator';
-import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 import { TypeScriptProjectCreator } from './TypeScriptProjectCreator';
+import { PowerShellProjectCreator } from './PowerShellProjectCreator';
+import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export async function createNewProject(
     actionContext: IActionContext,
@@ -51,7 +52,8 @@ export async function createNewProject(
                 { label: ProjectLanguage.TypeScript },
                 { label: ProjectLanguage.CSharp },
                 { label: ProjectLanguage.Python, description: previewDescription },
-                { label: ProjectLanguage.Java }
+                { label: ProjectLanguage.Java },
+                { label: ProjectLanguage.PowerShell, description: previewDescription }
             ];
 
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };
@@ -112,6 +114,9 @@ export function getProjectCreator(language: string, functionAppPath: string, act
             break;
         case ProjectLanguage.TypeScript:
             projectCreatorType = TypeScriptProjectCreator;
+            break;
+        case ProjectLanguage.PowerShell:
+            projectCreatorType = PowerShellProjectCreator;
             break;
         default:
             projectCreatorType = ScriptProjectCreatorBase;

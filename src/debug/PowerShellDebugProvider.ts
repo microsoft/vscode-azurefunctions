@@ -8,23 +8,23 @@ import { funcHostStartCommand, hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
-export const defaultNodeDebugPort: number = 9229;
+export const defaultCustomPipeName: string = "AzureFunctionsPSWorker";
 
-export const nodeDebugConfig: DebugConfiguration = {
-    name: localize('attachNode', 'Attach to Node Functions'),
-    type: 'node',
+export const powershellDebugConfig: DebugConfiguration = {
+    name: localize('attachPowerShell', 'Attach to PowerShell Functions'),
+    type: 'PowerShell',
     request: 'attach',
-    port: defaultNodeDebugPort,
+    customPipeName: defaultCustomPipeName,
     preLaunchTask: hostStartTaskName
 };
 
-export class NodeDebugProvider extends FuncDebugProviderBase {
-    protected readonly defaultPortOrPipeName: number = defaultNodeDebugPort;
-    protected readonly debugConfig: DebugConfiguration = nodeDebugConfig;
+export class PowerShellDebugProvider extends FuncDebugProviderBase {
+    protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
+    protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
         const port = this.getDebugPortOrPipeName(folder);
-        const options: ShellExecutionOptions = { env: { languageWorkers__node__arguments: `--inspect=${port}` } };
+        const options: ShellExecutionOptions = { env: { PSWorkerCustomPipeName: `${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }
 }

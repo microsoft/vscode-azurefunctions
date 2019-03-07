@@ -20,12 +20,12 @@ export const pythonDebugConfig: DebugConfiguration = {
 };
 
 export class PythonDebugProvider extends FuncDebugProviderBase {
-    protected readonly defaultPort: number = defaultPythonDebugPort;
+    protected readonly defaultPortOrPipeName: number = defaultPythonDebugPort;
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
         const command: string = venvUtils.convertToVenvCommand(funcHostStartCommand, folder.uri.fsPath);
-        const port: number = this.getDebugPort(folder);
+        const port = this.getDebugPortOrPipeName(folder) as number;
         const options: ShellExecutionOptions = { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
         return new ShellExecution(command, options);
     }

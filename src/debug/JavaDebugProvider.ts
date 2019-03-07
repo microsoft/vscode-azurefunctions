@@ -20,11 +20,11 @@ export const javaDebugConfig: DebugConfiguration = {
 };
 
 export class JavaDebugProvider extends FuncDebugProviderBase {
-    protected readonly defaultPort: number = defaultJavaDebugPort;
+    protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
     protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const port: number = this.getDebugPort(folder);
+        const port = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__java__arguments: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }

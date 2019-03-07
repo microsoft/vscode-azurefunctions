@@ -103,6 +103,8 @@ function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: str
             createOptions.runtime = 'python';
             createOptions.os = 'linux';
             break;
+        case ProjectLanguage.PowerShell:
+            createOptions.runtime = 'powershell'
         default:
     }
 }

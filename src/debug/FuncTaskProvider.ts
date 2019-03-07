@@ -13,16 +13,19 @@ import { getPythonTasks } from './getPythonTasks';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
 import { PythonDebugProvider } from './PythonDebugProvider';
+import { PowerShellDebugProvider } from './PowerShellDebugProvider';
 
 export class FuncTaskProvider implements TaskProvider {
     private readonly _nodeDebugProvider: NodeDebugProvider;
     private readonly _pythonDebugProvider: PythonDebugProvider;
     private readonly _javaDebugProvider: JavaDebugProvider;
+    private readonly _powershellDebugProvider: PowerShellDebugProvider;
 
-    constructor(nodeDebugProvider: NodeDebugProvider, pythonDebugProvider: PythonDebugProvider, javaDebugProvider: JavaDebugProvider) {
+    constructor(nodeDebugProvider: NodeDebugProvider, pythonDebugProvider: PythonDebugProvider, javaDebugProvider: JavaDebugProvider, powershellDebugProvider: PowerShellDebugProvider) {
         this._nodeDebugProvider = nodeDebugProvider;
         this._pythonDebugProvider = pythonDebugProvider;
         this._javaDebugProvider = javaDebugProvider;
+        this._powershellDebugProvider = powershellDebugProvider;
     }
 
     public async provideTasks(_token?: CancellationToken | undefined): Promise<Task[]> {
@@ -84,6 +87,8 @@ export class FuncTaskProvider implements TaskProvider {
             case ProjectLanguage.Java:
                 debugProvider = this._javaDebugProvider;
                 break;
+            case ProjectLanguage.PowerShell:
+                debugProvider = this._powershellDebugProvider;
             default:
         }
 
