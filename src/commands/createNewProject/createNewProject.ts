@@ -19,11 +19,11 @@ import { DotnetProjectCreator } from './DotnetProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { PowerShellProjectCreator } from './PowerShellProjectCreator';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 import { PythonProjectCreator } from './PythonProjectCreator';
-import { TypeScriptProjectCreator } from './TypeScriptProjectCreator';
-import { PowerShellProjectCreator } from './PowerShellProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
+import { TypeScriptProjectCreator } from './TypeScriptProjectCreator';
 
 export async function createNewProject(
     actionContext: IActionContext,

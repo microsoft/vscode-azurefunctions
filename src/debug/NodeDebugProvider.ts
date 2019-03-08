@@ -23,7 +23,7 @@ export class NodeDebugProvider extends FuncDebugProviderBase {
     protected readonly debugConfig: DebugConfiguration = nodeDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const port = this.getDebugPortOrPipeName(folder);
+        const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__node__arguments: `--inspect=${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }

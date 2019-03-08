@@ -23,7 +23,7 @@ export class PowerShellDebugProvider extends FuncDebugProviderBase {
     protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const port = this.getDebugPortOrPipeName(folder);
+        const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { PSWorkerCustomPipeName: `${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }

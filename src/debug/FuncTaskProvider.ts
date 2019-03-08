@@ -12,8 +12,8 @@ import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { getPythonTasks } from './getPythonTasks';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
-import { PythonDebugProvider } from './PythonDebugProvider';
 import { PowerShellDebugProvider } from './PowerShellDebugProvider';
+import { PythonDebugProvider } from './PythonDebugProvider';
 
 export class FuncTaskProvider implements TaskProvider {
     private readonly _nodeDebugProvider: NodeDebugProvider;

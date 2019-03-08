@@ -24,7 +24,7 @@ export class JavaDebugProvider extends FuncDebugProviderBase {
     protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const port = this.getDebugPortOrPipeName(folder);
+        const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__java__arguments: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }
