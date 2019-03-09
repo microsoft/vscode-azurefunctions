@@ -8,7 +8,7 @@ import { funcHostStartCommand, hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
-export const defaultCustomPipeName: string = "AzureFunctionsPSWorker";
+export const defaultCustomPipeName: string = 'AzureFunctionsPSWorker';
 
 export const powershellDebugConfig: DebugConfiguration = {
     name: localize('attachPowerShell', 'Attach to PowerShell Functions'),
