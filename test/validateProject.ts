@@ -142,6 +142,24 @@ export function getCSharpScriptValidateOptions(runtime: ProjectRuntime = Project
     };
 }
 
+export function getPowerShellValidateOptions(): IValidateProjectOptions {
+    return {
+        expectedSettings: {
+            projectLanguage: ProjectLanguage.PowerShell,
+            projectRuntime: ProjectRuntime.v2,
+            deploySubpath: '.',
+            preDeployTask: 'func: extensions install',
+            templateFilter: 'All'
+        },
+        expectedPaths: [
+            'profile.ps1'
+        ],
+        expectedExtensionRecs: [
+            'ms-vscode.PowerShell'
+        ]
+    };
+}
+
 export function getScriptValidateOptions(language: string): IValidateProjectOptions {
     return {
         expectedSettings: {

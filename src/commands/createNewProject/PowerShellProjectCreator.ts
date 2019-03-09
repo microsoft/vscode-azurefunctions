@@ -8,8 +8,9 @@ import { powershellDebugConfig } from "../../debug/PowerShellDebugProvider";
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
 
 export class PowerShellProjectCreator extends ScriptProjectCreatorBase {
-    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
+    public readonly templateFilter: TemplateFilter = TemplateFilter.All;
     public readonly deploySubpath: string = '.';
+
     // "func extensions install" task creates C# build artifacts that should be hidden
     // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
     public readonly excludedFiles: string | string[] = ['obj', 'bin'];
@@ -45,5 +46,9 @@ export class PowerShellProjectCreator extends ScriptProjectCreatorBase {
             version: '2.0.0',
             tasks: tasks
         };
+    }
+
+    public getRecommendedExtensions(): string[] {
+        return super.getRecommendedExtensions().concat(['ms-vscode.PowerShell']);
     }
 }

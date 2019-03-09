@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
-import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
+import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -103,6 +103,15 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureDir(path.join(projectPath, 'src'));
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getJavaValidateOptions(appName));
+    });
+
+    const powershellProject: string = 'AutoDetectPowerShellProject';
+    test(powershellProject, async () => {
+        const projectPath: string = path.join(testFolderPath, powershellProject);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerPS', 'run.ps1'));
+        await fse.ensureFile(path.join(projectPath, 'profile.ps1'));
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getPowerShellValidateOptions());
     });
 
     const multiLanguageProject: string = 'MultiLanguageProject';
