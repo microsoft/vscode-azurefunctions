@@ -86,7 +86,7 @@ export async function createFunction(
     }
 
     if (folderPath === undefined) {
-        const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function app');
+        const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function project');
         folderPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
     }
 

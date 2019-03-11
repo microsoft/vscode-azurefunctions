@@ -14,7 +14,7 @@ import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
-    public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App');
+    public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App in Azure');
 
     private _nextLink: string | undefined;
 
