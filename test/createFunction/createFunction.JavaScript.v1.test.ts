@@ -8,14 +8,14 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { JavaScriptProjectCreator, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {
-    protected _language: ProjectLanguage = ProjectLanguage.JavaScript;
-    protected _runtime: ProjectRuntime = JavaScriptProjectCreator.defaultRuntime;
+    public language: ProjectLanguage = ProjectLanguage.JavaScript;
+    public runtime: ProjectRuntime = ProjectRuntime.v1;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         const functionPath: string = path.join(testFolder, funcName);
@@ -25,7 +25,7 @@ class JSFunctionTester extends FunctionTesterBase {
 }
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
-suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     const jsTester: JSFunctionTester = new JSFunctionTester();
 
     suiteSetup(async () => {
@@ -141,7 +141,7 @@ suite('Create JavaScript Function Tests', async function (this: ISuiteCallbackCo
             const projectPath: string = path.join(jsTester.baseTestFolder, source);
             // Intentionally testing weird casing for authLevel
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, JavaScriptProjectCreator.defaultRuntime, async () => {
+                await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                 });
             });

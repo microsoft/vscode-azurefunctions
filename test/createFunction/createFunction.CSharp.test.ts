@@ -14,16 +14,16 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
-    protected _language: ProjectLanguage = ProjectLanguage.CSharp;
-    protected _runtime: ProjectRuntime = ProjectRuntime.v2;
+    public language: ProjectLanguage = ProjectLanguage.CSharp;
+    public runtime: ProjectRuntime = ProjectRuntime.v2;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         assert.equal(await fse.pathExists(path.join(testFolder, `${funcName}.cs`)), true, 'cs file does not exist');
     }
 }
 
-// tslint:disable-next-line:no-function-expression
-suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+// tslint:disable-next-line:no-function-expression max-func-body-length
+suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(40 * 1000);
 
     const csTester: CSharpFunctionTester = new CSharpFunctionTester();
@@ -44,6 +44,25 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
         );
     });
 
+    const cosmosTrigger: string = 'CosmosDBTrigger';
+    test(cosmosTrigger, async () => {
+        await csTester.testCreateFunction(
+            cosmosTrigger,
+            undefined, // namespace
+            'AzureWebJobsStorage', // Use existing app setting
+            undefined, // Use default database name
+            undefined // Use default collection name
+        );
+    });
+
+    const durableTrigger: string = 'DurableFunctionsOrchestration';
+    test(durableTrigger, async () => {
+        await csTester.testCreateFunction(
+            durableTrigger,
+            undefined // namespace
+        );
+    });
+
     const httpTrigger: string = 'HttpTrigger';
     test(httpTrigger, async () => {
         await csTester.testCreateFunction(
@@ -60,6 +79,27 @@ suite('Create C# Function Tests', async function (this: ISuiteCallbackContext): 
             undefined, // namespace
             'AzureWebJobsStorage', // Use existing app setting
             undefined // Use default queue name
+        );
+    });
+
+    const serviceBusQueueTrigger: string = 'ServiceBusQueueTrigger';
+    test(serviceBusQueueTrigger, async () => {
+        await csTester.testCreateFunction(
+            serviceBusQueueTrigger,
+            undefined, // namespace
+            'AzureWebJobsStorage', // Use existing app setting
+            undefined // Use default queue name
+        );
+    });
+
+    const serviceBusTopicTrigger: string = 'ServiceBusTopicTrigger';
+    test(serviceBusTopicTrigger, async () => {
+        await csTester.testCreateFunction(
+            serviceBusTopicTrigger,
+            undefined, // namespace
+            'AzureWebJobsStorage', // Use existing app setting
+            undefined, // Use default topic name
+            undefined // Use default subscription name
         );
     });
 

@@ -14,11 +14,11 @@ import { runWithFuncSetting } from '../runWithSetting';
 export abstract class FunctionTesterBase {
     public baseTestFolder: string;
 
-    protected abstract _language: ProjectLanguage;
-    protected abstract _runtime: ProjectRuntime;
+    public abstract language: ProjectLanguage;
+    public abstract runtime: ProjectRuntime;
 
     public async initAsync(): Promise<void> {
-        this.baseTestFolder = path.join(testFolderPath, `createFunction${this._language}${this._runtime}`);
+        this.baseTestFolder = path.join(testFolderPath, `createFunction${this.language}${this.runtime}`);
         await runForAllTemplateSources(async (source) => {
             await this.initializeTestFolder(path.join(this.baseTestFolder, source));
         });
@@ -54,8 +54,8 @@ export abstract class FunctionTesterBase {
 
         ext.ui = new TestUserInput(inputs);
         await runWithFuncSetting(templateFilterSetting, TemplateFilter.All, async () => {
-            await runWithFuncSetting(projectLanguageSetting, this._language, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, this._runtime, async () => {
+            await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
+                await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction');
                 });
             });
