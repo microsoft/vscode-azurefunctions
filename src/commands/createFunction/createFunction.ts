@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { isString } from 'util';
-import { InputBoxOptions, MessageItem, QuickPickItem, Uri, window, workspace } from 'vscode';
+import { InputBoxOptions, MessageItem, ProgressLocation, QuickPickItem, Uri, window, workspace } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
 import { SkipForNowError } from '../../errors';
@@ -19,6 +19,7 @@ import { IEnumValue, IFunctionSetting, ValueType } from '../../templates/IFuncti
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import { TemplateProvider } from '../../templates/TemplateProvider';
+import { nonNullValue } from '../../utils/nonNull';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { tryGetFunctionProjectRoot } from '../createNewProject/isFunctionProject';
@@ -176,11 +177,13 @@ export async function createFunction(
         }
     }
 
-    const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, runtime);
-    if (newFilePath && (await fse.pathExists(newFilePath))) {
-        const newFileUri: Uri = Uri.file(newFilePath);
-        window.showTextDocument(await workspace.openTextDocument(newFileUri));
-    }
+    await window.withProgress({ location: ProgressLocation.Notification, title: localize('creatingFunction', 'Creating function...') }, async () => {
+        const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, nonNullValue(runtime, 'runtime'));
+        if (newFilePath && (await fse.pathExists(newFilePath))) {
+            const newFileUri: Uri = Uri.file(newFilePath);
+            window.showTextDocument(await workspace.openTextDocument(newFileUri));
+        }
+    });
 
     if (!template.isHttpTrigger) {
         await validateAzureWebJobsStorage(actionContext, localSettingsPath);
@@ -203,17 +206,18 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
 
     let template: IFunctionTemplate | undefined;
     while (!template) {
-        const templateProvider: TemplateProvider = await ext.templateProviderTask;
-        const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
-        let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
-        picks = picks.concat([
-            { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
-            { label: localize('selectLanguage', '$(gear) Change project language'), description: localize('currentLanguage', 'Current: {0}', language), data: languagePickId, suppressPersistence: true },
-            { label: localize('selectFilter', '$(gear) Change template filter'), description: localize('currentFilter', 'Current: {0}', templateFilter), data: filterPickId, suppressPersistence: true }
-        ]);
+        const picksTask: Promise<IAzureQuickPickItem<IFunctionTemplate | string>[]> = ext.templateProviderTask.then(async templateProvider => {
+            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
+            const picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
+            return picks.concat([
+                { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
+                { label: localize('selectLanguage', '$(gear) Change project language'), description: localize('currentLanguage', 'Current: {0}', language), data: languagePickId, suppressPersistence: true },
+                { label: localize('selectFilter', '$(gear) Change template filter'), description: localize('currentFilter', 'Current: {0}', templateFilter), data: filterPickId, suppressPersistence: true }
+            ]);
+        });
 
-        const placeHolder: string = templates.length > 0 ? localize('azFunc.selectFuncTemplate', 'Select a function template') : localize('azFunc.noTemplatesFound', 'No templates found. Change your settings to view more templates');
-        const result: IFunctionTemplate | string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        const placeHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
+        const result: IFunctionTemplate | string = (await ext.ui.showQuickPick(picksTask, { placeHolder })).data;
         if (isString(result)) {
             switch (result) {
                 case runtimePickId:
