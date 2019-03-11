@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
+import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, proxiesFileName, TemplateFilter } from '../../constants';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
 import { ProjectCreatorBase } from './ProjectCreatorBase';
@@ -109,7 +109,6 @@ out
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
 export class ScriptProjectCreatorBase extends ProjectCreatorBase {
-    public static defaultRuntime: ProjectRuntime = ProjectRuntime.v1;
     // Default template filter to 'All' since preview languages have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
     public readonly functionsWorkerRuntime: string | undefined;

@@ -14,8 +14,8 @@ import { getCSharpScriptValidateOptions, validateProject } from '../validateProj
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
-    protected _language: ProjectLanguage = ProjectLanguage.CSharpScript;
-    protected _runtime: ProjectRuntime = ProjectRuntime.v1;
+    public language: ProjectLanguage = ProjectLanguage.CSharpScript;
+    public runtime: ProjectRuntime = ProjectRuntime.v1;
 
     public async validateFunction(testFolder: string, funcName: string): Promise<void> {
         const functionPath: string = path.join(testFolder, funcName);
@@ -24,7 +24,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
-suite('Create C# Script Function Tests', async () => {
+suite('Create C# Script ~1 Function Tests', async () => {
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester();
 
     suiteSetup(async () => {
