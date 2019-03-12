@@ -105,6 +105,7 @@ function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: str
             break;
         case ProjectLanguage.PowerShell:
             createOptions.runtime = 'powershell';
+            break;
         default:
     }
 }

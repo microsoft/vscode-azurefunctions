@@ -89,6 +89,7 @@ export class FuncTaskProvider implements TaskProvider {
                 break;
             case ProjectLanguage.PowerShell:
                 debugProvider = this._powershellDebugProvider;
+                break;
             default:
         }
 

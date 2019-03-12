@@ -52,8 +52,7 @@ export async function createNewProject(
                 { label: ProjectLanguage.TypeScript },
                 { label: ProjectLanguage.CSharp },
                 { label: ProjectLanguage.Python, description: previewDescription },
-                { label: ProjectLanguage.Java },
-                { label: ProjectLanguage.PowerShell, description: previewDescription }
+                { label: ProjectLanguage.Java }
             ];
 
             const options: QuickPickOptions = { placeHolder: localize('azFunc.selectFuncTemplate', 'Select a language for your function project') };

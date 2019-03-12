@@ -149,7 +149,7 @@ export function getPowerShellValidateOptions(): IValidateProjectOptions {
             projectRuntime: ProjectRuntime.v2,
             deploySubpath: '.',
             preDeployTask: 'func: extensions install',
-            templateFilter: 'All'
+            templateFilter: 'Verified'
         },
         expectedPaths: [
             'profile.ps1'

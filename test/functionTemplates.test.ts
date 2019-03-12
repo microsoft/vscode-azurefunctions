@@ -38,4 +38,7 @@ async function validateTemplateCounts(templates: TemplateProvider, source: strin
 
     const tsTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
     assert.equal(tsTemplates.length, 8, `Unexpected TypeScript ${source} templates count.`);
+
+    const powershellTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.PowerShell, ProjectRuntime.v2, TemplateFilter.Verified);
+    assert.equal(powershellTemplates.length, 2, `Unexpected PowerShell ${source} templates count.`);
 }
