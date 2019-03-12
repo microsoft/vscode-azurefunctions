@@ -19,6 +19,7 @@ import { DotnetProjectCreator } from './DotnetProjectCreator';
 import { initProjectForVSCode } from './initProjectForVSCode';
 import { JavaProjectCreator } from './JavaProjectCreator';
 import { JavaScriptProjectCreator } from './JavaScriptProjectCreator';
+import { PowerShellProjectCreator } from './PowerShellProjectCreator';
 import { ProjectCreatorBase } from './ProjectCreatorBase';
 import { PythonProjectCreator } from './PythonProjectCreator';
 import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
@@ -112,6 +113,9 @@ export function getProjectCreator(language: string, functionAppPath: string, act
             break;
         case ProjectLanguage.TypeScript:
             projectCreatorType = TypeScriptProjectCreator;
+            break;
+        case ProjectLanguage.PowerShell:
+            projectCreatorType = PowerShellProjectCreator;
             break;
         default:
             projectCreatorType = ScriptProjectCreatorBase;

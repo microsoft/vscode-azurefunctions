@@ -21,6 +21,7 @@ export * from './src/commands/createFunction/CSharpFunctionCreator';
 export * from './src/commands/createNewProject/createNewProject';
 export * from './src/commands/createNewProject/initProjectForVSCode';
 export * from './src/commands/createNewProject/JavaScriptProjectCreator';
+export * from './src/commands/createNewProject/PowerShellProjectCreator';
 export * from './src/commands/createNewProject/ScriptProjectCreatorBase';
 export * from './src/constants';
 export * from './src/extensionVariables';

@@ -10,7 +10,7 @@ import { hostStartTaskName } from '../constants';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
-    protected abstract defaultPort: number;
+    protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
 
     private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map();
@@ -59,8 +59,8 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
         return debugConfiguration;
     }
 
-    protected getDebugPort(folder: WorkspaceFolder): number {
+    protected getDebugPortOrPipeName(folder: WorkspaceFolder): number | string {
         // tslint:disable-next-line:strict-boolean-expressions
-        return this._debugPorts.get(folder) || this.defaultPort;
+        return this._debugPorts.get(folder) || this.defaultPortOrPipeName;
     }
 }

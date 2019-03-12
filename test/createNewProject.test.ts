@@ -10,7 +10,18 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
-import { getCSharpScriptValidateOptions, getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
+import {
+    getCSharpScriptValidateOptions,
+    getCSharpValidateOptions,
+    getFSharpValidateOptions,
+    getJavaScriptValidateOptions,
+    getJavaValidateOptions,
+    getPowerShellValidateOptions,
+    getPythonValidateOptions,
+    getScriptValidateOptions,
+    getTypeScriptValidateOptions,
+    validateProject
+} from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -101,7 +112,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     test(powerShellProject, async () => {
         const projectPath: string = path.join(testFolderPath, powerShellProject);
         await testCreateNewProject(projectPath, ProjectLanguage.PowerShell, { hiddenLanguage: true });
-        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.PowerShell));
+        await validateProject(projectPath, getPowerShellValidateOptions());
     });
 
     const pythonProject: string = 'PythonProject';

@@ -19,11 +19,11 @@ export const nodeDebugConfig: DebugConfiguration = {
 };
 
 export class NodeDebugProvider extends FuncDebugProviderBase {
-    protected readonly defaultPort: number = defaultNodeDebugPort;
+    protected readonly defaultPortOrPipeName: number = defaultNodeDebugPort;
     protected readonly debugConfig: DebugConfiguration = nodeDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const port: number = this.getDebugPort(folder);
+        const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__node__arguments: `--inspect=${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }

@@ -4,28 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
-import { funcHostStartCommand, hostStartTaskName, localhost } from '../constants';
+import { funcHostStartCommand, hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
-export const defaultJavaDebugPort: number = 5005;
+export const defaultCustomPipeName: string = 'AzureFunctionsPSWorker';
 
-export const javaDebugConfig: DebugConfiguration = {
-    name: localize('attachJava', 'Attach to Java Functions'),
-    type: 'java',
+export const powershellDebugConfig: DebugConfiguration = {
+    name: localize('attachPowerShell', 'Attach to PowerShell Functions'),
+    type: 'PowerShell',
     request: 'attach',
-    hostName: localhost,
-    port: defaultJavaDebugPort,
+    customPipeName: defaultCustomPipeName,
     preLaunchTask: hostStartTaskName
 };
 
-export class JavaDebugProvider extends FuncDebugProviderBase {
-    protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
-    protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
+export class PowerShellDebugProvider extends FuncDebugProviderBase {
+    protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
+    protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
     public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
-        const options: ShellExecutionOptions = { env: { languageWorkers__java__arguments: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}` } };
+        const options: ShellExecutionOptions = { env: { PSWorkerCustomPipeName: `${port}` } };
         return new ShellExecution(funcHostStartCommand, options);
     }
 }
