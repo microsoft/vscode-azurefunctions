@@ -7,21 +7,27 @@ import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
-import { isFuncHostTask, stopFuncHostPromise } from '../funcCoreTools/funcHostTask';
+import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
 
-export async function pickFuncProcess(this: IActionContext): Promise<string | undefined> {
+export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled()) {
         throw new UserCancelledError();
     }
 
-    await stopFuncHostPromise;
+    const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
+    await stopFuncHost(workspace);
 
+    // tslint:disable-next-line: no-unsafe-any
+    const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
-    const funcTask: vscode.Task | undefined = tasks.find(isFuncHostTask);
+    const funcTask: vscode.Task | undefined = tasks.find(t => {
+        return t.scope === workspace && (preLaunchTaskName ? t.name === preLaunchTaskName : isFuncHostTask(t));
+    });
+
     if (!funcTask) {
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', funcHostStartCommand));
     }
@@ -39,10 +45,29 @@ export async function pickFuncProcess(this: IActionContext): Promise<string | un
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
 }
 
+function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {
+    if (vscode.workspace.workspaceFolders) {
+        for (const workspace of vscode.workspace.workspaceFolders) {
+            try {
+                const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration('launch', workspace.uri);
+                // tslint:disable-next-line: strict-boolean-expressions
+                const configs: vscode.DebugConfiguration[] = config.get<vscode.DebugConfiguration[]>('configurations') || [];
+                if (configs.some(c => c.name === debugConfig.name && c.request === debugConfig.request && c.type === debugConfig.type)) {
+                    return workspace;
+                }
+            } catch {
+                // ignore and try next workspace
+            }
+        }
+    }
+
+    throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
+}
+
 async function startFuncTask(funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
     const waitForStartPromise: Promise<string> = new Promise((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
         const listener: vscode.Disposable = vscode.tasks.onDidStartTaskProcess((e: vscode.TaskProcessStartEvent) => {
-            if (isFuncHostTask(e.execution.task)) {
+            if (e.execution.task === funcTask) {
                 resolve(e.processId.toString());
                 listener.dispose();
             }
