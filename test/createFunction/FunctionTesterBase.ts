@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestUserInput } from '../../extension.bundle';
+import { ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TestInput, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
@@ -24,7 +24,7 @@ export abstract class FunctionTesterBase {
         });
     }
 
-    public async testCreateFunction(templateName: string, ...inputs: (string | undefined)[]): Promise<void> {
+    public async testCreateFunction(templateName: string, ...inputs: (string | TestInput)[]): Promise<void> {
         await runForAllTemplateSources(async (source) => {
             await this.testCreateFunctionInternal(path.join(this.baseTestFolder, source), templateName, inputs.slice());
         });
@@ -42,7 +42,7 @@ export abstract class FunctionTesterBase {
         ]);
     }
 
-    private async testCreateFunctionInternal(testFolder: string, templateName: string, inputs: (string | undefined)[]): Promise<void> {
+    private async testCreateFunctionInternal(testFolder: string, templateName: string, inputs: (string | TestInput)[]): Promise<void> {
         // Setup common inputs
         const funcName: string = templateName.replace(/ /g, '');
         inputs.unshift(funcName); // Specify the function name

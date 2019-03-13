@@ -91,11 +91,10 @@ export async function promptForStorageAccount(actionContext: IActionContext, fil
     const node: AzureTreeItem = await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
 
     const wizardContext: IStorageAccountWizardContext = Object.assign({}, node.root);
-    const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(
-        [new StorageAccountListStep({ kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS }, filterOptions)],
-        [],
-        wizardContext
-    );
+    const wizard: AzureWizard<IStorageAccountWizardContext> = new AzureWizard(wizardContext, {
+        title: localize('selectStorageAccount', 'Select storage account'),
+        promptSteps: [new StorageAccountListStep({ kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS }, filterOptions)]
+    });
 
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);

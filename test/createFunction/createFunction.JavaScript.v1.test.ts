@@ -8,6 +8,7 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -37,7 +38,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             blobTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            undefined // Use default path
+            TestInput.UseDefaultValue // Use default path
         );
     });
 
@@ -48,8 +49,8 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
             'AzureWebJobsStorage', // Use existing app setting
             'dbName',
             'collectionName',
-            undefined, // Use default for 'create leases if doesn't exist'
-            undefined // Use default lease name
+            TestInput.UseDefaultValue, // Use default for 'create leases if doesn't exist'
+            TestInput.UseDefaultValue // Use default lease name
         );
     });
 
@@ -58,8 +59,8 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             eventHubTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            undefined, // Use default event hub name
-            undefined // Use default event hub consumer group
+            TestInput.UseDefaultValue, // Use default event hub name
+            TestInput.UseDefaultValue // Use default event hub consumer group
         );
     });
 
@@ -77,7 +78,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(httpTrigger, async () => {
         await jsTester.testCreateFunction(
             httpTrigger,
-            undefined // Use default Authorization level
+            TestInput.UseDefaultValue // Use default Authorization level
         );
     });
 
@@ -85,7 +86,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(httpTriggerWithParameters, async () => {
         await jsTester.testCreateFunction(
             httpTriggerWithParameters,
-            undefined // Use default Authorization level
+            TestInput.UseDefaultValue // Use default Authorization level
         );
     });
 
@@ -99,7 +100,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             queueTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            undefined // Use default queue name
+            TestInput.UseDefaultValue // Use default queue name
         );
     });
 
@@ -108,8 +109,8 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             serviceBusQueueTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            undefined, // Use default access rights
-            undefined // Use default queue name
+            TestInput.UseDefaultValue, // Use default access rights
+            TestInput.UseDefaultValue // Use default queue name
         );
     });
 
@@ -118,9 +119,9 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             serviceBusTopicTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            undefined, // Use default access rights
-            undefined, // Use default topic name
-            undefined // Use default subscription name
+            TestInput.UseDefaultValue, // Use default access rights
+            TestInput.UseDefaultValue, // Use default topic name
+            TestInput.UseDefaultValue // Use default subscription name
         );
     });
 
@@ -128,7 +129,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(timerTrigger, async () => {
         await jsTester.testCreateFunction(
             timerTrigger,
-            undefined // Use default schedule
+            TestInput.UseDefaultValue // Use default schedule
         );
     });
 

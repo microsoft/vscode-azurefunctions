@@ -8,6 +8,7 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestInput } from 'vscode-azureextensionui';
 import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
@@ -192,7 +193,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
-    async function testInitProjectForVSCode(projectPath: string, ...inputs: (string | undefined)[]): Promise<void> {
+    async function testInitProjectForVSCode(projectPath: string, ...inputs: (string | TestInput)[]): Promise<void> {
         // create mock files
         await fse.ensureFile(path.join(projectPath, 'local.settings.json'));
         await fse.ensureFile(path.join(projectPath, 'host.json'));
