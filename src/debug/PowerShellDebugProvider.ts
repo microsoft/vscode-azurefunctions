@@ -15,6 +15,7 @@ export const powershellDebugConfig: DebugConfiguration = {
     type: 'PowerShell',
     request: 'attach',
     customPipeName: defaultCustomPipeName,
+    runspaceId: 1,
     preLaunchTask: hostStartTaskName
 };
 
