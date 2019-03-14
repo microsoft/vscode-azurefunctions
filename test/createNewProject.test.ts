@@ -8,6 +8,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestInput } from 'vscode-azureextensionui';
 import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
 import {
@@ -39,10 +40,10 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
             projectPath,
             ProjectLanguage.Java,
             {},
-            undefined,
-            undefined,
-            undefined,
-            undefined,
+            TestInput.UseDefaultValue,
+            TestInput.UseDefaultValue,
+            TestInput.UseDefaultValue,
+            TestInput.UseDefaultValue,
             appName
         );
         await validateProject(projectPath, getJavaValidateOptions(appName));
@@ -161,7 +162,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
 
-    async function testCreateNewProject(projectPath: string, language: string, options?: { hiddenLanguage?: boolean }, ...inputs: (string | undefined)[]): Promise<void> {
+    async function testCreateNewProject(projectPath: string, language: string, options?: { hiddenLanguage?: boolean }, ...inputs: (string | TestInput)[]): Promise<void> {
         const hiddenLanguage: boolean = !!options && !!options.hiddenLanguage;
         if (!hiddenLanguage) {
             inputs.unshift(language);

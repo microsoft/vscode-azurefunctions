@@ -1,6 +1,7 @@
 {
     "editor.formatOnSave": true,
     "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
     "editor.tabSize": 4,
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
@@ -10,7 +11,9 @@
         ".vscode-test": true,
         "resources/backup*Templates": true
     },
-    "tslint.autoFixOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.tslint": true,
+    },
     "tslint.ignoreDefinitionFiles": true,
     "files.exclude": {
         "tools/JsonCli/src/**": true

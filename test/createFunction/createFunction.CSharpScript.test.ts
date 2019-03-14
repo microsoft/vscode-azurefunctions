@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../../extension.bundle';
+import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestInput, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getCSharpScriptValidateOptions, validateProject } from '../validateProject';
@@ -35,7 +35,7 @@ suite('Create C# Script ~1 Function Tests', async () => {
     test(httpTrigger, async () => {
         await tester.testCreateFunction(
             httpTrigger,
-            undefined // Use default Authorization level
+            TestInput.UseDefaultValue // Use default Authorization level
         );
     });
 

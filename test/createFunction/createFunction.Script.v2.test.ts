@@ -8,6 +8,7 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -76,7 +77,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 blobTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                undefined // Use default path
+                TestInput.UseDefaultValue // Use default path
             );
         });
 
@@ -87,8 +88,8 @@ function addSuite(tester: FunctionTesterBase): void {
                 'AzureWebJobsStorage', // Use existing app setting
                 'dbName',
                 'collectionName',
-                undefined, // Use default for 'create leases if doesn't exist'
-                undefined // Use default lease name
+                TestInput.UseDefaultValue, // Use default for 'create leases if doesn't exist'
+                TestInput.UseDefaultValue // Use default lease name
             );
         });
 
@@ -103,7 +104,7 @@ function addSuite(tester: FunctionTesterBase): void {
         test(httpTrigger, async () => {
             await tester.testCreateFunction(
                 httpTrigger,
-                undefined // Use default Authorization level
+                TestInput.UseDefaultValue // Use default Authorization level
             );
         });
 
@@ -112,7 +113,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 queueTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                undefined // Use default queue name
+                TestInput.UseDefaultValue // Use default queue name
             );
         });
 
@@ -121,7 +122,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 serviceBusQueueTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                undefined // Use default queue name
+                TestInput.UseDefaultValue // Use default queue name
             );
         });
 
@@ -130,8 +131,8 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 serviceBusTopicTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                undefined, // Use default topic name
-                undefined // Use default subscription name
+                TestInput.UseDefaultValue, // Use default topic name
+                TestInput.UseDefaultValue // Use default subscription name
             );
         });
 
@@ -139,7 +140,7 @@ function addSuite(tester: FunctionTesterBase): void {
         test(timerTrigger, async () => {
             await tester.testCreateFunction(
                 timerTrigger,
-                undefined // Use default schedule
+                TestInput.UseDefaultValue // Use default schedule
             );
         });
 

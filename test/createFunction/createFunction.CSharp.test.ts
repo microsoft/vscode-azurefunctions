@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestInput } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -38,9 +38,9 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(blobTrigger, async () => {
         await csTester.testCreateFunction(
             blobTrigger,
-            undefined, // namespace
+            TestInput.UseDefaultValue, // namespace
             'AzureWebJobsStorage', // Use existing app setting
-            undefined // Use default path
+            TestInput.UseDefaultValue // Use default path
         );
     });
 
@@ -48,10 +48,10 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(cosmosTrigger, async () => {
         await csTester.testCreateFunction(
             cosmosTrigger,
-            undefined, // namespace
+            TestInput.UseDefaultValue, // namespace
             'AzureWebJobsStorage', // Use existing app setting
-            undefined, // Use default database name
-            undefined // Use default collection name
+            TestInput.UseDefaultValue, // Use default database name
+            TestInput.UseDefaultValue // Use default collection name
         );
     });
 
@@ -59,7 +59,7 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(durableTrigger, async () => {
         await csTester.testCreateFunction(
             durableTrigger,
-            undefined // namespace
+            TestInput.UseDefaultValue // namespace
         );
     });
 
@@ -67,8 +67,8 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(httpTrigger, async () => {
         await csTester.testCreateFunction(
             httpTrigger,
-            undefined, // namespace
-            undefined // Use default Authorization level
+            TestInput.UseDefaultValue, // namespace
+            TestInput.UseDefaultValue // Use default Authorization level
         );
     });
 
@@ -76,9 +76,9 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(queueTrigger, async () => {
         await csTester.testCreateFunction(
             queueTrigger,
-            undefined, // namespace
+            TestInput.UseDefaultValue, // namespace
             'AzureWebJobsStorage', // Use existing app setting
-            undefined // Use default queue name
+            TestInput.UseDefaultValue // Use default queue name
         );
     });
 
@@ -86,9 +86,9 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(serviceBusQueueTrigger, async () => {
         await csTester.testCreateFunction(
             serviceBusQueueTrigger,
-            undefined, // namespace
+            TestInput.UseDefaultValue, // namespace
             'AzureWebJobsStorage', // Use existing app setting
-            undefined // Use default queue name
+            TestInput.UseDefaultValue // Use default queue name
         );
     });
 
@@ -96,10 +96,10 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(serviceBusTopicTrigger, async () => {
         await csTester.testCreateFunction(
             serviceBusTopicTrigger,
-            undefined, // namespace
+            TestInput.UseDefaultValue, // namespace
             'AzureWebJobsStorage', // Use existing app setting
-            undefined, // Use default topic name
-            undefined // Use default subscription name
+            TestInput.UseDefaultValue, // Use default topic name
+            TestInput.UseDefaultValue // Use default subscription name
         );
     });
 
@@ -107,8 +107,8 @@ suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext
     test(timerTrigger, async () => {
         await csTester.testCreateFunction(
             timerTrigger,
-            undefined, // namespace
-            undefined // Use default schedule
+            TestInput.UseDefaultValue, // namespace
+            TestInput.UseDefaultValue // Use default schedule
         );
     });
 
