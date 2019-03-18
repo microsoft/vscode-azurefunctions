@@ -47,16 +47,12 @@ export abstract class FunctionTesterBase {
         const funcName: string = templateName.replace(/ /g, '');
         inputs.unshift(funcName); // Specify the function name
         inputs.unshift(templateName); // Select the function template
-        inputs.unshift(testFolder); // Select the test func app folder
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
-        }
 
         ext.ui = new TestUserInput(inputs);
         await runWithFuncSetting(templateFilterSetting, TemplateFilter.All, async () => {
             await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
                 await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
-                    await vscode.commands.executeCommand('azureFunctions.createFunction');
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', testFolder);
                 });
             });
         });

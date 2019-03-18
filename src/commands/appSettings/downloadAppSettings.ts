@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { getLocalSettings, ILocalAppSettings } from "../../LocalAppSettings";
+import { getLocalAppSettings, ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
 import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
@@ -30,7 +30,7 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLine(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
-        let localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath, true /* allowOverwrite */);
+        let localSettings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath, true /* allowOverwrite */);
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
         if (localSettings.IsEncrypted) {

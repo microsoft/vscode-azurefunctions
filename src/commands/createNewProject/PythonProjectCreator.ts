@@ -14,7 +14,7 @@ import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatch
 import { pythonDebugConfig } from '../../debug/PythonDebugProvider';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
-import { azureWebJobsStorageKey, getLocalSettings, ILocalAppSettings } from '../../LocalAppSettings';
+import { azureWebJobsStorageKey, getLocalAppSettings, ILocalAppSettings } from '../../LocalAppSettings';
 import { localize } from "../../localize";
 import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
 import { cpUtils } from "../../utils/cpUtils";
@@ -150,7 +150,7 @@ export class PythonProjectCreator extends ScriptProjectCreatorBase {
             // Make sure local settings isn't using Storage Emulator for non-windows
             // https://github.com/Microsoft/vscode-azurefunctions/issues/583
             const localSettingsPath: string = path.join(this.functionAppPath, localSettingsFileName);
-            const localSettings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
+            const localSettings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
             // tslint:disable-next-line:strict-boolean-expressions
             localSettings.Values = localSettings.Values || {};
             localSettings.Values[azureWebJobsStorageKey] = '';

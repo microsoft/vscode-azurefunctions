@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from './constants';
-import { NoSubscriptionError } from './errors';
 import { ext } from './extensionVariables';
 import { localize } from './localize';
-import { getResourceTypeLabel, ResourceType } from './templates/IFunctionSetting';
 import * as azUtil from './utils/azure';
 import * as fsUtil from './utils/fs';
 
@@ -22,80 +21,8 @@ export interface ILocalAppSettings {
 
 export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 
-export async function promptForAppSetting(actionContext: IActionContext, localSettingsPath: string, resourceType: ResourceType): Promise<string> {
-    const settings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
-    const resourceTypeLabel: string = getResourceTypeLabel(resourceType);
-
-    if (settings.Values) {
-        const existingSettings: string[] = Object.keys(settings.Values);
-        if (existingSettings.length !== 0) {
-            let picks: IAzureQuickPickItem<boolean>[] = [{ data: true /* createNewAppSetting */, label: localize('azFunc.newAppSetting', '$(plus) New App Setting'), description: '' }];
-            picks = picks.concat(existingSettings.map((s: string) => { return { data: false /* createNewAppSetting */, label: s, description: '' }; }));
-            const options: vscode.QuickPickOptions = { placeHolder: localize('azFunc.selectAppSetting', 'Select an App Setting for your \'{0}\'', resourceTypeLabel) };
-            const result: IAzureQuickPickItem<boolean> = await ext.ui.showQuickPick(picks, options);
-            if (!result.data /* createNewAppSetting */) {
-                return result.label;
-            }
-        }
-    }
-
-    let resourceResult: azUtil.IResourceResult | undefined;
-    try {
-        switch (resourceType) {
-            case ResourceType.DocumentDB:
-                resourceResult = await azUtil.promptForCosmosDBAccount();
-                break;
-            case ResourceType.Storage:
-                resourceResult = await azUtil.promptForStorageAccount(
-                    actionContext,
-                    {
-                        kind: [
-                            StorageAccountKind.BlobStorage
-                        ],
-                        learnMoreLink: 'https://aka.ms/T5o0nf'
-                    }
-                );
-                break;
-            case ResourceType.ServiceBus:
-                resourceResult = await azUtil.promptForServiceBus();
-                break;
-            default:
-        }
-    } catch (error) {
-        if (error instanceof NoSubscriptionError) {
-            // swallow error and prompt for connection string instead
-        } else {
-            throw error;
-        }
-    }
-
-    const appSettingSuffix: string = `_${resourceType.toUpperCase()}`;
-    let appSettingKey: string;
-    let connectionString: string;
-    if (resourceResult) {
-        appSettingKey = `${resourceResult.name}${appSettingSuffix}`;
-        connectionString = resourceResult.connectionString;
-    } else {
-        const keyOptions: vscode.InputBoxOptions = {
-            placeHolder: localize('azFunc.AppSettingKeyPlaceholder', '\'{0}\' App Setting Key', resourceTypeLabel),
-            prompt: localize('azFunc.AppSettingKeyPrompt', 'Enter a key for your \'{0}\' connection string', resourceTypeLabel),
-            value: `example${appSettingSuffix}`
-        };
-        appSettingKey = await ext.ui.showInputBox(keyOptions);
-
-        const valueOptions: vscode.InputBoxOptions = {
-            placeHolder: localize('azFunc.AppSettingValuePlaceholder', '\'{0}\' App Setting Value', resourceTypeLabel),
-            prompt: localize('azFunc.AppSettingValuePrompt', 'Enter the connection string for your \'{0}\'', resourceTypeLabel)
-        };
-        connectionString = await ext.ui.showInputBox(valueOptions);
-    }
-
-    await setAppSetting(settings, localSettingsPath, appSettingKey, connectionString);
-    return appSettingKey;
-}
-
 export async function validateAzureWebJobsStorage(actionContext: IActionContext, localSettingsPath: string): Promise<void> {
-    const settings: ILocalAppSettings = await getLocalSettings(localSettingsPath);
+    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
     if (settings.Values && settings.Values[azureWebJobsStorageKey]) {
         return;
     }
@@ -104,47 +31,37 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
     const selectStorageAccount: vscode.MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
     const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, selectStorageAccount, DialogResponses.skipForNow);
     if (result === selectStorageAccount) {
-        let connectionString: string;
-
-        try {
-            const resourceResult: azUtil.IResourceResult = await azUtil.promptForStorageAccount(
-                actionContext,
-                {
-                    kind: [
-                        StorageAccountKind.BlobStorage
-                    ],
-                    performance: [
-                        StorageAccountPerformance.Premium
-                    ],
-                    replication: [
-                        StorageAccountReplication.ZRS
-                    ],
-                    learnMoreLink: 'https://aka.ms/Cfqnrc'
-                }
-            );
-            connectionString = resourceResult.connectionString;
-        } catch (error) {
-            if (error instanceof NoSubscriptionError) {
-                const options: vscode.InputBoxOptions = {
-                    placeHolder: localize('azFunc.StoragePlaceholder', '\'{0}\' Connection String', azureWebJobsStorageKey),
-                    prompt: localize('azFunc.StoragePrompt', 'Enter the connection string for your \'{0}\'', azureWebJobsStorageKey)
-                };
-                connectionString = await ext.ui.showInputBox(options);
-            } else {
-                throw error;
+        const resourceResult: azUtil.IResourceResult = await azUtil.promptForStorageAccount(
+            actionContext,
+            {
+                kind: [
+                    StorageAccountKind.BlobStorage
+                ],
+                performance: [
+                    StorageAccountPerformance.Premium
+                ],
+                replication: [
+                    StorageAccountReplication.ZRS
+                ],
+                learnMoreLink: 'https://aka.ms/Cfqnrc'
             }
-        }
+        );
 
-        await setAppSetting(settings, localSettingsPath, azureWebJobsStorageKey, connectionString);
+        // tslint:disable-next-line:strict-boolean-expressions
+        settings.Values = settings.Values || {};
+        settings.Values[azureWebJobsStorageKey] = resourceResult.connectionString;
+        await fsUtil.writeFormattedJson(localSettingsPath, settings);
     }
 }
+export async function setLocalAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
+    const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
+    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
 
-async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: string, key: string, value: string): Promise<void> {
-    if (!settings.Values) {
-        settings.Values = {};
-    }
-
-    if (settings.Values[key]) {
+    // tslint:disable-next-line:strict-boolean-expressions
+    settings.Values = settings.Values || {};
+    if (settings.Values[key] === value) {
+        return;
+    } else if (settings.Values[key]) {
         const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
         if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
             return;
@@ -155,7 +72,7 @@ async function setAppSetting(settings: ILocalAppSettings, localSettingsPath: str
     await fsUtil.writeFormattedJson(localSettingsPath, settings);
 }
 
-export async function getLocalSettings(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalAppSettings> {
+export async function getLocalAppSettings(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalAppSettings> {
     if (await fse.pathExists(localSettingsPath)) {
         const data: string = (await fse.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
