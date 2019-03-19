@@ -53,6 +53,7 @@
         "onCommand:azureFunctions.appSettings.delete",
         "onCommand:azureFunctions.appSettings.encrypt",
         "onCommand:azureFunctions.appSettings.decrypt",
+        "onCommand:azureFunctions.appSettings.toggleSlotSetting",
         "onCommand:azureFunctions.pickProcess",
         "onCommand:azureFunctions.startStreamingLogs",
         "onCommand:azureFunctions.stopStreamingLogs",
@@ -215,6 +216,11 @@
             {
                 "command": "azureFunctions.appSettings.decrypt",
                 "title": "%azFunc.appSettings.decrypt%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.toggleSlotSetting",
+                "title": "%azFunc.appSettings.toggleSlotSetting%",
                 "category": "Azure Functions"
             },
             {
@@ -482,6 +488,11 @@
                     "command": "azureFunctions.appSettings.delete",
                     "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
                     "group": "1@3"
+                },
+                {
+                    "command": "azureFunctions.appSettings.toggleSlotSetting",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem && config.azureFunctions.enableSlots == true",
+                    "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
