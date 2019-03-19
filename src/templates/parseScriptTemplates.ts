@@ -33,6 +33,7 @@ interface IRawSetting {
     name: string;
     value: ValueType;
     label: string;
+    help?: string;
     defaultValue?: string;
     required: boolean;
     resource?: ResourceType;
@@ -103,6 +104,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
         name: getVariableValue(resources, variables, rawSetting.name),
         resourceType: rawSetting.resource,
         valueType: rawSetting.value,
+        description: rawSetting.help ? getResourceValue(resources, rawSetting.help) : undefined,
         defaultValue: rawSetting.defaultValue ? getVariableValue(resources, variables, rawSetting.defaultValue) : undefined,
         label: getVariableValue(resources, variables, rawSetting.label),
         enums: enums,
