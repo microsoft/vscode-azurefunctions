@@ -491,7 +491,7 @@
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem && config.azureFunctions.enableSlots == true",
                     "group": "1@4"
                 },
                 {
