@@ -10,6 +10,15 @@ import { cpUtils } from "./cpUtils";
 import { openUrl } from './openUrl';
 
 export namespace dotnetUtils {
+    export async function isDotnetInstalled(): Promise<boolean> {
+        try {
+            await cpUtils.executeCommand(undefined, undefined, 'dotnet', '--version');
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
     export async function validateDotnetInstalled(actionContext: IActionContext): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, undefined, 'dotnet', '--version');

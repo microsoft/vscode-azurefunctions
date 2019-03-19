@@ -9,7 +9,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { dotnetUtils } from '../utils/dotnetUtils';
 import { downloadFile } from '../utils/fs';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath } from './executeDotnetTemplateCommand';
@@ -41,9 +40,7 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
         }
     }
 
-    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, context: IActionContext): Promise<IFunctionTemplate[]> {
-        await dotnetUtils.validateDotnetInstalled(context);
-
+    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, _context: IActionContext): Promise<IFunctionTemplate[]> {
         const projectFilePath: string = getDotnetProjectTemplatePath(runtime);
         await downloadFile(cliFeedJson.releases[templateVersion].projectTemplates, projectFilePath);
 
