@@ -13,6 +13,7 @@ import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { decryptLocalSettings } from './commands/appSettings/decryptLocalSettings';
 import { downloadAppSettings } from './commands/appSettings/downloadAppSettings';
 import { encryptLocalSettings } from './commands/appSettings/encryptLocalSettings';
+import { toggleSlotSetting } from './commands/appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './commands/appSettings/uploadAppSettings';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
 import { copyFunctionUrl } from './commands/copyFunctionUrl';
@@ -120,6 +121,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
         registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
         registerCommand('azureFunctions.appSettings.delete', async (node?: AppSettingTreeItem) => await deleteNode(AppSettingTreeItem.contextValue, node));
+        registerCommand('azureFunctions.appSettings.toggleSlotSetting', toggleSlotSetting);
         registerCommand('azureFunctions.debugFunctionAppOnAzure', remoteDebugFunctionApp);
         registerCommand('azureFunctions.deleteProxy', async (node?: AzureTreeItem) => await deleteNode(ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
