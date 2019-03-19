@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from "./localize";
+
 export const isWindows: boolean = /^win/.test(process.platform);
 
 export const extensionPrefix: string = 'azureFunctions';
@@ -91,3 +93,6 @@ export const localhost: string = '127.0.0.1';
 
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
+
+export const functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
+export const functionNameInvalidMessage: string = localize('functionNameInvalidMessage', 'Function name must start with a letter and can only contain letters, digits, "_" and "-"');

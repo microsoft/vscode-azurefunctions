@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from './localize';
+import { CosmosDBManagementModels } from 'azure-arm-cosmosdb';
+import { ISubscriptionWizardContext } from 'vscode-azureextensionui';
 
-// tslint:disable:max-classes-per-file export-name
-
-export class NoWorkspaceError extends Error {
-    public message: string = localize('noWorkspaceError', 'You must have a workspace open to perform this operation.');
+export interface ICosmosDBWizardContext extends ISubscriptionWizardContext {
+    databaseAccount?: CosmosDBManagementModels.DatabaseAccount;
 }

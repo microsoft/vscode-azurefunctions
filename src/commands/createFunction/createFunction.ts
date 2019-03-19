@@ -6,71 +6,37 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { isString } from 'util';
-import { InputBoxOptions, MessageItem, ProgressLocation, QuickPickItem, Uri, window, workspace } from 'vscode';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureQuickPickItem, TelemetryProperties } from 'vscode-azureextensionui';
+import { MessageItem, Uri, window, workspace, WorkspaceFolder } from 'vscode';
+import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureQuickPickItem, IWizardOptions, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { localSettingsFileName, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter } from '../../constants';
-import { SkipForNowError } from '../../errors';
+import { NoWorkspaceError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { promptForAppSetting, validateAzureWebJobsStorage } from '../../LocalAppSettings';
+import { validateAzureWebJobsStorage } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProjectLanguage, promptForProjectRuntime, selectTemplateFilter, updateWorkspaceSetting } from '../../ProjectSettings';
-import { IEnumValue, IFunctionSetting, ValueType } from '../../templates/IFunctionSetting';
+import { ValueType } from '../../templates/IFunctionSetting';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { IScriptFunctionTemplate } from '../../templates/parseScriptTemplates';
 import { TemplateProvider } from '../../templates/TemplateProvider';
-import { nonNullValue } from '../../utils/nonNull';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { tryGetFunctionProjectRoot } from '../createNewProject/isFunctionProject';
-import { CSharpFunctionCreator } from './CSharpFunctionCreator';
-import { FunctionCreatorBase } from './FunctionCreatorBase';
-import { JavaFunctionCreator } from './JavaFunctionCreator';
-import { ScriptFunctionCreator } from './ScriptFunctionCreator';
-import { TypeScriptFunctionCreator } from './TypeScriptFunctionCreator';
+import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
+import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
+import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { IDotnetFunctionWizardContext } from './dotnetSteps/IDotnetFunctionWizardContext';
+import { BooleanPromptStep } from './genericSteps/BooleanPromptStep';
+import { EnumPromptStep } from './genericSteps/EnumPromptStep';
+import { LocalAppSettingListStep } from './genericSteps/LocalAppSettingListStep';
+import { StringPromptStep } from './genericSteps/StringPromptStep';
+import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
+import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
+import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
+import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
+import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
+import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
-async function promptForSetting(actionContext: IActionContext, localSettingsPath: string, setting: IFunctionSetting): Promise<string> {
-    if (setting.resourceType !== undefined) {
-        return await promptForAppSetting(actionContext, localSettingsPath, setting.resourceType);
-    } else {
-        switch (setting.valueType) {
-            case ValueType.boolean:
-                return await promptForBooleanSetting(setting);
-            case ValueType.enum:
-                return await promptForEnumSetting(setting);
-            default:
-                // Default to 'string' type for any setting that isn't supported
-                return await promptForStringSetting(setting);
-        }
-    }
-}
-
-async function promptForEnumSetting(setting: IFunctionSetting): Promise<string> {
-    const picks: IAzureQuickPickItem<string>[] = setting.enums.map((ev: IEnumValue) => { return { data: ev.value, label: ev.displayName, description: '' }; });
-
-    return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).data;
-}
-
-async function promptForBooleanSetting(setting: IFunctionSetting): Promise<string> {
-    const picks: QuickPickItem[] = [
-        { label: 'true', description: '' },
-        { label: 'false', description: '' }
-    ];
-
-    return (await ext.ui.showQuickPick(picks, { placeHolder: setting.label })).label;
-}
-
-async function promptForStringSetting(setting: IFunctionSetting): Promise<string> {
-    const options: InputBoxOptions = {
-        placeHolder: setting.label,
-        prompt: setting.description || localize('azFunc.stringSettingPrompt', 'Provide a \'{0}\'', setting.label),
-        validateInput: (s: string): string | undefined => setting.validateSetting(s),
-        value: setting.defaultValue
-    };
-    return await ext.ui.showInputBox(options);
-}
-
-// tslint:disable-next-line:max-func-body-length cyclomatic-complexity
 export async function createFunction(
     actionContext: IActionContext,
     folderPath?: string,
@@ -87,15 +53,27 @@ export async function createFunction(
     }
 
     if (folderPath === undefined) {
-        const folderPlaceholder: string = localize('azFunc.selectFunctionAppFolderExisting', 'Select the folder containing your function project');
-        folderPath = await workspaceUtil.selectWorkspaceFolder(ext.ui, folderPlaceholder);
+        const folderPlaceholder: string = localize('selectFunctionAppFolderExisting', 'Select the folder containing your function project');
+        let folder: WorkspaceFolder | undefined;
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+            throw new NoWorkspaceError();
+        } else if (workspace.workspaceFolders.length === 1) {
+            folder = workspace.workspaceFolders[0];
+        } else {
+            folder = await window.showWorkspaceFolderPick({ placeHolder: folderPlaceholder });
+            if (!folder) {
+                throw new UserCancelledError();
+            }
+        }
+
+        folderPath = folder.uri.fsPath;
     }
 
     let isNewProject: boolean = false;
     let templateFilter: TemplateFilter;
     let functionAppPath: string | undefined = await tryGetFunctionProjectRoot(folderPath);
     if (!functionAppPath) {
-        const message: string = localize('azFunc.notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
+        const message: string = localize('notFunctionApp', 'The selected folder is not a function app project. Initialize Project?');
         const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.skipForNow, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             await createNewProject(actionContext, folderPath, undefined, undefined, false);
@@ -108,8 +86,6 @@ export async function createFunction(
 
         functionAppPath = folderPath;
     }
-
-    const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
 
     if (language === undefined) {
         language = await getProjectLanguage(functionAppPath, ext.ui);
@@ -138,54 +114,21 @@ export async function createFunction(
     actionContext.properties.projectLanguage = language;
     actionContext.properties.projectRuntime = runtime;
     actionContext.properties.templateFilter = templateFilter;
-
     actionContext.properties.templateId = template.id;
 
-    let functionCreator: FunctionCreatorBase;
-    switch (language) {
-        case ProjectLanguage.Java:
-            functionCreator = new JavaFunctionCreator(functionAppPath, template, actionContext);
-            break;
-        case ProjectLanguage.CSharp:
-            functionCreator = new CSharpFunctionCreator(functionAppPath, template, actionContext);
-            break;
-        case ProjectLanguage.TypeScript:
-            functionCreator = new TypeScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, actionContext, language);
-            break;
-        default:
-            functionCreator = new ScriptFunctionCreator(functionAppPath, <IScriptFunctionTemplate>template, actionContext, language);
-            break;
+    const wizardContext: IFunctionWizardContext = { functionName, functionAppPath, template, actionContext, runtime, language };
+    const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, getWizardOptions(wizardContext, functionSettings));
+    await wizard.prompt(actionContext);
+    await wizard.execute(actionContext);
+
+    const newFilePath: string | undefined = wizardContext.newFilePath;
+    if (newFilePath && (await fse.pathExists(newFilePath))) {
+        const newFileUri: Uri = Uri.file(newFilePath);
+        window.showTextDocument(await workspace.openTextDocument(newFileUri));
     }
-
-    await functionCreator.promptForSettings(ext.ui, functionName, functionSettings);
-
-    const userSettings: { [propertyName: string]: string } = {};
-    for (const setting of template.userPromptedSettings) {
-        try {
-            let settingValue: string | undefined;
-            if (functionSettings[setting.name.toLowerCase()] !== undefined) {
-                settingValue = functionSettings[setting.name.toLowerCase()];
-            } else {
-                settingValue = await promptForSetting(actionContext, localSettingsPath, setting);
-            }
-
-            userSettings[setting.name] = settingValue ? settingValue : '';
-        } catch (error) {
-            if (!(error instanceof SkipForNowError)) { // ignore error if user wants to skip this app setting
-                throw error;
-            }
-        }
-    }
-
-    await window.withProgress({ location: ProgressLocation.Notification, title: localize('creatingFunction', 'Creating function...') }, async () => {
-        const newFilePath: string | undefined = await functionCreator.createFunction(userSettings, nonNullValue(runtime, 'runtime'));
-        if (newFilePath && (await fse.pathExists(newFilePath))) {
-            const newFileUri: Uri = Uri.file(newFilePath);
-            window.showTextDocument(await workspace.openTextDocument(newFileUri));
-        }
-    });
 
     if (!template.isHttpTrigger) {
+        const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
         await validateAzureWebJobsStorage(actionContext, localSettingsPath);
     }
 
@@ -197,6 +140,54 @@ export async function createFunction(
     if (isNewProject) {
         await workspaceUtil.ensureFolderIsOpen(functionAppPath, actionContext);
     }
+}
+
+function getWizardOptions(wizardContext: IFunctionWizardContext, defaultSettings: { [key: string]: string | undefined }): IWizardOptions<IFunctionWizardContext> {
+    const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
+    const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
+    switch (wizardContext.language) {
+        case ProjectLanguage.Java:
+            promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
+            executeSteps.push(new JavaFunctionCreateStep());
+            break;
+        case ProjectLanguage.CSharp:
+            (<IDotnetFunctionWizardContext>wizardContext).namespace = defaultSettings.namespace;
+            promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
+            executeSteps.push(new DotnetFunctionCreateStep());
+            break;
+        case ProjectLanguage.TypeScript:
+            promptSteps.push(new ScriptFunctionNameStep());
+            executeSteps.push(new TypeScriptFunctionCreateStep());
+            break;
+        default:
+            promptSteps.push(new ScriptFunctionNameStep());
+            executeSteps.push(new ScriptFunctionCreateStep());
+            break;
+    }
+
+    for (const setting of wizardContext.template.userPromptedSettings) {
+        if (defaultSettings[setting.name.toLowerCase()] !== undefined) {
+            wizardContext[setting.name] = defaultSettings[setting.name.toLowerCase()];
+        } else if (setting.resourceType !== undefined) {
+            promptSteps.push(new LocalAppSettingListStep(setting));
+        } else {
+            switch (setting.valueType) {
+                case ValueType.boolean:
+                    promptSteps.push(new BooleanPromptStep(setting));
+                    break;
+                case ValueType.enum:
+                    promptSteps.push(new EnumPromptStep(setting));
+                    break;
+                default:
+                    // Default to 'string' type for any valueType that isn't supported
+                    promptSteps.push(new StringPromptStep(setting));
+                    break;
+            }
+        }
+    }
+
+    const title: string = localize('createFunction', 'Create new {0}', wizardContext.template.name);
+    return { promptSteps, executeSteps, title, showExecuteProgress: true };
 }
 
 async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter, telemetryProperties: TelemetryProperties): Promise<[IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
@@ -216,7 +207,7 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
             ]);
         });
 
-        const placeHolder: string = localize('azFunc.selectFuncTemplate', 'Select a function template');
+        const placeHolder: string = localize('selectFuncTemplate', 'Select a function template');
         const result: IFunctionTemplate | string = (await ext.ui.showQuickPick(picksTask, { placeHolder })).data;
         if (isString(result)) {
             switch (result) {

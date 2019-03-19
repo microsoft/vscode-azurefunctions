@@ -865,7 +865,7 @@
         "request-promise": "^4.2.2",
         "semver": "^5.5.0",
         "vscode-azureappservice": "^0.32.0",
-        "vscode-azureextensionui": "^0.21.1",
+        "vscode-azureextensionui": "^0.21.2",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.0.0",
         "websocket": "^1.0.25",

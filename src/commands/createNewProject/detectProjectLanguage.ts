@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
-import { getScriptFileNameFromLanguage } from '../createFunction/ScriptFunctionCreator';
+import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
 import { tryGetCsprojFile, tryGetFsprojFile } from './DotnetProjectCreator';
 
 /**
