@@ -7,6 +7,7 @@ import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -77,13 +78,40 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
     }
 
     private async parseTemplates(templatesPath: string): Promise<IFunctionTemplate[]> {
-        // only Resources.json has a capital letter
-        this._rawResources = <object>await fse.readJSON(path.join(templatesPath, 'resources', 'Resources.json'));
+        this._rawResources = <object>await fse.readJSON(await getResourcesPath(templatesPath));
         this._rawTemplates = <object[]>await fse.readJSON(path.join(templatesPath, 'templates', 'templates.json'));
         this._rawConfig = <object>await fse.readJSON(path.join(templatesPath, 'bindings', 'bindings.json'));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
     }
+}
+
+/**
+ * Unlike templates.json and bindings.json, Resources.json has a capital letter
+ */
+export async function getResourcesPath(templatesPath: string, vscodeLang: string = vscode.env.language): Promise<string> {
+    const folder: string = path.join(templatesPath, 'resources');
+
+    try {
+        // Example: "en-US"
+        const parts: string[] = vscodeLang.split('-');
+        // Example: "en" for "english"
+        const language: string = parts[0];
+        // Example: "US" for "United States" (locale is optional)
+        // tslint:disable-next-line: strict-boolean-expressions
+        const locale: string | undefined = parts[1] || '[a-z]*';
+
+        const files: string[] = await fse.readdir(folder);
+        const regExp: RegExp = new RegExp(`resources\\.${language}(-${locale})?\\.json`, 'i');
+        const matchingFile: string | undefined = files.find(f => regExp.test(f));
+        if (matchingFile) {
+            return path.join(folder, matchingFile);
+        }
+    } catch {
+        // ignore and fall back to english
+    }
+
+    return path.join(folder, 'Resources.json');
 }
 
 export function getScriptVerifiedTemplateIds(runtime: string): string[] {
