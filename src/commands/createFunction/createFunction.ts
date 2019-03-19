@@ -208,7 +208,8 @@ async function promptForTemplate(functionAppPath: string, language: ProjectLangu
     while (!template) {
         const picksTask: Promise<IAzureQuickPickItem<IFunctionTemplate | string>[]> = ext.templateProviderTask.then(async templateProvider => {
             const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, functionAppPath, templateFilter, telemetryProperties);
-            const picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
+            let picks: IAzureQuickPickItem<IFunctionTemplate | string>[] = templates.map((t: IFunctionTemplate) => { return { data: t, label: t.name, description: '' }; });
+            picks = picks.sort((a, b) => a.label.localeCompare(b.label));
             return picks.concat([
                 { label: localize('selectRuntime', '$(gear) Change project runtime'), description: localize('currentRuntime', 'Current: {0}', runtime), data: runtimePickId, suppressPersistence: true },
                 { label: localize('selectLanguage', '$(gear) Change project language'), description: localize('currentLanguage', 'Current: {0}', language), data: languagePickId, suppressPersistence: true },
