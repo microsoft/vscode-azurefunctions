@@ -98,12 +98,22 @@ export async function getResourcesPath(templatesPath: string, vscodeLang: string
         // Example: "en" for "english"
         const language: string = parts[0];
         // Example: "US" for "United States" (locale is optional)
-        // tslint:disable-next-line: strict-boolean-expressions
-        const locale: string | undefined = parts[1] || '[a-z]*';
+        let locale: string | undefined = parts[1];
 
         const files: string[] = await fse.readdir(folder);
-        const regExp: RegExp = new RegExp(`resources\\.${language}(-${locale})?\\.json`, 'i');
-        const matchingFile: string | undefined = files.find(f => regExp.test(f));
+        let matchingFile: string | undefined;
+        if (!locale) {
+            const regExp: RegExp = new RegExp(`resources\\.${language}\\.json`, 'i');
+            matchingFile = files.find(f => regExp.test(f));
+        }
+
+        if (!matchingFile) {
+            // tslint:disable-next-line: strict-boolean-expressions
+            locale = locale || '[a-z]*';
+            const regExp: RegExp = new RegExp(`resources\\.${language}(-${locale})?\\.json`, 'i');
+            matchingFile = files.find(f => regExp.test(f));
+        }
+
         if (matchingFile) {
             return path.join(folder, matchingFile);
         }

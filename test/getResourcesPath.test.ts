@@ -4,16 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ext, getResourcesPath } from '../extension.bundle';
+import { testFolderPath } from './global.test';
 
-async function verifyLanguage(vscodeLanguage: string, fileName: string): Promise<void> {
-    const templatesPath: string = ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', '~2'));
+async function verifyLanguage(vscodeLanguage: string, fileName: string, templatesPath?: string): Promise<void> {
+    templatesPath = templatesPath || ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', '~2'));
     const actual: string = await getResourcesPath(templatesPath, vscodeLanguage);
     assert.equal(actual, path.join(templatesPath, 'resources', fileName));
 }
 
 suite('getResourcesPath Tests', async () => {
+    let extraTemplatesPath: string;
+    suiteSetup(async () => {
+        extraTemplatesPath = path.join(testFolderPath, 'extraTemplates');
+        const extraResourcesPath: string = path.join(extraTemplatesPath, 'resources');
+        await fse.ensureFile(path.join(extraResourcesPath, 'Resources.aa.json'));
+        await fse.ensureFile(path.join(extraResourcesPath, 'Resources.aa-bb.json'));
+        await fse.ensureFile(path.join(extraResourcesPath, 'Resources.aa-cc.json'));
+        await fse.ensureFile(path.join(extraResourcesPath, 'Resources.dd.json'));
+    });
+
     // list of VS Code locales: https://code.visualstudio.com/docs/getstarted/locales
     test('en', async () => { await verifyLanguage('en', 'Resources.json'); });
     test('zh-CN', async () => { await verifyLanguage('zh-CN', 'Resources.zh-CN.json'); });
@@ -29,6 +41,13 @@ suite('getResourcesPath Tests', async () => {
     test('hu', async () => { await verifyLanguage('hu', 'Resources.hu-HU.json'); });
     test('pt-br', async () => { await verifyLanguage('pt-br', 'Resources.pt-BR.json'); });
     test('tr', async () => { await verifyLanguage('tr', 'Resources.tr-TR.json'); });
+
+    // A few extra cases that might be possible, but aren't covered by current lists of locales
+    test('pt-pt', async () => { await verifyLanguage('pt-pt', 'Resources.pt-PT.json'); });
     test('unknown', async () => { await verifyLanguage('unknown', 'Resources.json'); });
     test('empty', async () => { await verifyLanguage('', 'Resources.json'); });
+    test('aa', async () => { await verifyLanguage('aa', 'Resources.aa.json', extraTemplatesPath); });
+    test('aa-bb', async () => { await verifyLanguage('aa-bb', 'Resources.aa-bb.json', extraTemplatesPath); });
+    test('aa-cc', async () => { await verifyLanguage('aa-cc', 'Resources.aa-cc.json', extraTemplatesPath); });
+    test('dd-ee', async () => { await verifyLanguage('dd-ee', 'Resources.dd.json', extraTemplatesPath); });
 });
