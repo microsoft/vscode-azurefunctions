@@ -80,12 +80,13 @@ export async function getLocalAppSettings(localSettingsPath: string, allowOverwr
                 return <ILocalAppSettings>JSON.parse(data);
             } catch (error) {
                 if (allowOverwrite) {
-                    const message: string = localize('failedToParse', 'Failed to parse local settings: {0}. Overwrite?', parseError(error).message);
+                    const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);
                     const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };
                     // Overwrite is the only button and cancel automatically throws, so no need to check result
                     await ext.ui.showWarningMessage(message, { modal: true }, overwriteButton, DialogResponses.cancel);
                 } else {
-                    throw error;
+                    const message: string = localize('failedToParse', 'Failed to parse "{0}": {1}.', localSettingsFileName, parseError(error).message);
+                    throw new Error(message);
                 }
             }
         }
