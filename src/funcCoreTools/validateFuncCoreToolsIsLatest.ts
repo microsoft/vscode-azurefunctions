@@ -88,7 +88,6 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                         if (result === DialogResponses.learnMore) {
                             await openUrl('https://aka.ms/azFuncOutdated');
                         } else if (result === update) {
-                            // tslint:disable-next-line:no-non-null-assertion
                             await updateFuncCoreTools(packageManager, projectRuntime);
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(showCoreToolsWarningKey, false);
