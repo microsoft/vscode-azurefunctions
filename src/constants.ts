@@ -59,8 +59,8 @@ export const gitignoreFileName: string = '.gitignore';
 export const profileps1FileName: string = 'profile.ps1';
 
 export enum PackageManager {
-    npm,
-    brew
+    npm = 'npm',
+    brew = 'brew'
 }
 
 export const funcPackageName: string = 'azure-functions-core-tools';

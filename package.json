@@ -739,6 +739,11 @@
                         "description": "%azFunc.showCoreToolsWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showMultiCoreToolsWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showMultiCoreToolsWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.show64BitWarning": {
                         "type": "boolean",
                         "description": "%azFunc.show64BitWarningDescription%",

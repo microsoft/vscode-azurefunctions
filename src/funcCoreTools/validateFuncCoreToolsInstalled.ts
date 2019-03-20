@@ -10,7 +10,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
-import { getFuncPackageManager } from './getFuncPackageManager';
+import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
 export async function validateFuncCoreToolsInstalled(customMessage?: string): Promise<boolean> {
@@ -26,8 +26,8 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
         } else {
             const items: MessageItem[] = [];
             const message: string = customMessage ? customMessage : localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
-            const packageManager: PackageManager | undefined = await getFuncPackageManager(false /* isFuncInstalled */);
-            if (packageManager !== undefined) {
+            const packageManagers: PackageManager[] = await getFuncPackageManagers(false /* isFuncInstalled */);
+            if (packageManagers.length > 0) {
                 items.push(install);
             } else {
                 items.push(DialogResponses.learnMore);
@@ -39,8 +39,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
             this.properties.dialogResult = input.title;
 
             if (input === install) {
-                // tslint:disable-next-line:no-non-null-assertion
-                await installFuncCoreTools(packageManager!);
+                await installFuncCoreTools(packageManagers);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
                 await openUrl('https://aka.ms/Dqur4e');
