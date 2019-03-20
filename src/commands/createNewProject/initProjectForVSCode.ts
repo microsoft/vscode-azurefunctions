@@ -6,11 +6,10 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext, TelemetryProperties } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, projectRuntimeSetting, templateFilterSetting } from '../../constants';
+import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFileName, preDeployTaskSetting, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
-import { convertStringToRuntime, getGlobalFuncExtensionSetting, promptForProjectLanguage, promptForProjectRuntime } from '../../ProjectSettings';
+import { convertStringToRuntime, getGlobalFuncExtensionSetting, promptForProjectLanguage } from '../../ProjectSettings';
 import { confirmEditJsonFile, confirmOverwriteFile, writeFormattedJson } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getProjectCreator } from './createNewProject';
@@ -39,13 +38,9 @@ export async function initProjectForVSCode(actionContext: IActionContext, functi
 
     await projectCreator.onInitProjectForVSCode();
 
-    if (projectCreator.runtime === undefined) {
-        // tslint:disable-next-line:strict-boolean-expressions
-        projectCreator.runtime = await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
-    }
-
-    ext.outputChannel.appendLine(localize('usingRuntime', 'Using "{0}" as the project runtime...', projectCreator.runtime));
-    telemetryProperties.projectRuntime = projectCreator.runtime;
+    const runtime: ProjectRuntime = await projectCreator.getRuntime();
+    ext.outputChannel.appendLine(localize('usingRuntime', 'Using "{0}" as the project runtime...', runtime));
+    telemetryProperties.projectRuntime = runtime;
 
     // tslint:disable-next-line:strict-boolean-expressions
     const templateFilter: string = getGlobalFuncExtensionSetting(templateFilterSetting) || projectCreator.templateFilter;
@@ -55,9 +50,9 @@ export async function initProjectForVSCode(actionContext: IActionContext, functi
     const vscodePath: string = path.join(functionAppPath, '.vscode');
     await fse.ensureDir(vscodePath);
     ext.outputChannel.appendLine(localize('writingDebugConfig', 'Writing project debug configuration...'));
-    await writeDebugConfiguration(projectCreator, vscodePath);
+    await writeDebugConfiguration(projectCreator, vscodePath, runtime);
     ext.outputChannel.appendLine(localize('writingSettings', 'Writing project settings...'));
-    await writeVSCodeSettings(projectCreator, vscodePath, language, templateFilter);
+    await writeVSCodeSettings(projectCreator, vscodePath, language, templateFilter, runtime);
     ext.outputChannel.appendLine(localize('writingRecommendations', 'Writing extension recommendations...'));
     await writeExtensionRecommendations(projectCreator, vscodePath);
 
@@ -74,13 +69,13 @@ export async function initProjectForVSCode(actionContext: IActionContext, functi
     return projectCreator;
 }
 
-async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string): Promise<void> {
+async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscodePath: string, runtime: ProjectRuntime): Promise<void> {
     const tasksJsonPath: string = path.join(vscodePath, 'tasks.json');
     if (await confirmOverwriteFile(tasksJsonPath)) {
-        await writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson());
+        await writeFormattedJson(tasksJsonPath, projectCreator.getTasksJson(runtime));
     }
 
-    const launchJson: {} | undefined = projectCreator.getLaunchJson();
+    const launchJson: {} | undefined = projectCreator.getLaunchJson(runtime);
     if (launchJson) {
         const launchJsonPath: string = path.join(vscodePath, 'launch.json');
         if (await confirmOverwriteFile(launchJsonPath)) {
@@ -89,12 +84,12 @@ async function writeDebugConfiguration(projectCreator: ProjectCreatorBase, vscod
     }
 }
 
-async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePath: string, language: string, templateFilter: string): Promise<void> {
+async function writeVSCodeSettings(projectCreator: ProjectCreatorBase, vscodePath: string, language: string, templateFilter: string, runtime: ProjectRuntime): Promise<void> {
     const settingsJsonPath: string = path.join(vscodePath, 'settings.json');
     await confirmEditJsonFile(
         settingsJsonPath,
         (data: {}): {} => {
-            data[`${extensionPrefix}.${projectRuntimeSetting}`] = projectCreator.runtime;
+            data[`${extensionPrefix}.${projectRuntimeSetting}`] = runtime;
             data[`${extensionPrefix}.${projectLanguageSetting}`] = language;
             data[`${extensionPrefix}.${templateFilterSetting}`] = templateFilter;
             if (projectCreator.deploySubpath) {

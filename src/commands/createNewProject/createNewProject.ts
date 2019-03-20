@@ -76,7 +76,8 @@ export async function createNewProject(
         }
 
         if (templateId) {
-            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, projectCreator.runtime);
+            const projectRuntime: ProjectRuntime = await projectCreator.getRuntime();
+            await createFunction(actionContext, functionAppPath, templateId, functionName, caseSensitiveFunctionSettings, <ProjectLanguage>language, projectRuntime);
         }
     });
     // don't wait

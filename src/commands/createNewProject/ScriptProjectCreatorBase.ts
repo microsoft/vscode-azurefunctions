@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, proxiesFileName, TemplateFilter } from '../../constants';
+import { extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
 import { ILocalAppSettings } from '../../LocalAppSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
 import { ProjectCreatorBase } from './ProjectCreatorBase';
@@ -112,10 +112,14 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     // Default template filter to 'All' since preview languages have not been 'verified'
     public readonly templateFilter: TemplateFilter = TemplateFilter.All;
     public readonly functionsWorkerRuntime: string | undefined;
+    public deploySubpath: string = '.';
+    // "func extensions install" task creates C# build artifacts that should be hidden
+    // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
+    public readonly excludedFiles: string | string[] = ['obj', 'bin'];
 
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
 
-    public getTasksJson(): {} {
+    public getTasksJson(runtime: ProjectRuntime): {} {
         return {
             version: '2.0.0',
             tasks: [
@@ -123,6 +127,7 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                     type: func,
                     command: hostStartCommand,
                     problemMatcher: funcWatchProblemMatcher,
+                    dependsOn: runtime === ProjectRuntime.v1 ? undefined : extInstallTaskName,
                     isBackground: true
                 }
             ]
@@ -130,11 +135,10 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     }
 
     public async onCreateNewProject(): Promise<void> {
+        const runtime: ProjectRuntime = await this.getRuntime();
         const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: {} = {
-                version: '2.0'
-            };
+            const hostJson: {} = runtime === ProjectRuntime.v1 ? {} : { version: '2.0' };
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -177,6 +181,11 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
     }
 
     public async onInitProjectForVSCode(): Promise<void> {
-        // nothing to do here
+        if (!this.preDeployTask) {
+            const runtime: ProjectRuntime = await this.getRuntime();
+            if (runtime !== ProjectRuntime.v1) {
+                this.preDeployTask = extInstallTaskName;
+            }
+        }
     }
 }
