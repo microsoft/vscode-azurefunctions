@@ -20,9 +20,7 @@ export namespace dotnetUtils {
     }
 
     export async function validateDotnetInstalled(actionContext: IActionContext): Promise<void> {
-        try {
-            await cpUtils.executeCommand(undefined, undefined, 'dotnet', '--version');
-        } catch (error) {
+        if (!await isDotnetInstalled()) {
             const message: string = localize('dotnetNotInstalled', 'You must have the .NET CLI installed to perform this operation.');
 
             if (!actionContext.suppressErrorDisplay) {
