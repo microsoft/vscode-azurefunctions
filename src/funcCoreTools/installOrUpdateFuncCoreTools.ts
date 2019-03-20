@@ -27,7 +27,7 @@ export async function installOrUpdateFuncCoreTools(): Promise<void> {
             packageManager = packageManagers[0];
         } else {
             const placeHolder: string = localize('multipleInstalls', 'Multiple installs of the func cli detected. Select the one to update');
-            const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: pm, data: pm }; });
+            const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: localize('update', 'Update {0} package', pm), data: pm }; });
             packageManager = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
         }
 

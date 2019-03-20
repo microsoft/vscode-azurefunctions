@@ -21,7 +21,7 @@ export async function uninstallFuncCoreTools(packageManagers?: PackageManager[])
         packageManager = packageManagers[0];
     } else {
         const placeHolder: string = localize('multipleInstalls', 'Multiple installs of the func cli detected. Select the one to uninstall');
-        const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: pm, data: pm }; });
+        const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: localize('uninstall', 'Uninstall {0} package', pm), data: pm }; });
         packageManager = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
