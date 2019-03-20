@@ -76,11 +76,12 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
-        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, 'azureFunctions.connectToGitHub');
+        const sourceControl: WebSiteManagementModels.SiteSourceControl = await this.root.client.getSourceControl();
+        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, sourceControl, 'azureFunctions.connectToGitHub');
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }
 
-    public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem<ISiteTreeRoot> | undefined {
+    public pickTreeItemImpl(expectedContextValue: string | RegExp): AzureTreeItem<ISiteTreeRoot> | undefined {
         switch (expectedContextValue) {
             case FunctionsTreeItem.contextValue:
             case FunctionTreeItem.contextValue:
@@ -96,6 +97,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             case DeploymentTreeItem.contextValue:
                 return this.deploymentsNode;
             default:
+                // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
+                if (typeof expectedContextValue === 'string' && DeploymentTreeItem.contextValue.test(expectedContextValue)) { return this.deploymentsNode; }
                 return undefined;
         }
     }

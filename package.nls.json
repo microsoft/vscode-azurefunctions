@@ -57,6 +57,7 @@
     "azFunc.enableSlotsDescription": "Enable preview support for slots.",
     "azFunc.redeploy": "Redeploy",
     "azFunc.viewDeploymentLogs": "View Deployment Logs",
+    "azFunc.viewCommitInGitHub": "View Commit in GitHub",
     "azFunc.ConnectToGitHub": "Connect to GitHub Repository...",
     "azFunc.disconnectRepo": "Disconnect from Repo...",
     "azFunc.createSlot": "Create Slot...",

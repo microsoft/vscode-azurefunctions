@@ -28,6 +28,7 @@ import { deploy } from './commands/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
 import { disconnectRepo } from './commands/deployments/disconnectRepo';
 import { redeployDeployment } from './commands/deployments/redeployDeployment';
+import { viewCommitInGitHub } from './commands/deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './commands/deployments/viewDeploymentLogs';
 import { editAppSetting } from './commands/editAppSetting';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
@@ -128,6 +129,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
         registerCommand('azureFunctions.redeploy', redeployDeployment);
         registerCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
+        registerCommand('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
         registerCommand('azureFunctions.connectToGitHub', connectToGitHub);
         registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
         registerCommand('azureFunctions.swapSlot', swapSlot);
