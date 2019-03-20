@@ -27,7 +27,7 @@ export class JavaProjectCreator extends ProjectCreatorBase {
     constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined, language: string) {
         super(functionAppPath, actionContext, runtime, language);
         assert.notEqual(runtime, ProjectRuntime.v1, localize('noV1', 'Java does not support runtime "{0}".', ProjectRuntime.v1));
-        this.runtime = ProjectRuntime.v2;
+        this.setRuntime(ProjectRuntime.v2);
     }
 
     public async onCreateNewProject(): Promise<void> {

@@ -31,16 +31,13 @@ const minPythonVersionLabel: string = '3.6.x'; // Use invalid semver as the labe
 export class PythonProjectCreator extends ScriptProjectCreatorBase {
     public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
     public preDeployTask: string = packTaskName;
-    // "func extensions install" task creates C# build artifacts that should be hidden
-    // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
-    public readonly excludedFiles: string | string[] = ['obj', 'bin'];
 
     private _venvName: string | undefined;
 
     constructor(functionAppPath: string, actionContext: IActionContext, runtime: ProjectRuntime | undefined, language: string) {
         super(functionAppPath, actionContext, runtime, language);
         assert.notEqual(runtime, ProjectRuntime.v1, localize('noV1', 'Python does not support runtime "{0}".', ProjectRuntime.v1));
-        this.runtime = ProjectRuntime.v2;
+        this.setRuntime(ProjectRuntime.v2);
     }
 
     public getLaunchJson(): {} {

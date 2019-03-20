@@ -85,7 +85,7 @@ export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
         }
     }
 
-    public getTasksJson(): {} {
+    public getTasksJson(runtime: ProjectRuntime): {} {
         const npmInstallTaskName: string = 'npm: install';
         const npmBuildTaskName: string = 'npm: build';
         return {
@@ -101,7 +101,7 @@ export class TypeScriptProjectCreator extends JavaScriptProjectCreator {
                 {
                     type: 'npm',
                     script: 'build',
-                    dependsOn: this.runtime === ProjectRuntime.v1 ? npmInstallTaskName : [extInstallTaskName, npmInstallTaskName],
+                    dependsOn: runtime === ProjectRuntime.v1 ? npmInstallTaskName : [extInstallTaskName, npmInstallTaskName],
                     problemMatcher: '$tsc'
                 },
                 {

@@ -10,9 +10,8 @@ import * as vscode from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, isWindows, localSettingsFileName, ProjectLanguage, ProjectRuntime, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../../localize";
-import { getFuncExtensionSetting, promptForProjectRuntime, updateGlobalSetting } from '../../ProjectSettings';
+import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { executeDotnetTemplateCommand } from '../../templates/executeDotnetTemplateCommand';
 import { cpUtils } from '../../utils/cpUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
@@ -37,12 +36,11 @@ export class DotnetProjectCreator extends ProjectCreatorBase {
         const projName: string = projectName + this._projectExtension;
         await this.confirmOverwriteExisting(this.functionAppPath, projName);
 
-        // tslint:disable-next-line:strict-boolean-expressions
-        this.runtime = this.runtime || await tryGetLocalRuntimeVersion() || await promptForProjectRuntime();
+        const runtime: ProjectRuntime = await this.getRuntime();
         const templateLanguage: string = this.language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${this.runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
-        const functionsVersion: string = this.runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
-        await executeDotnetTemplateCommand(this.runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
+        const functionsVersion: string = runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
+        await executeDotnetTemplateCommand(runtime, this.functionAppPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
     }
 
     public getTasksJson(): {} {
@@ -93,13 +91,13 @@ export class DotnetProjectCreator extends ProjectCreatorBase {
         };
     }
 
-    public getLaunchJson(): {} {
+    public getLaunchJson(runtime: ProjectRuntime): {} {
         return {
             version: '0.2.0',
             configurations: [
                 {
                     name: localize('attachToNetFunc', "Attach to .NET Functions"),
-                    type: this.runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
+                    type: runtime === ProjectRuntime.v2 ? 'coreclr' : 'clr',
                     request: 'attach',
                     processId: '\${command:azureFunctions.pickProcess}'
                 }
@@ -140,9 +138,9 @@ export class DotnetProjectCreator extends ProjectCreatorBase {
             const targetFramework: string = matches[1];
             this.actionContext.properties.dotnetTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
-                this.runtime = ProjectRuntime.v2;
+                this.setRuntime(ProjectRuntime.v2);
             } else {
-                this.runtime = ProjectRuntime.v1;
+                this.setRuntime(ProjectRuntime.v1);
                 const settingKey: string = 'show64BitWarning';
                 if (getFuncExtensionSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
