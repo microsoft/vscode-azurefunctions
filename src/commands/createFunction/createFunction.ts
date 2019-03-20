@@ -18,6 +18,7 @@ import { getProjectLanguage, getProjectRuntime, getTemplateFilter, promptForProj
 import { ValueType } from '../../templates/IFunctionSetting';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateProvider } from '../../templates/TemplateProvider';
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import * as workspaceUtil from '../../utils/workspace';
 import { createNewProject } from '../createNewProject/createNewProject';
 import { tryGetFunctionProjectRoot } from '../createNewProject/isFunctionProject';
@@ -37,6 +38,7 @@ import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
+// tslint:disable-next-line: max-func-body-length
 export async function createFunction(
     actionContext: IActionContext,
     folderPath?: string,
@@ -89,6 +91,10 @@ export async function createFunction(
 
     if (language === undefined) {
         language = await getProjectLanguage(functionAppPath, ext.ui);
+    }
+
+    if (language === ProjectLanguage.CSharp || language === ProjectLanguage.FSharp) {
+        await dotnetUtils.validateDotnetInstalled(actionContext);
     }
 
     if (runtime === undefined) {

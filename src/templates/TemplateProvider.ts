@@ -9,6 +9,7 @@ import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
 import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
+import { dotnetUtils } from '../utils/dotnetUtils';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
 import { IFunctionSetting } from './IFunctionSetting';
@@ -100,7 +101,11 @@ export async function getTemplateProvider(): Promise<TemplateProvider> {
     const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
     const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
 
-    const templateRetrievers: TemplateRetriever[] = [new ScriptTemplateRetriever(), new DotnetTemplateRetriever()];
+    const templateRetrievers: TemplateRetriever[] = [new ScriptTemplateRetriever()];
+    if (await dotnetUtils.isDotnetInstalled()) {
+        templateRetrievers.push(new DotnetTemplateRetriever());
+    }
+
     for (const templateRetriever of templateRetrievers) {
         for (const key of Object.keys(ProjectRuntime)) {
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];

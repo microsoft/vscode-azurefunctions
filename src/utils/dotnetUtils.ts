@@ -10,10 +10,17 @@ import { cpUtils } from "./cpUtils";
 import { openUrl } from './openUrl';
 
 export namespace dotnetUtils {
-    export async function validateDotnetInstalled(actionContext: IActionContext): Promise<void> {
+    export async function isDotnetInstalled(): Promise<boolean> {
         try {
             await cpUtils.executeCommand(undefined, undefined, 'dotnet', '--version');
+            return true;
         } catch (error) {
+            return false;
+        }
+    }
+
+    export async function validateDotnetInstalled(actionContext: IActionContext): Promise<void> {
+        if (!await isDotnetInstalled()) {
             const message: string = localize('dotnetNotInstalled', 'You must have the .NET CLI installed to perform this operation.');
 
             if (!actionContext.suppressErrorDisplay) {
