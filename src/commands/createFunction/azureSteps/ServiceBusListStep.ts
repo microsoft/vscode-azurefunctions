@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ServiceBusManagementClient } from 'azure-arm-sb';
-import { AzureWizardPromptStep, createAzureClient, ISubWizardOptions } from 'vscode-azureextensionui';
+import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
 import { localize } from '../../../localize';
 import { promptForResource } from '../../../utils/azure';
 import { IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusListStep extends AzureWizardPromptStep<IServiceBusWizardContext> {
-    public async prompt(wizardContext: IServiceBusWizardContext): Promise<void | ISubWizardOptions<IServiceBusWizardContext>> {
+    public async prompt(wizardContext: IServiceBusWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select a service bus namespace');
         const client: ServiceBusManagementClient = createAzureClient(wizardContext, ServiceBusManagementClient);
         wizardContext.sbNamespace = await promptForResource(placeHolder, client.namespaces.list());

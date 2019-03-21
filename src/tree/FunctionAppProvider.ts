@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { createFunctionApp, IAppCreateOptions, IAppSettingsContext, SiteClient } from 'vscode-azureappservice';
-import { AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, SubscriptionTreeItem } from 'vscode-azureextensionui';
+import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, ResourceGroupListStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { convertStringToRuntime, getFuncExtensionSetting } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
+import { nonNullProp } from '../utils/nonNull';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
@@ -71,43 +72,93 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
-        const createOptions: IAppCreateOptions = {
-            resourceGroup,
-            createFunctionAppSettings: async (context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
+
+        const wizardContext: IAppServiceWizardContext = {
+            newSiteKind: AppKind.functionapp,
+            subscriptionId: this.root.subscriptionId,
+            subscriptionDisplayName: this.root.subscriptionDisplayName,
+            credentials: this.root.credentials,
+            environment: this.root.environment,
+            newResourceGroupName: resourceGroup,
+            resourceGroupDeferLocationStep: true
         };
 
         if (!getFuncExtensionSetting('advancedCreation')) {
-            setCreateOptionDefaults(createOptions, language);
+            actionContext.properties.advancedCreation = 'false';
+            setBasicCreateDefaults(wizardContext, language);
+        } else {
+            actionContext.properties.advancedCreation = 'true';
         }
 
-        const site: WebSiteManagementModels.Site = await createFunctionApp(actionContext, this.root, createOptions, showCreatingTreeItem);
+        const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+        promptSteps.push(new SiteNameStep());
+        promptSteps.push(new ResourceGroupListStep());
+        promptSteps.push(new SiteOSStep());
+        promptSteps.push(new SiteRuntimeStep());
+        promptSteps.push(new StorageAccountListStep(
+            {
+                kind: StorageAccountKind.Storage,
+                performance: StorageAccountPerformance.Standard,
+                replication: StorageAccountReplication.LRS
+            },
+            {
+                kind: [
+                    StorageAccountKind.BlobStorage
+                ],
+                performance: [
+                    StorageAccountPerformance.Premium
+                ],
+                replication: [
+                    StorageAccountReplication.ZRS
+                ],
+                learnMoreLink: 'https://aka.ms/Cfqnrc'
+            }
+        ));
+
+        const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [new SiteCreateStep(
+            async (context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
+        )];
+
+        const title: string = localize('functionAppCreatingTitle', 'Create new function app');
+        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
+
+        await wizard.prompt(actionContext);
+        showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        await wizard.execute(actionContext);
+
+        actionContext.properties.os = wizardContext.newSiteOS;
+        actionContext.properties.runtime = wizardContext.newSiteRuntime;
+
+        const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
     }
 }
 
-function setCreateOptionDefaults(createOptions: IAppCreateOptions, language: string | undefined): void {
-    createOptions.os = 'windows';
+function setBasicCreateDefaults(wizardContext: IAppServiceWizardContext, language: string | undefined): void {
+    wizardContext.newSiteOS = WebsiteOS.windows;
     switch (language) {
         case ProjectLanguage.JavaScript:
         case ProjectLanguage.TypeScript:
-            createOptions.runtime = 'node';
+            wizardContext.newSiteRuntime = 'node';
             break;
         case ProjectLanguage.CSharp:
         case ProjectLanguage.FSharp:
-            createOptions.runtime = 'dotnet';
+            wizardContext.newSiteRuntime = 'dotnet';
             break;
         case ProjectLanguage.Java:
-            createOptions.runtime = 'java';
+            wizardContext.newSiteRuntime = 'java';
             break;
         case ProjectLanguage.Python:
-            createOptions.runtime = 'python';
-            createOptions.os = 'linux';
+            wizardContext.newSiteRuntime = 'python';
+            wizardContext.newSiteOS = WebsiteOS.linux;
             break;
         case ProjectLanguage.PowerShell:
-            createOptions.runtime = 'powershell';
+            wizardContext.newSiteRuntime = 'powershell';
             break;
         default:
     }
+
+    SiteOSStep.setLocationsTask(wizardContext);
 }
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {

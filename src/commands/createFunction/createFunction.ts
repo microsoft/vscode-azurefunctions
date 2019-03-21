@@ -193,7 +193,7 @@ function getWizardOptions(wizardContext: IFunctionWizardContext, defaultSettings
     }
 
     const title: string = localize('createFunction', 'Create new {0}', wizardContext.template.name);
-    return { promptSteps, executeSteps, title, showExecuteProgress: true };
+    return { promptSteps, executeSteps, title };
 }
 
 async function promptForTemplate(functionAppPath: string, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter: TemplateFilter, telemetryProperties: TelemetryProperties): Promise<[IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter]> {
