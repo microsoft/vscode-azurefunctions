@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionWizardContext, ISubWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionWizardContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
@@ -28,7 +28,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
         this._setting = setting;
     }
 
-    public async prompt(wizardContext: IFunctionWizardContext): Promise<ISubWizardOptions<IFunctionWizardContext> | void> {
+    public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
         const localSettingsPath: string = path.join(wizardContext.functionAppPath, localSettingsFileName);
         const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
         if (settings.Values) {
@@ -40,43 +40,48 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
                 const result: string | undefined = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
                 if (result) {
                     wizardContext[this._setting.name] = result;
-                    return;
                 }
             }
         }
+    }
 
-        const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
-        const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
-        switch (this._setting.resourceType) {
-            case ResourceType.DocumentDB:
-                azurePromptSteps.push(new CosmosDBListStep());
-                azureExecuteSteps.push(new CosmosDBConnectionCreateStep(this._setting));
-                break;
-            case ResourceType.Storage:
-                azurePromptSteps.push(new StorageAccountListStep(
-                    { kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
-                    { kind: [StorageAccountKind.BlobStorage], learnMoreLink: 'https://aka.ms/T5o0nf' }
-                ));
-                azureExecuteSteps.push(new StorageConnectionCreateStep(this._setting));
-                break;
-            case ResourceType.ServiceBus:
-                azurePromptSteps.push(new ServiceBusListStep());
-                azureExecuteSteps.push(new ServiceBusConnectionCreateStep(this._setting));
-                break;
-            default:
-                // Unsupported resource type - prompt user to enter connection string manually
-                const valueKey: string = this._setting.name + '_value';
-                return {
-                    promptSteps: [new LocalAppSettingNameStep(this._setting), new LocalAppSettingValueStep(valueKey)],
-                    executeSteps: [new LocalAppSettingCreateStep(this._setting.name, valueKey)]
-                };
-        }
+    public async getSubWizard(wizardContext: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+        if (!wizardContext[this._setting.name]) {
+            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
+            switch (this._setting.resourceType) {
+                case ResourceType.DocumentDB:
+                    azurePromptSteps.push(new CosmosDBListStep());
+                    azureExecuteSteps.push(new CosmosDBConnectionCreateStep(this._setting));
+                    break;
+                case ResourceType.Storage:
+                    azurePromptSteps.push(new StorageAccountListStep(
+                        { kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
+                        { kind: [StorageAccountKind.BlobStorage], learnMoreLink: 'https://aka.ms/T5o0nf' }
+                    ));
+                    azureExecuteSteps.push(new StorageConnectionCreateStep(this._setting));
+                    break;
+                case ResourceType.ServiceBus:
+                    azurePromptSteps.push(new ServiceBusListStep());
+                    azureExecuteSteps.push(new ServiceBusConnectionCreateStep(this._setting));
+                    break;
+                default:
+                    // Unsupported resource type - prompt user to enter connection string manually
+                    const valueKey: string = this._setting.name + '_value';
+                    return {
+                        promptSteps: [new LocalAppSettingNameStep(this._setting), new LocalAppSettingValueStep(valueKey)],
+                        executeSteps: [new LocalAppSettingCreateStep(this._setting.name, valueKey)]
+                    };
+            }
 
-        const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.tree.getSubscriptionPromptStep(wizardContext);
-        if (subscriptionPromptStep) {
-            azurePromptSteps.unshift(subscriptionPromptStep);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.tree.getSubscriptionPromptStep(wizardContext);
+            if (subscriptionPromptStep) {
+                azurePromptSteps.unshift(subscriptionPromptStep);
+            }
+            return { promptSteps: azurePromptSteps, executeSteps: azureExecuteSteps, title: 'test' };
+        } else {
+            return undefined;
         }
-        return { promptSteps: azurePromptSteps, executeSteps: azureExecuteSteps };
     }
 
     public shouldPrompt(wizardContext: IFunctionWizardContext): boolean {
