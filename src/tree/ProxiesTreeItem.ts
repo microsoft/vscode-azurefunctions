@@ -9,24 +9,50 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
+import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncProxies';
     public readonly contextValue: string = ProxiesTreeItem.contextValue;
     public readonly label: string = localize('azFunc.Proxies', 'Proxies');
     public readonly childTypeLabel: string = localize('azFunc.Proxy', 'Proxy');
+    public readonly parent: SlotTreeItemBase;
 
     private readonly _proxiesJsonPath: string = 'site/wwwroot/proxies.json';
     private _proxyConfig: IProxyConfig;
     private _etag: string;
     private _deletingProxy: boolean = false;
+    private _readOnly: boolean;
+
+    private constructor(parent: SlotTreeItemBase) {
+        super(parent);
+    }
+
+    public static async createProxiesTreeItem(parent: SlotTreeItemBase): Promise<ProxiesTreeItem> {
+        const ti: ProxiesTreeItem = new ProxiesTreeItem(parent);
+        // initialize
+        await ti.refreshImpl();
+        return ti;
+    }
 
     public get id(): string {
         return 'proxies';
     }
 
+    public get description(): string {
+        return this._readOnly ? localize('readOnly', 'Read only') : '';
+    }
+
     public get iconPath(): nodeUtils.IThemedIconPath {
         return nodeUtils.getThemedIconPath('BulletList');
+    }
+
+    public get readOnly(): boolean {
+        return this._readOnly;
+    }
+
+    public async refreshImpl(): Promise<void> {
+        this._readOnly = await this.parent.isReadOnly();
     }
 
     public hasMoreChildrenImpl(): boolean {

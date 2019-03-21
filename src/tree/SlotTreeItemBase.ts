@@ -23,16 +23,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     private readonly _root: ISiteTreeRoot;
     private _state?: string;
-    private readonly _functionsTreeItem: FunctionsTreeItem;
-    private readonly _proxiesTreeItem: ProxiesTreeItem;
+    private _functionsTreeItem: FunctionsTreeItem | undefined;
+    private _proxiesTreeItem: ProxiesTreeItem | undefined;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient) {
         super(parent);
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
-        this._functionsTreeItem = new FunctionsTreeItem(this);
         this.appSettingsTreeItem = new AppSettingsTreeItem(this, 'azureFunctions.toggleAppSettingVisibility');
-        this._proxiesTreeItem = new ProxiesTreeItem(this);
     }
 
     // overrides ISubscriptionRoot with an object that also has SiteClient
@@ -78,6 +76,15 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
         const sourceControl: WebSiteManagementModels.SiteSourceControl = await this.root.client.getSourceControl();
         this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, sourceControl, 'azureFunctions.connectToGitHub');
+
+        if (!this._functionsTreeItem) {
+            this._functionsTreeItem = await FunctionsTreeItem.createFunctionsTreeItem(this);
+        }
+
+        if (!this._proxiesTreeItem) {
+            this._proxiesTreeItem = await ProxiesTreeItem.createProxiesTreeItem(this);
+        }
+
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }
 
@@ -85,12 +92,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         switch (expectedContextValue) {
             case FunctionsTreeItem.contextValue:
             case FunctionTreeItem.contextValue:
+            case FunctionTreeItem.readOnlyContextValue:
                 return this._functionsTreeItem;
             case AppSettingsTreeItem.contextValue:
             case AppSettingTreeItem.contextValue:
                 return this.appSettingsTreeItem;
             case ProxiesTreeItem.contextValue:
             case ProxyTreeItem.contextValue:
+            case ProxyTreeItem.readOnlyContextValue:
                 return this._proxiesTreeItem;
             case DeploymentsTreeItem.contextValueConnected:
             case DeploymentsTreeItem.contextValueUnconnected:
@@ -101,6 +110,11 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
                 if (typeof expectedContextValue === 'string' && DeploymentTreeItem.contextValue.test(expectedContextValue)) { return this.deploymentsNode; }
                 return undefined;
         }
+    }
+
+    public async isReadOnly(): Promise<boolean> {
+        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+        return !!appSettings.properties && !!(appSettings.properties.WEBSITE_RUN_FROM_PACKAGE || appSettings.properties.WEBSITE_RUN_FROM_ZIP);
     }
 
     public async deleteTreeItemImpl(): Promise<void> {

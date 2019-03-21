@@ -9,8 +9,8 @@ import { nodeUtils } from '../utils/nodeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
 export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
-    public static readonly contextValue: string = 'azFuncProxy';
-    public readonly contextValue: string = ProxyTreeItem.contextValue;
+    public static contextValue: string = 'azFuncProxy';
+    public static readOnlyContextValue: string = 'azFuncProxyReadOnly';
     public readonly parent: ProxiesTreeItem;
     private readonly _name: string;
 
@@ -21,6 +21,10 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
 
     public get label(): string {
         return this._name;
+    }
+
+    public get contextValue(): string {
+        return this.parent.readOnly ? ProxyTreeItem.readOnlyContextValue : ProxyTreeItem.contextValue;
     }
 
     public get iconPath(): string {
