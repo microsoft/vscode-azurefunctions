@@ -28,6 +28,7 @@ export * from './src/extensionVariables';
 export * from './src/FunctionConfig';
 export * from './src/ProjectSettings';
 export * from './src/templates/IFunctionTemplate';
+export * from './src/templates/ScriptTemplateRetriever';
 export * from './src/templates/TemplateProvider';
 export * from './src/tree/FunctionAppProvider';
 export * from './src/utils/fs';

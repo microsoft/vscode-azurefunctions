@@ -68,7 +68,11 @@ interface IVariables { [name: string]: string; }
 /**
  * Describes script template resources to be used for parsing
  */
-export interface IResources { en: { [key: string]: string }; }
+export interface IResources {
+    lang?: { [key: string]: string };
+    // Every Resources.json file also contains the english strings
+    en: { [key: string]: string };
+}
 
 // tslint:disable-next-line:no-any
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
@@ -85,7 +89,16 @@ function getVariableValue(resources: IResources, variables: IVariables, data: st
 
 export function getResourceValue(resources: IResources, data: string): string {
     const matches: RegExpMatchArray | null = data.match(/\$(.*)/);
-    return matches !== null ? resources.en[matches[1]] : data;
+    if (matches === null) {
+        return data;
+    } else {
+        const key: string = matches[1];
+        if (resources.lang && resources.lang[key]) {
+            return resources.lang[key];
+        } else {
+            return resources.en[key];
+        }
+    }
 }
 
 function parseScriptSetting(data: object, resources: IResources, variables: IVariables): IFunctionSetting {

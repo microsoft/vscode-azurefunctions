@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as vscode from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -69,8 +70,8 @@ export abstract class TemplateRetriever {
     }
 
     /**
-     * Adds runtime and templateType information to a key to ensure there are no collisions in the cache
-     * For backwards compatability, the original runtime and templateType will not have this information
+     * Adds runtime, templateType, and language information to a key to ensure there are no collisions in the cache
+     * For backwards compatability, the original runtime, templateType, and language will not have this information
      */
     public getCacheKey(key: string, runtime: ProjectRuntime): string {
         if (runtime !== ProjectRuntime.v1) {
@@ -79,6 +80,10 @@ export abstract class TemplateRetriever {
 
         if (this.templateType !== TemplateType.Script) {
             key = `${key}.${this.templateType}`;
+        }
+
+        if (vscode.env.language && !/^en(-us)?$/i.test(vscode.env.language)) {
+            key = `${key}.${vscode.env.language}`;
         }
 
         return key;
