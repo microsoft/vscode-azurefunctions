@@ -10,14 +10,32 @@ import { AzureParentTreeItem, AzureTreeItem, createTreeItemsWithErrorHandling } 
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionTreeItem, getFunctionNameFromId } from './FunctionTreeItem';
+import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunctions';
     public readonly contextValue: string = FunctionsTreeItem.contextValue;
     public readonly label: string = localize('azFunc.Functions', 'Functions');
     public readonly childTypeLabel: string = localize('azFunc.Function', 'Function');
+    public readonly parent: SlotTreeItemBase;
 
     private _nextLink: string | undefined;
+    private _readOnly: boolean;
+
+    private constructor(parent: SlotTreeItemBase) {
+        super(parent);
+    }
+
+    public static async createFunctionsTreeItem(parent: SlotTreeItemBase): Promise<FunctionsTreeItem> {
+        const ti: FunctionsTreeItem = new FunctionsTreeItem(parent);
+        // initialize
+        await ti.refreshImpl();
+        return ti;
+    }
+
+    public get description(): string {
+        return this._readOnly ? localize('readOnly', 'Read only') : '';
+    }
 
     public get id(): string {
         return 'functions';
@@ -25,6 +43,14 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
 
     public get iconPath(): nodeUtils.IThemedIconPath {
         return nodeUtils.getThemedIconPath('BulletList');
+    }
+
+    public get readOnly(): boolean {
+        return this._readOnly;
+    }
+
+    public async refreshImpl(): Promise<void> {
+        this._readOnly = await this.parent.isReadOnly();
     }
 
     public hasMoreChildrenImpl(): boolean {

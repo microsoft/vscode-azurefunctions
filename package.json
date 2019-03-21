@@ -442,7 +442,7 @@
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
                     "group": "1@1"
                 },
                 {
@@ -452,12 +452,12 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
                     "group": "3@2"
                 },
                 {

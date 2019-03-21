@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import { URL } from 'url';
 import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
+import { AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
@@ -15,24 +15,26 @@ import { localize } from '../localize';
 import { convertStringToRuntime } from '../ProjectSettings';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
+import { FunctionsTreeItem } from './FunctionsTreeItem';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunction';
-    public readonly contextValue: string = FunctionTreeItem.contextValue;
+    public static readOnlyContextValue: string = 'azFuncFunctionReadOnly';
+    public readonly parent: FunctionsTreeItem;
     public readonly config: FunctionConfig;
 
     private readonly _name: string;
     private _triggerUrl: string;
     private _disabled: boolean;
 
-    private constructor(parent: AzureParentTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
+    private constructor(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
         super(parent);
         this._name = getFunctionNameFromId(nonNullProp(func, 'id'));
 
         this.config = new FunctionConfig(func.config);
     }
 
-    public static async createFunctionTreeItem(parent: AzureParentTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<FunctionTreeItem> {
+    public static async createFunctionTreeItem(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<FunctionTreeItem> {
         const ti: FunctionTreeItem = new FunctionTreeItem(parent, func);
         // initialize
         await ti.refreshImpl();
@@ -45,6 +47,10 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
 
     public get label(): string {
         return this._name;
+    }
+
+    public get contextValue(): string {
+        return this.parent.readOnly ? FunctionTreeItem.readOnlyContextValue : FunctionTreeItem.contextValue;
     }
 
     public get description(): string | undefined {
