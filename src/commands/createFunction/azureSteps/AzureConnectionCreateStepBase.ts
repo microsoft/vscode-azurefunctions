@@ -32,6 +32,6 @@ export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardCon
         const result: IConnection = await this.getConnection(wizardContext);
         const appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
         wizardContext[this._setting.name] = appSettingKey;
-        await setLocalAppSetting(wizardContext.functionAppPath, appSettingKey, result.connectionString);
+        await setLocalAppSetting(wizardContext.projectPath, appSettingKey, result.connectionString);
     }
 }

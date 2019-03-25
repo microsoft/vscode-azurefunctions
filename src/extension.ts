@@ -19,10 +19,9 @@ import { configureDeploymentSource } from './commands/configureDeploymentSource'
 import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { createChildNode } from './commands/createChildNode';
 import { createFunction } from './commands/createFunction/createFunction';
+import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
-import { initProjectForVSCode } from './commands/createNewProject/initProjectForVSCode';
-import { validateFunctionProjects } from './commands/createNewProject/validateFunctionProjects';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
@@ -31,6 +30,8 @@ import { redeployDeployment } from './commands/deployments/redeployDeployment';
 import { viewCommitInGitHub } from './commands/deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './commands/deployments/viewDeploymentLogs';
 import { editAppSetting } from './commands/editAppSetting';
+import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
+import { verifyVSCodeConfigOnActivate } from './commands/initProjectForVSCode/verifyVSCodeConfig';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
@@ -41,7 +42,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
-import { func } from './constants';
+import { func, ProjectLanguage } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -73,6 +74,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         this.properties.isActivationEvent = 'true';
         this.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
+        runPostFunctionCreateStepsFromCache();
+
         // tslint:disable-next-line:no-floating-promises
         validateFuncCoreToolsIsLatest();
 
@@ -83,10 +86,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
         callWithTelemetryAndErrorHandling(validateEventId, async function (this: IActionContext): Promise<void> {
-            await validateFunctionProjects(this, vscode.workspace.workspaceFolders);
+            await verifyVSCodeConfigOnActivate(this, vscode.workspace.workspaceFolders);
         });
         registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: vscode.WorkspaceFoldersChangeEvent): Promise<void> {
-            await validateFunctionProjects(this, event.added);
+            await verifyVSCodeConfigOnActivate(this, event.added);
         });
 
         ext.templateProviderTask = getTemplateProvider();
@@ -99,7 +102,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
             await createFunction(this, functionAppPath, templateId, functionName, functionSettings);
         });
-        registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: string, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
+        registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: ProjectLanguage, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
             await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this); });

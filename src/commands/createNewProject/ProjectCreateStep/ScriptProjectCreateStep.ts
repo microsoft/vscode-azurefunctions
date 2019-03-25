@@ -6,10 +6,13 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostFileName, hostStartCommand, localSettingsFileName, ProjectRuntime, proxiesFileName, TemplateFilter } from '../../constants';
-import { ILocalAppSettings } from '../../LocalAppSettings';
-import { confirmOverwriteFile, writeFormattedJson } from "../../utils/fs";
-import { ProjectCreatorBase } from './ProjectCreatorBase';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
+import { ILocalAppSettings } from '../../../LocalAppSettings';
+import { getFunctionsWorkerRuntime } from '../../../ProjectSettings';
+import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
+import { nonNullProp } from '../../../utils/nonNull';
+import { IProjectWizardContext } from '../IProjectWizardContext';
+import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 // https://github.com/github/gitignore/blob/master/Node.gitignore
 // tslint:disable-next-line:no-multiline-string
@@ -105,44 +108,18 @@ dist
 out
 `;
 
-/**
- * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
- */
-export class ScriptProjectCreatorBase extends ProjectCreatorBase {
-    // Default template filter to 'All' since preview languages have not been 'verified'
-    public readonly templateFilter: TemplateFilter = TemplateFilter.All;
-    public readonly functionsWorkerRuntime: string | undefined;
-    public deploySubpath: string = '.';
-    // "func extensions install" task creates C# build artifacts that should be hidden
-    // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
-    public readonly excludedFiles: string | string[] = ['obj', 'bin'];
-
+export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
 
-    public getTasksJson(runtime: ProjectRuntime): {} {
-        return {
-            version: '2.0.0',
-            tasks: [
-                {
-                    type: func,
-                    command: hostStartCommand,
-                    problemMatcher: funcWatchProblemMatcher,
-                    dependsOn: runtime === ProjectRuntime.v1 ? undefined : extInstallTaskName,
-                    isBackground: true
-                }
-            ]
-        };
-    }
-
-    public async onCreateNewProject(): Promise<void> {
-        const runtime: ProjectRuntime = await this.getRuntime();
-        const hostJsonPath: string = path.join(this.functionAppPath, hostFileName);
+    public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
+        const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
             const hostJson: {} = runtime === ProjectRuntime.v1 ? {} : { version: '2.0' };
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
-        const localSettingsJsonPath: string = path.join(this.functionAppPath, localSettingsFileName);
+        const localSettingsJsonPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath)) {
             const localSettingsJson: ILocalAppSettings = {
                 IsEncrypted: false,
@@ -151,41 +128,32 @@ export class ScriptProjectCreatorBase extends ProjectCreatorBase {
                 }
             };
 
-            if (this.functionsWorkerRuntime) {
+            const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(wizardContext.language);
+            if (functionsWorkerRuntime) {
                 // tslint:disable-next-line:no-non-null-assertion
-                localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = this.functionsWorkerRuntime;
+                localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = functionsWorkerRuntime;
             }
 
             await writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
-        const proxiesJsonPath: string = path.join(this.functionAppPath, proxiesFileName);
+        const proxiesJsonPath: string = path.join(wizardContext.projectPath, proxiesFileName);
         if (await confirmOverwriteFile(proxiesJsonPath)) {
-            const proxiesJson: {} = {
+            await writeFormattedJson(proxiesJsonPath, {
                 // tslint:disable-next-line:no-http-string
                 $schema: 'http://json.schemastore.org/proxies',
                 proxies: {}
-            };
-            await writeFormattedJson(proxiesJsonPath, proxiesJson);
+            });
         }
 
-        const gitignorePath: string = path.join(this.functionAppPath, gitignoreFileName);
+        const gitignorePath: string = path.join(wizardContext.projectPath, gitignoreFileName);
         if (await confirmOverwriteFile(gitignorePath)) {
             await fse.writeFile(gitignorePath, gitignore);
         }
 
-        const funcIgnorePath: string = path.join(this.functionAppPath, '.funcignore');
+        const funcIgnorePath: string = path.join(wizardContext.projectPath, '.funcignore');
         if (await confirmOverwriteFile(funcIgnorePath)) {
             await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
-        }
-    }
-
-    public async onInitProjectForVSCode(): Promise<void> {
-        if (!this.preDeployTask) {
-            const runtime: ProjectRuntime = await this.getRuntime();
-            if (runtime !== ProjectRuntime.v1) {
-                this.preDeployTask = extInstallTaskName;
-            }
         }
     }
 }

@@ -5,7 +5,7 @@
 
 import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, ShellExecution, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { isFunctionProject } from '../commands/createNewProject/isFunctionProject';
+import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskName } from '../constants';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 

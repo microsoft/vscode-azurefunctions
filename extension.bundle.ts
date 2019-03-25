@@ -19,10 +19,7 @@ export { activateInternal, deactivateInternal } from './src/extension';
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
 export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createNewProject/createNewProject';
-export * from './src/commands/createNewProject/initProjectForVSCode';
-export * from './src/commands/createNewProject/JavaScriptProjectCreator';
-export * from './src/commands/createNewProject/PowerShellProjectCreator';
-export * from './src/commands/createNewProject/ScriptProjectCreatorBase';
+export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
 export * from './src/constants';
 export * from './src/extensionVariables';
 export * from './src/FunctionConfig';

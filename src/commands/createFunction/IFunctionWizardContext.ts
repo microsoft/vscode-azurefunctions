@@ -3,17 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, ISubscriptionWizardContext } from "vscode-azureextensionui";
-import { ProjectLanguage, ProjectRuntime } from "../../constants";
+import { ISubscriptionWizardContext } from "vscode-azureextensionui";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
+import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
 
-export interface IFunctionWizardContext extends Partial<ISubscriptionWizardContext> {
-    functionAppPath: string;
-    runtime: ProjectRuntime;
-    language: ProjectLanguage;
-    actionContext: IActionContext;
-    template: IFunctionTemplate;
-
+export interface IFunctionWizardContext extends Partial<ISubscriptionWizardContext>, IProjectWizardContext {
+    functionTemplate?: IFunctionTemplate;
     functionName?: string;
-    newFilePath?: string;
 }

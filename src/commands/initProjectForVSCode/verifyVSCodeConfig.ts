@@ -12,48 +12,45 @@ import { ext } from '../../extensionVariables';
 import { oldFuncHostNameRegEx } from "../../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
+import { nonNullValue } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
+import { createVirtualEnviornment } from '../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
+import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { initProjectForVSCode } from './initProjectForVSCode';
-import { isFunctionProject } from './isFunctionProject';
-import { ITask, ITasksJson } from './ITasksJson';
-import { createVirtualEnviornment } from './PythonProjectCreator';
 
-export async function validateFunctionProjects(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
     actionContext.properties.isActivationEvent = 'true';
     if (folders) {
         for (const folder of folders) {
-            const folderPath: string = folder.uri.fsPath;
-            if (await isFunctionProject(folderPath)) {
+            const workspacePath: string = folder.uri.fsPath;
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspacePath);
+            if (projectPath) {
                 actionContext.suppressTelemetry = false;
 
-                if (isInitializedProject(folderPath)) {
+                if (isInitializedProject(projectPath)) {
                     actionContext.properties.isInitialized = 'true';
                     actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
 
-                    const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
+                    const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, workspacePath);
                     actionContext.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
                         case ProjectLanguage.JavaScript:
-                            await verifyJSDebugConfigIsValid(projectLanguage, folderPath, actionContext);
+                            await verifyJSDebugConfigIsValid(projectLanguage, workspacePath, actionContext);
                             break;
                         case ProjectLanguage.Java:
-                            await verifyJavaDeployConfigIsValid(projectLanguage, folderPath, actionContext);
+                            await verifyJavaDeployConfigIsValid(projectLanguage, workspacePath, actionContext);
                             break;
                         case ProjectLanguage.Python:
-                            await verifyPythonVenv(folderPath, actionContext);
+                            await verifyPythonVenv(projectPath, actionContext);
                             break;
                         default:
                     }
                 } else {
                     actionContext.properties.isInitialized = 'false';
-                    if (await promptToInitializeProject(folderPath)) {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creating', 'Initializing project...') }, async () => {
-                            await initProjectForVSCode(actionContext, folderPath);
-                        });
-                        // don't wait
-                        vscode.window.showInformationMessage(localize('finishedInit', 'Finished initializing project.'));
+                    if (await promptToInitializeProject(workspacePath)) {
+                        await initProjectForVSCode(actionContext, workspacePath);
                     }
                 }
             }
@@ -61,16 +58,35 @@ export async function validateFunctionProjects(actionContext: IActionContext, fo
     }
 }
 
-async function promptToInitializeProject(folderPath: string): Promise<boolean> {
+/**
+ * Simpler function than `verifyVSCodeConfigOnActivate` to be used right before an operation that requires the project to be initialized for VS Code
+ */
+export async function verifyInitForVSCode(actionContext: IActionContext, fsPath: string, language?: string, runtime?: string): Promise<[ProjectLanguage, ProjectRuntime]> {
+    language = language || getFuncExtensionSetting(projectLanguageSetting, fsPath);
+    runtime = convertStringToRuntime(runtime || getFuncExtensionSetting(projectRuntimeSetting, fsPath));
+
+    if (!language || !runtime) {
+        const message: string = localize('initFolder', 'Initialize project for use with VS Code?');
+        // No need to check result - cancel will throw a UserCancelledError
+        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        await initProjectForVSCode(actionContext, fsPath);
+        language = nonNullValue(getFuncExtensionSetting(projectLanguageSetting, fsPath));
+        runtime = nonNullValue(getFuncExtensionSetting(projectRuntimeSetting, fsPath));
+    }
+
+    return [<ProjectLanguage>language, <ProjectRuntime>runtime];
+}
+
+async function promptToInitializeProject(workspacePath: string): Promise<boolean> {
     const settingKey: string = 'showProjectWarning';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
-        const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(folderPath));
+        const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(workspacePath));
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
         } else if (result === DialogResponses.learnMore) {
             await openUrl('https://aka.ms/azFuncProject');
-            return await promptToInitializeProject(folderPath);
+            return await promptToInitializeProject(workspacePath);
         } else {
             return true;
         }
@@ -79,9 +95,9 @@ async function promptToInitializeProject(folderPath: string): Promise<boolean> {
     return false;
 }
 
-function isInitializedProject(folderPath: string): boolean {
-    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folderPath);
-    const runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, folderPath);
+function isInitializedProject(projectPath: string): boolean {
+    const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, projectPath);
+    const runtime: string | undefined = getFuncExtensionSetting(projectRuntimeSetting, projectPath);
     return !!language && !!runtime;
 }
 
@@ -89,10 +105,10 @@ function isInitializedProject(folderPath: string): boolean {
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
+async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, actionContext: IActionContext): Promise<void> {
     const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
     if (localProjectRuntime === ProjectRuntime.v2) {
-        const tasksJsonPath: string = path.join(folderPath, vscodeFolderName, tasksFileName);
+        const tasksJsonPath: string = path.join(workspacePath, vscodeFolderName, tasksFileName);
         const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 
         const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
@@ -109,9 +125,9 @@ async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, f
                 const settingKey: string = 'showDebugConfigWarning';
                 const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
                 const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
-                if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+                if (await promptToUpdateProject(workspacePath, settingKey, message, learnMoreLink)) {
                     actionContext.suppressErrorDisplay = false;
-                    await initProjectForVSCode(actionContext, folderPath, projectLanguage);
+                    await initProjectForVSCode(actionContext, workspacePath, projectLanguage);
                     actionContext.properties.updatedDebugConfig = 'true';
                 }
             }
@@ -119,9 +135,9 @@ async function verifyJSDebugConfigIsValid(projectLanguage: string | undefined, f
     }
 }
 
-async function verifyJavaDeployConfigIsValid(projectLanguage: string | undefined, folderPath: string, actionContext: IActionContext): Promise<void> {
-    const preDeployTask: string | undefined = getFuncExtensionSetting<string>(preDeployTaskSetting, folderPath);
-    const deploySubPath: string | undefined = getFuncExtensionSetting<string>(deploySubpathSetting, folderPath);
+async function verifyJavaDeployConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, actionContext: IActionContext): Promise<void> {
+    const preDeployTask: string | undefined = getFuncExtensionSetting<string>(preDeployTaskSetting, workspacePath);
+    const deploySubPath: string | undefined = getFuncExtensionSetting<string>(deploySubpathSetting, workspacePath);
 
     if (!preDeployTask && !deploySubPath) {
         actionContext.properties.javaDeployConfigValid = 'false';
@@ -129,9 +145,9 @@ async function verifyJavaDeployConfigIsValid(projectLanguage: string | undefined
         const settingKey: string = 'showJavaDeployConfigWarning';
         const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
         const learnMoreLink: string = 'https://aka.ms/AA41zno';
-        if (await promptToUpdateProject(folderPath, settingKey, message, learnMoreLink)) {
+        if (await promptToUpdateProject(workspacePath, settingKey, message, learnMoreLink)) {
             actionContext.suppressErrorDisplay = false;
-            await initProjectForVSCode(actionContext, folderPath, projectLanguage);
+            await initProjectForVSCode(actionContext, workspacePath, projectLanguage);
             actionContext.properties.updatedJavaDebugConfig = 'true';
         }
     }
@@ -156,9 +172,9 @@ async function promptToUpdateProject(fsPath: string, settingKey: string, message
     return false;
 }
 
-async function verifyPythonVenv(folderPath: string, actionContext: IActionContext): Promise<void> {
-    const venvName: string | undefined = getFuncExtensionSetting(pythonVenvSetting, folderPath);
-    if (venvName && !await fse.pathExists(path.join(folderPath, venvName))) {
+async function verifyPythonVenv(projectPath: string, actionContext: IActionContext): Promise<void> {
+    const venvName: string | undefined = getFuncExtensionSetting(pythonVenvSetting, projectPath);
+    if (venvName && !await fse.pathExists(path.join(projectPath, venvName))) {
         actionContext.properties.pythonVenvExists = 'false';
 
         const settingKey: string = 'showPythonVenvWarning';
@@ -170,7 +186,7 @@ async function verifyPythonVenv(folderPath: string, actionContext: IActionContex
                 actionContext.suppressErrorDisplay = false;
                 await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                     // create venv
-                    await createVirtualEnviornment(venvName, folderPath);
+                    await createVirtualEnviornment(venvName, projectPath);
                 });
 
                 actionContext.properties.createdPythonVenv = 'true';
@@ -181,4 +197,19 @@ async function verifyPythonVenv(folderPath: string, actionContext: IActionContex
             }
         }
     }
+}
+
+interface ITasksJson {
+    tasks: ITask[];
+}
+
+interface ITask {
+    label: string;
+    options?: ITaskOptions;
+}
+
+interface ITaskOptions {
+    env?: {
+        [key: string]: string;
+    };
 }

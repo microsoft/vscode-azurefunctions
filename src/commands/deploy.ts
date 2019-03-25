@@ -14,7 +14,7 @@ import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, getProjectLanguage, getProjectRuntime, updateGlobalSetting, updateWorkspaceSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
@@ -24,6 +24,7 @@ import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { openUrl } from '../utils/openUrl';
 import * as workspaceUtil from '../utils/workspace';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { verifyInitForVSCode } from './initProjectForVSCode/verifyVSCodeConfig';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
@@ -44,8 +45,10 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         node = target;
     }
 
-    const folderOpenWarning: string = localize('folderOpenWarning', 'Failed to deploy because the folder is not open in a workspace. Open in a workspace and try again.');
-    const workspaceFsPath: string = await workspaceUtil.ensureFolderIsOpen(deployFsPath, this, folderOpenWarning, true /* allowSubFolder */);
+    const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(deployFsPath);
+    if (!workspaceFolder) {
+        throw new Error(localize('folderOpenWarning', 'Failed to deploy because the path is not part of an open workspace. Open in a workspace and try again.'));
+    }
 
     if (!node) {
         if (!functionAppId || typeof functionAppId !== 'string') {
@@ -72,9 +75,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     const confirmDeployment: boolean = !newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
 
     const client: appservice.SiteClient = node.root.client;
-    const language: ProjectLanguage = await getProjectLanguage(deployFsPath, ext.ui);
+    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(this, deployFsPath);
     telemetryProperties.projectLanguage = language;
-    const runtime: ProjectRuntime = await getProjectRuntime(language, deployFsPath, ext.ui);
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
@@ -99,7 +101,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
-        deployFsPath = workspaceFsPath;
+        deployFsPath = workspaceFolder.uri.fsPath;
     }
 
     if (isZipDeploy) {

@@ -9,7 +9,7 @@ import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptSt
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
-import { convertStringToRuntime, getFuncExtensionSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getFunctionsWorkerRuntime } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -135,29 +135,8 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 }
 
 function setBasicCreateDefaults(wizardContext: IAppServiceWizardContext, language: string | undefined): void {
-    wizardContext.newSiteOS = WebsiteOS.windows;
-    switch (language) {
-        case ProjectLanguage.JavaScript:
-        case ProjectLanguage.TypeScript:
-            wizardContext.newSiteRuntime = 'node';
-            break;
-        case ProjectLanguage.CSharp:
-        case ProjectLanguage.FSharp:
-            wizardContext.newSiteRuntime = 'dotnet';
-            break;
-        case ProjectLanguage.Java:
-            wizardContext.newSiteRuntime = 'java';
-            break;
-        case ProjectLanguage.Python:
-            wizardContext.newSiteRuntime = 'python';
-            wizardContext.newSiteOS = WebsiteOS.linux;
-            break;
-        case ProjectLanguage.PowerShell:
-            wizardContext.newSiteRuntime = 'powershell';
-            break;
-        default:
-    }
-
+    wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
+    wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
     SiteOSStep.setLocationsTask(wizardContext);
 }
 

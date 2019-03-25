@@ -43,6 +43,9 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 
     // tslint:disable-next-line:strict-boolean-expressions
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
+
+    // set AzureWebJobsStorage so that it doesn't prompt during tests
+    process.env.AzureWebJobsStorage = 'ignore';
 });
 
 suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {

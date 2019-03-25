@@ -5,7 +5,11 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { hostFileName } from '../../constants';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../localize';
+import { createNewProject } from './createNewProject';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -28,5 +32,21 @@ export async function tryGetFunctionProjectRoot(folderPath: string): Promise<str
             }
         }));
         return matchingSubpaths.length === 1 ? path.join(folderPath, matchingSubpaths[0]) : undefined;
+    }
+}
+
+/**
+ * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
+ */
+export async function verifyAndPromptToCreateProject(actionContext: IActionContext, fsPath: string): Promise<string | undefined> {
+    const projectPath: string | undefined = await tryGetFunctionProjectRoot(fsPath);
+    if (!projectPath) {
+        const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
+        // No need to check result - cancel will throw a UserCancelledError
+        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        await createNewProject(actionContext, fsPath);
+        return undefined;
+    } else {
+        return projectPath;
     }
 }

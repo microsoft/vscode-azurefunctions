@@ -4,19 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { Progress } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { localize } from "../../../localize";
+import { IActionContext } from 'vscode-azureextensionui';
+import { ProjectRuntime } from '../../../constants';
 import { executeDotnetTemplateCommand } from '../../../templates/executeDotnetTemplateCommand';
+import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
+import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
-export class DotnetFunctionCreateStep extends AzureWizardExecuteStep<IDotnetFunctionWizardContext> {
-    public async execute(wizardContext: IDotnetFunctionWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        progress.report({ message: localize('creatingFunction', 'Creating {0}...', wizardContext.template.name) });
-        await dotnetUtils.validateDotnetInstalled(wizardContext.actionContext);
+export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
+    private constructor() {
+        super();
+    }
+
+    public static async createStep(actionContext: IActionContext): Promise<DotnetFunctionCreateStep> {
+        await dotnetUtils.validateDotnetInstalled(actionContext);
+        return new DotnetFunctionCreateStep();
+    }
+
+    public async executeCore(wizardContext: IDotnetFunctionWizardContext): Promise<string> {
+        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
 
         const args: string[] = [];
         args.push('--arg:name');
@@ -25,18 +34,15 @@ export class DotnetFunctionCreateStep extends AzureWizardExecuteStep<IDotnetFunc
         args.push('--arg:namespace');
         args.push(cpUtils.wrapArgInQuotes(nonNullProp(wizardContext, 'namespace')));
 
-        for (const setting of wizardContext.template.userPromptedSettings) {
+        for (const setting of template.userPromptedSettings) {
             args.push(`--arg:${setting.name}`);
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
             args.push(cpUtils.wrapArgInQuotes(wizardContext[setting.name] || ''));
         }
 
-        await executeDotnetTemplateCommand(wizardContext.runtime, wizardContext.functionAppPath, 'create', '--identity', wizardContext.template.id, ...args);
+        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
+        await executeDotnetTemplateCommand(runtime, wizardContext.projectPath, 'create', '--identity', template.id, ...args);
 
-        wizardContext.newFilePath = path.join(wizardContext.functionAppPath, `${wizardContext.functionName}.cs`);
-    }
-
-    public shouldExecute(wizardContext: IDotnetFunctionWizardContext): boolean {
-        return !wizardContext.newFilePath;
+        return path.join(wizardContext.projectPath, `${wizardContext.functionName}.cs`);
     }
 }

@@ -3,17 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export interface ITasksJson {
-    tasks: ITask[];
-}
+import { DebugConfiguration } from "vscode";
+import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
+import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
-export interface ITask {
-    label: string;
-    options?: ITaskOptions;
-}
-
-export interface ITaskOptions {
-    env?: {
-        [key: string]: string;
-    };
+export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
+    protected getDebugConfiguration(): DebugConfiguration {
+        return nodeDebugConfig;
+    }
 }

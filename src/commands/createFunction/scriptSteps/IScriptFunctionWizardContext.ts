@@ -7,5 +7,5 @@ import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates
 import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export interface IScriptFunctionWizardContext extends IFunctionWizardContext {
-    template: IScriptFunctionTemplate;
+    functionTemplate?: IScriptFunctionTemplate;
 }

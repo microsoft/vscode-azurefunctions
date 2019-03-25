@@ -14,8 +14,7 @@ export function getJavaScriptValidateOptions(): IValidateProjectOptions {
             projectLanguage: ProjectLanguage.JavaScript,
             projectRuntime: ProjectRuntime.v2,
             deploySubpath: '.',
-            preDeployTask: 'func: extensions install',
-            templateFilter: 'Verified'
+            preDeployTask: 'func: extensions install'
         },
         expectedPaths: [
         ],
@@ -30,8 +29,7 @@ export function getTypeScriptValidateOptions(): IValidateProjectOptions {
             projectLanguage: ProjectLanguage.TypeScript,
             projectRuntime: ProjectRuntime.v2,
             deploySubpath: '.',
-            preDeployTask: 'prune',
-            templateFilter: 'Verified'
+            preDeployTask: 'npm prune'
         },
         expectedPaths: [
             'tsconfig.json',
@@ -48,8 +46,7 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
             projectLanguage: ProjectLanguage.CSharp,
             projectRuntime: ProjectRuntime.v2,
             preDeployTask: 'publish',
-            deploySubpath: `bin/Release/${targetFramework}/publish`,
-            templateFilter: 'Verified'
+            deploySubpath: `bin/Release/${targetFramework}/publish`
         },
         expectedPaths: [
             `${projectName}.csproj`
@@ -69,8 +66,7 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
             projectLanguage: ProjectLanguage.FSharp,
             projectRuntime: ProjectRuntime.v2,
             preDeployTask: 'publish',
-            deploySubpath: `bin/Release/${targetFramework}/publish`,
-            templateFilter: 'Verified'
+            deploySubpath: `bin/Release/${targetFramework}/publish`
         },
         expectedPaths: [
             `${projectName}.fsproj`
@@ -92,7 +88,6 @@ export function getPythonValidateOptions(projectName: string, venvName: string):
             projectRuntime: ProjectRuntime.v2,
             preDeployTask: 'func: pack',
             deploySubpath: `${projectName}.zip`,
-            templateFilter: 'Verified',
             pythonVenv: venvName
         },
         expectedPaths: [
@@ -110,8 +105,7 @@ export function getJavaValidateOptions(appName: string): IValidateProjectOptions
             projectLanguage: ProjectLanguage.Java,
             projectRuntime: ProjectRuntime.v2,
             preDeployTask: 'package',
-            deploySubpath: `target/azure-functions/${appName}/`,
-            templateFilter: 'Verified'
+            deploySubpath: `target/azure-functions/${appName}/`
         },
         expectedPaths: [
             'src',
@@ -126,13 +120,12 @@ export function getJavaValidateOptions(appName: string): IValidateProjectOptions
     };
 }
 
-export function getCSharpScriptValidateOptions(runtime: ProjectRuntime = ProjectRuntime.v2): IValidateProjectOptions {
+export function getDotnetScriptValidateOptions(language: ProjectLanguage, runtime: ProjectRuntime = ProjectRuntime.v2): IValidateProjectOptions {
     return {
         expectedSettings: {
-            projectLanguage: ProjectLanguage.CSharpScript,
+            projectLanguage: language,
             projectRuntime: runtime,
-            deploySubpath: '.',
-            templateFilter: 'Core'
+            deploySubpath: '.'
         },
         expectedPaths: [
         ],
@@ -148,8 +141,7 @@ export function getPowerShellValidateOptions(): IValidateProjectOptions {
             projectLanguage: ProjectLanguage.PowerShell,
             projectRuntime: ProjectRuntime.v2,
             deploySubpath: '.',
-            preDeployTask: 'func: extensions install',
-            templateFilter: 'Verified'
+            preDeployTask: 'func: extensions install'
         },
         expectedPaths: [
             'profile.ps1'
@@ -164,8 +156,7 @@ export function getScriptValidateOptions(language: string): IValidateProjectOpti
     return {
         expectedSettings: {
             projectLanguage: language,
-            projectRuntime: ProjectRuntime.v2,
-            templateFilter: 'All'
+            projectRuntime: ProjectRuntime.v2
         },
         expectedPaths: [
         ],

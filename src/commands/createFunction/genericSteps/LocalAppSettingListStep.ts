@@ -29,7 +29,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
     }
 
     public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
-        const localSettingsPath: string = path.join(wizardContext.functionAppPath, localSettingsFileName);
+        const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
         if (settings.Values) {
             const existingSettings: string[] = Object.keys(settings.Values);
@@ -78,7 +78,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
             if (subscriptionPromptStep) {
                 azurePromptSteps.unshift(subscriptionPromptStep);
             }
-            return { promptSteps: azurePromptSteps, executeSteps: azureExecuteSteps, title: 'test' };
+            return { promptSteps: azurePromptSteps, executeSteps: azureExecuteSteps };
         } else {
             return undefined;
         }

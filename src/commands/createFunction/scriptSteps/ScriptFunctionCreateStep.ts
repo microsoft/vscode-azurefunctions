@@ -5,13 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Progress } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../../constants';
 import { IFunctionJson } from '../../../FunctionConfig';
-import { localize } from "../../../localize";
+import { localize } from '../../../localize';
+import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
+import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export function getScriptFileNameFromLanguage(language: string): string | undefined {
@@ -39,36 +39,33 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
     }
 }
 
-export class ScriptFunctionCreateStep extends AzureWizardExecuteStep<IScriptFunctionWizardContext> {
-    public async execute(wizardContext: IScriptFunctionWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        progress.report({ message: localize('creatingFunction', 'Creating {0}...', wizardContext.template.name) });
-
-        const functionPath: string = path.join(wizardContext.functionAppPath, nonNullProp(wizardContext, 'functionName'));
+export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
+    public async executeCore(wizardContext: IScriptFunctionWizardContext): Promise<string> {
+        const functionPath: string = path.join(wizardContext.projectPath, nonNullProp(wizardContext, 'functionName'));
+        const template: IScriptFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
         await fse.ensureDir(functionPath);
-        await Promise.all(Object.keys(wizardContext.template.templateFiles).map(async fileName => {
-            await fse.writeFile(path.join(functionPath, fileName), wizardContext.template.templateFiles[fileName]);
+        await Promise.all(Object.keys(template.templateFiles).map(async f => {
+            await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
         }));
 
-        for (const setting of wizardContext.template.userPromptedSettings) {
+        for (const setting of template.userPromptedSettings) {
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            wizardContext.template.functionConfig.inBinding[setting.name] = wizardContext[setting.name] || '';
+            template.functionConfig.inBinding[setting.name] = wizardContext[setting.name] || '';
         }
 
-        const functionJson: IFunctionJson = wizardContext.template.functionConfig.functionJson;
+        const functionJson: IFunctionJson = template.functionConfig.functionJson;
         if (this.editFunctionJson) {
             await this.editFunctionJson(wizardContext, functionJson);
         }
 
         await fsUtil.writeFormattedJson(path.join(functionPath, 'function.json'), functionJson);
 
-        const scriptFileName: string | undefined = getScriptFileNameFromLanguage(wizardContext.language);
-        if (scriptFileName) {
-            wizardContext.newFilePath = path.join(functionPath, scriptFileName);
+        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+        const fileName: string | undefined = getScriptFileNameFromLanguage(language);
+        if (!fileName) {
+            throw new RangeError(localize('invalidLanguage', 'Invalid language "{0}".', language));
         }
-    }
-
-    public shouldExecute(wizardContext: IScriptFunctionWizardContext): boolean {
-        return !wizardContext.newFilePath;
+        return path.join(functionPath, fileName);
     }
 
     protected editFunctionJson?(wizardContext: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;

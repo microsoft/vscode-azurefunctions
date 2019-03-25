@@ -5,7 +5,7 @@
 
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { tryGetFunctionProjectRoot } from '../commands/createNewProject/isFunctionProject';
+import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';

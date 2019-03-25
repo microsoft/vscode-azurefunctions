@@ -7,7 +7,6 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensionui';
 import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { testFolderPath } from './global.test';
@@ -201,13 +200,8 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureFile(path.join(projectPath, '.gitignore'));
         await fse.ensureDir(path.join(projectPath, '.git'));
 
-        inputs.unshift(projectPath); // Select the test func app folder
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
-        }
-
         ext.ui = new TestUserInput(inputs);
-        await initProjectForVSCode({ properties: {}, measurements: {} });
+        await initProjectForVSCode({ properties: {}, measurements: {} }, projectPath);
         assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
     }
 });
