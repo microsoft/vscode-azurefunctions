@@ -734,6 +734,11 @@
                         "type": "string",
                         "description": "%azFunc.deploySubpathDescription%"
                     },
+                    "azureFunctions.projectSubpath": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azFunc.projectSubpathDescription%"
+                    },
                     "azureFunctions.showCoreToolsWarning": {
                         "type": "boolean",
                         "description": "%azFunc.showCoreToolsWarningDescription%",

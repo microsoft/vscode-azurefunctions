@@ -22,6 +22,8 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
     actionContext.properties.isActivationEvent = 'true';
+    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
+
     if (folders) {
         for (const folder of folders) {
             const workspacePath: string = folder.uri.fsPath;
@@ -31,7 +33,6 @@ export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext
 
                 if (isInitializedProject(projectPath)) {
                     actionContext.properties.isInitialized = 'true';
-                    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
 
                     const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, workspacePath);
                     actionContext.properties.projectLanguage = projectLanguage;

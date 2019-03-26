@@ -31,6 +31,7 @@
     "azFunc.appSettings.toggleSlotSetting": "Toggle as Slot Setting",
     "azFunc.pickProcess": "Pick Process",
     "azFunc.deploySubpathDescription": "The default subpath of a workspace folder to use when deploying. If set, you will not be prompted for the folder path when deploying.",
+    "azFunc.projectSubpathDescription": "The default subpath of a workspace folder to use for project operations. This is only necessary if you have multiple projects in one workspace. See https://aka.ms/AA4nmfy for more information.",
     "azFunc.showCoreToolsWarningDescription": "Show a warning if your installed version of Azure Functions Core Tools is out-of-date.",
     "azFunc.showMultiCoreToolsWarningDescription": "Show a warning if multiple installs of Azure Functions Core Tools are detected.",
     "azFunc.show64BitWarningDescription": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
