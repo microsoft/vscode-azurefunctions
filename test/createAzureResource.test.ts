@@ -10,6 +10,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
+import { runWithFuncSetting } from './runWithSetting';
 
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(1200 * 1000);
@@ -57,7 +58,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const resourceName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         resourceGroupsToDelete.push(resourceName);
 
-        const testInputs: string[] = [resourceName, '$(plus) Create new resource group', resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
+        const testInputs: string[] = [resourceName];
         ext.ui = new TestUserInput(testInputs);
         await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
@@ -73,26 +74,27 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
     test('createFunctionApp API', async () => {
         const resourceGroupName: string = getRandomHexString();
-        const storageAccountName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         resourceGroupsToDelete.push(resourceGroupName);
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
 
-        const functionAppName1: string = getRandomHexString();
-        const testInputs1: string[] = [functionAppName1, '$(plus) Create new storage account', storageAccountName, 'West US'];
+        const appAndStorageName1: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
+        const testInputs1: string[] = [appAndStorageName1];
         ext.ui = new TestUserInput(testInputs1);
         const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp1: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName1);
+        const createdApp1: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, appAndStorageName1);
         assert.ok(createdApp1, 'Function app with new rg/sa failed.');
         assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
 
-        // Create another function app, but use the existing resource group and storage account
-        const functionAppName2: string = getRandomHexString();
-        const testInputs2: string[] = [functionAppName2, storageAccountName];
-        ext.ui = new TestUserInput(testInputs2);
-        const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp2: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName2);
-        assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
-        assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
+        // Create another function app, but use the existing resource group and storage account through advanced creation
+        await runWithFuncSetting('advancedCreation', 'true', async () => {
+            const functionAppName2: string = getRandomHexString();
+            const testInputs2: string[] = [functionAppName2, 'Windows', 'JavaScript', appAndStorageName1];
+            ext.ui = new TestUserInput(testInputs2);
+            const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
+            const createdApp2: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName2);
+            assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
+            assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
+        });
 
         // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });

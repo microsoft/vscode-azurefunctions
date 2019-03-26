@@ -12,5 +12,5 @@ export async function openInPortal(node?: AzureTreeItem): Promise<void> {
         node = await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
     }
 
-    node.openInPortal();
+    await node.openInPortal();
 }
