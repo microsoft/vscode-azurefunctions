@@ -7,50 +7,50 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
-import { tryGetCsprojFile, tryGetFsprojFile } from './DotnetProjectCreator';
+import { tryGetCsprojFile, tryGetFsprojFile } from './InitVSCodeStep/DotnetInitVSCodeStep';
 
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
-export async function detectProjectLanguage(functionAppPath: string): Promise<ProjectLanguage | undefined> {
-    const detectedLangs: ProjectLanguage[] = await detectScriptLanguages(functionAppPath);
+export async function detectProjectLanguage(projectPath: string): Promise<ProjectLanguage | undefined> {
+    const detectedLangs: ProjectLanguage[] = await detectScriptLanguages(projectPath);
 
-    if (await isJavaProject(functionAppPath)) {
+    if (await isJavaProject(projectPath)) {
         detectedLangs.push(ProjectLanguage.Java);
     }
 
-    if (await isCSharpProject(functionAppPath)) {
+    if (await isCSharpProject(projectPath)) {
         detectedLangs.push(ProjectLanguage.CSharp);
     }
 
-    if (await isFSharpProject(functionAppPath)) {
+    if (await isFSharpProject(projectPath)) {
         detectedLangs.push(ProjectLanguage.FSharp);
     }
 
     return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
 }
 
-async function isJavaProject(functionAppPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(functionAppPath, 'pom.xml'));
+async function isJavaProject(projectPath: string): Promise<boolean> {
+    return await fse.pathExists(path.join(projectPath, 'pom.xml'));
 }
 
-async function isCSharpProject(functionAppPath: string): Promise<boolean> {
-    return !!await tryGetCsprojFile(functionAppPath);
+async function isCSharpProject(projectPath: string): Promise<boolean> {
+    return !!await tryGetCsprojFile(projectPath);
 }
 
-async function isFSharpProject(functionAppPath: string): Promise<boolean> {
-    return !!await tryGetFsprojFile(functionAppPath);
+async function isFSharpProject(projectPath: string): Promise<boolean> {
+    return !!await tryGetFsprojFile(projectPath);
 }
 
 /**
  * Script projects will always be in the following structure: <Root project dir>/<function dir>/<function script file>
  * To detect the language, we can check for any "function script file" that matches the well-known filename for each language
  */
-async function detectScriptLanguages(functionAppPath: string): Promise<ProjectLanguage[]> {
+async function detectScriptLanguages(projectPath: string): Promise<ProjectLanguage[]> {
     const subDirs: string[] = [];
-    const subpaths: string[] = await fse.readdir(functionAppPath);
+    const subpaths: string[] = await fse.readdir(projectPath);
     for (const subpath of subpaths) {
-        const fullPath: string = path.join(functionAppPath, subpath);
+        const fullPath: string = path.join(projectPath, subpath);
         const stats: fse.Stats = await fse.lstat(fullPath);
         if (stats.isDirectory()) {
             subDirs.push(fullPath);

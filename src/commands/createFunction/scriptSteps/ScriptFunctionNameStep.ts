@@ -5,35 +5,22 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { functionNameInvalidMessage, functionNameRegex } from '../../../constants';
-import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
+import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
+import { nonNullProp } from '../../../utils/nonNull';
+import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
-export class ScriptFunctionNameStep extends AzureWizardPromptStep<IScriptFunctionWizardContext> {
-    public async prompt(wizardContext: IScriptFunctionWizardContext): Promise<void> {
-        const defaultFunctionName: string | undefined = await fsUtil.getUniqueFsPath(wizardContext.functionAppPath, wizardContext.template.defaultFunctionName);
-        wizardContext.functionName = await ext.ui.showInputBox({
-            placeHolder: localize('funcNamePlaceholder', 'Function name'),
-            prompt: localize('funcNamePrompt', 'Provide a function name'),
-            validateInput: (s: string): string | undefined => this.validateTemplateName(wizardContext, s),
-            value: defaultFunctionName || wizardContext.template.defaultFunctionName
-        });
+export class ScriptFunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
+    protected async getUniqueFunctionName(wizardContext: IScriptFunctionWizardContext): Promise<string | undefined> {
+        const template: IScriptFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
+        return await fsUtil.getUniqueFsPath(wizardContext.projectPath, template.defaultFunctionName);
     }
 
-    public shouldPrompt(wizardContext: IScriptFunctionWizardContext): boolean {
-        return !wizardContext.functionName;
-    }
-
-    private validateTemplateName(wizardContext: IScriptFunctionWizardContext, name: string | undefined): string | undefined {
-        if (!name) {
-            return localize('emptyTemplateNameError', 'The template name cannot be empty.');
-        } else if (fse.existsSync(path.join(wizardContext.functionAppPath, name))) {
+    protected async validateFunctionNameCore(wizardContext: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
+        if (await fse.pathExists(path.join(wizardContext.projectPath, name))) {
             return localize('existingFolderError', 'A folder with the name "{0}" already exists.', name);
-        } else if (!functionNameRegex.test(name)) {
-            return functionNameInvalidMessage;
         } else {
             return undefined;
         }

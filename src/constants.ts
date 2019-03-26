@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from "./localize";
-
 export const isWindows: boolean = /^win/.test(process.platform);
 
 export const extensionPrefix: string = 'azureFunctions';
@@ -16,6 +14,7 @@ export const templateVersionSetting: string = 'templateVersion';
 export const preDeployTaskSetting: string = 'preDeployTask';
 export const filesExcludeSetting: string = 'files.exclude';
 export const pythonVenvSetting: string = 'pythonVenv';
+export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 
 export enum ProjectLanguage {
     Bash = 'Bash',
@@ -53,6 +52,7 @@ export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const proxiesFileName: string = 'proxies.json';
 export const tasksFileName: string = 'tasks.json';
+export const launchFileName: string = 'launch.json';
 export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
@@ -93,6 +93,3 @@ export const localhost: string = '127.0.0.1';
 
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
-
-export const functionNameRegex: RegExp = /^[a-zA-Z][a-zA-Z\d_\-]*$/;
-export const functionNameInvalidMessage: string = localize('functionNameInvalidMessage', 'Function name must start with a letter and can only contain letters, digits, "_" and "-"');

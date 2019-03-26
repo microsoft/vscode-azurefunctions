@@ -15,7 +15,7 @@ export class TypeScriptFunctionCreateStep extends ScriptFunctionCreateStep {
     protected async editFunctionJson(wizardContext: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void> {
         let outDir: string = tsDefaultOutDir;
         try {
-            const tsconfigPath: string = path.join(wizardContext.functionAppPath, tsConfigFileName);
+            const tsconfigPath: string = path.join(wizardContext.projectPath, tsConfigFileName);
             // tslint:disable-next-line:no-unsafe-any
             outDir = (await fse.readJSON(tsconfigPath)).compilerOptions.outDir;
         } catch {

@@ -13,9 +13,9 @@ import { openUrl } from './openUrl';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
-    export async function validateMavenInstalled(actionContext: IActionContext, workingDirectory: string | undefined): Promise<void> {
+    export async function validateMavenInstalled(actionContext: IActionContext): Promise<void> {
         try {
-            await cpUtils.executeCommand(undefined, workingDirectory, mvnCommand, '--version');
+            await cpUtils.executeCommand(undefined, undefined, mvnCommand, '--version');
         } catch (error) {
             const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
             // don't wait

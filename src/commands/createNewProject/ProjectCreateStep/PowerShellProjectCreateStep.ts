@@ -5,10 +5,10 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { profileps1FileName, TemplateFilter } from "../../constants";
-import { powershellDebugConfig } from "../../debug/PowerShellDebugProvider";
-import { confirmOverwriteFile } from "../../utils/fs";
-import { ScriptProjectCreatorBase } from './ScriptProjectCreatorBase';
+import { profileps1FileName } from "../../../constants";
+import { confirmOverwriteFile } from "../../../utils/fs";
+import { IProjectWizardContext } from '../IProjectWizardContext';
+import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 const profileps1: string = `# Azure Functions profile.ps1
 #
@@ -33,27 +33,13 @@ if ($env:MSI_SECRET -and (Get-Module -ListAvailable Az.Accounts)) {
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
 `;
 
-export class PowerShellProjectCreator extends ScriptProjectCreatorBase {
-    public readonly templateFilter: TemplateFilter = TemplateFilter.Verified;
-    public readonly functionsWorkerRuntime: string | undefined = 'powershell';
+export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
+    public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+        await super.executeCore(wizardContext);
 
-    public getLaunchJson(): {} {
-        return {
-            version: '0.2.0',
-            configurations: [powershellDebugConfig]
-        };
-    }
-
-    public async onCreateNewProject(): Promise<void> {
-        await super.onCreateNewProject();
-
-        const profileps1Path: string = path.join(this.functionAppPath, profileps1FileName);
+        const profileps1Path: string = path.join(wizardContext.projectPath, profileps1FileName);
         if (await confirmOverwriteFile(profileps1Path)) {
             await fse.writeFile(profileps1Path, profileps1);
         }
-    }
-
-    public getRecommendedExtensions(): string[] {
-        return super.getRecommendedExtensions().concat(['ms-vscode.PowerShell']);
     }
 }

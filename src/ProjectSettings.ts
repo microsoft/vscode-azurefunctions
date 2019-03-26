@@ -3,16 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
-import * as path from 'path';
-import { ConfigurationTarget, MessageItem, QuickPickItem, QuickPickOptions, Uri, workspace, WorkspaceConfiguration } from "vscode";
-import { DialogResponses, IAzureQuickPickItem, IAzureQuickPickOptions, IAzureUserInput } from 'vscode-azureextensionui';
-import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from './constants';
+import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
+import { extensionPrefix, ProjectLanguage, ProjectRuntime } from './constants';
 import { ext } from './extensionVariables';
 import { localize } from "./localize";
 import { openUrl } from './utils/openUrl';
-
-const previewDescription: string = localize('previewDescription', '(Preview)');
 
 export async function updateGlobalSetting<T = string>(section: string, value: T, prefix: string = extensionPrefix): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
@@ -22,26 +18,6 @@ export async function updateGlobalSetting<T = string>(section: string, value: T,
 export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, Uri.file(fsPath));
     await projectConfiguration.update(section, value);
-}
-
-export async function promptForProjectLanguage(ui: IAzureUserInput): Promise<ProjectLanguage> {
-    const picks: QuickPickItem[] = [
-        { label: ProjectLanguage.JavaScript },
-        { label: ProjectLanguage.CSharp },
-        { label: ProjectLanguage.FSharp },
-        { label: ProjectLanguage.CSharpScript },
-        { label: ProjectLanguage.FSharpScript },
-        { label: ProjectLanguage.Bash, description: previewDescription },
-        { label: ProjectLanguage.Batch, description: previewDescription },
-        { label: ProjectLanguage.Java },
-        { label: ProjectLanguage.PHP, description: previewDescription },
-        { label: ProjectLanguage.PowerShell, description: previewDescription },
-        { label: ProjectLanguage.Python, description: previewDescription },
-        { label: ProjectLanguage.TypeScript }
-    ];
-
-    const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
-    return <ProjectLanguage>(await ui.showQuickPick(picks, options)).label;
 }
 
 export async function promptForProjectRuntime(message?: string): Promise<ProjectRuntime> {
@@ -63,19 +39,6 @@ export async function promptForProjectRuntime(message?: string): Promise<Project
     return runtime;
 }
 
-export async function selectTemplateFilter(projectPath: string, ui: IAzureUserInput): Promise<TemplateFilter> {
-    const picks: QuickPickItem[] = [
-        { label: TemplateFilter.Verified, description: localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)') },
-        { label: TemplateFilter.Core, description: '' },
-        { label: TemplateFilter.All, description: '' }
-    ];
-
-    const options: QuickPickOptions = { placeHolder: localize('selectFilter', 'Select a template filter') };
-    const result: string = (await ui.showQuickPick(picks, options)).label;
-    await updateWorkspaceSetting(templateFilterSetting, result, projectPath);
-    return <TemplateFilter>result;
-}
-
 export function getGlobalFuncExtensionSetting<T>(key: string, prefix: string = extensionPrefix): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
     const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
@@ -85,46 +48,6 @@ export function getGlobalFuncExtensionSetting<T>(key: string, prefix: string = e
 export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, fsPath ? Uri.file(fsPath) : undefined);
     return projectConfiguration.get<T>(key);
-}
-
-export async function getProjectLanguage(projectPath: string, ui: IAzureUserInput): Promise<ProjectLanguage> {
-    if (await fse.pathExists(path.join(projectPath, 'pom.xml'))) {
-        return ProjectLanguage.Java;
-    } else {
-        let language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, projectPath);
-        if (!language) {
-            const message: string = localize('noLanguage', 'You must have a project language set to perform this operation.');
-            const selectLanguage: MessageItem = { title: localize('selectLanguageButton', 'Select Language') };
-            await ui.showWarningMessage(message, { modal: true }, selectLanguage, DialogResponses.cancel);
-            language = await promptForProjectLanguage(ui);
-            await updateWorkspaceSetting(projectLanguageSetting, language, projectPath);
-        }
-
-        return <ProjectLanguage>language;
-    }
-}
-
-export async function getProjectRuntime(language: ProjectLanguage, projectPath: string, ui: IAzureUserInput): Promise<ProjectRuntime> {
-    if (language === ProjectLanguage.Java) {
-        // Java only supports v2
-        return ProjectRuntime.v2;
-    }
-
-    let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting, projectPath));
-    if (!runtime) {
-        const message: string = localize('noRuntime', 'You must have a project runtime set to perform this operation.');
-        const selectRuntime: MessageItem = { title: localize('selectRuntimeButton', 'Select Runtime') };
-        await ui.showWarningMessage(message, { modal: true }, selectRuntime, DialogResponses.cancel);
-        runtime = await promptForProjectRuntime();
-        await updateWorkspaceSetting(projectRuntimeSetting, runtime, projectPath);
-    }
-
-    return <ProjectRuntime>runtime;
-}
-
-export async function getTemplateFilter(projectPath: string): Promise<TemplateFilter> {
-    const templateFilter: string | undefined = getFuncExtensionSetting(templateFilterSetting, projectPath);
-    return templateFilter ? <TemplateFilter>templateFilter : TemplateFilter.Verified;
 }
 
 /**
@@ -142,5 +65,24 @@ export function convertStringToRuntime(rawRuntime: string | undefined): ProjectR
     } else {
         // Return undefined if we don't recognize the runtime
         return undefined;
+    }
+}
+
+export function getFunctionsWorkerRuntime(language: string | undefined): string | undefined {
+    switch (language) {
+        case ProjectLanguage.JavaScript:
+        case ProjectLanguage.TypeScript:
+            return 'node';
+        case ProjectLanguage.CSharp:
+        case ProjectLanguage.FSharp:
+            return 'dotnet';
+        case ProjectLanguage.Java:
+            return 'java';
+        case ProjectLanguage.Python:
+            return 'python';
+        case ProjectLanguage.PowerShell:
+            return 'powershell';
+        default:
+            return undefined;
     }
 }

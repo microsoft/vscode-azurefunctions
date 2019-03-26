@@ -24,7 +24,7 @@ export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IFunctionW
     public async execute(wizardContext: IFunctionWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('updatingLocalSettings', 'Updating {0}...', localSettingsFileName) });
         // tslint:disable-next-line: no-unsafe-any no-any
-        await setLocalAppSetting(wizardContext.functionAppPath, nonNullProp(wizardContext, <any>this._nameKey), nonNullProp(wizardContext, <any>this._valueKey));
+        await setLocalAppSetting(wizardContext.projectPath, nonNullProp(wizardContext, <any>this._nameKey), nonNullProp(wizardContext, <any>this._valueKey));
     }
 
     public shouldExecute(wizardContext: IFunctionWizardContext): boolean {

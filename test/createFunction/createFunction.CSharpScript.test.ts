@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestInput, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
-import { getCSharpScriptValidateOptions, validateProject } from '../validateProject';
+import { getDotnetScriptValidateOptions, validateProject } from '../validateProject';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
@@ -64,7 +64,7 @@ suite('Create C# Script ~1 Function Tests', async () => {
             ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
             await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotFunctionSettings);
             await tester.validateFunction(projectPath, iotFunctionName);
-            await validateProject(projectPath, getCSharpScriptValidateOptions(ProjectRuntime.v1));
+            await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, ProjectRuntime.v1));
         });
     });
 });

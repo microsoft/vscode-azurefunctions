@@ -12,8 +12,8 @@ import { TestInput } from 'vscode-azureextensionui';
 import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
 import {
-    getCSharpScriptValidateOptions,
     getCSharpValidateOptions,
+    getDotnetScriptValidateOptions,
     getFSharpValidateOptions,
     getJavaScriptValidateOptions,
     getJavaValidateOptions,
@@ -92,14 +92,14 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     test(csharpScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, csharpScriptProject);
         await testCreateNewProject(projectPath, ProjectLanguage.CSharpScript, { hiddenLanguage: true });
-        await validateProject(projectPath, getCSharpScriptValidateOptions());
+        await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript));
     });
 
     const fsharpScriptProject: string = 'FSharpScriptProject';
     test(fsharpScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, fsharpScriptProject);
         await testCreateNewProject(projectPath, ProjectLanguage.FSharpScript, { hiddenLanguage: true });
-        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.FSharpScript));
+        await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript));
     });
 
     const phpProject: string = 'PHPProject';
@@ -140,6 +140,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
+        ext.ui = new TestUserInput([/skip for now/i]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
         await validateProject(projectPath, getJavaScriptValidateOptions());
     });
@@ -162,7 +163,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
 
-    async function testCreateNewProject(projectPath: string, language: string, options?: { hiddenLanguage?: boolean }, ...inputs: (string | TestInput)[]): Promise<void> {
+    async function testCreateNewProject(projectPath: string, language: ProjectLanguage, options?: { hiddenLanguage?: boolean }, ...inputs: (string | TestInput | RegExp)[]): Promise<void> {
         const hiddenLanguage: boolean = !!options && !!options.hiddenLanguage;
         if (!hiddenLanguage) {
             inputs.unshift(language);
@@ -171,6 +172,13 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         inputs.unshift(projectPath); // Select the test func app folder
         if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
             inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
+        }
+
+        // All languages except Java support creating a function after creating a project
+        // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
+        if (language !== ProjectLanguage.Java) {
+            // don't create function
+            inputs.push(/skip for now/i);
         }
 
         ext.ui = new TestUserInput(inputs);

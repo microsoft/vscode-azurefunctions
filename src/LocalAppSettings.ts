@@ -22,6 +22,11 @@ export interface ILocalAppSettings {
 export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 
 export async function validateAzureWebJobsStorage(actionContext: IActionContext, localSettingsPath: string): Promise<void> {
+    // func cli uses environment variable if it's defined on the machine, so no need to prompt
+    if (process.env[azureWebJobsStorageKey]) {
+        return;
+    }
+
     const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
     if (settings.Values && settings.Values[azureWebJobsStorageKey]) {
         return;
