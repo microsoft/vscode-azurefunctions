@@ -5,8 +5,8 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, parseError, ResourceGroupListStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
+import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { convertStringToRuntime, getFuncExtensionSetting, getFunctionsWorkerRuntime } from '../ProjectSettings';
@@ -83,47 +83,62 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             resourceGroupDeferLocationStep: true
         };
 
-        if (!getFuncExtensionSetting('advancedCreation')) {
-            actionContext.properties.advancedCreation = 'false';
-            setBasicCreateDefaults(wizardContext, language);
-        } else {
-            actionContext.properties.advancedCreation = 'true';
-        }
-
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
+        const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep());
-        promptSteps.push(new ResourceGroupListStep());
         promptSteps.push(new SiteOSStep());
         promptSteps.push(new SiteRuntimeStep());
-        promptSteps.push(new StorageAccountListStep(
-            {
-                kind: StorageAccountKind.Storage,
-                performance: StorageAccountPerformance.Standard,
-                replication: StorageAccountReplication.LRS
-            },
-            {
-                kind: [
-                    StorageAccountKind.BlobStorage
-                ],
-                performance: [
-                    StorageAccountPerformance.Premium
-                ],
-                replication: [
-                    StorageAccountReplication.ZRS
-                ],
-                learnMoreLink: 'https://aka.ms/Cfqnrc'
-            }
-        ));
 
-        const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [new SiteCreateStep(
-            async (context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)
-        )];
+        const storageAccountCreateOptions: INewStorageAccountDefaults = {
+            kind: StorageAccountKind.Storage,
+            performance: StorageAccountPerformance.Standard,
+            replication: StorageAccountReplication.LRS
+        };
+
+        const advancedCreationKey: string = 'advancedCreation';
+        const advancedCreation: boolean = !!getFuncExtensionSetting(advancedCreationKey);
+        actionContext.properties.advancedCreation = String(advancedCreation);
+        if (!advancedCreation) {
+            wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
+            wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
+            // Pick a region that works for both windows and linux. Pricing seems to be same in all regions as of this writing anyways.
+            await LocationListStep.setLocation(wizardContext, 'westus');
+            executeSteps.push(new ResourceGroupCreateStep());
+            executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+        } else {
+            promptSteps.push(new ResourceGroupListStep());
+            promptSteps.push(new StorageAccountListStep(
+                storageAccountCreateOptions,
+                {
+                    kind: [
+                        StorageAccountKind.BlobStorage
+                    ],
+                    performance: [
+                        StorageAccountPerformance.Premium
+                    ],
+                    replication: [
+                        StorageAccountReplication.ZRS
+                    ],
+                    learnMoreLink: 'https://aka.ms/Cfqnrc'
+                }
+            ));
+        }
+
+        executeSteps.push(new SiteCreateStep(async (context): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)));
 
         const title: string = localize('functionAppCreatingTitle', 'Create new function app');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt(actionContext);
         showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        if (!advancedCreation) {
+            const newName: string | undefined = await wizardContext.relatedNameTask;
+            if (!newName) {
+                throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Modify the setting "{0}" to manually enter resource names.', `${extensionPrefix}.${advancedCreationKey}`));
+            }
+            wizardContext.newResourceGroupName = resourceGroup || newName;
+            wizardContext.newStorageAccountName = newName;
+        }
         await wizard.execute(actionContext);
 
         actionContext.properties.os = wizardContext.newSiteOS;
@@ -132,12 +147,6 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
     }
-}
-
-function setBasicCreateDefaults(wizardContext: IAppServiceWizardContext, language: string | undefined): void {
-    wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
-    wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
-    SiteOSStep.setLocationsTask(wizardContext);
 }
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
