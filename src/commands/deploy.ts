@@ -23,6 +23,7 @@ import { isPathEqual, isSubpath } from '../utils/fs';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { openUrl } from '../utils/openUrl';
 import * as workspaceUtil from '../utils/workspace';
+import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 
 // tslint:disable-next-line:max-func-body-length
@@ -128,17 +129,21 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', client.fullName);
     ext.outputChannel.appendLine(deployComplete);
-    const viewOutput: vscode.MessageItem = { title: localize('viewOutput', 'View Output') };
-    const streamLogs: vscode.MessageItem = { title: localize('streamLogs', 'Stream Logs') };
+    const viewOutput: vscode.MessageItem = { title: localize('viewOutput', 'View output') };
+    const streamLogs: vscode.MessageItem = { title: localize('streamLogs', 'Stream logs') };
+    const uploadSettings: vscode.MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
 
     // Don't wait
-    vscode.window.showInformationMessage(deployComplete, streamLogs, viewOutput).then(async (result: vscode.MessageItem | undefined) => {
+    vscode.window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async (result: vscode.MessageItem | undefined) => {
         await callWithTelemetryAndErrorHandling('postDeploy', async function (this: IActionContext): Promise<void> {
             this.properties.dialogResult = result && result.title;
             if (result === viewOutput) {
                 ext.outputChannel.show();
             } else if (result === streamLogs) {
                 await startStreamingLogs(node);
+            } else if (result === uploadSettings) {
+                // tslint:disable-next-line: no-non-null-assertion
+                await uploadAppSettings(node!.appSettingsTreeItem);
             }
         });
     });
