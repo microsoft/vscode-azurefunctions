@@ -131,6 +131,8 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         await wizard.prompt(actionContext);
         showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        actionContext.properties.os = wizardContext.newSiteOS;
+        actionContext.properties.runtime = wizardContext.newSiteRuntime;
         if (!advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
@@ -140,9 +142,6 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             wizardContext.newStorageAccountName = newName;
         }
         await wizard.execute(actionContext);
-
-        actionContext.properties.os = wizardContext.newSiteOS;
-        actionContext.properties.runtime = wizardContext.newSiteRuntime;
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
