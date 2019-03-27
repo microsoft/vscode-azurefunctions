@@ -8,7 +8,7 @@ import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
+import { AzureTreeDataProvider, ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 
@@ -52,23 +52,6 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             }
         }
         ext.tree.dispose();
-    });
-
-    test('Create and Delete New Function App', async () => {
-        const resourceName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
-        resourceGroupsToDelete.push(resourceName);
-
-        const testInputs: string[] = [resourceName];
-        ext.ui = new TestUserInput(testInputs);
-        await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
-        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
-        const createdApp: WebSiteManagementModels.Site = await client.webApps.get(resourceName, resourceName);
-        assert.ok(createdApp);
-
-        ext.ui = new TestUserInput([resourceName, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
-        await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
-        const deletedApp: WebSiteManagementModels.Site | undefined = await client.webApps.get(resourceName, resourceName);
-        assert.ifError(deletedApp); // if app was deleted, get() returns null.  assert.ifError throws if the value passed is not null/undefined
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
