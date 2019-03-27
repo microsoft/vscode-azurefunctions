@@ -5,11 +5,15 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { MessageItem } from 'vscode';
+import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { createNewProject } from './createNewProject';
+
+const projectSubpathKey: string = 'projectSubpath';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -18,21 +22,49 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
 
 /**
  * Checks root folder and subFolders one level down
- * If a single function project is found, returns that path
+ * If a single function project is found, returns that path.
+ * If multiple projects are found, prompt to pick the project.
  */
-export async function tryGetFunctionProjectRoot(folderPath: string): Promise<string | undefined> {
-    if (await isFunctionProject(folderPath)) {
-        return folderPath;
-    } else {
-        const subpaths: string[] = await fse.readdir(folderPath);
-        const matchingSubpaths: string[] = [];
-        await Promise.all(subpaths.map(async (subpath: string) => {
-            if (await isFunctionProject(path.join(folderPath, subpath))) {
-                matchingSubpaths.push(subpath);
+export async function tryGetFunctionProjectRoot(folderPath: string, suppressPrompt: boolean = false): Promise<string | undefined> {
+    let subpath: string | undefined = getFuncExtensionSetting(projectSubpathKey, folderPath);
+    if (!subpath) {
+        if (await isFunctionProject(folderPath)) {
+            return folderPath;
+        } else {
+            const subpaths: string[] = await fse.readdir(folderPath);
+            const matchingSubpaths: string[] = [];
+            await Promise.all(subpaths.map(async s => {
+                if (await isFunctionProject(path.join(folderPath, s))) {
+                    matchingSubpaths.push(s);
+                }
+            }));
+
+            if (matchingSubpaths.length === 1) {
+                subpath = matchingSubpaths[0];
+            } else if (matchingSubpaths.length !== 0 && !suppressPrompt) {
+                subpath = await promptForProjectSubpath(folderPath, matchingSubpaths);
+            } else {
+                return undefined;
             }
-        }));
-        return matchingSubpaths.length === 1 ? path.join(folderPath, matchingSubpaths[0]) : undefined;
+        }
     }
+
+    return path.join(folderPath, subpath);
+}
+
+async function promptForProjectSubpath(workspacePath: string, matchingSubpaths: string[]): Promise<string> {
+    const message: string = localize('detectedMultipleProject', 'Detected multiple function projects in the same workspace folder. You must either set the default or use a multi-root workspace.');
+    const learnMoreLink: string = 'https://aka.ms/AA4nmfy';
+    const setDefault: MessageItem = { title: localize('setDefault', 'Set default') };
+    // No need to check result - cancel will throw a UserCancelledError
+    await ext.ui.showWarningMessage(message, { learnMoreLink }, setDefault);
+
+    const picks: IAzureQuickPickItem<string>[] = matchingSubpaths.map(p => { return { label: p, description: workspacePath, data: p }; });
+    const placeHolder: string = localize('selectProject', 'Select the default project subpath');
+    const subpath: string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+    await updateWorkspaceSetting(projectSubpathKey, subpath, workspacePath);
+
+    return subpath;
 }
 
 /**

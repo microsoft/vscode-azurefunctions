@@ -14,7 +14,6 @@ import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntim
 import { localize } from '../../localize';
 import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { nonNullValue } from '../../utils/nonNull';
-import { openUrl } from '../../utils/openUrl';
 import { createVirtualEnviornment } from '../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { initProjectForVSCode } from './initProjectForVSCode';
@@ -22,6 +21,8 @@ import { initProjectForVSCode } from './initProjectForVSCode';
 export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
     actionContext.suppressTelemetry = true;
     actionContext.properties.isActivationEvent = 'true';
+    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
+
     if (folders) {
         for (const folder of folders) {
             const workspacePath: string = folder.uri.fsPath;
@@ -31,7 +32,6 @@ export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext
 
                 if (isInitializedProject(projectPath)) {
                     actionContext.properties.isInitialized = 'true';
-                    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying debug config. No point in showing an error if we can't understand the project anyways
 
                     const projectLanguage: string | undefined = getFuncExtensionSetting(projectLanguageSetting, workspacePath);
                     actionContext.properties.projectLanguage = projectLanguage;
@@ -80,13 +80,11 @@ export async function verifyInitForVSCode(actionContext: IActionContext, fsPath:
 async function promptToInitializeProject(workspacePath: string): Promise<boolean> {
     const settingKey: string = 'showProjectWarning';
     if (getFuncExtensionSetting<boolean>(settingKey)) {
+        const learnMoreLink: string = 'https://aka.ms/azFuncProject';
         const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(workspacePath));
-        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.yes, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, DialogResponses.yes, DialogResponses.dontWarnAgain);
         if (result === DialogResponses.dontWarnAgain) {
             await updateGlobalSetting(settingKey, false);
-        } else if (result === DialogResponses.learnMore) {
-            await openUrl('https://aka.ms/azFuncProject');
-            return await promptToInitializeProject(workspacePath);
         } else {
             return true;
         }
@@ -156,17 +154,12 @@ async function verifyJavaDeployConfigIsValid(projectLanguage: ProjectLanguage | 
 async function promptToUpdateProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string): Promise<boolean> {
     if (getFuncExtensionSetting<boolean>(settingKey)) {
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
-        let result: vscode.MessageItem;
-        do {
-            result = await ext.ui.showWarningMessage(message, updateConfig, DialogResponses.dontWarnAgain, DialogResponses.learnMore);
-            if (result === DialogResponses.dontWarnAgain) {
-                await updateWorkspaceSetting(settingKey, false, fsPath);
-            } else if (result === DialogResponses.learnMore) {
-                await openUrl(learnMoreLink);
-            } else {
-                return true;
-            }
-        } while (result === DialogResponses.learnMore);
+        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, updateConfig, DialogResponses.dontWarnAgain);
+        if (result === DialogResponses.dontWarnAgain) {
+            await updateWorkspaceSetting(settingKey, false, fsPath);
+        } else {
+            return true;
+        }
     }
 
     return false;

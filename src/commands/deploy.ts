@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeItem, callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, IAzureUserInput, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureTreeItem, callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, TelemetryProperties, UserCancelledError } from 'vscode-azureextensionui';
 import { deploySubpathSetting, dotnetPublishTaskLabel, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../constants';
 import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -85,7 +85,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     }
     await verifyWebContentSettings(node, telemetryProperties);
 
-    await verifyRuntimeIsCompatible(runtime, ext.ui, ext.outputChannel, client, telemetryProperties);
+    await verifyRuntimeIsCompatible(runtime, client);
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
@@ -248,7 +248,7 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
 /**
  * NOTE: If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
  */
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzureUserInput, outputChannel: vscode.OutputChannel, client: appservice.SiteClient, telemetryProperties: TelemetryProperties): Promise<void> {
+async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, client: appservice.SiteClient): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
         const rawAzureRuntime: string = appSettings.properties.FUNCTIONS_EXTENSION_VERSION;
@@ -256,20 +256,16 @@ async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, ui: IAzur
         if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
             const message: string = localize('incompatibleRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
             const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
-            const result: vscode.MessageItem = await ui.showWarningMessage(message, { modal: true }, updateRemoteRuntime, DialogResponses.learnMore, DialogResponses.cancel);
-            if (result === DialogResponses.learnMore) {
-                await openUrl('https://aka.ms/azFuncRuntime');
-                telemetryProperties.cancelStep = 'learnMoreRuntime';
-                throw new UserCancelledError();
-            } else {
-                const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localRuntime);
-                for (const key of Object.keys(newAppSettings)) {
-                    const value: string = newAppSettings[key];
-                    outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
-                    appSettings.properties[key] = value;
-                }
-                await client.updateApplicationSettings(appSettings);
+            const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
+            // No need to check result - cancel will throw a UserCancelledError
+            await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, updateRemoteRuntime);
+            const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localRuntime);
+            for (const key of Object.keys(newAppSettings)) {
+                const value: string = newAppSettings[key];
+                ext.outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
+                appSettings.properties[key] = value;
             }
+            await client.updateApplicationSettings(appSettings);
         }
     }
 }

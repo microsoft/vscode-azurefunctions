@@ -39,7 +39,7 @@ export class FuncTaskProvider implements TaskProvider {
             const result: Task[] = [];
             if (workspace.workspaceFolders) {
                 for (const folder of workspace.workspaceFolders) {
-                    const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath);
+                    const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
                     if (projectRoot) {
                         result.push(getExtensionInstallTask(folder, projectRoot));
                         const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
