@@ -72,7 +72,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     }
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
-    const confirmDeployment: boolean = !newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
+    const isNewFunctionApp: boolean = newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
+    this.properties.isNewFunctionApp = String(isNewFunctionApp);
 
     const client: appservice.SiteClient = node.root.client;
     const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(this, deployFsPath);
@@ -88,7 +89,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
-    if (confirmDeployment && isZipDeploy) {
+    if (!isNewFunctionApp && isZipDeploy) {
         const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
         telemetryProperties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
