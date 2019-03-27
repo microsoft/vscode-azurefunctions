@@ -31,17 +31,13 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
     public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
         const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
-        if (settings.Values) {
-            const existingSettings: string[] = Object.keys(settings.Values);
-            if (existingSettings.length > 0) {
-                let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
-                picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));
-                const placeHolder: string = localize('selectAppSetting', 'Select setting from "{0}"', localSettingsFileName);
-                const result: string | undefined = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
-                if (result) {
-                    wizardContext[this._setting.name] = result;
-                }
-            }
+        const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
+        let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
+        picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));
+        const placeHolder: string = localize('selectAppSetting', 'Select setting from "{0}"', localSettingsFileName);
+        const result: string | undefined = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        if (result) {
+            wizardContext[this._setting.name] = result;
         }
     }
 
