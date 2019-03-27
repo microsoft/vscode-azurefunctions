@@ -20,7 +20,7 @@ Install the prerequisites for your desired language:
 
 * [JavaScript](#node)
 * [TypeScript](#node)
-* [C#](#.net)
+* [C#](#net)
 * [Java](#java)
 * [Python (Preview)](#python)
 
