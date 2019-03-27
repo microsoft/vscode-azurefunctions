@@ -6,6 +6,8 @@ Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
 out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
 to get started with the Azure Functions extension.
 
+**Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for additional information about the extension.**
+
 ## Prerequisites
 
 Follow the OS-specific instructions to install the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local):
@@ -16,27 +18,25 @@ Follow the OS-specific instructions to install the [Azure Functions Core Tools](
 
 Install the prerequisites for your desired language:
 
-* [JavaScript](#javascript)
-* [TypeScript](#javascript)
-* [C#](#c)
+* [JavaScript](#node)
+* [TypeScript](#node)
+* [C#](#.net)
 * [Java](#java)
 * [Python (Preview)](#python)
 
-> **NOTE**: You may change your `azureFunctions.projectLanguage` user setting to multiple other 'preview' languages not listed above. This allows you to create a project/function in that language, but we do not yet support local debugging for these languages.
-
 ## Features
 
-* Create new Function projects
-* Create new Functions from a template
-* Debug Function projects locally
-* Deploy to Azure Function Apps
-* View, create, delete, start, stop, and restart Azure Function Apps
+* Create new function projects
+* Create new functions from a template
+* Debug function projects locally
+* Deploy to Azure
+* View, create, delete, start, stop, and restart Azure function apps
 * View, edit, upload, and download application settings
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
-* Stream logs from your remote Function Apps
+* Stream logs from your function apps in Azure
 * View and manage deployment slots
     > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
-* Debug Java Function App on Azure (experimental)
+* Debug Java function app in Azure (experimental)
     > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
 
 ### Create New Project
@@ -112,11 +112,11 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 
 ## Language-Specific Prerequisites
 
-### JavaScript
+### Node
 
 * [Node 8.0+](https://nodejs.org/)
 
-### C#
+### .NET
 
 * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
 * [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
@@ -156,7 +156,7 @@ There are a couple of ways you can contribute to this repo:
 * **Documentation**: Found a typo or strangely worded sentences? Submit a PR!
 * **Code**: Contribute bug fixes, features or design changes:
   * Clone the repository locally and open in VS Code.
-  * Install [TSLint for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=eg2.tslint).
+  * Install [TSLint for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-tslint-plugin).
   * Open the terminal (press `CTRL+`\`) and run `npm install`.
   * To build, press `F1` and type in `Tasks: Run Build Task`.
   * Debug: press `F5` to start debugging the extension.

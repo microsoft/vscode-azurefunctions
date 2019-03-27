@@ -4,7 +4,26 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
-## 0.15.0 - 2018-02-22
+## 0.16.0 - 2019-03-28
+
+### Added
+
+- Improved multi-prompt wizards (e.g. "Create function")
+  - Added support for back button
+  - All prompts will occur up front before any steps are executed
+- Creating a project will automatically prompt for the first function
+- Projects in sub-directory of a workspace will be recognized as function projects
+- Prompt to upload local app settings after deploy
+- View commit in GitHub for an applicable deployment
+
+### Changed
+- Creating a function app in Azure will only prompt for function app name. Set `azureFunctions.advancedCreation` to `true` to be prompted for all other values.
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.16.0%22+is%3Aclosed)
+
+## 0.15.0 - 2019-02-22
 
 ### Added
 
@@ -20,7 +39,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.15.0%22+is%3Aclosed)
 
-## 0.14.0 - 2018-02-11
+## 0.14.0 - 2019-02-11
 
 ### Added
 
