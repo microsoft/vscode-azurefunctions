@@ -66,7 +66,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
             if (functionAppNode) {
                 node = <SlotTreeItemBase>functionAppNode;
             } else {
-                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a function app matching id "{0}".', functionAppId));
+                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a Function App matching id "{0}".', functionAppId));
             }
         }
     }
@@ -81,7 +81,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     telemetryProperties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
-        throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows function apps.  Deploy to a Linux function app instead.'));
+        throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
     await verifyWebContentSettings(node, telemetryProperties);
 

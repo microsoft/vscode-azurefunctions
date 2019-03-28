@@ -34,7 +34,7 @@ export abstract class FunctionTesterBase {
 
     private async initializeTestFolder(testFolder: string): Promise<void> {
         await fse.ensureDir(path.join(testFolder, '.vscode'));
-        // Pretend to create the parent function app
+        // Pretend to create the parent function project
         await Promise.all([
             fse.writeFile(path.join(testFolder, 'host.json'), ''),
             fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
