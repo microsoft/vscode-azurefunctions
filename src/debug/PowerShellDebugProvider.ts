@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
-import { funcHostStartCommand, hostStartTaskName } from '../constants';
+import { hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
@@ -23,9 +23,9 @@ export class PowerShellDebugProvider extends FuncDebugProviderBase {
     protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
     protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
-    public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
+    public async getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { PSWorkerCustomPipeName: `${port}` } };
-        return new ShellExecution(funcHostStartCommand, options);
+        return new ShellExecution(commandLine, options);
     }
 }
