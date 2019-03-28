@@ -29,7 +29,7 @@ export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.
     });
 
     if (!funcTask) {
-        throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', funcHostStartCommand));
+        throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || funcHostStartCommand));
     }
 
     const settingKey: string = 'pickProcessTimeout';

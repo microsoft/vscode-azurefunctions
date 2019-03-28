@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration, Extension, extensions, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
-import { funcHostStartCommand, hostStartTaskName, localhost } from '../constants';
+import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { venvUtils } from '../utils/venvUtils';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
@@ -23,11 +23,11 @@ export class PythonDebugProvider extends FuncDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultPythonDebugPort;
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
-    public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
-        const command: string = venvUtils.convertToVenvCommand(funcHostStartCommand, folder.uri.fsPath);
+    public async getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution> {
+        commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
         const port: number = <number>this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
-        return new ShellExecution(command, options);
+        return new ShellExecution(commandLine, options);
     }
 }
 

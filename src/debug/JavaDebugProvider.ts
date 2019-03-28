@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
-import { funcHostStartCommand, hostStartTaskName, localhost } from '../constants';
+import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
@@ -23,9 +23,9 @@ export class JavaDebugProvider extends FuncDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
     protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
 
-    public async getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution> {
+    public async getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
         const options: ShellExecutionOptions = { env: { languageWorkers__java__arguments: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}` } };
-        return new ShellExecution(funcHostStartCommand, options);
+        return new ShellExecution(commandLine, options);
     }
 }
