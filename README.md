@@ -30,20 +30,20 @@ Install the prerequisites for your desired language:
 * Create new functions from a template
 * Debug function projects locally
 * Deploy to Azure
-* View, create, delete, start, stop, and restart Azure function apps
+* View, create, delete, start, stop, and restart Azure Function Apps
 * View, edit, upload, and download application settings
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
-* Stream logs from your function apps in Azure
+* Stream logs from your Azure Function Apps
 * View and manage deployment slots
     > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
-* Debug Java function app in Azure (experimental)
+* Debug Java function project in Azure (experimental)
     > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
 
 ### Create New Project
 
 ![CreateProject](resources/CreateProject.gif)
 
-### Debug Function App Locally
+### Debug Function Project Locally
 
 ![Debug](resources/Debug.gif)
 
