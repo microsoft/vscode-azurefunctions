@@ -28,9 +28,7 @@ export function runPostFunctionCreateStepsFromCache(): void {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
     if (cachedFunc) {
         try {
-            if (getContainingWorkspace(cachedFunc.projectPath)) {
-                runPostFunctionCreateSteps(cachedFunc);
-            }
+            runPostFunctionCreateSteps(cachedFunc);
         } finally {
             ext.context.globalState.update(cacheKey, undefined);
         }
@@ -74,13 +72,15 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
     callWithTelemetryAndErrorHandling('postFunctionCreate', async function (this: IActionContext): Promise<void> {
-        if (await fse.pathExists(func.newFilePath)) {
-            window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
-        }
+        if (getContainingWorkspace(func.projectPath)) {
+            if (await fse.pathExists(func.newFilePath)) {
+                window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
+            }
 
-        if (!func.isHttpTrigger) {
-            const localSettingsPath: string = path.join(func.projectPath, localSettingsFileName);
-            await validateAzureWebJobsStorage(this, localSettingsPath);
+            if (!func.isHttpTrigger) {
+                const localSettingsPath: string = path.join(func.projectPath, localSettingsFileName);
+                await validateAzureWebJobsStorage(this, localSettingsPath);
+            }
         }
     });
 }
