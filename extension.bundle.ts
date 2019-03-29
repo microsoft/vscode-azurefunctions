@@ -20,6 +20,7 @@ export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createNewProject/createNewProject';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
+export { verifyRuntimeIsCompatible } from './src/commands/deploy';
 export * from './src/constants';
 export * from './src/extensionVariables';
 export * from './src/FunctionConfig';
