@@ -25,6 +25,7 @@
     "keywords": [
         "Azure",
         "Functions",
+        "serverless",
         "multi-root ready"
     ],
     "preview": true,
