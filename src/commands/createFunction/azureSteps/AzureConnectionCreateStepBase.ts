@@ -17,6 +17,8 @@ export interface IConnection {
 }
 
 export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+    public priority: number = 200;
+
     private readonly _setting: IFunctionSetting;
 
     constructor(setting: IFunctionSetting) {

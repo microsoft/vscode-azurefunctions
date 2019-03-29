@@ -14,6 +14,8 @@ import { IFunctionWizardContext } from '../../createFunction/IFunctionWizardCont
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
 export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
+    public priority: number = 20;
+
     protected preDeployTask?: string;
     protected excludedFiles?: string[];
     protected otherSettings: { [key: string]: string } = {};

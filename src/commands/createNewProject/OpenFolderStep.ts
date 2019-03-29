@@ -8,6 +8,8 @@ import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext> {
+    public priority: number = 250;
+
     public async execute(wizardContext: IProjectWizardContext): Promise<void> {
         // tslint:disable-next-line:strict-boolean-expressions
         const openFolders: WorkspaceFolder[] = workspace.workspaceFolders || [];

@@ -12,6 +12,8 @@ import { gitUtils } from '../../../utils/gitUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
+    public priority: number = 10;
+
     public abstract async executeCore(wizardContext: IProjectWizardContext): Promise<void>;
 
     public async execute(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {

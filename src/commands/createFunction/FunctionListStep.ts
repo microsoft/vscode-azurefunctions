@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -96,8 +96,24 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 }
             }
 
+            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
+            switch (wizardContext.language) {
+                case ProjectLanguage.Java:
+                    executeSteps.push(await JavaFunctionCreateStep.createStep(wizardContext.actionContext));
+                    break;
+                case ProjectLanguage.CSharp:
+                    executeSteps.push(await DotnetFunctionCreateStep.createStep(wizardContext.actionContext));
+                    break;
+                case ProjectLanguage.TypeScript:
+                    executeSteps.push(new TypeScriptFunctionCreateStep());
+                    break;
+                default:
+                    executeSteps.push(new ScriptFunctionCreateStep());
+                    break;
+            }
+
             const title: string = localize('createFunction', 'Create new {0}', template.name);
-            return { promptSteps, title };
+            return { promptSteps, executeSteps, title };
         } else {
             return undefined;
         }
@@ -159,30 +175,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         });
 
         return picks;
-    }
-}
-
-export async function addFunctionSteps(wizardContext: IFunctionWizardContext, options: IWizardOptions<IFunctionWizardContext>, stepOptions: IFunctionListStepOptions): Promise<void> {
-    // tslint:disable-next-line: strict-boolean-expressions
-    options.promptSteps = options.promptSteps || [];
-    // tslint:disable-next-line: strict-boolean-expressions
-    options.executeSteps = options.executeSteps || [];
-
-    options.promptSteps.push(await FunctionListStep.createFunctionListStep(wizardContext, stepOptions));
-
-    switch (wizardContext.language) {
-        case ProjectLanguage.Java:
-            options.executeSteps.push(await JavaFunctionCreateStep.createStep(wizardContext.actionContext));
-            break;
-        case ProjectLanguage.CSharp:
-            options.executeSteps.push(await DotnetFunctionCreateStep.createStep(wizardContext.actionContext));
-            break;
-        case ProjectLanguage.TypeScript:
-            options.executeSteps.push(new TypeScriptFunctionCreateStep());
-            break;
-        default:
-            options.executeSteps.push(new ScriptFunctionCreateStep());
-            break;
     }
 }
 
