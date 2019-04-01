@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { window, workspace, WorkspaceFolder } from 'vscode';
-import { AzureWizard, IActionContext, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
+import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { verifyInitForVSCode } from '../initProjectForVSCode/verifyVSCodeConfig';
-import { addFunctionSteps } from './FunctionListStep';
+import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 export async function createFunction(
@@ -48,9 +48,9 @@ export async function createFunction(
     [language, runtime] = await verifyInitForVSCode(actionContext, projectPath, language, runtime);
 
     const wizardContext: IFunctionWizardContext = { actionContext, projectPath, workspacePath, runtime, language, functionName };
-    const wizardOptions: IWizardOptions<IFunctionWizardContext> = {};
-    await addFunctionSteps(wizardContext, wizardOptions, { templateId, caseSensitiveFunctionSettings, isProjectWizard: false });
-    const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, wizardOptions);
+    const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
+        promptSteps: [await FunctionListStep.createFunctionListStep(wizardContext, { templateId, caseSensitiveFunctionSettings, isProjectWizard: false })]
+    });
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);
 }

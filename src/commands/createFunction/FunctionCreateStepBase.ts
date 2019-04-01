@@ -36,6 +36,8 @@ export function runPostFunctionCreateStepsFromCache(): void {
 }
 
 export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+    public priority: number = 220;
+
     /**
      * Returns the full path to the new function file
      */
