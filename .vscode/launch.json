@@ -15,6 +15,26 @@
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ],
+            "preLaunchTask": "npm: compile",
+            "env": {
+                "AZCODE_IGNORE_BUNDLE": "1",
+                "DEBUGTELEMETRY": "1",
+                "NODE_DEBUG": ""
+            }
+        },
+        {
+            "name": "Launch Extension (webpack)",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "stopOnEntry": false,
+            "sourceMaps": true,
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ],
             "preLaunchTask": "npm: webpack",
             "env": {
                 "DEBUGTELEMETRY": "1",
