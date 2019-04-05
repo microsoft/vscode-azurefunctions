@@ -48,6 +48,11 @@ export enum Platform {
     Linux = 'linux'
 }
 
+export enum InstallManagedDependencies {
+    Yes = 'Yes',
+    No = 'No'
+}
+
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const proxiesFileName: string = 'proxies.json';
@@ -57,6 +62,7 @@ export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 export const profileps1FileName: string = 'profile.ps1';
+export const requirementspsd1FileName: string = 'requirements.psd1';
 
 export enum PackageManager {
     npm = 'npm',

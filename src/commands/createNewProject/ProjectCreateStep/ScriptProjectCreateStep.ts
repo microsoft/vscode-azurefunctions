@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, ProjectRuntime, proxiesFileName } from '../../../constants';
 import { ILocalAppSettings } from '../../../LocalAppSettings';
 import { getFunctionsWorkerRuntime } from '../../../ProjectSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
@@ -106,6 +106,9 @@ local.settings.json
 # TypeScript output
 dist
 out
+
+# Managed dependencies folder
+ManagedDependencies/
 `;
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
@@ -115,7 +118,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
         const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: {} = runtime === ProjectRuntime.v1 ? {} : { version: '2.0' };
+            const hostJson: object = this.getHostContent(wizardContext, runtime);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -155,5 +158,19 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         if (await confirmOverwriteFile(funcIgnorePath)) {
             await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
         }
+    }
+
+    private getHostContent(wizardContext: IProjectWizardContext, runtime: ProjectRuntime): object {
+        if (wizardContext.language === ProjectLanguage.PowerShell && runtime === ProjectRuntime.v2 && wizardContext.managedDependencies) {
+            return {
+                version: '2.0',
+                managedDependency: {
+                    enabled: true
+                }
+            };
+        } else if (runtime === ProjectRuntime.v2) {
+            return { version: '2.0' };
+        }
+        return {};
     }
 }
