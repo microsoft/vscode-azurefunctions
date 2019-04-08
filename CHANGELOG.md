@@ -4,7 +4,26 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
-## 0.15.0 - 2018-02-22
+## 0.16.0 - 2019-03-28
+
+### Added
+
+- Improved multi-prompt wizards (e.g. "Create function")
+  - Added support for back button
+  - All prompts will occur up front before any steps are executed
+- Creating a project will automatically prompt for the first function
+- Projects in sub-directory of a workspace will be recognized as function projects
+- Prompt to upload local app settings after deploy
+- View commit in GitHub for an applicable deployment
+
+### Changed
+- Creating a Function App in Azure will only prompt for Function App name. Set `azureFunctions.advancedCreation` to `true` to be prompted for all other values.
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.16.0%22+is%3Aclosed)
+
+## 0.15.0 - 2019-02-22
 
 ### Added
 
@@ -20,7 +39,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.15.0%22+is%3Aclosed)
 
-## 0.14.0 - 2018-02-11
+## 0.14.0 - 2019-02-11
 
 ### Added
 
@@ -30,7 +49,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
   - Removed terminal specific separators from debug config
   - Allow deployment to dedicated App Service plans
   - Added retry logic to handle momentary issues while deploying
-- Added `azureFunctions.advancedCreation` setting. When set to true, this allows you to manually select several properties (i.e. OS and runtime) when creating a function app
+- Added `azureFunctions.advancedCreation` setting. When set to true, this allows you to manually select several properties (i.e. OS and runtime) when creating a Function App
 - App setting values are hidden by default
 
 ### Changed
@@ -105,7 +124,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 - Added several more templates to the "verified" category, including Cosmos DB and Service Bus.
 
 ### Changed
-- Newly created function apps will default to "Run From Package". See [here](https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package) for more info.
+- Newly created Function Apps will default to "Run From Package". See [here](https://docs.microsoft.com/azure/azure-functions/run-functions-from-deployment-package) for more info.
 - Deprecated projectRuntime of "beta" in favor of "~2".
 - "azureFunctions.deploySubpath" setting takes precedence
 
@@ -187,7 +206,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 ## 0.8.1 - 2018-04-13
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.1%22+label%3Abug+is%3Aclosed)
-- Deployment fail when deploying to function app with a custom domain
+- Deployment fail when deploying to Function App with a custom domain
 
 ## 0.8.0 - 2018-04-05
 
@@ -229,7 +248,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 ### Added
 
-- Stream logs from your remote Function Apps
+- Stream logs from your Azure Function Apps
 - Support projects in multi-root workspaces
 - Link to deployment tutorial
 
@@ -338,7 +357,7 @@ All notable changes to the "azurefunctions" extension will be documented in this
 
 - Create new project
 - Create new function from template
-- Debug function apps locally
+- Debug function projects locally
 - View Azure Functions
 - Deploy to Azure Functions
 - Start, stop, and restart Azure Functions

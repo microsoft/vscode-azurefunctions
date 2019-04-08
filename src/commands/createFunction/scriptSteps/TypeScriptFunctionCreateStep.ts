@@ -22,6 +22,6 @@ export class TypeScriptFunctionCreateStep extends ScriptFunctionCreateStep {
             // ignore and use default outDir
         }
 
-        functionJson.scriptFile = path.join('..', outDir, nonNullProp(wizardContext, 'functionName'), 'index.js');
+        functionJson.scriptFile = path.posix.join('..', outDir, nonNullProp(wizardContext, 'functionName'), 'index.js');
     }
 }

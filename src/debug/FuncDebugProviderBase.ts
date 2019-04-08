@@ -15,7 +15,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
 
     private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map();
 
-    public abstract getShellExecution(folder: WorkspaceFolder): Promise<ShellExecution>;
+    public abstract getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution>;
 
     public async provideDebugConfigurations(folder: WorkspaceFolder | undefined, _token?: CancellationToken): Promise<DebugConfiguration[]> {
         // tslint:disable-next-line: no-this-assignment

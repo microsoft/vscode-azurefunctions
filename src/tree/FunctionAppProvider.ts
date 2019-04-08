@@ -37,8 +37,8 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         } catch (error) {
             if (parseError(error).errorType.toLowerCase() === 'notfound') {
                 // This error type means the 'Microsoft.Web' provider has not been registered in this subscription
-                // In that case, we know there are no function apps, so we can return an empty array
-                // (The provider will be registered automatically if the user creates a new function app)
+                // In that case, we know there are no Function Apps, so we can return an empty array
+                // (The provider will be registered automatically if the user creates a new Function App)
                 return [];
             } else {
                 throw error;
@@ -126,11 +126,13 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         executeSteps.push(new SiteCreateStep(async (context): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)));
 
-        const title: string = localize('functionAppCreatingTitle', 'Create new function app');
+        const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt(actionContext);
         showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        actionContext.properties.os = wizardContext.newSiteOS;
+        actionContext.properties.runtime = wizardContext.newSiteRuntime;
         if (!advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
@@ -140,9 +142,6 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             wizardContext.newStorageAccountName = newName;
         }
         await wizard.execute(actionContext);
-
-        actionContext.properties.os = wizardContext.newSiteOS;
-        actionContext.properties.runtime = wizardContext.newSiteRuntime;
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));

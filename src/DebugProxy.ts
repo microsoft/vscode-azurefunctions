@@ -34,7 +34,7 @@ export class DebugProxy extends EventEmitter {
         if (!this._server) {
             this.emit('error', new Error('Proxy server is not started.'));
         } else {
-            // wake up the function app before connecting to it.
+            // wake up the Function App before connecting to it.
             await this.keepAlive();
 
             this._server.on('connection', (socket: Socket) => {
@@ -137,7 +137,7 @@ export class DebugProxy extends EventEmitter {
         this._keepAlive = false;
     }
 
-    //keep querying the function app state, otherwise the connection will lose.
+    //keep querying the Function App state, otherwise the connection will lose.
     private async keepAlive(): Promise<void> {
         if (this._keepAlive) {
             try {

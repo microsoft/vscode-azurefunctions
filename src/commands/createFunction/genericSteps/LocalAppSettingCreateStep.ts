@@ -12,6 +12,8 @@ import { nonNullProp } from '../../../utils/nonNull';
 import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
+    public priority: number = 210;
+
     private readonly _nameKey: string;
     private readonly _valueKey: string;
 

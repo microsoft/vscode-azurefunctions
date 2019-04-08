@@ -6,9 +6,10 @@
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { extInstallCommand, func, funcExtInstallCommand, funcHostStartCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { extInstallCommand, func, funcExtInstallCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { getFuncExtensionSetting } from '../ProjectSettings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { getFuncTaskCommand, IFuncTaskCommand } from './getFuncTaskCommand';
 import { getPythonTasks } from './getPythonTasks';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
@@ -93,7 +94,8 @@ export class FuncTaskProvider implements TaskProvider {
             default:
         }
 
-        const shellExecution: ShellExecution = debugProvider ? await debugProvider.getShellExecution(folder) : new ShellExecution(funcHostStartCommand);
+        const funcCommand: IFuncTaskCommand = getFuncTaskCommand(folder, hostStartCommand, /^\s*(host )?start/i);
+        const shellExecution: ShellExecution = debugProvider ? await debugProvider.getShellExecution(folder, funcCommand.commandLine) : new ShellExecution(funcCommand.commandLine);
         if (!shellExecution.options) {
             shellExecution.options = {};
         }
@@ -102,10 +104,10 @@ export class FuncTaskProvider implements TaskProvider {
         return new Task(
             {
                 type: func,
-                command: hostStartCommand
+                command: funcCommand.taskName
             },
             folder,
-            hostStartCommand,
+            funcCommand.taskName,
             func,
             shellExecution,
             funcWatchProblemMatcher

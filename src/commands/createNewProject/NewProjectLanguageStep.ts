@@ -10,7 +10,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting } from '../../ProjectSettings';
 import { nonNullProp } from '../../utils/nonNull';
-import { addFunctionSteps } from '../createFunction/FunctionListStep';
+import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
@@ -96,11 +96,11 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
         if (language !== ProjectLanguage.Java) {
-            await addFunctionSteps(wizardContext, wizardOptions, {
+            promptSteps.push(await FunctionListStep.createFunctionListStep(wizardContext, {
                 isProjectWizard: true,
                 templateId: this._templateId,
                 caseSensitiveFunctionSettings: this._caseSensitiveFunctionSettings
-            });
+            }));
         }
 
         return wizardOptions;
