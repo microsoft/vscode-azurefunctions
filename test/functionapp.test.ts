@@ -8,13 +8,14 @@ import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getRandomHexString, TestAzureAccount, TestUserInput } from '../extension.bundle';
+import { AzureTreeDataProvider, DialogResponses, ext, extensionPrefix, FunctionAppProvider, getRandomHexString, TestAzureAccount, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 
 // tslint:disable-next-line:max-func-body-length
 suite('Function App actions', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(1200 * 1000);
     const resourceGroupsToDelete: string[] = [];
+    let oldAdvancedCreationSetting: boolean | undefined;
     const resourceName: string = getRandomHexString().toLowerCase();
     const testAccount: TestAzureAccount = new TestAzureAccount();
 
@@ -23,6 +24,7 @@ suite('Function App actions', async function (this: ISuiteCallbackContext): Prom
             this.skip();
         }
         this.timeout(120 * 1000);
+        oldAdvancedCreationSetting = <boolean>vscode.workspace.getConfiguration(extensionPrefix).get('advancedCreation');
         await testAccount.signIn();
         ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
     });
@@ -32,6 +34,7 @@ suite('Function App actions', async function (this: ISuiteCallbackContext): Prom
             this.skip();
         }
         this.timeout(1200 * 1000);
+        await vscode.workspace.getConfiguration(extensionPrefix).update('advancedCreation', oldAdvancedCreationSetting, vscode.ConfigurationTarget.Global);
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
         for (const resourceGroup of resourceGroupsToDelete) {
             if (await client.resourceGroups.checkExistence(resourceGroup)) {
@@ -46,9 +49,21 @@ suite('Function App actions', async function (this: ISuiteCallbackContext): Prom
         ext.tree.dispose();
     });
 
-    test('createFunctionApp', async () => {
+    test('createFunctionApp (basic)', async () => {
+        const resourceName1: string = getRandomHexString().toLowerCase();
+        resourceGroupsToDelete.push(resourceName1);
+        const testInputs: string[] = [resourceName1, '$(plus) Create new resource group', resourceName1, '$(plus) Create new storage account', resourceName1, 'East US'];
+        ext.ui = new TestUserInput(testInputs);
+        await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
+        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
+        const createdApp: WebSiteManagementModels.Site = await client.webApps.get(resourceName1, resourceName1);
+        assert.ok(createdApp);
+    });
+
+    test('createFunctionApp (Advanced)', async () => {
         resourceGroupsToDelete.push(resourceName);
-        const testInputs: string[] = [resourceName, '$(plus) Create new resource group', resourceName, '$(plus) Create new storage account', resourceName, 'East US'];
+        await vscode.workspace.getConfiguration(extensionPrefix).update('advancedCreation', true, vscode.ConfigurationTarget.Global);
+        const testInputs: string[] = [resourceName, 'Linux', '.NET', '$(plus) Create new resource group', resourceName, '$(plus) Create new storage account', resourceName, 'West US'];
         ext.ui = new TestUserInput(testInputs);
         await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
         const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
