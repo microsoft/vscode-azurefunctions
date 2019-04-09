@@ -26,7 +26,7 @@ export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, work
 
 export function getDotnetTemplatesPath(): string {
     // tslint:disable-next-line:strict-boolean-expressions
-    return ext.context.asAbsolutePath(path.join('resources', 'dotnetTemplates', ext.templateSource || ''));
+    return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateSource || '');
 }
 
 export function getDotnetItemTemplatePath(runtime: ProjectRuntime): string {
