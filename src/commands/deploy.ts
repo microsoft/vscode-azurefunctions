@@ -14,7 +14,7 @@ import { ext } from '../extensionVariables';
 import { addLocalFuncTelemetry } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting, updateWorkspaceSetting } from '../ProjectSettings';
+import { convertStringToRuntime, getFuncExtensionSetting, getFunctionsWorkerRuntime, updateGlobalSetting, updateWorkspaceSetting } from '../ProjectSettings';
 import { FunctionsTreeItem } from '../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
@@ -83,9 +83,16 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
-    await verifyWebContentSettings(node, telemetryProperties);
 
-    await verifyRuntimeIsCompatible(runtime, client);
+    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+    if (appSettings.properties) {
+        const updateAppSettings: boolean = await verifyWebContentSettings(node, telemetryProperties, appSettings.properties) || await verifyRuntimeIsCompatible(runtime, language, appSettings.properties);
+        if (updateAppSettings) {
+            await client.updateApplicationSettings(appSettings);
+            // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
+            await node.appSettingsTreeItem.refresh();
+        }
+    }
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
@@ -245,28 +252,44 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
     return targetPath;
 }
 
+// todo Move this to a separate file after PR Review
 /**
  * NOTE: If we can't recognize the Azure runtime (aka it's undefined), just assume it's compatible
  */
-async function verifyRuntimeIsCompatible(localRuntime: ProjectRuntime, client: appservice.SiteClient): Promise<void> {
-    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
-    if (appSettings.properties) {
-        const rawAzureRuntime: string = appSettings.properties.FUNCTIONS_EXTENSION_VERSION;
-        const azureRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureRuntime);
-        if (azureRuntime !== undefined && azureRuntime !== localRuntime) {
-            const message: string = localize('incompatibleRuntime', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureRuntime, localRuntime);
-            const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
-            const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
-            // No need to check result - cancel will throw a UserCancelledError
-            await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, updateRemoteRuntime);
-            const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localRuntime);
-            for (const key of Object.keys(newAppSettings)) {
-                const value: string = newAppSettings[key];
-                ext.outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
-                appSettings.properties[key] = value;
-            }
-            await client.updateApplicationSettings(appSettings);
+export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+    const rawAzureFuncRuntime: string = remoteProperties.FUNCTIONS_EXTENSION_VERSION;
+    const azureFuncRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureFuncRuntime);
+
+    const azureWorkerRuntime: string | undefined = remoteProperties.FUNCTIONS_WORKER_RUNTIME;
+    const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
+
+    let shouldPrompt: boolean = !!rawAzureFuncRuntime && azureFuncRuntime !== localFuncRuntime;
+    let message: string = localize('incompatibleRuntimeV1', 'The remote runtime "{0}" is not compatible with your local runtime "{1}".', rawAzureFuncRuntime, localFuncRuntime);
+    if (localFuncRuntime === ProjectRuntime.v2 && localWorkerRuntime) {
+        shouldPrompt = shouldPrompt || (!!azureWorkerRuntime && azureWorkerRuntime !== localWorkerRuntime);
+        message = localize('incompatibleRuntimeV2', 'The remote runtime "{0}" and "{1}" is not compatible with your local runtime "{2}" and "{3}".', rawAzureFuncRuntime, azureWorkerRuntime, localFuncRuntime, localWorkerRuntime);
+    }
+
+    if (shouldPrompt) {
+        const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteRuntime', 'Update remote runtime') };
+        const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
+        // No need to check result - cancel will throw a UserCancelledError
+        await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, updateRemoteRuntime);
+
+        const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localFuncRuntime);
+        if (localFuncRuntime === ProjectRuntime.v2 && localWorkerRuntime) {
+            newAppSettings.FUNCTIONS_WORKER_RUNTIME = localWorkerRuntime;
         }
+
+        for (const key of Object.keys(newAppSettings)) {
+            const value: string = newAppSettings[key];
+            ext.outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
+            remoteProperties[key] = value;
+        }
+
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -341,15 +364,13 @@ async function promptToBuildNativeDeps(actionContext: IActionContext, deployFsPa
  * We need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
  * Only applies to Linux Consumption apps
  */
-async function verifyWebContentSettings(node: SlotTreeItemBase, telemetryProperties: TelemetryProperties): Promise<void> {
+async function verifyWebContentSettings(node: SlotTreeItemBase, telemetryProperties: TelemetryProperties, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
     if (node.root.client.isLinux) {
         const asp: WebSiteManagementModels.AppServicePlan | undefined = await node.root.client.getAppServicePlan();
         if (!!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic') {
-            const client: appservice.SiteClient = node.root.client;
-            const applicationSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
             const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
             const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
-            if (applicationSettings.properties && (applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || applicationSettings.properties[WEBSITE_CONTENTSHARE])) {
+            if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
                 telemetryProperties.webContentSettingsRemoved = 'false';
                 await ext.ui.showWarningMessage(
                     localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
@@ -357,13 +378,13 @@ async function verifyWebContentSettings(node: SlotTreeItemBase, telemetryPropert
                     DialogResponses.yes,
                     DialogResponses.cancel
                 );
-                delete applicationSettings.properties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
-                delete applicationSettings.properties[WEBSITE_CONTENTSHARE];
+                delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
+                delete remoteProperties[WEBSITE_CONTENTSHARE];
                 telemetryProperties.webContentSettingsRemoved = 'true';
-                await client.updateApplicationSettings(applicationSettings);
-                // if the user cancels the deployment, the app settings node doesn't reflect the deleted settings
-                await node.appSettingsTreeItem.refresh();
+                return true;
             }
         }
     }
+
+    return false;
 }
