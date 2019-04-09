@@ -5,6 +5,7 @@
 
 import * as path from 'path';
 import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 
 export namespace nodeUtils {
@@ -14,16 +15,18 @@ export namespace nodeUtils {
     }
 
     export function getIconPath(iconName: string): string {
-        // (relative to dist folder)
-        return path.join(__dirname, '..', 'resources', `${iconName}.svg`);
+        return path.join(getResourcesPath(), `${iconName}.svg`);
     }
 
     export function getThemedIconPath(iconName: string): IThemedIconPath {
-        // (relative to dist folder)
         return {
-            light: path.join(__dirname, '..', 'resources', 'light', `${iconName}.svg`),
-            dark: path.join(__dirname, '..', 'resources', 'dark', `${iconName}.svg`)
+            light: path.join(getResourcesPath(), 'light', `${iconName}.svg`),
+            dark: path.join(getResourcesPath(), 'dark', `${iconName}.svg`)
         };
+    }
+
+    function getResourcesPath(): string {
+        return ext.context.asAbsolutePath('resources');
     }
 
     export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<AzureParentTreeItem> {
