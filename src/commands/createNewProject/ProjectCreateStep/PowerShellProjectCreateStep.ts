@@ -5,10 +5,12 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { profileps1FileName, requirementspsd1FileName } from "../../../constants";
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
+
+const profileps1FileName: string = 'profile.ps1';
+const requirementspsd1FileName: string = 'requirements.psd1';
 
 const profileps1: string = `# Azure Functions profile.ps1
 #
@@ -50,11 +52,9 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
-        if (wizardContext.managedDependencies) {
-            const requirementspsd1Path: string = path.join(wizardContext.projectPath, requirementspsd1FileName);
-            if (await confirmOverwriteFile(requirementspsd1Path)) {
-                await fse.writeFile(requirementspsd1Path, requirementspsd1);
-            }
+        const requirementspsd1Path: string = path.join(wizardContext.projectPath, requirementspsd1FileName);
+        if (await confirmOverwriteFile(requirementspsd1Path)) {
+            await fse.writeFile(requirementspsd1Path, requirementspsd1);
         }
     }
 }

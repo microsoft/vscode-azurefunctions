@@ -106,9 +106,6 @@ local.settings.json
 # TypeScript output
 dist
 out
-
-# Managed dependencies folder
-ManagedDependencies/
 `;
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
@@ -161,16 +158,20 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     }
 
     private getHostContent(wizardContext: IProjectWizardContext, runtime: ProjectRuntime): object {
-        if (wizardContext.language === ProjectLanguage.PowerShell && runtime === ProjectRuntime.v2 && wizardContext.managedDependencies) {
-            return {
-                version: '2.0',
-                managedDependency: {
-                    enabled: true
-                }
-            };
-        } else if (runtime === ProjectRuntime.v2) {
+        if (runtime === ProjectRuntime.v2) {
+            if (wizardContext.language === ProjectLanguage.PowerShell) {
+                return {
+                    version: '2.0',
+                    managedDependency: {
+                        enabled: true
+                    }
+                };
+            }
+
             return { version: '2.0' };
         }
+
+        // runtime === ProjectRuntime.v1
         return {};
     }
 }

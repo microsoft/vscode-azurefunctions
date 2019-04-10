@@ -12,7 +12,6 @@ export interface IProjectWizardContext {
     workspacePath: string;
 
     language?: ProjectLanguage;
-    managedDependencies?: boolean;
     runtime?: ProjectRuntime;
     openBehavior?: OpenBehavior;
 }

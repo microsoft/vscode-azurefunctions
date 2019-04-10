@@ -5,7 +5,7 @@
 
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
-import { InstallManagedDependencies, ProjectLanguage } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
@@ -51,11 +51,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const options: QuickPickOptions = { placeHolder: localize('selectFuncTemplate', 'Select a language for your function project') };
         wizardContext.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;
-
-        if (wizardContext.language === ProjectLanguage.PowerShell) {
-            const managedDependenciesOptions: QuickPickOptions = { placeHolder: localize('enableManagedDependencies', 'Would you like to install the Azure modules and have these automatically managed in Azure?') };
-            wizardContext.managedDependencies = (await (ext.ui.showQuickPick([{ label: InstallManagedDependencies.Yes }, { label: InstallManagedDependencies.No }], managedDependenciesOptions))).label === InstallManagedDependencies.Yes;
-        }
     }
 
     public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
