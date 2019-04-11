@@ -5,8 +5,8 @@
 
 import { CosmosDBManagementClient } from 'azure-arm-cosmosdb';
 import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
-import { localize } from '../../../localize';
-import { promptForResource } from '../../../utils/azure';
+import { localize } from '../../../../localize';
+import { promptForResource } from '../../../../utils/azure';
 import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
 export class CosmosDBListStep extends AzureWizardPromptStep<ICosmosDBWizardContext> {

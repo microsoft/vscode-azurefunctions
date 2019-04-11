@@ -9,14 +9,14 @@ import { setLocalAppSetting } from '../../../LocalAppSettings';
 import { localize } from '../../../localize';
 import { IFunctionSetting } from '../../../templates/IFunctionSetting';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { IBindingWizardContext } from '../IBindingWizardContext';
 
 export interface IConnection {
     name: string;
     connectionString: string;
 }
 
-export abstract class AzureConnectionCreateStepBase<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
 
     private readonly _setting: IFunctionSetting;

@@ -5,13 +5,13 @@
 
 import { CosmosDBManagementClient, CosmosDBManagementModels } from 'azure-arm-cosmosdb';
 import { createAzureClient } from 'vscode-azureextensionui';
-import { getResourceGroupFromId } from '../../../utils/azure';
-import { nonNullProp } from '../../../utils/nonNull';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
+import { getResourceGroupFromId } from '../../../../utils/azure';
+import { nonNullProp } from '../../../../utils/nonNull';
+import { IBindingWizardContext } from '../../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
 import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
-export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IFunctionWizardContext & ICosmosDBWizardContext> {
+export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IBindingWizardContext & ICosmosDBWizardContext> {
     public async getConnection(wizardContext: ICosmosDBWizardContext): Promise<IConnection> {
         const databaseAccount: CosmosDBManagementModels.DatabaseAccount = nonNullProp(wizardContext, 'databaseAccount');
         const name: string = nonNullProp(databaseAccount, 'name');
