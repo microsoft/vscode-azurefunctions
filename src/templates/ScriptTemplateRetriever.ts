@@ -26,10 +26,6 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
     private _rawTemplates: object[];
     private _rawConfig: object;
 
-    public getVerifiedTemplateIds(runtime: ProjectRuntime): string[] {
-        return getScriptVerifiedTemplateIds(runtime);
-    }
-
     protected async getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
         const cachedResources: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._resourcesKey, runtime));
         const cachedTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._templatesKey, runtime));

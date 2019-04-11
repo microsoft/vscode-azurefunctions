@@ -21,10 +21,6 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
     private _dotnetTemplatesKey: string = 'DotnetTemplates';
     private _rawTemplates: object[];
 
-    public getVerifiedTemplateIds(runtime: ProjectRuntime): string[] {
-        return getDotnetVerifiedTemplateIds(runtime);
-    }
-
     protected async getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
         const projectFilePath: string = getDotnetProjectTemplatePath(runtime);
         const itemFilePath: string = getDotnetItemTemplatePath(runtime);

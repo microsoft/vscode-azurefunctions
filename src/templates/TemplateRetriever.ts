@@ -39,7 +39,6 @@ export abstract class TemplateRetriever {
             context.properties.templateVersion = templateVersion;
             ext.outputChannel.appendLine(localize('updatingTemplates', 'Updating {0} templates for runtime "{1}" to version "{2}"...', this.templateType, runtime, templateVersion));
             const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime, context);
-            await this.verifyTemplates(templates, runtime);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), templateVersion);
             await this.cacheTemplates(runtime);
             ext.outputChannel.appendLine(localize('updatedTemplates', 'Successfully updated templates.'));
@@ -56,7 +55,6 @@ export abstract class TemplateRetriever {
         try {
             const backupTemplateVersion: string = this.getBackupVersion(runtime);
             const templates: IFunctionTemplate[] = await this.getTemplatesFromBackup(runtime);
-            await this.verifyTemplates(templates, runtime);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), backupTemplateVersion);
             await this.cacheTemplates(runtime);
             ext.outputChannel.appendLine(localize('usingBackupTemplates', 'Falling back to version "{0}" for {1} templates for runtime "{2}".', backupTemplateVersion, this.templateType, runtime));
@@ -93,7 +91,6 @@ export abstract class TemplateRetriever {
     protected abstract getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime, context: IActionContext): Promise<IFunctionTemplate[]>;
     protected abstract getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]>;
     protected abstract cacheTemplates(runtime: ProjectRuntime): Promise<void>;
-    protected abstract getVerifiedTemplateIds(runtime: ProjectRuntime): string[];
 
     protected getBackupVersion(runtime: ProjectRuntime): string {
         switch (runtime) {
@@ -103,16 +100,6 @@ export abstract class TemplateRetriever {
                 return v2BackupTemplatesVersion;
             default:
                 throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
-        }
-    }
-
-    private async verifyTemplates(templates: IFunctionTemplate[], runtime: ProjectRuntime): Promise<void> {
-        const verifiedTemplateIds: string[] = this.getVerifiedTemplateIds(runtime);
-
-        for (const verifiedTemplateId of verifiedTemplateIds) {
-            if (!templates.some((t: IFunctionTemplate) => t.id === verifiedTemplateId)) {
-                throw new Error(localize('failedToVerifiedTemplate', 'Failed to find verified template with id "{0}".', verifiedTemplateId));
-            }
         }
     }
 }
