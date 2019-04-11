@@ -8,143 +8,185 @@ import { FunctionConfig, HttpAuthLevel } from '../extension.bundle';
 
 // tslint:disable-next-line:max-func-body-length
 suite('Function Config Tests', () => {
-    test('Invalid triggers', () => {
-        // no bindings
-        assert.throws(
-            () => new FunctionConfig({}),
-            (error: Error) => error.message.includes('bindings')
-        );
+    test('null', () => {
+        const config: FunctionConfig = new FunctionConfig(null);
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 0);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, undefined);
+        assert.equal(config.isHttpTrigger, false);
+    });
 
-        // bindings is not array
-        assert.throws(
-            () => new FunctionConfig({ bindings: 'test' }),
-            (error: Error) => error.message.includes('bindings')
-        );
+    test('undefined', () => {
+        const config: FunctionConfig = new FunctionConfig(undefined);
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 0);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, undefined);
+        assert.equal(config.isHttpTrigger, false);
+    });
 
-        // in binding does not have type
-        assert.throws(
-            () => new FunctionConfig({
-                bindings: [{
-                    direction: 'in'
-                }]
-            }),
-            (error: Error) => error.message.includes('direction') && error.message.includes('in') && error.message.includes('type')
-        );
+    test('empty object', () => {
+        const config: FunctionConfig = new FunctionConfig({});
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 0);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, undefined);
+        assert.equal(config.isHttpTrigger, false);
+    });
 
-        // unrecognized auth level
+    test('bindings is not array', () => {
+        const config: FunctionConfig = new FunctionConfig({ bindings: 'test' });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 0);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, undefined);
+        assert.equal(config.isHttpTrigger, false);
+    });
+
+    test('disabled function', () => {
+        const config: FunctionConfig = new FunctionConfig({
+            disabled: true
+        });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 0);
+        assert.equal(config.disabled, true);
+        assert.equal(config.inBinding, undefined);
+        assert.equal(config.isHttpTrigger, false);
+    });
+
+    test('in binding type is undefined', () => {
+        const inBinding: {} = {
+            direction: 'in'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, false);
+    });
+
+    test('in binding type is not http', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'testType'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, false);
+    });
+
+    test('http trigger', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, true);
+    });
+
+    test('admin auth level', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger',
+            authLevel: 'admin'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.admin);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, true);
+    });
+
+    test('function auth level', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger',
+            authLevel: 'function'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.function);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, true);
+    });
+
+    test('anonymous auth level', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger',
+            authLevel: 'anonymous'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.anonymous);
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, true);
+    });
+
+    test('unrecognized auth level', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger',
+            authLevel: 'testAuthLevel'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
         assert.throws(
-            () => new FunctionConfig({
-                bindings: [{
-                    direction: 'in',
-                    type: 'httpTrigger',
-                    authLevel: 'testAuthLevel'
-                }]
-            }),
+            () => config.authLevel,
             (error: Error) => error.message.includes('Unrecognized') && error.message.includes('testAuthLevel')
         );
+        assert.equal(config.bindings.length, 1);
+        assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
+        assert.equal(config.isHttpTrigger, true);
     });
 
-    test('Non http trigger', () => {
-        let config: FunctionConfig = new FunctionConfig({
-            bindings: [{
-                direction: 'in',
-                type: 'testType'
-            }]
+    test('Multiple http bindings', () => {
+        const inBinding: {} = {
+            direction: 'in',
+            type: 'httpTrigger',
+            authLevel: 'admin'
+        };
+        const config: FunctionConfig = new FunctionConfig({
+            bindings: [
+                {
+                    direction: 'out',
+                    type: 'httpTrigger',
+                    authLevel: 'anonymous'
+                },
+                inBinding
+            ]
         });
-        assert.equal(config.disabled, false); // default to false if not specified
-        assert.equal(config.isHttpTrigger, false);
-
-        // binding with disabled set to true and custom setting
-        config = new FunctionConfig({
-            disabled: true,
-            bindings: [{
-                direction: 'in',
-                type: 'testType',
-                testSetting: 'testValue'
-            }]
-        });
-        assert.equal(config.disabled, true);
-        assert.equal(config.isHttpTrigger, false);
-        assert.equal(config.inBinding.testSetting, 'testValue');
-
-        // no bindings (we can still get 'isHttpTrigger' and 'disabled', just not 'inBinding' information)
-        config = new FunctionConfig({
-            disabled: true,
-            bindings: []
-        });
-        assert.equal(config.disabled, true);
-        assert.equal(config.isHttpTrigger, false);
-        assert.throws(
-            () => config.inBinding,
-            (error: Error) => error.message.includes('binding')
-        );
-        assert.throws(
-            () => config.inBindingType,
-            (error: Error) => error.message.includes('binding')
-        );
-    });
-
-    test('Http trigger', () => {
-        let config: FunctionConfig = new FunctionConfig({
-            bindings: [{
-                direction: 'in',
-                type: 'httpTrigger'
-            }]
-        });
-        assert.equal(config.disabled, false);
-        assert.equal(config.isHttpTrigger, true);
-        assert.equal(config.authLevel, HttpAuthLevel.function); // default to function if not specified
-
-        // validate 'admin' authLevel
-        config = new FunctionConfig({
-            bindings: [{
-                direction: 'in',
-                type: 'httpTrigger',
-                authLevel: 'admin'
-            }]
-        });
-        assert.equal(config.disabled, false);
-        assert.equal(config.isHttpTrigger, true);
+        // auth level from 'in' inBinding should be used
         assert.equal(config.authLevel, HttpAuthLevel.admin);
-
-        // validate 'anonymous' authLevel
-        config = new FunctionConfig({
-            bindings: [{
-                direction: 'in',
-                type: 'httpTrigger',
-                authLevel: 'anonymous'
-            }]
-        });
+        assert.equal(config.bindings.length, 2);
         assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
         assert.equal(config.isHttpTrigger, true);
-        assert.equal(config.authLevel, HttpAuthLevel.anonymous);
+    });
 
-        // validate 'function' authLevel and make sure 'in' binding is used
-        config = new FunctionConfig({
-            bindings: [{
-                direction: 'out',
-                type: 'httpTrigger',
-                authLevel: 'anonymous'
-            },
-            {
-                direction: 'in',
-                type: 'httpTrigger',
-                authLevel: 'function'
-            }]
-        });
+    // This happens for C# functions
+    test('generated function.json that doesn\'t have in binding', () => {
+        const inBinding: {} = {
+            type: 'httpTrigger',
+            authLevel: 'admin'
+        };
+        const config: FunctionConfig = new FunctionConfig({ bindings: [inBinding] });
+        assert.equal(config.authLevel, HttpAuthLevel.admin);
+        assert.equal(config.bindings.length, 1);
         assert.equal(config.disabled, false);
+        assert.equal(config.inBinding, inBinding);
         assert.equal(config.isHttpTrigger, true);
-        assert.equal(config.authLevel, HttpAuthLevel.function);
-
-        // validate generated function.json that doesn't have 'in' binding
-        config = new FunctionConfig({
-            bindings: [{
-                type: 'httpTrigger',
-                authLevel: 'function'
-            }]
-        });
-        assert.equal(config.disabled, false);
-        assert.equal(config.isHttpTrigger, true);
-        assert.equal(config.authLevel, HttpAuthLevel.function);
     });
 });

@@ -10,17 +10,17 @@ import { ext } from '../../../extensionVariables';
 import { getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
 import { localize } from '../../../localize';
 import { IFunctionSetting, ResourceType } from '../../../templates/IFunctionSetting';
+import { IBindingWizardContext } from '../../addBinding/IBindingWizardContext';
 import { CosmosDBConnectionCreateStep } from '../azureSteps/CosmosDBConnectionCreateStep';
 import { CosmosDBListStep } from '../azureSteps/CosmosDBListStep';
 import { ServiceBusConnectionCreateStep } from '../azureSteps/ServiceBusConnectionCreateStep';
 import { ServiceBusListStep } from '../azureSteps/ServiceBusListStep';
 import { StorageConnectionCreateStep } from '../azureSteps/StorageConnectionCreateStep';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
 import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
 
-export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _setting: IFunctionSetting;
 
     constructor(setting: IFunctionSetting) {
@@ -28,7 +28,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
         this._setting = setting;
     }
 
-    public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
+    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
         const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
@@ -41,10 +41,10 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
         }
     }
 
-    public async getSubWizard(wizardContext: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+    public async getSubWizard(wizardContext: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
         if (!wizardContext[this._setting.name]) {
-            const azurePromptSteps: AzureWizardPromptStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
-            const azureExecuteSteps: AzureWizardExecuteStep<IFunctionWizardContext & ISubscriptionWizardContext>[] = [];
+            const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
+            const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
             switch (this._setting.resourceType) {
                 case ResourceType.DocumentDB:
                     azurePromptSteps.push(new CosmosDBListStep());
@@ -80,7 +80,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IFunctionWiza
         }
     }
 
-    public shouldPrompt(wizardContext: IFunctionWizardContext): boolean {
+    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
         return !wizardContext[this._setting.name];
     }
 }

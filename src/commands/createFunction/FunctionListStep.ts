@@ -8,19 +8,15 @@ import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateFilterSetting 
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
-import { ValueType } from '../../templates/IFunctionSetting';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import { nonNullProp } from '../../utils/nonNull';
+import { addBindingSteps } from '../addBinding/BindingListStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
 import { IDotnetFunctionWizardContext } from './dotnetSteps/IDotnetFunctionWizardContext';
-import { BooleanPromptStep } from './genericSteps/BooleanPromptStep';
-import { EnumPromptStep } from './genericSteps/EnumPromptStep';
-import { LocalAppSettingListStep } from './genericSteps/LocalAppSettingListStep';
-import { StringPromptStep } from './genericSteps/StringPromptStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -78,23 +74,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 const lowerCaseKey: string = setting.name.toLowerCase();
                 if (this._defaultSettings[lowerCaseKey] !== undefined) {
                     wizardContext[setting.name] = this._defaultSettings[lowerCaseKey];
-                } else if (setting.resourceType !== undefined) {
-                    promptSteps.push(new LocalAppSettingListStep(setting));
-                } else {
-                    switch (setting.valueType) {
-                        case ValueType.boolean:
-                            promptSteps.push(new BooleanPromptStep(setting));
-                            break;
-                        case ValueType.enum:
-                            promptSteps.push(new EnumPromptStep(setting));
-                            break;
-                        default:
-                            // Default to 'string' type for any valueType that isn't supported
-                            promptSteps.push(new StringPromptStep(setting));
-                            break;
-                    }
                 }
             }
+
+            addBindingSteps(template.userPromptedSettings, promptSteps);
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
             switch (wizardContext.language) {

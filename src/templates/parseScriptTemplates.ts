@@ -5,7 +5,9 @@
 
 import { isString } from 'util';
 import { ProjectLanguage } from '../constants';
-import { FunctionConfig } from '../FunctionConfig';
+import { ext } from '../extensionVariables';
+import { FunctionConfig, IFunctionBinding } from '../FunctionConfig';
+import { IBindingTemplate } from './IBindingTemplate';
 import { IEnumValue, IFunctionSetting, ResourceType, ValueType } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 
@@ -48,16 +50,21 @@ interface IRawSetting {
     }[];
 }
 
+interface IRawBinding {
+    // tslint:disable-next-line:no-reserved-keywords
+    type: string;
+    documentation: string;
+    displayName: string;
+    direction: string;
+    settings: object[];
+}
+
 /**
  * Describes script template config to be used for parsing
  */
 export interface IConfig {
     variables: IVariables;
-    bindings: {
-        // tslint:disable-next-line:no-reserved-keywords
-        type: string;
-        settings: object[];
-    }[];
+    bindings: object[];
 }
 
 /**
@@ -135,12 +142,19 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
     };
 }
 
-export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, commonSettings: IConfig): IScriptFunctionTemplate {
-    const commonSettingsMap: { [inBindingType: string]: IFunctionSetting[] | undefined } = {};
-    for (const binding of commonSettings.bindings) {
-        commonSettingsMap[binding.type] = binding.settings.map((setting: object) => parseScriptSetting(setting, resources, commonSettings.variables));
-    }
+export function parseScriptBindings(config: IConfig, resources: IResources): IBindingTemplate[] {
+    return config.bindings.map((rawBinding: IRawBinding) => {
+        const settings: IFunctionSetting[] = rawBinding.settings.map((setting: object) => parseScriptSetting(setting, resources, config.variables));
+        return {
+            direction: rawBinding.direction,
+            displayName: getResourceValue(resources, rawBinding.displayName),
+            settings,
+            type: rawBinding.type
+        };
+    });
+}
 
+export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, bindingTemplates: IBindingTemplate[]): IScriptFunctionTemplate {
     const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
@@ -162,16 +176,19 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
     const userPromptedSettings: IFunctionSetting[] = [];
     if (rawTemplate.metadata.userPrompt) {
         for (const settingName of rawTemplate.metadata.userPrompt) {
-            const settings: IFunctionSetting[] | undefined = commonSettingsMap[functionConfig.inBindingType];
-            if (settings) {
-                const setting: IFunctionSetting | undefined = settings.find((bs: IFunctionSetting) => bs.name === settingName);
-                if (setting) {
-                    const functionSpecificDefaultValue: string | undefined = functionConfig.inBinding[setting.name];
-                    if (functionSpecificDefaultValue) {
-                        // overwrite common default value with the function-specific default value
-                        setting.defaultValue = functionSpecificDefaultValue;
+            if (functionConfig.inBinding) {
+                const inBinding: IFunctionBinding = functionConfig.inBinding;
+                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === inBinding.type);
+                if (bindingTemplate) {
+                    const setting: IFunctionSetting | undefined = bindingTemplate.settings.find((bs: IFunctionSetting) => bs.name === settingName);
+                    if (setting) {
+                        const functionSpecificDefaultValue: string | undefined = inBinding[setting.name];
+                        if (functionSpecificDefaultValue) {
+                            // overwrite common default value with the function-specific default value
+                            setting.defaultValue = functionSpecificDefaultValue;
+                        }
+                        userPromptedSettings.push(setting);
                     }
-                    userPromptedSettings.push(setting);
                 }
             }
         }
@@ -181,7 +198,6 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         functionConfig: functionConfig,
         isHttpTrigger: functionConfig.isHttpTrigger,
         id: rawTemplate.id,
-        functionType: functionConfig.inBindingType,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
         language: language,
@@ -193,7 +209,6 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
 
 export interface IScriptFunctionTemplate extends IFunctionTemplate {
     templateFiles: { [filename: string]: string };
-    functionType: string;
     functionConfig: FunctionConfig;
 }
 
@@ -202,10 +217,12 @@ export interface IScriptFunctionTemplate extends IFunctionTemplate {
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
 export function parseScriptTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): IFunctionTemplate[] {
+    ext.scriptBindings = parseScriptBindings(<IConfig>rawConfig, <IResources>rawResources);
+
     const templates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
-            templates.push(parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, <IConfig>rawConfig));
+            templates.push(parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, ext.scriptBindings));
         } catch (error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }

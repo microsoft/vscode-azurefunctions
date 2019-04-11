@@ -68,6 +68,7 @@
         "onCommand:azureFunctions.connectToGitHub",
         "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.swapSlot",
+        "onCommand:azureFunctions.addBinding",
         "workspaceContains:host.json",
         "workspaceContains:*/host.json",
         "onView:azureFunctionsExplorer",
@@ -302,6 +303,11 @@
                     "light": "resources/light/Visible.svg",
                     "dark": "resources/dark/Visible.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.addBinding",
+                "title": "%azFunc.addBinding%",
+                "category": "Azure Functions"
             }
         ],
         "viewsContainers": {
@@ -545,6 +551,10 @@
                     "command": "azureFunctions.viewDeploymentLogs",
                     "when": "view == azureFunctionsExplorer && viewItem =~ /^deployment//",
                     "group": "inline"
+                },
+                {
+                    "command": "azureFunctions.addBinding",
+                    "when": "view == azureFunctionsExplorer && viewItem == azFuncLocalBindings"
                 }
             ],
             "explorer/context": [
@@ -562,6 +572,11 @@
                     "command": "azureFunctions.appSettings.encrypt",
                     "when": "resourceFilename==local.settings.json",
                     "group": "zzz_appSettings@2"
+                },
+                {
+                    "command": "azureFunctions.addBinding",
+                    "when": "resourceFilename==function.json",
+                    "group": "zzz_binding@1"
                 }
             ],
             "commandPalette": [
@@ -596,6 +611,17 @@
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.addBinding",
+                    "when": "config.azureFunctions.enableProjectTree == true"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "azureFunctions.addBinding",
+                    "when": "resourceFilename==function.json",
+                    "group": "zzz_binding@1"
                 }
             ]
         },
@@ -826,6 +852,11 @@
                     "azureFunctions.enablePowerShell": {
                         "type": "boolean",
                         "description": "%azFunc.enablePowerShell%",
+                        "default": false
+                    },
+                    "azureFunctions.enableProjectTree": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableProjectTree%",
                         "default": false
                     }
                 }

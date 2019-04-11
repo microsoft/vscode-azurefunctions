@@ -24,7 +24,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public readonly config: FunctionConfig;
 
     private readonly _name: string;
-    private _triggerUrl: string;
+    private _triggerUrl: string | undefined;
     private _disabled: boolean;
 
     private constructor(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
@@ -61,7 +61,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
         return nodeUtils.getIconPath(FunctionTreeItem.contextValue);
     }
 
-    public get triggerUrl(): string {
+    public get triggerUrl(): string | undefined {
         return this._triggerUrl;
     }
 
@@ -74,7 +74,10 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public async refreshImpl(): Promise<void> {
-        await this.refreshTriggerUrl();
+        if (this.config.isHttpTrigger) {
+            await this.refreshTriggerUrl();
+        }
+
         await this.refreshDisabledState();
     }
 

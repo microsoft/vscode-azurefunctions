@@ -6,8 +6,9 @@
 import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
 import { mavenUtils } from "../utils/mavenUtils";
+import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
-import { IConfig, IRawTemplate, IResources, parseScriptTemplate as parseJavaTemplate } from './parseScriptTemplates';
+import { IConfig, IRawTemplate, IResources, parseScriptBindings, parseScriptTemplate as parseJavaTemplate } from './parseScriptTemplates';
 import { removeLanguageFromId } from "./TemplateProvider";
 
 /**
@@ -30,7 +31,7 @@ const backupJavaTemplateNames: string[] = [
  */
 export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], functionAppPath: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
     let embeddedTemplates: IRawJavaTemplates = { templates: [] };
-    let embeddedConfig: object = {};
+    let embeddedConfig: IConfig | undefined;
     let embeddedResources: object = {};
     try {
         // Try to get the templates information by calling 'mvn azure-functions:list'.
@@ -39,7 +40,7 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {
             embeddedTemplates = <IRawJavaTemplates>JSON.parse(regExpResult[1]);
-            embeddedConfig = <object[]>JSON.parse(regExpResult[2]);
+            embeddedConfig = <IConfig>JSON.parse(regExpResult[2]);
             embeddedResources = <object[]>JSON.parse(regExpResult[3]);
         }
     } catch (error) {
@@ -48,14 +49,19 @@ export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], func
             telemetryProperties.parseJavaTemplateErrors = parseError(error).message;
         }
     }
+
     const templates: IFunctionTemplate[] = [];
-    for (const template of embeddedTemplates.templates) {
-        try {
-            templates.push(parseJavaTemplate(template, <IResources>embeddedResources, <IConfig>embeddedConfig));
-        } catch (error) {
-            // Ignore errors so that a single poorly formed template does not affect other templates
+    if (embeddedConfig) {
+        const bindings: IBindingTemplate[] = parseScriptBindings(embeddedConfig, <IResources>embeddedResources);
+        for (const template of embeddedTemplates.templates) {
+            try {
+                templates.push(parseJavaTemplate(template, <IResources>embeddedResources, bindings));
+            } catch (error) {
+                // Ignore errors so that a single poorly formed template does not affect other templates
+            }
         }
     }
+
     if (templates.length > 0) {
         return templates;
     } else {
