@@ -47,18 +47,16 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const projectPath: string = wizardContext.projectPath;
         const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
 
-        const projName: string | undefined = language === ProjectLanguage.FSharp ? await tryGetFsprojFile(projectPath) : await tryGetCsprojFile(projectPath);
-        if (!projName) {
+        const projFileName: string | undefined = language === ProjectLanguage.FSharp ? await tryGetFsprojFile(projectPath) : await tryGetCsprojFile(projectPath);
+        if (!projFileName) {
             throw new Error(localize('projNotFound', 'Expected to find a single project file in folder "{1}", but found zero or multiple instead.', path.basename(projectPath)));
         }
 
-        const projPath: string = path.join(projectPath, projName);
-        const projContents: string = (await fse.readFile(projPath)).toString();
-        const matches: RegExpMatchArray | null = projContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
-        if (matches === null || matches.length < 1) {
-            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projName));
+        const projFilePath: string = path.join(projectPath, projFileName);
+        const targetFramework: string | undefined = await tryGetTargetFramework(projFilePath);
+        if (!targetFramework) {
+            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projFileName));
         } else {
-            const targetFramework: string = matches[1];
             wizardContext.actionContext.properties.dotnetTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
                 wizardContext.runtime = ProjectRuntime.v2;
@@ -139,6 +137,12 @@ export async function tryGetCsprojFile(projectPath: string): Promise<string | un
 
 export async function tryGetFsprojFile(projectPath: string): Promise<string | undefined> {
     return await tryGetProjFile(projectPath, /\.fsproj$/i);
+}
+
+export async function tryGetTargetFramework(projFilePath: string): Promise<string | undefined> {
+    const projContents: string = (await fse.readFile(projFilePath)).toString();
+    const matches: RegExpMatchArray | null = projContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
+    return matches === null ? undefined : matches[1];
 }
 
 /**

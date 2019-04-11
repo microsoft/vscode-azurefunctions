@@ -811,6 +811,11 @@
                         "description": "%azFunc.showDeploySubpathWarningDescription%",
                         "default": true
                     },
+                    "azureFunctions.showTargetFrameworkWarning": {
+                        "type": "boolean",
+                        "description": "%azFunc.showTargetFrameworkWarningDescription%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azFunc.pickProcessTimeoutDescription%",
