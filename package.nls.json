@@ -39,6 +39,7 @@
     "azFunc.showDebugConfigWarningDescription": "Show a warning when an Azure Functions project was detected that has an out-of-date debug configuration.",
     "azFunc.showJavaDeployConfigWarningDescription": "Show a warning when an Azure Functions Java project was detected that has an out-of-date deploy configuration.",
     "azFunc.showPythonVenvWarningDescription": "Show a warning when an Azure Functions Python project was detected that does not have a virtual environment.",
+    "azFunc.showTargetFrameworkWarningDescription": "Show a warning when an Azure Functions .NET project was detected that has mismatched target frameworks.",
     "azFunc.showDeploySubpathWarningDescription": "Show a warning when the \"deploySubpath\" setting does not match the selected folder for deploying.",
     "azFunc.startStreamingLogs": "Start Streaming Logs",
     "azFunc.stopStreamingLogs": "Stop Streaming Logs",
