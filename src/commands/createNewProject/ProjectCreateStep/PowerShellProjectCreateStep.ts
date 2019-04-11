@@ -44,6 +44,8 @@ const requirementspsd1: string = `# This file enables modules to be automaticall
 }`;
 
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
+    protected supportsManagedDependencies: boolean = true;
+
     public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
         await super.executeCore(wizardContext);
 

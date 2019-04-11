@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, ProjectRuntime, proxiesFileName } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
 import { ILocalAppSettings } from '../../../LocalAppSettings';
 import { getFunctionsWorkerRuntime } from '../../../ProjectSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
@@ -110,12 +110,13 @@ out
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
+    protected supportsManagedDependencies: boolean = false;
 
     public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
         const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: object = this.getHostContent(wizardContext, runtime);
+            const hostJson: object = this.getHostContent(runtime);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -157,9 +158,9 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         }
     }
 
-    private getHostContent(wizardContext: IProjectWizardContext, runtime: ProjectRuntime): object {
+    private getHostContent(runtime: ProjectRuntime): object {
         if (runtime === ProjectRuntime.v2) {
-            if (wizardContext.language === ProjectLanguage.PowerShell) {
+            if (this.supportsManagedDependencies) {
                 return {
                     version: '2.0',
                     managedDependency: {

@@ -110,6 +110,7 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         const projectPath: string = path.join(testFolderPath, powershellProject);
         await fse.ensureFile(path.join(projectPath, 'HttpTriggerPS', 'run.ps1'));
         await fse.ensureFile(path.join(projectPath, 'profile.ps1'));
+        await fse.ensureFile(path.join(projectPath, 'requirements.psd1'));
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getPowerShellValidateOptions());
     });
