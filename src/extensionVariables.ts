@@ -5,6 +5,7 @@
 
 import { ExtensionContext, OutputChannel } from "vscode";
 import { AzureTreeDataProvider, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
+import { IBindingTemplate } from "./templates/IBindingTemplate";
 import { TemplateProvider } from "./templates/TemplateProvider";
 
 /**
@@ -19,6 +20,7 @@ export namespace ext {
     export let reporter: ITelemetryReporter;
     export let funcCliPath: string = 'func';
     export let templateSource: TemplateSource | undefined;
+    export let scriptBindings: IBindingTemplate[];
 }
 
 export enum TemplateSource {

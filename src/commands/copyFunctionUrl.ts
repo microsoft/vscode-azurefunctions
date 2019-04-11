@@ -13,7 +13,7 @@ export async function copyFunctionUrl(node?: FunctionTreeItem): Promise<void> {
         node = <FunctionTreeItem>await ext.tree.showTreeItemPicker([FunctionTreeItem.contextValue, FunctionTreeItem.readOnlyContextValue]);
     }
 
-    if (node.config.isHttpTrigger) {
+    if (node.triggerUrl) {
         await vscode.env.clipboard.writeText(node.triggerUrl);
     } else {
         throw new Error(localize('CopyFailedForNonHttp', 'Function URLs can only be used for HTTP triggers.'));

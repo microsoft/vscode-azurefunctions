@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseError } from 'vscode-azureextensionui';
 import { localize } from "./localize";
 
 export interface IFunctionJson {
     disabled?: boolean;
     scriptFile?: string;
-    bindings: IFunctionBinding[];
+    bindings?: IFunctionBinding[];
 }
 
-interface IFunctionBinding {
+export interface IFunctionBinding {
     // tslint:disable-next-line:no-reserved-keywords
     type?: string;
     name?: string;
@@ -38,81 +37,50 @@ enum BindingDirection {
  */
 export class FunctionConfig {
     public readonly functionJson: IFunctionJson;
-    public readonly disabled: boolean;
-    public readonly isHttpTrigger: boolean = false;
-    public readonly authLevel: HttpAuthLevel = HttpAuthLevel.function;
-
-    private readonly _inBinding: IFunctionBinding | undefined;
-    private readonly _inBindingType: string | undefined;
-    private readonly _noInBindingError: Error = new Error(localize('noInBinding', 'Failed to find binding with direction "in" for this function.'));
 
     // tslint:disable-next-line:no-any
     public constructor(data: any) {
-        let errMessage: string | undefined;
+        // tslint:disable-next-line:no-unsafe-any
+        if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
+            this.functionJson = <IFunctionJson>data;
+        } else {
+            this.functionJson = {};
+        }
+    }
 
-        try {
-            if (data === null || data === undefined) {
-                errMessage = localize('noDataError', 'No data was supplied.');
+    public get bindings(): IFunctionBinding[] {
+        // tslint:disable-next-line: strict-boolean-expressions
+        return this.functionJson.bindings || [];
+    }
+
+    public get disabled(): boolean {
+        return this.functionJson.disabled === true;
+    }
+
+    public get inBinding(): IFunctionBinding | undefined {
+        let inBinding: IFunctionBinding | undefined = this.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
+        if (inBinding === undefined && this.bindings.length > 0) {
+            // The generated 'function.json' file for C# class libraries doesn't have direction information (by design), so just use the first
+            inBinding = this.bindings[0];
+        }
+
+        return inBinding;
+    }
+
+    public get isHttpTrigger(): boolean {
+        return !!this.inBinding && !!this.inBinding.type && this.inBinding.type.toLowerCase() === 'httptrigger';
+    }
+
+    public get authLevel(): HttpAuthLevel {
+        if (this.inBinding && this.inBinding.authLevel) {
+            const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.inBinding.authLevel.toLowerCase()];
+            if (authLevel === undefined) {
+                throw new Error(localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.inBinding.authLevel));
             } else {
-                // tslint:disable-next-line:no-unsafe-any
-                this.disabled = data.disabled === true;
-
-                // tslint:disable-next-line:no-unsafe-any
-                if (!data.bindings || !(data.bindings instanceof Array)) {
-                    errMessage = localize('expectedBindings', 'Expected "bindings" element of type "Array".');
-                } else {
-                    this.functionJson = <IFunctionJson>data;
-
-                    const inBinding: IFunctionBinding | undefined = this.functionJson.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
-                    if (inBinding === undefined && this.functionJson.bindings.length > 0) {
-                        // The generated 'function.json' file for C# class libraries doesn't have direction information (by design), so just use the first
-                        this._inBinding = this.functionJson.bindings[0];
-                    } else {
-                        this._inBinding = inBinding;
-                    }
-
-                    if (this._inBinding) {
-                        if (!this._inBinding.type) {
-                            errMessage = localize('inBindingTypeError', 'The binding with direction "in" must have a type.');
-                        } else {
-                            this._inBindingType = this._inBinding.type;
-                            if (this._inBinding.type.toLowerCase() === 'httptrigger') {
-                                this.isHttpTrigger = true;
-                                if (this._inBinding.authLevel) {
-                                    const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this._inBinding.authLevel.toLowerCase()];
-                                    if (authLevel === undefined) {
-                                        errMessage = localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this._inBinding.authLevel);
-                                    } else {
-                                        this.authLevel = authLevel;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                return authLevel;
             }
-        } catch (error) {
-            errMessage = (parseError(error)).message;
-        }
-
-        if (errMessage !== undefined) {
-            throw new Error(localize('functionJsonParseError', 'Failed to parse function.json: {0}', errMessage));
-        }
-    }
-
-    public get inBinding(): IFunctionBinding {
-        if (!this._inBinding) {
-            throw this._noInBindingError;
         } else {
-            return this._inBinding;
-        }
-    }
-
-    public get inBindingType(): string {
-        if (!this._inBindingType) {
-            throw this._noInBindingError;
-        } else {
-            return this._inBindingType;
+            return HttpAuthLevel.function;
         }
     }
 }
