@@ -7,7 +7,7 @@ import { AzureWizardPromptStep } from "vscode-azureextensionui";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IFunctionSetting } from "../../../templates/IFunctionSetting";
-import { IBindingWizardContext } from "../../addBinding/IBindingWizardContext";
+import { IBindingWizardContext } from "../IBindingWizardContext";
 
 export class StringPromptStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _setting: IFunctionSetting;

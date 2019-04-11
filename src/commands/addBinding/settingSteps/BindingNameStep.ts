@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { FunctionConfig } from '../../FunctionConfig';
-import { localize } from '../../localize';
-import { StringPromptStep } from '../createFunction/genericSteps/StringPromptStep';
-import { IBindingWizardContext } from './IBindingWizardContext';
+import { FunctionConfig } from '../../../FunctionConfig';
+import { localize } from '../../../localize';
+import { IBindingWizardContext } from '../IBindingWizardContext';
+import { StringPromptStep } from './StringPromptStep';
 
 export class BindingNameStep extends StringPromptStep {
     private _functionConfig: FunctionConfig | undefined;

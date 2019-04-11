@@ -7,14 +7,9 @@ import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vsco
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IBindingTemplate } from '../../templates/IBindingTemplate';
-import { IFunctionSetting, ValueType } from '../../templates/IFunctionSetting';
 import { nonNullProp } from '../../utils/nonNull';
-import { BooleanPromptStep } from '../createFunction/genericSteps/BooleanPromptStep';
-import { EnumPromptStep } from '../createFunction/genericSteps/EnumPromptStep';
-import { LocalAppSettingListStep } from '../createFunction/genericSteps/LocalAppSettingListStep';
-import { StringPromptStep } from '../createFunction/genericSteps/StringPromptStep';
-import { BindingNameStep } from './BindingNameStep';
 import { IBindingWizardContext } from './IBindingWizardContext';
+import { addBindingSettingSteps } from './settingSteps/addBindingSettingSteps';
 
 export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext> {
     public hideStepCount: boolean = true;
@@ -33,7 +28,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
         const binding: IBindingTemplate | undefined = wizardContext.bindingTemplate;
         if (binding) {
             const promptSteps: AzureWizardPromptStep<IBindingWizardContext>[] = [];
-            addBindingSteps(binding.settings, promptSteps);
+            addBindingSettingSteps(binding.settings, promptSteps);
             return { promptSteps };
         } else {
             return undefined;
@@ -48,28 +43,5 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
             .filter(b => b.direction.toLowerCase() === direction.toLowerCase())
             .sort((a, b) => a.displayName.localeCompare(b.displayName));
         return bindings.map(b => { return { label: b.displayName, data: b }; });
-    }
-}
-
-export function addBindingSteps(settings: IFunctionSetting[], promptSteps: AzureWizardPromptStep<IBindingWizardContext>[]): void {
-    for (const setting of settings) {
-        if (setting.name.toLowerCase() === 'name') {
-            promptSteps.push(new BindingNameStep(setting));
-        } else if (setting.resourceType !== undefined) {
-            promptSteps.push(new LocalAppSettingListStep(setting));
-        } else {
-            switch (setting.valueType) {
-                case ValueType.boolean:
-                    promptSteps.push(new BooleanPromptStep(setting));
-                    break;
-                case ValueType.enum:
-                    promptSteps.push(new EnumPromptStep(setting));
-                    break;
-                default:
-                    // Default to 'string' type for any valueType that isn't supported
-                    promptSteps.push(new StringPromptStep(setting));
-                    break;
-            }
-        }
     }
 }

@@ -8,9 +8,9 @@ import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { IFunctionSetting } from '../../../templates/IFunctionSetting';
 import { nonNullProp } from '../../../utils/nonNull';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { IBindingWizardContext } from '../IBindingWizardContext';
 
-export class LocalAppSettingNameStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+export class LocalAppSettingNameStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _setting: IFunctionSetting;
 
     public constructor(setting: IFunctionSetting) {
@@ -18,7 +18,7 @@ export class LocalAppSettingNameStep extends AzureWizardPromptStep<IFunctionWiza
         this._setting = setting;
     }
 
-    public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
+    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
         const appSettingSuffix: string = `_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
         wizardContext[this._setting.name] = await ext.ui.showInputBox({
             placeHolder: localize('appSettingKeyPlaceholder', 'Local app setting key'),
@@ -27,7 +27,7 @@ export class LocalAppSettingNameStep extends AzureWizardPromptStep<IFunctionWiza
         });
     }
 
-    public shouldPrompt(wizardContext: IFunctionWizardContext): boolean {
+    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
         return !wizardContext[this._setting.name];
     }
 }

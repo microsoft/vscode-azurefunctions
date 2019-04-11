@@ -10,15 +10,15 @@ import { ext } from '../../../extensionVariables';
 import { getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
 import { localize } from '../../../localize';
 import { IFunctionSetting, ResourceType } from '../../../templates/IFunctionSetting';
-import { IBindingWizardContext } from '../../addBinding/IBindingWizardContext';
-import { CosmosDBConnectionCreateStep } from '../azureSteps/CosmosDBConnectionCreateStep';
-import { CosmosDBListStep } from '../azureSteps/CosmosDBListStep';
-import { ServiceBusConnectionCreateStep } from '../azureSteps/ServiceBusConnectionCreateStep';
-import { ServiceBusListStep } from '../azureSteps/ServiceBusListStep';
-import { StorageConnectionCreateStep } from '../azureSteps/StorageConnectionCreateStep';
+import { IBindingWizardContext } from '../IBindingWizardContext';
+import { CosmosDBConnectionCreateStep } from './cosmosDB/CosmosDBConnectionCreateStep';
+import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
 import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
+import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectionCreateStep';
+import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
+import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 
 export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _setting: IFunctionSetting;

@@ -6,9 +6,9 @@
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { IBindingWizardContext } from '../IBindingWizardContext';
 
-export class LocalAppSettingValueStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+export class LocalAppSettingValueStep extends AzureWizardPromptStep<IBindingWizardContext> {
     private readonly _key: string;
 
     public constructor(key: string) {
@@ -16,14 +16,14 @@ export class LocalAppSettingValueStep extends AzureWizardPromptStep<IFunctionWiz
         this._key = key;
     }
 
-    public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
+    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
         wizardContext[this._key] = await ext.ui.showInputBox({
             placeHolder: localize('appSettingValuePlaceholder', 'App setting value'),
             prompt: localize('appSettingValuePrompt', 'Provide a connection string')
         });
     }
 
-    public shouldPrompt(wizardContext: IFunctionWizardContext): boolean {
+    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
         return !wizardContext[this._key];
     }
 }

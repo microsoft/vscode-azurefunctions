@@ -7,10 +7,10 @@ import { StorageManagementClient, StorageManagementModels } from 'azure-arm-stor
 import { createAzureClient, IStorageAccountWizardContext } from 'vscode-azureextensionui';
 import { getResourceGroupFromId } from '../../../utils/azure';
 import { nonNullProp, nonNullValue } from '../../../utils/nonNull';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { IBindingWizardContext } from '../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
 
-export class StorageConnectionCreateStep extends AzureConnectionCreateStepBase<IStorageAccountWizardContext & IFunctionWizardContext> {
+export class StorageConnectionCreateStep extends AzureConnectionCreateStepBase<IStorageAccountWizardContext & IBindingWizardContext> {
     public async getConnection(wizardContext: IStorageAccountWizardContext): Promise<IConnection> {
         const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>nonNullProp(wizardContext, 'storageAccount');
         const name: string = nonNullProp(storageAccount, 'name');

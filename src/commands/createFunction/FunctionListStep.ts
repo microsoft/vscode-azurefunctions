@@ -11,7 +11,7 @@ import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSe
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import { nonNullProp } from '../../utils/nonNull';
-import { addBindingSteps } from '../addBinding/BindingListStep';
+import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
@@ -77,7 +77,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 }
             }
 
-            addBindingSteps(template.userPromptedSettings, promptSteps);
+            addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
             switch (wizardContext.language) {

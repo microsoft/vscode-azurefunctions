@@ -5,14 +5,14 @@
 
 import { ServiceBusManagementClient, ServiceBusManagementModels } from 'azure-arm-sb';
 import { createAzureClient } from 'vscode-azureextensionui';
-import { localize } from '../../../localize';
-import { getResourceGroupFromId } from '../../../utils/azure';
-import { nonNullProp } from '../../../utils/nonNull';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
-import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
+import { localize } from '../../../../localize';
+import { getResourceGroupFromId } from '../../../../utils/azure';
+import { nonNullProp } from '../../../../utils/nonNull';
+import { IBindingWizardContext } from '../../IBindingWizardContext';
+import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
 import { IServiceBusWizardContext } from './IServiceBusWizardContext';
 
-export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IFunctionWizardContext> {
+export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IBindingWizardContext> {
     public async getConnection(wizardContext: IServiceBusWizardContext): Promise<IConnection> {
         const sbNamespace: ServiceBusManagementModels.SBNamespace = nonNullProp(wizardContext, 'sbNamespace');
         const id: string = nonNullProp(sbNamespace, 'id');

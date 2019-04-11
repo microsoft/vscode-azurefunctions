@@ -5,8 +5,8 @@
 
 import { ServiceBusManagementClient } from 'azure-arm-sb';
 import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
-import { localize } from '../../../localize';
-import { promptForResource } from '../../../utils/azure';
+import { localize } from '../../../../localize';
+import { promptForResource } from '../../../../utils/azure';
 import { IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusListStep extends AzureWizardPromptStep<IServiceBusWizardContext> {
