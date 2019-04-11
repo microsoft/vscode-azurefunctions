@@ -8,6 +8,7 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'v
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import { getFuncExtensionSetting } from '../../ProjectSettings';
 import { nonNullProp } from '../../utils/nonNull';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
@@ -44,10 +45,13 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript },
             { label: ProjectLanguage.TypeScript },
             { label: ProjectLanguage.CSharp },
-            { label: ProjectLanguage.PowerShell, description: previewDescription },
             { label: ProjectLanguage.Python, description: previewDescription },
             { label: ProjectLanguage.Java }
         ];
+
+        if (getFuncExtensionSetting('enablePowerShell')) {
+            languagePicks.push({ label: ProjectLanguage.PowerShell, description: previewDescription });
+        }
 
         const options: QuickPickOptions = { placeHolder: localize('selectFuncTemplate', 'Select a language for your function project') };
         wizardContext.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;

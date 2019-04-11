@@ -822,6 +822,11 @@
                         "type": "boolean",
                         "description": "%azFunc.advancedCreationDescription%",
                         "default": false
+                    },
+                    "azureFunctions.enablePowerShell": {
+                        "type": "boolean",
+                        "description": "%azFunc.enablePowerShell%",
+                        "default": false
                     }
                 }
             }
