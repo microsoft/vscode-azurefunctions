@@ -110,12 +110,13 @@ out
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
+    protected supportsManagedDependencies: boolean = false;
 
     public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
         const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: {} = runtime === ProjectRuntime.v1 ? {} : { version: '2.0' };
+            const hostJson: object = this.getHostContent(runtime);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -155,5 +156,23 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         if (await confirmOverwriteFile(funcIgnorePath)) {
             await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
         }
+    }
+
+    private getHostContent(runtime: ProjectRuntime): object {
+        if (runtime === ProjectRuntime.v2) {
+            if (this.supportsManagedDependencies) {
+                return {
+                    version: '2.0',
+                    managedDependency: {
+                        enabled: true
+                    }
+                };
+            }
+
+            return { version: '2.0' };
+        }
+
+        // runtime === ProjectRuntime.v1
+        return {};
     }
 }

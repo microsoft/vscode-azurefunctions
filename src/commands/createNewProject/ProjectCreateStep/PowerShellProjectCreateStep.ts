@@ -5,10 +5,12 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { profileps1FileName } from "../../../constants";
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
+
+const profileps1FileName: string = 'profile.ps1';
+const requirementspsd1FileName: string = 'requirements.psd1';
 
 const profileps1: string = `# Azure Functions profile.ps1
 #
@@ -33,13 +35,28 @@ if ($env:MSI_SECRET -and (Get-Module -ListAvailable Az.Accounts)) {
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
 `;
 
+const requirementspsd1: string = `# This file enables modules to be automatically managed by the Functions service.
+# Only the Azure Az module is supported in preview.
+# See https://aka.ms/functionsmanageddependency for additional information.
+#
+@{
+    'Az' = '1.*'
+}`;
+
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
+    protected supportsManagedDependencies: boolean = true;
+
     public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
         await super.executeCore(wizardContext);
 
         const profileps1Path: string = path.join(wizardContext.projectPath, profileps1FileName);
         if (await confirmOverwriteFile(profileps1Path)) {
             await fse.writeFile(profileps1Path, profileps1);
+        }
+
+        const requirementspsd1Path: string = path.join(wizardContext.projectPath, requirementspsd1FileName);
+        if (await confirmOverwriteFile(requirementspsd1Path)) {
+            await fse.writeFile(requirementspsd1Path, requirementspsd1);
         }
     }
 }

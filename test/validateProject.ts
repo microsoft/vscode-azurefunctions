@@ -144,7 +144,8 @@ export function getPowerShellValidateOptions(): IValidateProjectOptions {
             preDeployTask: 'func: extensions install'
         },
         expectedPaths: [
-            'profile.ps1'
+            'profile.ps1',
+            'requirements.psd1'
         ],
         expectedExtensionRecs: [
             'ms-vscode.PowerShell'

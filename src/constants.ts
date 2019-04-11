@@ -56,7 +56,6 @@ export const launchFileName: string = 'launch.json';
 export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
-export const profileps1FileName: string = 'profile.ps1';
 
 export enum PackageManager {
     npm = 'npm',
