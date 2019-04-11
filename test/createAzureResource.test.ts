@@ -12,11 +12,14 @@ import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGl
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 
+// tslint:disable-next-line:max-func-body-length
 suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(1200 * 1000);
     const resourceGroupsToDelete: string[] = [];
     const testAccount: TestAzureAccount = new TestAzureAccount();
     let oldProjectLanguage: ProjectLanguage | undefined;
+    let webSiteClient: WebSiteManagementClient;
+    const resourceName1: string = getRandomHexString().toLowerCase();
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -30,6 +33,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         this.timeout(120 * 1000);
         await testAccount.signIn();
         ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
+        webSiteClient = getWebsiteManagementClient(testAccount);
     });
 
     suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
@@ -54,34 +58,77 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         ext.tree.dispose();
     });
 
-    test('Create and Delete New Function App', async () => {
-        const resourceName: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
-        resourceGroupsToDelete.push(resourceName);
+    test('createFunctionApp (Basic)', async () => {
+        resourceGroupsToDelete.push(resourceName1);
+        await runWithFuncSetting('advancedCreation', undefined, async () => {
+            ext.ui = new TestUserInput([resourceName1]);
+            await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
+            const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName1, resourceName1);
+            assert.ok(createdApp);
+        });
+    });
 
-        const testInputs: string[] = [resourceName];
-        ext.ui = new TestUserInput(testInputs);
-        await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
-        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
-        const createdApp: WebSiteManagementModels.Site = await client.webApps.get(resourceName, resourceName);
-        assert.ok(createdApp);
+    test('createFunctionApp (Advanced)', async () => {
+        const resourceName2: string = getRandomHexString();
+        const resourceGroupName: string = getRandomHexString();
+        const storageAccountName: string = getRandomHexString().toLowerCase();
+        resourceGroupsToDelete.push(resourceGroupName);
+        await runWithFuncSetting('advancedCreation', 'true', async () => {
+            const testInputs: string[] = [resourceName2, 'Windows', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
+            ext.ui = new TestUserInput(testInputs);
+            await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
+            const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName2);
+            assert.ok(createdApp, 'Create windows Function App with new rg/sa failed.');
+        });
+    });
 
-        ext.ui = new TestUserInput([resourceName, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
+    test('stopFunctionApp', async () => {
+        let createdApp: WebSiteManagementModels.Site;
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state} before stop.`);
+        ext.ui = new TestUserInput([resourceName1]);
+        await vscode.commands.executeCommand('azureFunctions.stopFunctionApp');
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Stopped', `Function App state should be 'Stopped' rather than ${createdApp.state}.`);
+    });
+
+    test('startFunctionApp', async () => {
+        let createdApp: WebSiteManagementModels.Site;
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Stopped', `Function App state should be 'Stopped' rather than ${createdApp.state} before start.`);
+        ext.ui = new TestUserInput([resourceName1]);
+        await vscode.commands.executeCommand('azureFunctions.startFunctionApp');
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state}.`);
+    });
+
+    test('restartFunctionApp', async () => {
+        let createdApp: WebSiteManagementModels.Site;
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state} before restart.`);
+        ext.ui = new TestUserInput([resourceName1, resourceName1]);
+        await vscode.commands.executeCommand('azureFunctions.restartFunctionApp');
+        createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state}.`);
+    });
+
+    test('deleteFunctionApp', async () => {
+        ext.ui = new TestUserInput([resourceName1, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
         await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
-        const deletedApp: WebSiteManagementModels.Site | undefined = await client.webApps.get(resourceName, resourceName);
-        assert.ifError(deletedApp); // if app was deleted, get() returns null.  assert.ifError throws if the value passed is not null/undefined
+        const deletedApp: WebSiteManagementModels.Site | undefined = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.ifError(deletedApp);
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
     test('createFunctionApp API', async () => {
         const resourceGroupName: string = getRandomHexString();
         resourceGroupsToDelete.push(resourceGroupName);
-        const client: WebSiteManagementClient = getWebsiteManagementClient(testAccount);
 
         const appAndStorageName1: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         const testInputs1: string[] = [appAndStorageName1];
         ext.ui = new TestUserInput(testInputs1);
         const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp1: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, appAndStorageName1);
+        const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
         assert.ok(createdApp1, 'Function app with new rg/sa failed.');
         assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
 
@@ -91,7 +138,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             const testInputs2: string[] = [functionAppName2, 'Windows', 'JavaScript', appAndStorageName1];
             ext.ui = new TestUserInput(testInputs2);
             const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-            const createdApp2: WebSiteManagementModels.Site = await client.webApps.get(resourceGroupName, functionAppName2);
+            const createdApp2: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, functionAppName2);
             assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
             assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
         });
