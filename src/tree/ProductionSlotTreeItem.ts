@@ -5,7 +5,7 @@
 
 import { ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -27,7 +27,7 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         const children: AzureTreeItem<ISiteTreeRoot>[] = await super.loadMoreChildrenImpl();
-        if (getFuncExtensionSetting('enableSlots')) {
+        if (getWorkspaceSetting('enableSlots')) {
             children.push(this._slotsTreeItem);
         }
         return children;

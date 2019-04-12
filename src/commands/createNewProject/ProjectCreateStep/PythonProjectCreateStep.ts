@@ -10,9 +10,9 @@ import { IAzureQuickPickOptions, parseError, UserCancelledError } from 'vscode-a
 import { ext } from '../../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from "../../../localize";
-import { getGlobalFuncExtensionSetting } from '../../../ProjectSettings';
 import { cpUtils } from "../../../utils/cpUtils";
 import { venvUtils } from '../../../utils/venvUtils';
+import { getGlobalSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
@@ -96,7 +96,7 @@ async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean 
 
 async function getPythonAlias(): Promise<string> {
     const aliasesToTry: string[] = ['python3.6', 'py -3.6', 'python3', 'python', 'py'];
-    const globalPythonPathSetting: string | undefined = getGlobalFuncExtensionSetting('pythonPath', 'python');
+    const globalPythonPathSetting: string | undefined = getGlobalSetting('pythonPath', 'python');
     if (globalPythonPathSetting) {
         aliasesToTry.unshift(globalPythonPathSetting);
     }

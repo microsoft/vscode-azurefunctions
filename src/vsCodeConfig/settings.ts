@@ -5,19 +5,42 @@
 
 import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
-import { extensionPrefix, ProjectLanguage, ProjectRuntime } from './constants';
-import { ext } from './extensionVariables';
-import { localize } from "./localize";
-import { openUrl } from './utils/openUrl';
+import { extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
+import { ext } from '../extensionVariables';
+import { localize } from "../localize";
+import { openUrl } from '../utils/openUrl';
 
+/**
+ * Uses extensionPrefix 'azureFunctions' unless otherwise specified
+ */
 export async function updateGlobalSetting<T = string>(section: string, value: T, prefix: string = extensionPrefix): Promise<void> {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
     await projectConfiguration.update(section, value, ConfigurationTarget.Global);
 }
 
-export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string): Promise<void> {
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, Uri.file(fsPath));
+/**
+ * Uses extensionPrefix 'azureFunctions' unless otherwise specified
+ */
+export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string, prefix: string = extensionPrefix): Promise<void> {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, Uri.file(fsPath));
     await projectConfiguration.update(section, value);
+}
+
+/**
+ * Uses extensionPrefix 'azureFunctions' unless otherwise specified
+ */
+export function getGlobalSetting<T>(key: string, prefix: string = extensionPrefix): T | undefined {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
+    const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
+    return result && result.globalValue;
+}
+
+/**
+ * Uses extensionPrefix 'azureFunctions' unless otherwise specified
+ */
+export function getWorkspaceSetting<T>(key: string, fsPath?: string, prefix: string = extensionPrefix): T | undefined {
+    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, fsPath ? Uri.file(fsPath) : undefined);
+    return projectConfiguration.get<T>(key);
 }
 
 export async function promptForProjectRuntime(message?: string): Promise<ProjectRuntime> {
@@ -37,17 +60,6 @@ export async function promptForProjectRuntime(message?: string): Promise<Project
     }
     while (runtime === undefined);
     return runtime;
-}
-
-export function getGlobalFuncExtensionSetting<T>(key: string, prefix: string = extensionPrefix): T | undefined {
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix);
-    const result: { globalValue?: T } | undefined = projectConfiguration.inspect<T>(key);
-    return result && result.globalValue;
-}
-
-export function getFuncExtensionSetting<T>(key: string, fsPath?: string): T | undefined {
-    const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(extensionPrefix, fsPath ? Uri.file(fsPath) : undefined);
-    return projectConfiguration.get<T>(key);
 }
 
 /**

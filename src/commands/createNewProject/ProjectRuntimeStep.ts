@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { promptForProjectRuntime } from '../../ProjectSettings';
+import { promptForProjectRuntime } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProjectRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {

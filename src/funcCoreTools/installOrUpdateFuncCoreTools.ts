@@ -7,7 +7,7 @@ import { IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { promptForProjectRuntime } from '../ProjectSettings';
+import { promptForProjectRuntime } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 import { tryGetLocalRuntimeVersion } from './tryGetLocalRuntimeVersion';

@@ -8,7 +8,7 @@ import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureext
 import { ProjectLanguage, projectLanguageSetting } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { localize } from '../../localize';
-import { getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { detectProjectLanguage } from './detectProjectLanguage';
@@ -35,7 +35,7 @@ export async function initProjectForVSCode(actionContext: IActionContext, worksp
     }
 
     // tslint:disable-next-line: strict-boolean-expressions
-    language = language || getGlobalFuncExtensionSetting(projectLanguageSetting) || await detectProjectLanguage(projectPath);
+    language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(projectPath);
 
     const wizardContext: IProjectWizardContext = { projectPath, workspacePath, actionContext, language };
     const wizard: AzureWizard<IProjectWizardContext> = new AzureWizard(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });

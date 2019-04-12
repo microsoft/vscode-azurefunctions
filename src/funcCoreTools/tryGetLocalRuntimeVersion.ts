@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isWindows, ProjectRuntime } from '../constants';
-import { convertStringToRuntime } from '../ProjectSettings';
+import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 
 export async function tryGetLocalRuntimeVersion(): Promise<ProjectRuntime | undefined> {

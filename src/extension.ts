@@ -32,7 +32,6 @@ import { viewCommitInGitHub } from './commands/deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './commands/deployments/viewDeploymentLogs';
 import { editAppSetting } from './commands/editAppSetting';
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
-import { verifyVSCodeConfigOnActivate } from './commands/initProjectForVSCode/verifyVSCodeConfig';
 import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
@@ -61,6 +60,7 @@ import { getProjectTreeItems } from './tree/localProject/getProjectTreeItems';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { SlotsTreeItem } from './tree/SlotsTreeItem';
+import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;

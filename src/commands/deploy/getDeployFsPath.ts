@@ -9,10 +9,10 @@ import { DialogResponses } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../ProjectSettings';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { isPathEqual, isSubpath } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
+import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
 
 export async function getDeployFsPath(target: vscode.Uri | string | SlotTreeItemBase | undefined): Promise<string> {
     if (target instanceof vscode.Uri) {
@@ -22,14 +22,14 @@ export async function getDeployFsPath(target: vscode.Uri | string | SlotTreeItem
     } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length === 1) {
         // If there is only one workspace and it has 'deploySubPath' set - return that value without prompting
         const folderPath: string = vscode.workspace.workspaceFolders[0].uri.fsPath;
-        const deploySubpath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, folderPath);
+        const deploySubpath: string | undefined = getWorkspaceSetting(deploySubpathSetting, folderPath);
         if (deploySubpath) {
             return path.join(folderPath, deploySubpath);
         }
     }
 
     const workspaceMessage: string = localize('selectZipDeployFolder', 'Select the folder to zip and deploy');
-    return await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, f => getFuncExtensionSetting(deploySubpathSetting, f.uri.fsPath));
+    return await workspaceUtil.selectWorkspaceFolder(ext.ui, workspaceMessage, f => getWorkspaceSetting(deploySubpathSetting, f.uri.fsPath));
 }
 
 /**
@@ -38,7 +38,7 @@ export async function getDeployFsPath(target: vscode.Uri | string | SlotTreeItem
  */
 async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
     if (vscode.workspace.workspaceFolders) {
-        const deploySubPath: string | undefined = getFuncExtensionSetting(deploySubpathSetting, targetPath);
+        const deploySubPath: string | undefined = getWorkspaceSetting(deploySubpathSetting, targetPath);
         if (deploySubPath) {
             if (vscode.workspace.workspaceFolders.some(f => isPathEqual(f.uri.fsPath, targetPath))) {
                 return path.join(targetPath, deploySubPath);
@@ -48,7 +48,7 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
                     const fsPathWithSetting: string = path.join(folder.uri.fsPath, deploySubPath);
                     if (!isPathEqual(fsPathWithSetting, targetPath)) {
                         const settingKey: string = 'showDeploySubpathWarning';
-                        if (getFuncExtensionSetting(settingKey)) {
+                        if (getWorkspaceSetting(settingKey)) {
                             const selectedFolder: string = path.relative(folder.uri.fsPath, targetPath);
                             const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}". Use "{2}.{3}" to change this behavior.', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
                             // don't wait

@@ -12,9 +12,9 @@ import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
 import { localize } from '../localize';
-import { convertStringToRuntime } from '../ProjectSettings';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
+import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {

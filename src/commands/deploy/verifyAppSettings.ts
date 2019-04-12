@@ -9,9 +9,9 @@ import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { convertStringToRuntime, getFunctionsWorkerRuntime } from '../../ProjectSettings';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { getCliFeedAppSettings } from '../../utils/getCliFeedJson';
+import { convertStringToRuntime, getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
 
 export async function verifyAppSettings(actionContext: IActionContext, node: SlotTreeItemBase, runtime: ProjectRuntime, language: ProjectLanguage): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();

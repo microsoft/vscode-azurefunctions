@@ -10,9 +10,9 @@ import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, ProjectRuntime } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
-import { getFuncExtensionSetting, updateGlobalSetting } from '../../../ProjectSettings';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
+import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -63,7 +63,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             } else {
                 wizardContext.runtime = ProjectRuntime.v1;
                 const settingKey: string = 'show64BitWarning';
-                if (getFuncExtensionSetting<boolean>(settingKey)) {
+                if (getWorkspaceSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
                     try {
                         const result: MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);

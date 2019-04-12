@@ -11,8 +11,8 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, par
 import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { openUrl } from '../utils/openUrl';
+import { convertStringToRuntime, getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 import { getNpmDistTag } from "./getNpmDistTag";
@@ -25,10 +25,10 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
         this.properties.isActivationEvent = 'true';
 
         const showMultiCoreToolsWarningKey: string = 'showMultiCoreToolsWarning';
-        const showMultiCoreToolsWarning: boolean = !!getFuncExtensionSetting<boolean>(showMultiCoreToolsWarningKey);
+        const showMultiCoreToolsWarning: boolean = !!getWorkspaceSetting<boolean>(showMultiCoreToolsWarningKey);
 
         const showCoreToolsWarningKey: string = 'showCoreToolsWarning';
-        const showCoreToolsWarning: boolean = !!getFuncExtensionSetting<boolean>(showCoreToolsWarningKey);
+        const showCoreToolsWarning: boolean = !!getWorkspaceSetting<boolean>(showCoreToolsWarningKey);
 
         if (showCoreToolsWarning || showMultiCoreToolsWarning) {
             const packageManagers: PackageManager[] = await getFuncPackageManagers(true /* isFuncInstalled */);

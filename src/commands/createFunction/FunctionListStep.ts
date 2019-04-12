@@ -7,10 +7,10 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAz
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import { nonNullProp } from '../../utils/nonNull';
+import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
@@ -104,7 +104,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
         // tslint:disable-next-line: strict-boolean-expressions
-        let templateFilter: TemplateFilter = getFuncExtensionSetting<TemplateFilter>(templateFilterSetting, wizardContext.projectPath) || TemplateFilter.Verified;
+        let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, wizardContext.projectPath) || TemplateFilter.Verified;
 
         while (!wizardContext.functionTemplate) {
             const placeHolder: string = this._isProjectWizard ?

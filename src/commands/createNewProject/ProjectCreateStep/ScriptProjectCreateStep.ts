@@ -8,9 +8,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
 import { ILocalAppSettings } from '../../../LocalAppSettings';
-import { getFunctionsWorkerRuntime } from '../../../ProjectSettings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
+import { getFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 

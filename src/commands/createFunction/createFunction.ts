@@ -10,8 +10,8 @@ import { NoWorkspaceError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
+import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
-import { verifyInitForVSCode } from '../initProjectForVSCode/verifyVSCodeConfig';
 import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 

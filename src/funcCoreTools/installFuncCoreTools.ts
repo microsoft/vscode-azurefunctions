@@ -6,8 +6,8 @@
 import { funcPackageName, isWindows, PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { promptForProjectRuntime } from "../ProjectSettings";
 import { cpUtils } from '../utils/cpUtils';
+import { promptForProjectRuntime } from "../vsCodeConfig/settings";
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
 export async function installFuncCoreTools(packageManagers: PackageManager[]): Promise<void> {

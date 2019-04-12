@@ -10,8 +10,8 @@ import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
 import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
-import { getFuncExtensionSetting } from '../ProjectSettings';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     if (!await validateFuncCoreToolsInstalled()) {
@@ -33,7 +33,7 @@ export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.
     }
 
     const settingKey: string = 'pickProcessTimeout';
-    const settingValue: number | undefined = getFuncExtensionSetting<number>(settingKey);
+    const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
     const timeoutInSeconds: number = Number(settingValue);
     if (isNaN(timeoutInSeconds)) {
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));

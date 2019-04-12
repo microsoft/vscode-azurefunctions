@@ -10,7 +10,7 @@ import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azu
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting, updateWorkspaceSetting } from '../../ProjectSettings';
+import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { createNewProject } from './createNewProject';
 
 const projectSubpathKey: string = 'projectSubpath';
@@ -26,7 +26,7 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
  * If multiple projects are found, prompt to pick the project.
  */
 export async function tryGetFunctionProjectRoot(folderPath: string, suppressPrompt: boolean = false): Promise<string | undefined> {
-    let subpath: string | undefined = getFuncExtensionSetting(projectSubpathKey, folderPath);
+    let subpath: string | undefined = getWorkspaceSetting(projectSubpathKey, folderPath);
     if (!subpath) {
         if (await isFunctionProject(folderPath)) {
             return folderPath;

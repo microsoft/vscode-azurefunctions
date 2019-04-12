@@ -8,7 +8,7 @@ import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalFuncExtensionSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
+import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 
@@ -27,7 +27,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         }
 
         // set project language so that test isn't prompted for runtime
-        oldProjectLanguage = getGlobalFuncExtensionSetting(projectLanguageSetting);
+        oldProjectLanguage = getGlobalSetting(projectLanguageSetting);
         await updateGlobalSetting(projectLanguageSetting, ProjectLanguage.JavaScript);
 
         this.timeout(120 * 1000);

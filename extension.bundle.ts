@@ -24,7 +24,7 @@ export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/constants';
 export * from './src/extensionVariables';
 export * from './src/FunctionConfig';
-export * from './src/ProjectSettings';
+export * from './src/vsCodeConfig/settings';
 export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/ScriptTemplateRetriever';
 export * from './src/templates/TemplateProvider';

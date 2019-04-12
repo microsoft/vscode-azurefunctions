@@ -8,7 +8,7 @@ import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectRuntimeSetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
-import { convertStringToRuntime, getFuncExtensionSetting, getGlobalFuncExtensionSetting } from '../../ProjectSettings';
+import { convertStringToRuntime, getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
 import { FolderListStep } from './FolderListStep';
 import { NewProjectLanguageStep } from './NewProjectLanguageStep';
@@ -27,8 +27,8 @@ export async function createNewProject(
     addLocalFuncTelemetry(actionContext);
 
     // tslint:disable-next-line: strict-boolean-expressions
-    language = language || getGlobalFuncExtensionSetting(projectLanguageSetting);
-    runtime = runtime || getGlobalFuncExtensionSetting(projectRuntimeSetting);
+    language = language || getGlobalSetting(projectLanguageSetting);
+    runtime = runtime || getGlobalSetting(projectRuntimeSetting);
 
     const wizardContext: Partial<IFunctionWizardContext> = { actionContext, functionName, language, runtime: convertStringToRuntime(runtime) };
 
@@ -39,7 +39,7 @@ export async function createNewProject(
     if (!openFolder) {
         wizardContext.openBehavior = 'DontOpen';
     } else {
-        wizardContext.openBehavior = getFuncExtensionSetting(projectOpenBehaviorSetting);
+        wizardContext.openBehavior = getWorkspaceSetting(projectOpenBehaviorSetting);
         actionContext.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
     }
 

@@ -11,11 +11,11 @@ import { extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType } from '../..
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting } from '../../ProjectSettings';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import * as workspaceUtil from '../../utils/workspace';
-import { verifyInitForVSCode } from '../initProjectForVSCode/verifyVSCodeConfig';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { getDeployFsPath } from './getDeployFsPath';
 import { handlePreDeployTaskResult } from './handlePreDeployTaskResult';
 import { notifyDeployComplete } from './notifyDeployComplete';
@@ -119,8 +119,8 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {
     const includeKey: string = 'zipGlobPattern';
     const excludeKey: string = 'zipIgnorePattern';
-    const includeSetting: string | undefined = getFuncExtensionSetting(includeKey, fsPath);
-    const excludeSetting: string | string[] | undefined = getFuncExtensionSetting(excludeKey, fsPath);
+    const includeSetting: string | undefined = getWorkspaceSetting(includeKey, fsPath);
+    const excludeSetting: string | string[] | undefined = getWorkspaceSetting(excludeKey, fsPath);
     if (includeSetting || excludeSetting) {
         actionContext.properties.hasOldGlobSettings = 'true';
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
