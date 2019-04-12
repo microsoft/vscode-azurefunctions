@@ -12,7 +12,6 @@ export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
 export const templateVersionSetting: string = 'templateVersion';
 export const preDeployTaskSetting: string = 'preDeployTask';
-export const filesExcludeSetting: string = 'files.exclude';
 export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 

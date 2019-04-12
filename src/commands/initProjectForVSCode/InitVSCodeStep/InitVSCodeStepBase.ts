@@ -7,9 +7,11 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, filesExcludeSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, extensionPrefix, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { confirmEditJsonFile, confirmOverwriteFile, isPathEqual, writeFormattedJson } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
+import { getContainingWorkspace } from '../../../utils/workspace';
+import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
@@ -17,10 +19,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     public priority: number = 20;
 
     protected preDeployTask?: string;
-    protected excludedFiles?: string[];
-    protected otherSettings: { [key: string]: string } = {};
-
-    private _deploySubpath: string | undefined;
+    protected settings: ISettingToAdd[] = [];
 
     public async execute(wizardContext: IProjectWizardContext): Promise<void> {
         await this.executeCore(wizardContext);
@@ -35,7 +34,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         await fse.ensureDir(vscodePath);
         await this.writeTasksJson(wizardContext, vscodePath, runtime);
         await this.writeLaunchJson(vscodePath, runtime);
-        await this.writeSettingsJson(vscodePath, language, runtime);
+        await this.writeSettingsJson(wizardContext, vscodePath, language, runtime);
         await this.writeExtensionsJson(vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
@@ -57,8 +56,9 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
     protected setDeploySubpath(wizardContext: IProjectWizardContext, deploySubpath: string): string {
-        this._deploySubpath = this.addSubDir(wizardContext, deploySubpath);
-        return this._deploySubpath;
+        deploySubpath = this.addSubDir(wizardContext, deploySubpath);
+        this.settings.push({ key: deploySubpathSetting, value: deploySubpath });
+        return deploySubpath;
     }
 
     protected addSubDir(wizardContext: IProjectWizardContext, fsPath: string): string {
@@ -98,34 +98,35 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
     }
 
-    private async writeSettingsJson(vscodePath: string, language: string, runtime: ProjectRuntime): Promise<void> {
-        const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
-        await confirmEditJsonFile(
-            settingsJsonPath,
-            (data: {}): {} => {
-                data[`${extensionPrefix}.${projectRuntimeSetting}`] = runtime;
-                data[`${extensionPrefix}.${projectLanguageSetting}`] = language;
-
-                if (this._deploySubpath) {
-                    data[`${extensionPrefix}.${deploySubpathSetting}`] = this._deploySubpath;
-                }
-                if (this.preDeployTask) {
-                    data[`${extensionPrefix}.${preDeployTaskSetting}`] = this.preDeployTask;
-                }
-                if (this.excludedFiles) {
-                    data[filesExcludeSetting] = this.addToFilesExcludeSetting(this.excludedFiles, data);
-                }
-
-                for (const key of Object.keys(this.otherSettings)) {
-                    data[key] = this.otherSettings[key];
-                }
-
-                // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
-                data['debug.internalConsoleOptions'] = 'neverOpen';
-
-                return data;
-            }
+    private async writeSettingsJson(wizardContext: IFunctionWizardContext, vscodePath: string, language: string, runtime: ProjectRuntime): Promise<void> {
+        const settings: ISettingToAdd[] = this.settings.concat(
+            { key: projectLanguageSetting, value: language },
+            { key: projectRuntimeSetting, value: runtime },
+            // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
+            { prefix: 'debug', key: 'internalConsoleOptions', value: 'neverOpen' }
         );
+
+        if (this.preDeployTask) {
+            settings.push({ key: preDeployTaskSetting, value: this.preDeployTask });
+        }
+
+        if (getContainingWorkspace(wizardContext.projectPath)) {
+            for (const setting of settings) {
+                await updateWorkspaceSetting(setting.key, setting.value, wizardContext.workspacePath, setting.prefix);
+            }
+        } else {
+            const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
+            await confirmEditJsonFile(
+                settingsJsonPath,
+                (data: {}): {} => {
+                    for (const setting of settings) {
+                        const key: string = `${setting.prefix || extensionPrefix}.${setting.key}`;
+                        data[key] = setting.value;
+                    }
+                    return data;
+                }
+            );
+        }
     }
 
     private async writeExtensionsJson(vscodePath: string, language: ProjectLanguage): Promise<void> {
@@ -148,17 +149,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             }
         );
     }
-
-    private addToFilesExcludeSetting(filesToExclude: string[], data: {}): { [key: string]: boolean } {
-        // tslint:disable-next-line:no-unsafe-any strict-boolean-expressions
-        const result: { [key: string]: boolean } = data[filesExcludeSetting] || {};
-        for (const file of filesToExclude) {
-            result[file] = true;
-        }
-        return result;
-    }
 }
 
 interface IRecommendations {
     recommendations?: string[];
+}
+
+interface ISettingToAdd {
+    key: string;
+    value: string | {};
+    prefix?: string;
 }

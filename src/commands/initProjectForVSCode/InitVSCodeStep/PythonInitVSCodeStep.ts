@@ -16,8 +16,6 @@ import { IProjectWizardContext } from '../../createNewProject/IProjectWizardCont
 import { ensureVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
-const fullPythonVenvSetting: string = `${extensionPrefix}.${pythonVenvSetting}`;
-
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     protected preDeployTask: string = packTaskName;
 
@@ -25,7 +23,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
         const zipPath: string = this.setDeploySubpath(wizardContext, `${path.basename(wizardContext.projectPath)}.zip`);
 
         const venvName: string = await ensureVenv(wizardContext.projectPath);
-        this.otherSettings[fullPythonVenvSetting] = venvName;
+        this.settings.push({ key: pythonVenvSetting, value: venvName });
 
         await ensureVenvInFuncIgnore(wizardContext.projectPath, venvName);
         await ensureGitIgnoreContents(wizardContext.projectPath, venvName, zipPath);
@@ -38,7 +36,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
 
     protected getTasks(): TaskDefinition[] {
         const pipInstallLabel: string = 'pipInstall';
-        const venvSettingReference: string = `\${config:${fullPythonVenvSetting}}`;
+        const venvSettingReference: string = `\${config:${extensionPrefix}.${pythonVenvSetting}}`;
 
         function getPipInstallCommand(platform: NodeJS.Platform): string {
             return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);
