@@ -9,11 +9,22 @@ import { handleFailedPreDeployTask, IPreDeployTaskResult, tryRunPreDeployTask } 
 import { DialogResponses, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { dotnetPublishTaskLabel, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { openUrl } from '../../utils/openUrl';
-import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 
-export async function handlePreDeployTaskResult(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined, result: IPreDeployTaskResult, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
+export async function runPreDeployTask(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
+    const preDeployTask: string | undefined = getWorkspaceSetting(preDeployTaskSetting, deployFsPath);
+    if (preDeployTask && preDeployTask.startsWith('func:')) {
+        const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run preDeployTask "{0}".', preDeployTask);
+        if (!await validateFuncCoreToolsInstalled(message)) {
+            throw new UserCancelledError();
+        }
+    }
+
+    let result: IPreDeployTaskResult = await tryRunPreDeployTask(actionContext, deployFsPath, scmType, extensionPrefix);
+
     // https://github.com/Microsoft/vscode-azurefunctions/issues/826
     if (result.taskName === packTaskName && result.exitCode === 4) {
         result = await promptToBuildNativeDeps(actionContext, deployFsPath, scmType);
