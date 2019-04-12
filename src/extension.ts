@@ -24,7 +24,7 @@ import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/F
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
 import { deleteNode } from './commands/deleteNode';
-import { deploy } from './commands/deploy';
+import { deploy } from './commands/deploy/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
 import { disconnectRepo } from './commands/deployments/disconnectRepo';
 import { redeployDeployment } from './commands/deployments/redeployDeployment';
