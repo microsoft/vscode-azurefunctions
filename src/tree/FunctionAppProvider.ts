@@ -9,9 +9,9 @@ import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptSt
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
-import { convertStringToRuntime, getFuncExtensionSetting, getFunctionsWorkerRuntime } from '../ProjectSettings';
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
+import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
@@ -71,7 +71,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
-        const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting);
+        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting);
 
         const wizardContext: IAppServiceWizardContext = {
             newSiteKind: AppKind.functionapp,
@@ -96,7 +96,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         };
 
         const advancedCreationKey: string = 'advancedCreation';
-        const advancedCreation: boolean = !!getFuncExtensionSetting(advancedCreationKey);
+        const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
         actionContext.properties.advancedCreation = String(advancedCreation);
         if (!advancedCreation) {
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
@@ -150,7 +150,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: string | undefined = convertStringToRuntime(getFuncExtensionSetting(projectRuntimeSetting));
+    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting));
     actionContext.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {

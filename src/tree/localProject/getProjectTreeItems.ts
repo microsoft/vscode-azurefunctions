@@ -6,7 +6,7 @@
 import { ExtensionContext, workspace, WorkspaceFolder } from "vscode";
 import { AzureParentTreeItem } from "vscode-azureextensionui";
 import { tryGetFunctionProjectRoot } from "../../commands/createNewProject/verifyIsProject";
-import { getFuncExtensionSetting } from "../../ProjectSettings";
+import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
 import { LocalProjectTreeItem } from "./LocalProjectTreeItem";
 
 /**
@@ -15,7 +15,7 @@ import { LocalProjectTreeItem } from "./LocalProjectTreeItem";
  */
 export async function getProjectTreeItems(context: ExtensionContext): Promise<AzureParentTreeItem[]> {
     const result: AzureParentTreeItem[] = [];
-    if (getFuncExtensionSetting('enableProjectTree')) {
+    if (getWorkspaceSetting('enableProjectTree')) {
         // tslint:disable-next-line: strict-boolean-expressions
         const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {

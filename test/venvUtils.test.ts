@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ITestCallbackContext } from 'mocha';
 import * as path from 'path';
-import { cpUtils, ext, getGlobalFuncExtensionSetting, Platform, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
+import { cpUtils, ext, getGlobalSetting, Platform, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
@@ -19,7 +19,7 @@ suite('venvUtils Tests', () => {
     let oldVenvValue: string | undefined;
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-        oldVenvValue = getGlobalFuncExtensionSetting(pythonVenvSetting);
+        oldVenvValue = getGlobalSetting(pythonVenvSetting);
         await updateGlobalSetting(pythonVenvSetting, venvName);
 
         if (longRunningTestsEnabled) {

@@ -10,8 +10,8 @@ import { DialogResponses, IActionContext, UserCancelledError } from 'vscode-azur
 import { dotnetPublishTaskLabel, extensionPrefix, extInstallTaskName, javaPackageTaskLabel, packTaskName, preDeployTaskSetting, ProjectLanguage, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { updateWorkspaceSetting } from '../../ProjectSettings';
 import { openUrl } from '../../utils/openUrl';
+import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 
 export async function handlePreDeployTaskResult(actionContext: IActionContext, deployFsPath: string, scmType: string | undefined, result: IPreDeployTaskResult, language: ProjectLanguage, runtime: ProjectRuntime): Promise<void> {
     // https://github.com/Microsoft/vscode-azurefunctions/issues/826

@@ -7,7 +7,7 @@ import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, Works
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { extInstallCommand, func, funcExtInstallCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { getFuncTaskCommand, IFuncTaskCommand } from './getFuncTaskCommand';
 import { getPythonTasks } from './getPythonTasks';
@@ -43,7 +43,7 @@ export class FuncTaskProvider implements TaskProvider {
                     const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
                     if (projectRoot) {
                         result.push(getExtensionInstallTask(folder, projectRoot));
-                        const language: string | undefined = getFuncExtensionSetting(projectLanguageSetting, folder.uri.fsPath);
+                        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
                         const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
                         if (hostStartTask) {
                             result.push(hostStartTask);

@@ -8,8 +8,8 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'v
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { getFuncExtensionSetting } from '../../ProjectSettings';
 import { nonNullProp } from '../../utils/nonNull';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
@@ -49,7 +49,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.Java }
         ];
 
-        if (getFuncExtensionSetting('enablePowerShell')) {
+        if (getWorkspaceSetting('enablePowerShell')) {
             languagePicks.push({ label: ProjectLanguage.PowerShell, description: previewDescription });
         }
 

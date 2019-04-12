@@ -8,9 +8,9 @@ import { callWithTelemetryAndErrorHandling, IActionContext, parseError, Telemetr
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
-import { getFuncExtensionSetting, updateGlobalSetting } from '../ProjectSettings';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
+import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
 import { IFunctionSetting } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
@@ -166,7 +166,7 @@ export function removeLanguageFromId(id: string): string {
 
 async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
     const feedRuntime: string = getFeedRuntime(runtime);
-    const userTemplateVersion: string | undefined = getFuncExtensionSetting(templateVersionSetting);
+    const userTemplateVersion: string | undefined = getWorkspaceSetting(templateVersionSetting);
     try {
         if (userTemplateVersion) {
             context.properties.userTemplateVersion = userTemplateVersion;

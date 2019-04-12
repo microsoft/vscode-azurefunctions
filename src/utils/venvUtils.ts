@@ -8,7 +8,7 @@ import * as path from 'path';
 import { workspace, WorkspaceConfiguration } from 'vscode';
 import { Platform, pythonVenvSetting } from "../constants";
 import { ext } from '../extensionVariables';
-import { getFuncExtensionSetting } from '../ProjectSettings';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
 
 export namespace venvUtils {
@@ -20,7 +20,7 @@ export namespace venvUtils {
 
     export function convertToVenvCommand(command: string, folderPath: string, platform: NodeJS.Platform = process.platform): string {
         const terminal: Terminal = getTerminal(platform);
-        const venvName: string | undefined = getFuncExtensionSetting<string>(pythonVenvSetting, folderPath);
+        const venvName: string | undefined = getWorkspaceSetting<string>(pythonVenvSetting, folderPath);
         if (venvName) {
             return joinCommands(terminal, getVenvActivateCommand(venvName, terminal, platform), command);
         } else {
