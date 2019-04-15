@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType } from '../../constants';
+import { ProjectLanguage, ProjectRuntime, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -17,8 +17,8 @@ import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { getDeployFsPath } from './getDeployFsPath';
-import { handlePreDeployTaskResult } from './handlePreDeployTaskResult';
 import { notifyDeployComplete } from './notifyDeployComplete';
+import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
 
 export async function deploy(this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
@@ -80,8 +80,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         this.properties.cancelStep = '';
     }
 
-    const preDeployResult: appservice.IPreDeployTaskResult = await appservice.tryRunPreDeployTask(this, deployFsPath, siteConfig.scmType, extensionPrefix);
-    await handlePreDeployTaskResult(this, deployFsPath, siteConfig.scmType, preDeployResult, language, runtime);
+    await runPreDeployTask(this, deployFsPath, siteConfig.scmType, language, runtime);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
