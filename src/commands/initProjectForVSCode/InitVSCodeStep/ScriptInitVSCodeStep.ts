@@ -12,10 +12,6 @@ import { InitVSCodeStepBase } from './InitVSCodeStepBase';
  * Base class for all projects based on a simple script (i.e. JavaScript, C# Script, Bash, etc.) that don't require compilation
  */
 export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
-    // "func extensions install" task creates C# build artifacts that should be hidden
-    // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
-    protected readonly excludedFiles: string[] = ['obj', 'bin'];
-
     protected getTasks(runtime: ProjectRuntime): TaskDefinition[] {
         return [
             {
@@ -29,6 +25,10 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
     }
 
     protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+        // "func extensions install" task creates C# build artifacts that should be hidden
+        // See issue: https://github.com/Microsoft/vscode-azurefunctions/pull/699
+        this.settings.push({ prefix: 'files', key: 'exclude', value: { obj: true, bin: true } });
+
         this.setDeploySubpath(wizardContext, '.');
         if (!this.preDeployTask) {
             if (wizardContext.runtime !== ProjectRuntime.v1) {
