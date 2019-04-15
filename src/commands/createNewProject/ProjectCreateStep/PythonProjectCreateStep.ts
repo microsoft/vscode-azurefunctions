@@ -40,7 +40,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const settingKey: string = 'createPythonVenv';
         if (getWorkspaceSetting(settingKey, wizardContext.workspacePath) && !await getExistingVenv(wizardContext.projectPath)) {
-            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... Modify "{0}.{1}" if you want to skip this step in the future.', extensionPrefix, settingKey) });
+            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
             const defaultVenvName: string = '.env';
             await createVirtualEnviornment(defaultVenvName, wizardContext.projectPath);
             progress.report({ message: this.creatingMessage });
