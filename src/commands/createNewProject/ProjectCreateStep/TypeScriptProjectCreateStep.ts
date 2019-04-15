@@ -4,19 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
+import { Progress } from 'vscode';
 import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { confirmOverwriteFile, writeFormattedJson } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
-import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
+import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
-export class TypeScriptProjectCreateStep extends ScriptProjectCreateStep {
-    constructor() {
-        super();
-        this.funcignore.push('*.js.map', '*.ts', 'tsconfig.json');
-    }
-
-    public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        await super.executeCore(wizardContext);
+export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
+    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await super.executeCore(wizardContext, progress);
 
         const tsconfigPath: string = path.join(wizardContext.projectPath, tsConfigFileName);
         if (await confirmOverwriteFile(tsconfigPath)) {

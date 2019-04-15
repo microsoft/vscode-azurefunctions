@@ -57,6 +57,7 @@
     "azFunc.projectRuntime.betaDescription": "DEPRECATED Use \"~2\" instead.",
     "azFunc.projectLanguage.previewDescription": "(Preview)",
     "azFunc.pythonVenvDescription": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",
+    "azFunc.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azFunc.enableSlotsDescription": "Enable preview support for slots.",
     "azFunc.redeploy": "Redeploy",
     "azFunc.viewDeploymentLogs": "View Deployment Logs",

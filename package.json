@@ -844,6 +844,11 @@
                         "type": "string",
                         "description": "%azFunc.pythonVenvDescription%"
                     },
+                    "azureFunctions.createPythonVenv": {
+                        "type": "boolean",
+                        "description": "%azFunc.createPythonVenv%",
+                        "default": true
+                    },
                     "azureFunctions.enableSlots": {
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",

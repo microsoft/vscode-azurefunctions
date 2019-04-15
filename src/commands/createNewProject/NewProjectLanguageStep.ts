@@ -20,6 +20,7 @@ import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
 import { JavaVersionStep } from './javaSteps/JavaVersionStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaProjectCreateStep } from './ProjectCreateStep/JavaProjectCreateStep';
+import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
@@ -67,6 +68,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [new ProjectRuntimeStep()];
         switch (language) {
+            case ProjectLanguage.JavaScript:
+                executeSteps.push(new JavaScriptProjectCreateStep());
+                break;
             case ProjectLanguage.TypeScript:
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
@@ -75,7 +79,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(wizardContext.actionContext));
                 break;
             case ProjectLanguage.Python:
-                executeSteps.push(await PythonProjectCreateStep.createStep());
+                executeSteps.push(new PythonProjectCreateStep());
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());
