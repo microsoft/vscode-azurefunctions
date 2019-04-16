@@ -11,10 +11,10 @@ import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { getLocalAppSettings, ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
-import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
+import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
@@ -24,7 +24,7 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
     const client: SiteClient = node.root.client;
 
     const message: string = localize('selectLocalSettings', 'Select the destination file for your downloaded settings.');
-    const localSettingsPath: string = await workspaceUtil.selectWorkspaceFile(ext.ui, message, () => localSettingsFileName);
+    const localSettingsPath: string = await getLocalSettingsFile(message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {

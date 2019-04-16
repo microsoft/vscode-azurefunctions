@@ -14,7 +14,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
-export async function notifyDeployComplete(actionContext: IActionContext, node: SlotTreeItemBase): Promise<void> {
+export async function notifyDeployComplete(actionContext: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
     ext.outputChannel.appendLine(deployComplete);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
@@ -30,7 +30,7 @@ export async function notifyDeployComplete(actionContext: IActionContext, node: 
             } else if (result === streamLogs) {
                 await startStreamingLogs(node);
             } else if (result === uploadSettings) {
-                await uploadAppSettings(node.appSettingsTreeItem);
+                await uploadAppSettings(node.appSettingsTreeItem, workspacePath);
             }
         });
     });

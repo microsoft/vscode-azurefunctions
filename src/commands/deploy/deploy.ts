@@ -112,7 +112,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         }
     );
 
-    await notifyDeployComplete(this, node);
+    await notifyDeployComplete(this, node, workspaceFolder.uri.fsPath);
 }
 
 async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {

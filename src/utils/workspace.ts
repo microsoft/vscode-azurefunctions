@@ -9,7 +9,7 @@ import { IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import * as fsUtils from './fs';
 
-export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined): Promise<string> {
+export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
     return await selectWorkspaceItem(
         ui,
         placeHolder,
@@ -23,11 +23,11 @@ export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: st
         getSubPath);
 }
 
-export async function selectWorkspaceFile(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined): Promise<string> {
+export async function selectWorkspaceFile(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
     let defaultUri: vscode.Uri | undefined;
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0 && getSubPath) {
         const firstFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];
-        const subPath: string | undefined = getSubPath(firstFolder);
+        const subPath: string | undefined = await getSubPath(firstFolder);
         if (subPath) {
             defaultUri = vscode.Uri.file(path.join(firstFolder.uri.fsPath, subPath));
         }
@@ -46,18 +46,18 @@ export async function selectWorkspaceFile(ui: IAzureUserInput, placeHolder: stri
         getSubPath);
 }
 
-export async function selectWorkspaceItem(ui: IAzureUserInput, placeHolder: string, options: vscode.OpenDialogOptions, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined): Promise<string> {
+export async function selectWorkspaceItem(ui: IAzureUserInput, placeHolder: string, options: vscode.OpenDialogOptions, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
     let folder: IAzureQuickPickItem<string | undefined> | undefined;
     if (vscode.workspace.workspaceFolders) {
-        const folderPicks: IAzureQuickPickItem<string | undefined>[] = vscode.workspace.workspaceFolders.map((f: vscode.WorkspaceFolder) => {
+        const folderPicks: IAzureQuickPickItem<string | undefined>[] = await Promise.all(vscode.workspace.workspaceFolders.map(async (f: vscode.WorkspaceFolder) => {
             let subpath: string | undefined;
             if (getSubPath) {
-                subpath = getSubPath(f);
+                subpath = await getSubPath(f);
             }
 
             const fsPath: string = subpath ? path.join(f.uri.fsPath, subpath) : f.uri.fsPath;
             return { label: path.basename(fsPath), description: fsPath, data: fsPath };
-        });
+        }));
 
         folderPicks.push({ label: localize('azFunc.browse', '$(file-directory) Browse...'), description: '', data: undefined });
         folder = await ui.showQuickPick(folderPicks, { placeHolder });
