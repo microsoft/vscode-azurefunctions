@@ -5,14 +5,14 @@
 
 import * as path from 'path';
 import { Uri } from "vscode";
-import { localSettingsFileName } from '../../constants';
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
-import * as workspaceUtil from '../../utils/workspace';
+import { getLocalSettingsFile } from './getLocalSettingsFile';
 
 export async function decryptLocalSettings(uri?: Uri): Promise<void> {
-    const localSettingsPath: string = uri ? uri.fsPath : await workspaceUtil.selectWorkspaceFile(ext.ui, localize('selectLocalSettings', 'Select the settings file to decrypt.'), () => localSettingsFileName);
+    const message: string = localize('selectLocalSettings', 'Select the settings file to decrypt.');
+    const localSettingsPath: string = uri ? uri.fsPath : await getLocalSettingsFile(message);
     ext.outputChannel.show(true);
     await cpUtils.executeCommand(ext.outputChannel, path.dirname(localSettingsPath), 'func', 'settings', 'decrypt');
 }

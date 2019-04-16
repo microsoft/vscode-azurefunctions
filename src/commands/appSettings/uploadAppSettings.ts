@@ -11,14 +11,14 @@ import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalAppSettings } from "../../LocalAppSettings";
 import { localize } from "../../localize";
-import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
+import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function uploadAppSettings(node?: AppSettingsTreeItem): Promise<void> {
+export async function uploadAppSettings(node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
-    const localSettingsPath: string = await workspaceUtil.selectWorkspaceFile(ext.ui, message, () => localSettingsFileName);
+    const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     if (!node) {
