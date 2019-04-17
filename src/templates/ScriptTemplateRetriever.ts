@@ -152,8 +152,8 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
         // TypeScript is only supported in v2 - same functions as JavaScript
         verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
 
-        // We only care about PowerShell supported in v2 since v1 implementation was only experimental
-        verifiedTemplateIds = verifiedTemplateIds.concat(['HttpTrigger-PowerShell', 'TimerTrigger-PowerShell']);
+        // PowerShell is only supported in v2 - same functions as JavaScript
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'PowerShell')));
     }
 
     return verifiedTemplateIds;
