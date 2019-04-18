@@ -11,6 +11,7 @@ import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
@@ -49,10 +50,8 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
     if (vscode.workspace.workspaceFolders) {
         for (const workspace of vscode.workspace.workspaceFolders) {
             try {
-                const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration('launch', workspace.uri);
-                // tslint:disable-next-line: strict-boolean-expressions
-                const configs: vscode.DebugConfiguration[] = config.get<vscode.DebugConfiguration[]>('configurations') || [];
-                if (configs.some(c => c.name === debugConfig.name && c.request === debugConfig.request && c.type === debugConfig.type)) {
+                const configs: vscode.DebugConfiguration[] = getDebugConfigs(workspace);
+                if (configs.some(c => isDebugConfigEqual(c, debugConfig))) {
                     return workspace;
                 }
             } catch {

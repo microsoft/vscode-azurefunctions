@@ -52,7 +52,8 @@ export class LocalBindingsTreeItem extends AzureParentTreeItem<IProjectRoot> {
             actionContext,
             functionJsonPath: this.functionJsonPath,
             workspacePath: this.root.workspacePath,
-            projectPath: this.root.projectPath
+            projectPath: this.root.projectPath,
+            workspaceFolder: this.root.workspaceFolder
         };
 
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);

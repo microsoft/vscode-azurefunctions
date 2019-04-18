@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WorkspaceFolder } from 'vscode';
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -15,9 +14,9 @@ export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext>
 
     public static setProjectPath(wizardContext: Partial<IProjectWizardContext>, projectPath: string): void {
         wizardContext.projectPath = projectPath;
-        const workspaceFolder: WorkspaceFolder | undefined = getContainingWorkspace(projectPath);
-        wizardContext.workspacePath = (workspaceFolder && workspaceFolder.uri.fsPath) || projectPath;
-        if (workspaceFolder) {
+        wizardContext.workspaceFolder = getContainingWorkspace(projectPath);
+        wizardContext.workspacePath = (wizardContext.workspaceFolder && wizardContext.workspaceFolder.uri.fsPath) || projectPath;
+        if (wizardContext.workspaceFolder) {
             wizardContext.openBehavior = 'AlreadyOpen';
         }
     }

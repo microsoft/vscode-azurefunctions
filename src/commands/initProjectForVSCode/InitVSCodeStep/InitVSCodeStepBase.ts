@@ -8,10 +8,13 @@ import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
-import { confirmEditJsonFile, confirmOverwriteFile, isPathEqual, writeFormattedJson } from '../../../utils/fs';
+import { localize } from '../../../localize';
+import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
-import { getContainingWorkspace } from '../../../utils/workspace';
+import { IExtensionsJson } from '../../../vsCodeConfig/extensions';
+import { getDebugConfigs, getLaunchVersion, ILaunchJson, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';
 import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
+import { getTasks, getTasksVersion, ITask, ITasksJson, tasksVersion, updateTasks, updateTasksVersion } from '../../../vsCodeConfig/tasks';
 import { IFunctionWizardContext } from '../../createFunction/IFunctionWizardContext';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 
@@ -30,10 +33,12 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
         wizardContext.actionContext.properties.projectLanguage = language;
 
+        wizardContext.actionContext.properties.isProjectInSubDir = String(isSubpath(wizardContext.workspacePath, wizardContext.projectPath));
+
         const vscodePath: string = path.join(wizardContext.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);
         await this.writeTasksJson(wizardContext, vscodePath, runtime);
-        await this.writeLaunchJson(vscodePath, runtime);
+        await this.writeLaunchJson(wizardContext, vscodePath, runtime);
         await this.writeSettingsJson(wizardContext, vscodePath, language, runtime);
         await this.writeExtensionsJson(vscodePath, language);
 
@@ -68,34 +73,94 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     }
 
     private async writeTasksJson(wizardContext: IFunctionWizardContext, vscodePath: string, runtime: ProjectRuntime): Promise<void> {
-        const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
-        if (await confirmOverwriteFile(tasksJsonPath)) {
-            const tasks: TaskDefinition[] = this.getTasks(runtime);
-            for (const task of tasks) {
-                // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-                let cwd: string = (task.options && task.options.cwd) || '.';
-                cwd = this.addSubDir(wizardContext, cwd);
-                if (!isPathEqual(cwd, '.')) {
-                    // tslint:disable-next-line: strict-boolean-expressions
-                    task.options = task.options || {};
-                    // always use posix for debug config
-                    // tslint:disable-next-line: no-unsafe-any no-invalid-template-strings
-                    task.options.cwd = path.posix.join('${workspaceFolder}', cwd);
-                }
+        const newTasks: TaskDefinition[] = this.getTasks(runtime);
+        for (const task of newTasks) {
+            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
+            let cwd: string = (task.options && task.options.cwd) || '.';
+            cwd = this.addSubDir(wizardContext, cwd);
+            if (!isPathEqual(cwd, '.')) {
+                // tslint:disable-next-line: strict-boolean-expressions
+                task.options = task.options || {};
+                // always use posix for debug config
+                // tslint:disable-next-line: no-unsafe-any no-invalid-template-strings
+                task.options.cwd = path.posix.join('${workspaceFolder}', cwd);
             }
+        }
 
-            await writeFormattedJson(tasksJsonPath, { version: '2.0.0', tasks });
+        const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', tasksFileName, tasksVersion));
+        if (wizardContext.workspaceFolder) { // Use VS Code api to update config if folder is open
+            const currentVersion: string | undefined = getTasksVersion(wizardContext.workspaceFolder);
+            if (!currentVersion) {
+                updateTasksVersion(wizardContext.workspaceFolder, tasksVersion);
+            } else if (currentVersion !== tasksVersion) {
+                throw versionMismatchError;
+            }
+            updateTasks(wizardContext.workspaceFolder, this.insertNewTasks(getTasks(wizardContext.workspaceFolder), newTasks));
+        } else { // otherwise manually edit json
+            const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
+            await confirmEditJsonFile(
+                tasksJsonPath,
+                (data: ITasksJson): ITasksJson => {
+                    if (!data.version) {
+                        data.version = tasksVersion;
+                    } else if (data.version !== tasksVersion) {
+                        throw versionMismatchError;
+                    }
+                    data.tasks = this.insertNewTasks(data.tasks, newTasks);
+                    return data;
+                }
+            );
         }
     }
 
-    private async writeLaunchJson(vscodePath: string, runtime: ProjectRuntime): Promise<void> {
+    private insertNewTasks(existingTasks: ITask[] | undefined, newTasks: ITask[]): ITask[] {
+        // tslint:disable-next-line: strict-boolean-expressions
+        existingTasks = existingTasks || [];
+        // Remove tasks that match the ones we're about to add
+        existingTasks = existingTasks.filter(t1 => newTasks.find(t2 => {
+            return t1.type !== t2.type || t1.label !== t2.label || t1.command !== t2.command;
+        }));
+        existingTasks.push(...newTasks);
+        return existingTasks;
+    }
+
+    private async writeLaunchJson(wizardContext: IFunctionWizardContext, vscodePath: string, runtime: ProjectRuntime): Promise<void> {
         if (this.getDebugConfiguration) {
-            const launchJsonPath: string = path.join(vscodePath, launchFileName);
-            if (await confirmOverwriteFile(launchJsonPath)) {
-                const debugConfig: DebugConfiguration = this.getDebugConfiguration(runtime);
-                await writeFormattedJson(launchJsonPath, { version: '0.2.0', configurations: [debugConfig] });
+            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(runtime);
+            const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
+            if (wizardContext.workspaceFolder) { // Use VS Code api to update config if folder is open
+                const currentVersion: string | undefined = getLaunchVersion(wizardContext.workspaceFolder);
+                if (!currentVersion) {
+                    updateLaunchVersion(wizardContext.workspaceFolder, launchVersion);
+                } else if (currentVersion !== launchVersion) {
+                    throw versionMismatchError;
+                }
+                updateDebugConfigs(wizardContext.workspaceFolder, this.insertLaunchConfig(getDebugConfigs(wizardContext.workspaceFolder), newDebugConfig));
+            } else { // otherwise manually edit json
+                const launchJsonPath: string = path.join(vscodePath, launchFileName);
+                await confirmEditJsonFile(
+                    launchJsonPath,
+                    (data: ILaunchJson): ILaunchJson => {
+                        if (!data.version) {
+                            data.version = launchVersion;
+                        } else if (data.version !== launchVersion) {
+                            throw versionMismatchError;
+                        }
+                        data.configurations = this.insertLaunchConfig(data.configurations, newDebugConfig);
+                        return data;
+                    }
+                );
             }
         }
+    }
+
+    private insertLaunchConfig(existingConfigs: DebugConfiguration[] | undefined, newConfig: DebugConfiguration): DebugConfiguration[] {
+        // tslint:disable-next-line: strict-boolean-expressions
+        existingConfigs = existingConfigs || [];
+        // Remove configs that match the one we're about to add
+        existingConfigs = existingConfigs.filter(l1 => !isDebugConfigEqual(l1, newConfig));
+        existingConfigs.push(newConfig);
+        return existingConfigs;
     }
 
     private async writeSettingsJson(wizardContext: IFunctionWizardContext, vscodePath: string, language: string, runtime: ProjectRuntime): Promise<void> {
@@ -110,11 +175,11 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             settings.push({ key: preDeployTaskSetting, value: this.preDeployTask });
         }
 
-        if (getContainingWorkspace(wizardContext.projectPath)) {
+        if (wizardContext.workspaceFolder) { // Use VS Code api to update config if folder is open
             for (const setting of settings) {
                 await updateWorkspaceSetting(setting.key, setting.value, wizardContext.workspacePath, setting.prefix);
             }
-        } else {
+        } else { // otherwise manually edit json
             const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
             await confirmEditJsonFile(
                 settingsJsonPath,
@@ -133,7 +198,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
         await confirmEditJsonFile(
             extensionsJsonPath,
-            (data: IRecommendations): {} => {
+            (data: IExtensionsJson): {} => {
                 const recommendations: string[] = ['ms-azuretools.vscode-azurefunctions'];
                 if (this.getRecommendedExtensions) {
                     recommendations.push(...this.getRecommendedExtensions(language));
@@ -149,10 +214,6 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             }
         );
     }
-}
-
-interface IRecommendations {
-    recommendations?: string[];
 }
 
 interface ISettingToAdd {
