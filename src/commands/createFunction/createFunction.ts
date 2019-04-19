@@ -28,7 +28,7 @@ export async function createFunction(
 
     let workspaceFolder: WorkspaceFolder | undefined;
     if (workspacePath === undefined) {
-        workspaceFolder = await getWorkspacePath(actionContext);
+        workspaceFolder = await getWorkspaceFolder(actionContext);
         workspacePath = workspaceFolder.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
@@ -49,7 +49,7 @@ export async function createFunction(
     await wizard.execute(actionContext);
 }
 
-async function getWorkspacePath(actionContext: IActionContext): Promise<WorkspaceFolder> {
+async function getWorkspaceFolder(actionContext: IActionContext): Promise<WorkspaceFolder> {
     let folder: WorkspaceFolder | undefined;
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
