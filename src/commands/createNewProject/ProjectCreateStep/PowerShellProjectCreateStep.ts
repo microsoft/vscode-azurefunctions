@@ -5,6 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { Progress } from 'vscode';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
@@ -46,8 +47,8 @@ const requirementspsd1: string = `# This file enables modules to be automaticall
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     protected supportsManagedDependencies: boolean = true;
 
-    public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        await super.executeCore(wizardContext);
+    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await super.executeCore(wizardContext, progress);
 
         const profileps1Path: string = path.join(wizardContext.projectPath, profileps1FileName);
         if (await confirmOverwriteFile(profileps1Path)) {
