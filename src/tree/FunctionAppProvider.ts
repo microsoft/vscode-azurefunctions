@@ -4,14 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
+import { MessageItem } from 'vscode';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { ext } from '../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
@@ -141,7 +143,23 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             wizardContext.newResourceGroupName = resourceGroup || newName;
             wizardContext.newStorageAccountName = newName;
         }
-        await wizard.execute(actionContext);
+
+        try {
+            await wizard.execute(actionContext);
+        } catch (error) {
+            if (!parseError(error).isUserCancelledError && !advancedCreation) {
+                const message: string = localize('tryAdvancedCreate', 'Modify the setting "{0}.{1}" if you want to change the default values when creating a Function App in Azure.', extensionPrefix, advancedCreationKey);
+                const btn: MessageItem = { title: localize('turnOn', 'Turn on advanced creation') };
+                // tslint:disable-next-line: no-floating-promises
+                ext.ui.showWarningMessage(message, btn).then(async result => {
+                    if (result === btn) {
+                        await updateGlobalSetting(advancedCreationKey, true);
+                    }
+                });
+            }
+
+            throw error;
+        }
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
