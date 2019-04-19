@@ -16,11 +16,11 @@ import { IBindingWizardContext } from "./IBindingWizardContext";
 export async function addBinding(this: IActionContext, data: Uri | LocalBindingsTreeItem | undefined): Promise<void> {
     if (data instanceof Uri) {
         const functionJsonPath: string = data.fsPath;
-        const folder: WorkspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'folder');
-        const workspacePath: string = folder.uri.fsPath;
+        const workspaceFolder: WorkspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
+        const workspacePath: string = workspaceFolder.uri.fsPath;
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
 
-        const wizardContext: IBindingWizardContext = { actionContext: this, functionJsonPath: data.fsPath, workspacePath, projectPath };
+        const wizardContext: IBindingWizardContext = { actionContext: this, functionJsonPath: data.fsPath, workspacePath, projectPath, workspaceFolder };
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
         await wizard.prompt(this);
         await wizard.execute(this);

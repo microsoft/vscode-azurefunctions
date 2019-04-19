@@ -11,8 +11,8 @@ import { ProjectLanguage, ProjectRuntime, tasksFileName, vscodeFolderName } from
 import { oldFuncHostNameRegEx } from "../funcCoreTools/funcHostTask";
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from '../localize';
-import { ITask } from './ITask';
 import { promptToReinitializeProject } from './promptToReinitializeProject';
+import { ITask, ITasksJson } from './tasks';
 
 /**
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
@@ -31,7 +31,7 @@ export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguag
 
             // NOTE: Only checking against oldFuncHostNameRegEx (where label looks like "runFunctionsHost")
             // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
-            const funcTask: ITask | undefined = tasksContent.tasks.find((t: ITask) => !!t.label && oldFuncHostNameRegEx.test(t.label));
+            const funcTask: ITask | undefined = tasksContent.tasks && tasksContent.tasks.find((t: ITask) => !!t.label && oldFuncHostNameRegEx.test(t.label));
             if (funcTask) {
                 actionContext.properties.verifyConfigPrompt = 'updateJSDebugConfig';
 
@@ -45,8 +45,4 @@ export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguag
             }
         }
     }
-}
-
-interface ITasksJson {
-    tasks: ITask[];
 }

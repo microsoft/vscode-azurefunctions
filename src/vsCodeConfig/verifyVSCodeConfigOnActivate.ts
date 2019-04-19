@@ -44,7 +44,7 @@ export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext
                             break;
                         case ProjectLanguage.CSharp:
                         case ProjectLanguage.FSharp:
-                            await verifyTargetFramework(projectLanguage, workspacePath, projectPath, actionContext);
+                            await verifyTargetFramework(projectLanguage, folder, projectPath, actionContext);
                             break;
                         default:
                     }

@@ -32,5 +32,8 @@ export * from './src/tree/FunctionAppProvider';
 export * from './src/utils/fs';
 export * from './src/utils/cpUtils';
 export * from './src/utils/venvUtils';
+export * from './src/vsCodeConfig/extensions';
+export * from './src/vsCodeConfig/launch';
+export * from './src/vsCodeConfig/tasks';
 export * from 'vscode-azureappservice';
 export * from 'vscode-azureextensionui';

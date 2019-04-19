@@ -17,6 +17,7 @@
             "member-variable-declaration"
             // "object-destructuring",
             // "array-destructuring"
-        ]
+        ],
+        "no-unexternalized-strings": false
     }
 }
