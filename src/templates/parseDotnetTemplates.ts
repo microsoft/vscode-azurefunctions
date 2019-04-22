@@ -58,7 +58,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         id: rawTemplate.Identity,
         name: rawTemplate.Name,
         defaultFunctionName: rawTemplate.DefaultName,
-        language: ProjectLanguage.CSharp,
+        language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
         categories: [TemplateCategory.Core] // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
     };
@@ -73,7 +73,7 @@ export function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRun
     for (const rawTemplate of rawTemplates) {
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
-            if (template.id.startsWith('Azure.Function.CSharp.') &&
+            if (/^Azure\.Function\.(F|C)Sharp\./i.test(template.id) &&
                 ((runtime === ProjectRuntime.v1 && template.id.includes('1')) || (runtime === ProjectRuntime.v2 && template.id.includes('2')))) {
                 templates.push(template);
             }

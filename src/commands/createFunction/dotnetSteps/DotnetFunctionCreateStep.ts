@@ -12,7 +12,7 @@ import { cpUtils } from '../../../utils/cpUtils';
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
+import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
     private constructor() {
@@ -27,9 +27,10 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
     public async executeCore(wizardContext: IDotnetFunctionWizardContext): Promise<string> {
         const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
 
+        const functionName: string = nonNullProp(wizardContext, 'functionName');
         const args: string[] = [];
         args.push('--arg:name');
-        args.push(cpUtils.wrapArgInQuotes(nonNullProp(wizardContext, 'functionName')));
+        args.push(cpUtils.wrapArgInQuotes(functionName));
 
         args.push('--arg:namespace');
         args.push(cpUtils.wrapArgInQuotes(nonNullProp(wizardContext, 'namespace')));
@@ -43,6 +44,6 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
         await executeDotnetTemplateCommand(runtime, wizardContext.projectPath, 'create', '--identity', template.id, ...args);
 
-        return path.join(wizardContext.projectPath, `${wizardContext.functionName}.cs`);
+        return path.join(wizardContext.projectPath, functionName + getFileExtension(wizardContext));
     }
 }

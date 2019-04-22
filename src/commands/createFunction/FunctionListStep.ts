@@ -85,6 +85,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     executeSteps.push(await JavaFunctionCreateStep.createStep(wizardContext.actionContext));
                     break;
                 case ProjectLanguage.CSharp:
+                case ProjectLanguage.FSharp:
                     executeSteps.push(await DotnetFunctionCreateStep.createStep(wizardContext.actionContext));
                     break;
                 case ProjectLanguage.TypeScript:
