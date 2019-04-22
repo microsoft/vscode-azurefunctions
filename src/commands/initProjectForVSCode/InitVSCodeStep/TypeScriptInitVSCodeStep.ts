@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand, ProjectRuntime } from '../../../constants';
+import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
 
 const npmPruneTaskLabel: string = 'npm prune';
@@ -14,7 +14,7 @@ const npmBuildTaskLabel: string = 'npm build';
 export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
     public readonly preDeployTask: string = npmPruneTaskLabel;
 
-    public getTasks(runtime: ProjectRuntime): TaskDefinition[] {
+    public getTasks(): TaskDefinition[] {
         return [
             {
                 type: func,
@@ -27,7 +27,7 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 type: 'shell',
                 label: npmBuildTaskLabel,
                 command: 'npm run build',
-                dependsOn: runtime === ProjectRuntime.v1 ? npmInstallTaskLabel : [extInstallTaskName, npmInstallTaskLabel],
+                dependsOn: this.requiresFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel,
                 problemMatcher: '$tsc'
             },
             {

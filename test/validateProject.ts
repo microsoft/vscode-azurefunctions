@@ -13,8 +13,7 @@ export function getJavaScriptValidateOptions(): IValidateProjectOptions {
         expectedSettings: {
             projectLanguage: ProjectLanguage.JavaScript,
             projectRuntime: ProjectRuntime.v2,
-            deploySubpath: '.',
-            preDeployTask: 'func: extensions install'
+            deploySubpath: '.'
         },
         expectedPaths: [
         ],
@@ -135,7 +134,6 @@ export function getPythonValidateOptions(projectName: string, venvName: string):
             'Attach to Python Functions'
         ],
         expectedTasks: [
-            'extensions install',
             'pipInstall',
             'host start'
         ]
@@ -196,8 +194,7 @@ export function getPowerShellValidateOptions(): IValidateProjectOptions {
         expectedSettings: {
             projectLanguage: ProjectLanguage.PowerShell,
             projectRuntime: ProjectRuntime.v2,
-            deploySubpath: '.',
-            preDeployTask: 'func: extensions install'
+            deploySubpath: '.'
         },
         expectedPaths: [
             'profile.ps1',

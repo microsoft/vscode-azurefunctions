@@ -197,6 +197,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
     return {
         functionConfig: functionConfig,
         isHttpTrigger: functionConfig.isHttpTrigger,
+        isTimerTrigger: functionConfig.isTimerTrigger,
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,

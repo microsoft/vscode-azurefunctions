@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { azureWebJobsStorageKey, getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
 import { writeFormattedJson } from '../../../utils/fs';
@@ -21,6 +21,8 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     private _venvName: string | undefined;
 
     protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+        await super.executeCore(wizardContext);
+
         const zipPath: string = this.setDeploySubpath(wizardContext, `${path.basename(wizardContext.projectPath)}.zip`);
 
         this._venvName = await getExistingVenv(wizardContext.projectPath);
@@ -38,18 +40,28 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 
     protected getTasks(): TaskDefinition[] {
+        const pipInstallLabel: string = 'pipInstall';
+        const dependsOn: string | undefined = this.requiresFuncExtensionsInstall ? extInstallCommand : this._venvName ? pipInstallLabel : undefined;
         const tasks: TaskDefinition[] = [
             {
                 type: func,
                 command: hostStartCommand,
                 problemMatcher: funcWatchProblemMatcher,
                 isBackground: true,
-                dependsOn: extInstallTaskName
+                dependsOn
             }
         ];
 
         if (this._venvName) {
-            const pipInstallLabel: string = 'pipInstall';
+            if (this.requiresFuncExtensionsInstall) {
+                tasks.push({
+                    type: func,
+                    command: extInstallCommand,
+                    dependsOn: pipInstallLabel,
+                    problemMatcher: []
+                });
+            }
+
             const venvSettingReference: string = `\${config:${extensionPrefix}.${pythonVenvSetting}}`;
 
             function getPipInstallCommand(platform: NodeJS.Platform): string {
@@ -57,12 +69,6 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
             }
 
             tasks.push(
-                {
-                    type: func,
-                    command: extInstallCommand,
-                    dependsOn: pipInstallLabel,
-                    problemMatcher: []
-                },
                 {
                     label: pipInstallLabel,
                     type: 'shell',
