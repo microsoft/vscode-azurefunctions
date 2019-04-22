@@ -6,12 +6,14 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { localSettingsFileName } from '../../constants';
+import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
+import { hostFileName, localSettingsFileName, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { IHostJson } from '../../funcConfig/host';
 import { validateAzureWebJobsStorage } from '../../LocalAppSettings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { writeFormattedJson } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -53,6 +55,10 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(wizardContext);
+        if (wizardContext.runtime !== ProjectRuntime.v1 && !template.isHttpTrigger && !template.isTimerTrigger) {
+            await this.verifyExtensionBundle(wizardContext);
+        }
+
         const cachedFunc: ICachedFunction = { projectPath: wizardContext.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
 
         if (wizardContext.openBehavior) {
@@ -63,6 +69,23 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         }
 
         runPostFunctionCreateSteps(cachedFunc);
+    }
+
+    public async verifyExtensionBundle(wizardContext: T): Promise<void> {
+        const hostFilePath: string = path.join(wizardContext.projectPath, hostFileName);
+        try {
+            const hostJson: IHostJson = <IHostJson>await fse.readJSON(hostFilePath);
+            if (!hostJson.extensionBundle) {
+                // https://github.com/Microsoft/vscode-azurefunctions/issues/1202
+                hostJson.extensionBundle = {
+                    id: 'Microsoft.Azure.Functions.ExtensionBundle',
+                    version: '[1.*, 2.0.0)'
+                };
+                await writeFormattedJson(hostFilePath, hostJson);
+            }
+        } catch (error) {
+            throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
+        }
     }
 
     public shouldExecute(wizardContext: T): boolean {

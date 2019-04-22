@@ -68,7 +68,11 @@ export class FunctionConfig {
     }
 
     public get isHttpTrigger(): boolean {
-        return !!this.inBinding && !!this.inBinding.type && this.inBinding.type.toLowerCase() === 'httptrigger';
+        return !!this.inBinding && !!this.inBinding.type && /^http/i.test(this.inBinding.type);
+    }
+
+    public get isTimerTrigger(): boolean {
+        return !!this.inBinding && !!this.inBinding.type && /^timer/i.test(this.inBinding.type);
     }
 
     public get authLevel(): HttpAuthLevel {

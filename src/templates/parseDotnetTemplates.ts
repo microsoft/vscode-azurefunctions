@@ -54,7 +54,8 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     }
 
     return {
-        isHttpTrigger: rawTemplate.Name.toLowerCase().startsWith('http') || rawTemplate.Name.toLowerCase().endsWith('webhook'),
+        isHttpTrigger: /^http/i.test(rawTemplate.Name) || /webhook$/i.test(rawTemplate.Name),
+        isTimerTrigger: /^timer/i.test(rawTemplate.Name),
         id: rawTemplate.Identity,
         name: rawTemplate.Name,
         defaultFunctionName: rawTemplate.DefaultName,

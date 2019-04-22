@@ -18,6 +18,7 @@ export interface IFunctionTemplate {
     defaultFunctionName: string;
     language: string;
     isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
     userPromptedSettings: IFunctionSetting[];
     categories: TemplateCategory[];
 }
