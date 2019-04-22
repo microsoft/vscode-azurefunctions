@@ -60,8 +60,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
                 isOldFuncCli = false;
             }
 
-            // Add "azure.functions" for the intellisense, even though it's not technically needed to debug/deploy (The 'a' includes pre-release)
-            await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : 'azure.functions~=1.0a');
+            await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : '');
         }
     }
 }
@@ -140,6 +139,14 @@ async function getPythonAlias(): Promise<string> {
 export async function createVirtualEnviornment(venvName: string, projectPath: string): Promise<void> {
     const pythonAlias: string = await getPythonAlias();
     await cpUtils.executeCommand(ext.outputChannel, projectPath, pythonAlias, '-m', 'venv', venvName);
+
+    const packageName: string = 'azure-functions';
+    try {
+        // Install "azure-functions" package into virtual env so that user gets intellisense
+        await venvUtils.runCommandInVenv(`pip install ${packageName}`, venvName, projectPath);
+    } catch {
+        ext.outputChannel.appendLine(localize('noPipAzureFunctions', 'WARNING: You may not have IntelliSense for the package "{0}", but this should not affect debugging or deploying your project.', packageName));
+    }
 }
 
 // https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
