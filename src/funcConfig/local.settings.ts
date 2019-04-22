@@ -7,13 +7,13 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
-import { localSettingsFileName } from './constants';
-import { ext } from './extensionVariables';
-import { localize } from './localize';
-import * as azUtil from './utils/azure';
-import * as fsUtil from './utils/fs';
+import { localSettingsFileName } from '../constants';
+import { ext } from '../extensionVariables';
+import { localize } from '../localize';
+import * as azUtil from '../utils/azure';
+import * as fsUtil from '../utils/fs';
 
-export interface ILocalAppSettings {
+export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
     Values?: { [key: string]: string };
     ConnectionStrings?: { [key: string]: string };
@@ -27,7 +27,7 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
         return;
     }
 
-    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
     if (settings.Values && settings.Values[azureWebJobsStorageKey]) {
         return;
     }
@@ -58,9 +58,10 @@ export async function validateAzureWebJobsStorage(actionContext: IActionContext,
         await fsUtil.writeFormattedJson(localSettingsPath, settings);
     }
 }
+
 export async function setLocalAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
-    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
 
     // tslint:disable-next-line:strict-boolean-expressions
     settings.Values = settings.Values || {};
@@ -77,12 +78,12 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
     await fsUtil.writeFormattedJson(localSettingsPath, settings);
 }
 
-export async function getLocalAppSettings(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalAppSettings> {
+export async function getLocalSettingsJson(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalSettingsJson> {
     if (await fse.pathExists(localSettingsPath)) {
         const data: string = (await fse.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
-                return <ILocalAppSettings>JSON.parse(data);
+                return <ILocalSettingsJson>JSON.parse(data);
             } catch (error) {
                 if (allowOverwrite) {
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);

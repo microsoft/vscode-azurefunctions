@@ -6,7 +6,7 @@
 import { AzureParentTreeItem, AzureWizard, IActionContext } from 'vscode-azureextensionui';
 import { createBindingWizard } from '../../commands/addBinding/createBindingWizard';
 import { IBindingWizardContext } from '../../commands/addBinding/IBindingWizardContext';
-import { FunctionConfig } from '../../FunctionConfig';
+import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nodeUtils } from '../../utils/nodeUtils';
 import { nonNullProp } from '../../utils/nonNull';
@@ -21,9 +21,9 @@ export class LocalBindingsTreeItem extends AzureParentTreeItem<IProjectRoot> {
     public readonly childTypeLabel: string = localize('binding', 'binding');
     public functionJsonPath: string;
 
-    private readonly _config: FunctionConfig;
+    private readonly _config: ParsedFunctionJson;
 
-    public constructor(parent: LocalFunctionTreeItem, config: FunctionConfig, functionJsonPath: string) {
+    public constructor(parent: LocalFunctionTreeItem, config: ParsedFunctionJson, functionJsonPath: string) {
         super(parent);
         this._config = config;
         this.functionJsonPath = functionJsonPath;

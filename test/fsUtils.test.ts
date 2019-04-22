@@ -8,7 +8,7 @@ import * as path from 'path';
 import { isPathEqual, isSubpath } from '../extension.bundle';
 
 // tslint:disable-next-line:max-func-body-length
-suite('fsUtils Tests', () => {
+suite('fsUtils', () => {
     test('isPathEqual, posix, true', () => {
         let fsPath1: string = '/test/';
         let fsPath2: string = '/test/';

@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
-import { IFunctionBinding, IFunctionJson } from '../../../FunctionConfig';
+import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
 import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
@@ -48,13 +48,13 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
             await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
         }));
 
-        const triggerBinding: IFunctionBinding = nonNullProp(template.functionConfig, 'triggerBinding');
+        const triggerBinding: IFunctionBinding = nonNullProp(template.functionJson, 'triggerBinding');
         for (const setting of template.userPromptedSettings) {
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
             triggerBinding[setting.name] = wizardContext[setting.name] || '';
         }
 
-        const functionJson: IFunctionJson = template.functionConfig.functionJson;
+        const functionJson: IFunctionJson = template.functionJson.data;
         if (this.editFunctionJson) {
             await this.editFunctionJson(wizardContext, functionJson);
         }

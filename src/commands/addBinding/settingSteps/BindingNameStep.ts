@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { FunctionConfig } from '../../../FunctionConfig';
+import { ParsedFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { StringPromptStep } from './StringPromptStep';
 
 export class BindingNameStep extends StringPromptStep {
-    private _functionConfig: FunctionConfig | undefined;
+    private _functionJson: ParsedFunctionJson | undefined;
 
     public async getDefaultValue(wizardContext: IBindingWizardContext): Promise<string | undefined> {
         const defaultValue: string | undefined = await super.getDefaultValue(wizardContext);
@@ -44,11 +44,11 @@ export class BindingNameStep extends StringPromptStep {
 
     private async bindingExists(wizardContext: IBindingWizardContext, val: string): Promise<boolean> {
         try {
-            if (!this._functionConfig) {
-                this._functionConfig = new FunctionConfig(await fse.readJSON(wizardContext.functionJsonPath));
+            if (!this._functionJson) {
+                this._functionJson = new ParsedFunctionJson(await fse.readJSON(wizardContext.functionJsonPath));
             }
 
-            return !!this._functionConfig.bindings.find(b => b.name === val);
+            return !!this._functionJson.bindings.find(b => b.name === val);
         } catch {
             // If we can't parse the function.json file, we will prompt to overwrite the file later and can assume the binding doesn't exist
             return false;

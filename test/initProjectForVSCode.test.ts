@@ -13,7 +13,7 @@ import { testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
 
     const javaScriptProject: string = 'AutoDetectJavaScriptProject';

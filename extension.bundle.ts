@@ -23,7 +23,7 @@ export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/constants';
 export * from './src/extensionVariables';
-export * from './src/FunctionConfig';
+export * from './src/funcConfig/function';
 export * from './src/vsCodeConfig/settings';
 export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/ScriptTemplateRetriever';

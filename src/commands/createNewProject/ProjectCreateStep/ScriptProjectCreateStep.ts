@@ -9,7 +9,7 @@ import * as path from 'path';
 import { Progress } from 'vscode';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
 import { IHostJson } from '../../../funcConfig/host';
-import { ILocalAppSettings } from '../../../LocalAppSettings';
+import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
@@ -31,7 +31,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
 
         const localSettingsJsonPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath)) {
-            const localSettingsJson: ILocalAppSettings = {
+            const localSettingsJson: ILocalSettingsJson = {
                 IsEncrypted: false,
                 Values: {
                     AzureWebJobsStorage: ''

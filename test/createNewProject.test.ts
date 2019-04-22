@@ -25,7 +25,7 @@ import {
 } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create New Project', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
 
     const javaProject: string = 'JavaProject';

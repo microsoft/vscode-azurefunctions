@@ -6,7 +6,7 @@
 import { MessageItem, window } from 'vscode';
 import { AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
-import { HttpAuthLevel } from '../../FunctionConfig';
+import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { FunctionsTreeItem } from '../../tree/FunctionsTreeItem';
 import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
