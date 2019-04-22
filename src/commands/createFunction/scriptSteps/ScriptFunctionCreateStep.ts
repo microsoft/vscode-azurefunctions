@@ -48,10 +48,10 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
             await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
         }));
 
-        const inBinding: IFunctionBinding = nonNullProp(template.functionConfig, 'inBinding');
+        const triggerBinding: IFunctionBinding = nonNullProp(template.functionConfig, 'triggerBinding');
         for (const setting of template.userPromptedSettings) {
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            inBinding[setting.name] = wizardContext[setting.name] || '';
+            triggerBinding[setting.name] = wizardContext[setting.name] || '';
         }
 
         const functionJson: IFunctionJson = template.functionConfig.functionJson;

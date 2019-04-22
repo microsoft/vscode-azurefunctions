@@ -176,13 +176,13 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
     const userPromptedSettings: IFunctionSetting[] = [];
     if (rawTemplate.metadata.userPrompt) {
         for (const settingName of rawTemplate.metadata.userPrompt) {
-            if (functionConfig.inBinding) {
-                const inBinding: IFunctionBinding = functionConfig.inBinding;
-                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === inBinding.type);
+            if (functionConfig.triggerBinding) {
+                const triggerBinding: IFunctionBinding = functionConfig.triggerBinding;
+                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === triggerBinding.type);
                 if (bindingTemplate) {
                     const setting: IFunctionSetting | undefined = bindingTemplate.settings.find((bs: IFunctionSetting) => bs.name === settingName);
                     if (setting) {
-                        const functionSpecificDefaultValue: string | undefined = inBinding[setting.name];
+                        const functionSpecificDefaultValue: string | undefined = triggerBinding[setting.name];
                         if (functionSpecificDefaultValue) {
                             // overwrite common default value with the function-specific default value
                             setting.defaultValue = functionSpecificDefaultValue;
