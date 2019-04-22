@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { QuickPickItem, QuickPickOptions } from 'vscode';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
+import { QuickPickOptions } from 'vscode';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
+import { openUrl } from '../../utils/openUrl';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
@@ -42,20 +43,29 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
     public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
         const previewDescription: string = localize('previewDescription', '(Preview)');
         // Only display 'supported' languages that can be debugged in VS Code
-        const languagePicks: QuickPickItem[] = [
-            { label: ProjectLanguage.JavaScript },
-            { label: ProjectLanguage.TypeScript },
-            { label: ProjectLanguage.CSharp },
-            { label: ProjectLanguage.Python, description: previewDescription },
-            { label: ProjectLanguage.Java }
+        const languagePicks: IAzureQuickPickItem<ProjectLanguage | undefined>[] = [
+            { label: ProjectLanguage.JavaScript, data: ProjectLanguage.JavaScript },
+            { label: ProjectLanguage.TypeScript, data: ProjectLanguage.TypeScript },
+            { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
+            { label: ProjectLanguage.Python, description: previewDescription, data: ProjectLanguage.Python },
+            { label: ProjectLanguage.Java, data: ProjectLanguage.Java }
         ];
 
         if (getWorkspaceSetting('enablePowerShell')) {
-            languagePicks.push({ label: ProjectLanguage.PowerShell, description: previewDescription });
+            languagePicks.push({ label: ProjectLanguage.PowerShell, description: previewDescription, data: ProjectLanguage.PowerShell });
         }
 
+        languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });
+
         const options: QuickPickOptions = { placeHolder: localize('selectFuncTemplate', 'Select a language for your function project') };
-        wizardContext.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;
+        const result: ProjectLanguage | undefined = (await ext.ui.showQuickPick(languagePicks, options)).data;
+        if (result === undefined) {
+            await openUrl('https://aka.ms/AA4ul9b');
+            wizardContext.actionContext.properties.cancelStep = 'viewSampleProjects';
+            throw new UserCancelledError();
+        } else {
+            wizardContext.language = result;
+        }
     }
 
     public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
