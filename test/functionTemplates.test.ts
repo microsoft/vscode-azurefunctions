@@ -4,41 +4,70 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { ext, IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter, TemplateProvider } from '../extension.bundle';
-import { runForAllTemplateSources } from './global.test';
+import { IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter, TemplateProvider, TemplateSource } from '../extension.bundle';
+import { runForTemplateSource } from './global.test';
 
-suite('Template Count Tests', async () => {
-    test('Valid templates count', async () => {
-        await validateTemplateCounts(await ext.templateProviderTask, 'defaultOnExtensionActivation');
+addSuite(undefined);
+addSuite(TemplateSource.CliFeed);
+addSuite(TemplateSource.StagingCliFeed);
+addSuite(TemplateSource.Backup);
 
-        await runForAllTemplateSources(async (source, templates) => {
-            await validateTemplateCounts(templates, source);
+function addSuite(source: TemplateSource | undefined): void {
+    suite(`Verified Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, async () => {
+        test('JavaScript v1', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const jsTemplatesv1: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v1, TemplateFilter.Verified);
+                assert.equal(jsTemplatesv1.length, 8);
+            });
+        });
+
+        test('JavaScript v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const jsTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(jsTemplatesv2.length, 11);
+            });
+        });
+
+        test('Java v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(javaTemplates.length, 4);
+            });
+        });
+
+        test('C# v1', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);
+                assert.equal(cSharpTemplates.length, 11);
+            });
+        });
+
+        test('C# v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const cSharpTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(cSharpTemplatesv2.length, 8);
+            });
+        });
+
+        test('Python v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const pythonTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(pythonTemplates.length, 8);
+            });
+        });
+
+        test('TypeScript v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const tsTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(tsTemplates.length, 11);
+            });
+        });
+
+        test('PowerShell v2', async () => {
+            await runForTemplateSource(source, async (templates: TemplateProvider) => {
+                const powershellTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.PowerShell, ProjectRuntime.v2, TemplateFilter.Verified);
+                assert.equal(powershellTemplates.length, 8);
+            });
         });
     });
-});
-
-async function validateTemplateCounts(templates: TemplateProvider, source: string): Promise<void> {
-    const jsTemplatesv1: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v1, TemplateFilter.Verified);
-    assert.equal(jsTemplatesv1.length, 8, `Unexpected JavaScript v1 ${source} templates count.`);
-
-    const jsTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(jsTemplatesv2.length, 8, `Unexpected JavaScript v2 ${source} templates count.`);
-
-    const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(javaTemplates.length, 4, `Unexpected Java ${source} templates count.`);
-
-    const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);
-    assert.equal(cSharpTemplates.length, 11, `Unexpected CSharp (.NET Framework) ${source} templates count.`);
-
-    const cSharpTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(cSharpTemplatesv2.length, 8, `Unexpected CSharp (.NET Core) ${source} templates count.`);
-
-    const pythonTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(pythonTemplates.length, 8, `Unexpected Python ${source} templates count.`);
-
-    const tsTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(tsTemplates.length, 8, `Unexpected TypeScript ${source} templates count.`);
-
-    const powershellTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.PowerShell, ProjectRuntime.v2, TemplateFilter.Verified);
-    assert.equal(powershellTemplates.length, 8, `Unexpected PowerShell ${source} templates count.`);
 }

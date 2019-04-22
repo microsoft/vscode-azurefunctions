@@ -139,6 +139,9 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
         // For JavaScript, only include triggers that require extensions in v2. v1 doesn't have the same support for 'func extensions install'
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'CosmosDBTrigger-JavaScript',
+            'DurableFunctionsActivity-JavaScript',
+            'DurableFunctionsHttpStart-JavaScript',
+            'DurableFunctionsOrchestrator-JavaScript',
             'EventGridTrigger-JavaScript',
             'ServiceBusQueueTrigger-JavaScript',
             'ServiceBusTopicTrigger-JavaScript'
@@ -146,14 +149,14 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
 
         const javaScriptTemplateIds: string[] = verifiedTemplateIds;
 
-        // Python is only supported in v2 - same functions as JavaScript
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'Python')));
+        // Python is only supported in v2 - same functions as JavaScript except Durable
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'Python')));
 
         // TypeScript is only supported in v2 - same functions as JavaScript
         verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
 
-        // PowerShell is only supported in v2 - same functions as JavaScript
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'PowerShell')));
+        // PowerShell is only supported in v2 - same functions as JavaScript except Durable
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'PowerShell')));
     }
 
     return verifiedTemplateIds;
