@@ -6,7 +6,7 @@
 import { isString } from 'util';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
-import { FunctionConfig, IFunctionBinding } from '../FunctionConfig';
+import { IFunctionBinding, ParsedFunctionJson } from '../funcConfig/function';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IEnumValue, IFunctionSetting, ResourceType, ValueType } from './IFunctionSetting';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
@@ -155,7 +155,7 @@ export function parseScriptBindings(config: IConfig, resources: IResources): IBi
 }
 
 export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, bindingTemplates: IBindingTemplate[]): IScriptFunctionTemplate {
-    const functionConfig: FunctionConfig = new FunctionConfig(rawTemplate.function);
+    const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
     // The templateApiZip only supports script languages, and thus incorrectly defines 'C#Script' as 'C#', etc.
@@ -176,8 +176,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
     const userPromptedSettings: IFunctionSetting[] = [];
     if (rawTemplate.metadata.userPrompt) {
         for (const settingName of rawTemplate.metadata.userPrompt) {
-            if (functionConfig.triggerBinding) {
-                const triggerBinding: IFunctionBinding = functionConfig.triggerBinding;
+            if (functionJson.triggerBinding) {
+                const triggerBinding: IFunctionBinding = functionJson.triggerBinding;
                 const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === triggerBinding.type);
                 if (bindingTemplate) {
                     const setting: IFunctionSetting | undefined = bindingTemplate.settings.find((bs: IFunctionSetting) => bs.name === settingName);
@@ -195,14 +195,14 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
     }
 
     return {
-        functionConfig: functionConfig,
-        isHttpTrigger: functionConfig.isHttpTrigger,
-        isTimerTrigger: functionConfig.isTimerTrigger,
+        functionJson,
+        isHttpTrigger: functionJson.isHttpTrigger,
+        isTimerTrigger: functionJson.isTimerTrigger,
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
-        language: language,
-        userPromptedSettings: userPromptedSettings,
+        language,
+        userPromptedSettings,
         templateFiles: rawTemplate.files,
         categories: rawTemplate.metadata.category
     };
@@ -210,7 +210,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
 
 export interface IScriptFunctionTemplate extends IFunctionTemplate {
     templateFiles: { [filename: string]: string };
-    functionConfig: FunctionConfig;
+    functionJson: ParsedFunctionJson;
 }
 
 /**

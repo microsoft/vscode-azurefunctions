@@ -15,7 +15,7 @@ async function verifyLanguage(vscodeLanguage: string, fileName: string, template
     assert.equal(actual, path.join(templatesPath, 'resources', fileName));
 }
 
-suite('getResourcesPath Tests', async () => {
+suite('getResourcesPath', async () => {
     let extraTemplatesPath: string;
     suiteSetup(async () => {
         extraTemplatesPath = path.join(testFolderPath, 'extraTemplates');

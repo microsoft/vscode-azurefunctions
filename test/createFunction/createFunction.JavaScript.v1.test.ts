@@ -26,7 +26,7 @@ class JSFunctionTester extends FunctionTesterBase {
 }
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
-suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create JavaScript ~1 Function', async function (this: ISuiteCallbackContext): Promise<void> {
     const jsTester: JSFunctionTester = new JSFunctionTester();
 
     suiteSetup(async () => {

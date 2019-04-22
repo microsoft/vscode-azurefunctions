@@ -23,7 +23,7 @@ class CSharpFunctionTester extends FunctionTesterBase {
 }
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Create C# ~2 Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create C# ~2 Function', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(40 * 1000);
 
     const csTester: CSharpFunctionTester = new CSharpFunctionTester();

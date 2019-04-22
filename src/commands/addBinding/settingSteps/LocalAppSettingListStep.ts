@@ -7,7 +7,7 @@ import * as path from 'path';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionWizardContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
-import { getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
+import { getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { IFunctionSetting, ResourceType } from '../../../templates/IFunctionSetting';
 import { IBindingWizardContext } from '../IBindingWizardContext';
@@ -30,7 +30,7 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizar
 
     public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
         const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
-        const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
+        const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
         picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));

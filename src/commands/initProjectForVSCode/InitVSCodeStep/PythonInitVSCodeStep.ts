@@ -9,7 +9,7 @@ import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
 import { extensionPrefix, extInstallCommand, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
-import { azureWebJobsStorageKey, getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
+import { azureWebJobsStorageKey, getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { writeFormattedJson } from '../../../utils/fs';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -127,7 +127,7 @@ async function ensureAzureWebJobsStorage(projectPath: string): Promise<void> {
         // Make sure local settings isn't using Storage Emulator for non-windows
         // https://github.com/Microsoft/vscode-azurefunctions/issues/583
         const localSettingsPath: string = path.join(projectPath, localSettingsFileName);
-        const localSettings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
+        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
         // tslint:disable-next-line:strict-boolean-expressions
         localSettings.Values = localSettings.Values || {};
         localSettings.Values[azureWebJobsStorageKey] = '';

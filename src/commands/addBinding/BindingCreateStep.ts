@@ -5,7 +5,7 @@
 
 import { Progress, Uri, window, workspace } from "vscode";
 import { AzureWizardExecuteStep } from "vscode-azureextensionui";
-import { IFunctionBinding, IFunctionJson } from "../../FunctionConfig";
+import { IFunctionBinding, IFunctionJson } from "../../funcConfig/function";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { confirmEditJsonFile } from '../../utils/fs';
 import { nonNullProp } from "../../utils/nonNull";

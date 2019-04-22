@@ -5,7 +5,7 @@
 
 import { Progress } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { setLocalAppSetting } from '../../../LocalAppSettings';
+import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { IFunctionSetting } from '../../../templates/IFunctionSetting';
 import { nonNullProp } from '../../../utils/nonNull';

@@ -10,7 +10,7 @@ import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionConte
 import { hostFileName, localSettingsFileName, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJson } from '../../funcConfig/host';
-import { validateAzureWebJobsStorage } from '../../LocalAppSettings';
+import { validateAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { writeFormattedJson } from '../../utils/fs';

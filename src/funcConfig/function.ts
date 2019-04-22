@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from "./localize";
+import { localize } from "../localize";
 
 export interface IFunctionJson {
     disabled?: boolean;
@@ -30,26 +30,26 @@ export enum HttpAuthLevel {
  * Basic config for a function, stored in the 'function.json' file at the root of the function's folder
  * Since the user can manually edit their 'function.json' file, we can't assume it will have the proper schema
  */
-export class FunctionConfig {
-    public readonly functionJson: IFunctionJson;
+export class ParsedFunctionJson {
+    public readonly data: IFunctionJson;
 
     // tslint:disable-next-line:no-any
     public constructor(data: any) {
         // tslint:disable-next-line:no-unsafe-any
         if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
-            this.functionJson = <IFunctionJson>data;
+            this.data = <IFunctionJson>data;
         } else {
-            this.functionJson = {};
+            this.data = {};
         }
     }
 
     public get bindings(): IFunctionBinding[] {
         // tslint:disable-next-line: strict-boolean-expressions
-        return this.functionJson.bindings || [];
+        return this.data.bindings || [];
     }
 
     public get disabled(): boolean {
-        return this.functionJson.disabled === true;
+        return this.data.disabled === true;
     }
 
     /**

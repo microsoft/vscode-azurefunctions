@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IFunctionBinding } from "../../FunctionConfig";
+import { IFunctionBinding } from "../../funcConfig/function";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { IFunctionWizardContext } from "../createFunction/IFunctionWizardContext";
 

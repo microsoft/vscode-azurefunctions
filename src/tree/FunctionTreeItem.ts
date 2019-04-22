@@ -10,7 +10,7 @@ import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
+import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
@@ -21,7 +21,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncFunction';
     public static readOnlyContextValue: string = 'azFuncFunctionReadOnly';
     public readonly parent: FunctionsTreeItem;
-    public readonly config: FunctionConfig;
+    public readonly config: ParsedFunctionJson;
 
     private readonly _name: string;
     private _triggerUrl: string | undefined;
@@ -31,7 +31,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
         super(parent);
         this._name = getFunctionNameFromId(nonNullProp(func, 'id'));
 
-        this.config = new FunctionConfig(func.config);
+        this.config = new ParsedFunctionJson(func.config);
     }
 
     public static async createFunctionTreeItem(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<FunctionTreeItem> {
