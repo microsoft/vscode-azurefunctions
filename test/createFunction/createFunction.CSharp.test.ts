@@ -63,6 +63,16 @@ suite('Create C# ~2 Function', async function (this: ISuiteCallbackContext): Pro
         );
     });
 
+    const eventHubTrigger: string = 'EventHubTrigger';
+    test(eventHubTrigger, async () => {
+        await csTester.testCreateFunction(
+            eventHubTrigger,
+            TestInput.UseDefaultValue, // namespace
+            'AzureWebJobsStorage', // Use existing app setting
+            'eventHubName'
+        );
+    });
+
     const httpTrigger: string = 'HttpTrigger';
     test(httpTrigger, async () => {
         await csTester.testCreateFunction(

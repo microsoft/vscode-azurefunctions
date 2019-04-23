@@ -143,6 +143,7 @@ export function getScriptVerifiedTemplateIds(runtime: string): string[] {
             'DurableFunctionsHttpStart-JavaScript',
             'DurableFunctionsOrchestrator-JavaScript',
             'EventGridTrigger-JavaScript',
+            'EventHubTrigger-JavaScript',
             'ServiceBusQueueTrigger-JavaScript',
             'ServiceBusTopicTrigger-JavaScript'
         ]);

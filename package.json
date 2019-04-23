@@ -933,6 +933,7 @@
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.1.2",
+        "azure-arm-eventhub": "^3.2.0",
         "azure-arm-sb": "^2.3.0-preview",
         "azure-arm-storage": "^4.0.0",
         "azure-arm-website": "^5.3.0",
