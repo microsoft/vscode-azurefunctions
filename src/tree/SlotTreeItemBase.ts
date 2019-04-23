@@ -69,6 +69,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return false;
     }
 
+    /**
+     * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
+     */
     public async refreshImpl(): Promise<void> {
         let runtime: ProjectRuntime | undefined;
         try {
