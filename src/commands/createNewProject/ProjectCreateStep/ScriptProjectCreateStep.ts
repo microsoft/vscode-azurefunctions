@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
-import { IHostJson } from '../../../funcConfig/host';
+import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
@@ -25,7 +25,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
         const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: IHostJson = this.getHostContent(runtime);
+            const hostJson: IHostJsonV2 | IHostJsonV1 = this.getHostContent(runtime);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -72,7 +72,7 @@ local.settings.json`));
         }
     }
 
-    private getHostContent(runtime: ProjectRuntime): IHostJson {
+    private getHostContent(runtime: ProjectRuntime): IHostJsonV2 | IHostJsonV1 {
         if (runtime === ProjectRuntime.v2) {
             if (this.supportsManagedDependencies) {
                 return {

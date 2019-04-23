@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
+import { AzureTreeItem } from 'vscode-azureextensionui';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { FunctionAppProvider } from './FunctionAppProvider';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -16,9 +17,15 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    public constructor(parent: AzureParentTreeItem, client: SiteClient) {
+    private constructor(parent: FunctionAppProvider, client: SiteClient) {
         super(parent, client);
         this._slotsTreeItem = new SlotsTreeItem(this);
+    }
+
+    public static async create(parent: FunctionAppProvider, client: SiteClient): Promise<ProductionSlotTreeItem> {
+        const result: ProductionSlotTreeItem = new ProductionSlotTreeItem(parent, client);
+        await result.refreshImpl();
+        return result;
     }
 
     public get label(): string {
