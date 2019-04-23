@@ -15,6 +15,7 @@ export interface IFunctionBinding {
     // tslint:disable-next-line:no-reserved-keywords
     type?: string;
     name?: string;
+    route?: string;
     direction?: string;
     authLevel?: string;
     [propertyName: string]: string | undefined;

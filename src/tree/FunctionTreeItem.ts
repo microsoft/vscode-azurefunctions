@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import { URL } from 'url';
+import * as url from 'url';
 import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
@@ -14,7 +14,6 @@ import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
@@ -148,7 +147,12 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     private async refreshTriggerUrl(): Promise<void> {
-        const triggerUrl: URL = new URL(`${this.root.client.defaultHostUrl}/api/${this.name}`);
+        const triggerUrl: url.URL = new url.URL(this.root.client.defaultHostUrl);
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        const route: string = (this.config.triggerBinding && this.config.triggerBinding.route) || this.name;
+        triggerUrl.pathname = `${this.parent.parent.hostJson.routePrefix}/${route}`;
+
         const key: string | undefined = await this.getKey();
         if (key) {
             triggerUrl.searchParams.set('code', key);
@@ -161,13 +165,12 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(): Promise<void> {
-        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-        // tslint:disable-next-line:strict-boolean-expressions
-        appSettings.properties = appSettings.properties || {};
-        const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
-        if (projectRuntime === ProjectRuntime.v1) {
+        if (this.parent.parent.runtime === ProjectRuntime.v1) {
             this._disabled = this.config.disabled;
         } else {
+            const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+            // tslint:disable-next-line:strict-boolean-expressions
+            appSettings.properties = appSettings.properties || {};
             const key: string = `AzureWebJobs.${this.name}.Disabled`;
             /**
              * The docs only officially mentioned 'true' and 'false', but here is what I found:

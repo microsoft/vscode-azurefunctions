@@ -9,7 +9,7 @@ import { Progress, Uri, window, workspace } from 'vscode';
 import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
 import { hostFileName, localSettingsFileName, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { IHostJson } from '../../funcConfig/host';
+import { IHostJsonV2 } from '../../funcConfig/host';
 import { validateAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
@@ -74,7 +74,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public async verifyExtensionBundle(wizardContext: T): Promise<void> {
         const hostFilePath: string = path.join(wizardContext.projectPath, hostFileName);
         try {
-            const hostJson: IHostJson = <IHostJson>await fse.readJSON(hostFilePath);
+            const hostJson: IHostJsonV2 = <IHostJsonV2>await fse.readJSON(hostFilePath);
             if (!hostJson.extensionBundle) {
                 // https://github.com/Microsoft/vscode-azurefunctions/issues/1202
                 hostJson.extensionBundle = {

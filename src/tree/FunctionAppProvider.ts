@@ -53,10 +53,10 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             this,
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            (site: WebSiteManagementModels.Site) => {
+            async (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    return new ProductionSlotTreeItem(this, siteClient);
+                    return await ProductionSlotTreeItem.create(this, siteClient);
                 }
                 return undefined;
             },
@@ -162,7 +162,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         }
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
-        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
+        return await ProductionSlotTreeItem.create(this, new SiteClient(site, this.root));
     }
 }
 

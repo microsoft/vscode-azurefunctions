@@ -6,8 +6,11 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
+import { ProjectRuntime } from '../constants';
+import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
+import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
@@ -17,6 +20,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
+    public hostJson: IParsedHostJson;
+    public runtime: ProjectRuntime;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
@@ -64,7 +69,29 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return false;
     }
 
+    /**
+     * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
+     */
     public async refreshImpl(): Promise<void> {
+        let runtime: ProjectRuntime | undefined;
+        try {
+            const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+            runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
+        } catch {
+            // ignore and use default
+        }
+        // tslint:disable-next-line: strict-boolean-expressions
+        this.runtime = runtime || ProjectRuntime.v2;
+
+        // tslint:disable-next-line: no-any
+        let data: any;
+        try {
+            data = await this.root.client.kudu.functionModel.getHostSettings();
+        } catch {
+            // ignore and use default
+        }
+        this.hostJson = parseHostJson(data, this.runtime);
+
         try {
             this._state = await this.root.client.getState();
         } catch {
