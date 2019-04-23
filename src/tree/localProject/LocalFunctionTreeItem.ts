@@ -32,7 +32,7 @@ export class LocalFunctionTreeItem extends AzureParentTreeItem<IProjectRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionTreeItem.contextValue);
+        return nodeUtils.getIconPath(FunctionTreeItem.contextValueBase);
     }
 
     public hasMoreChildrenImpl(): boolean {

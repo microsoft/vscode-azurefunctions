@@ -42,6 +42,7 @@
         "onCommand:azureFunctions.restartFunctionApp",
         "onCommand:azureFunctions.deleteFunctionApp",
         "onCommand:azureFunctions.copyFunctionUrl",
+        "onCommand:azureFunctions.executeFunction",
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.configureDeploymentSource",
@@ -174,6 +175,11 @@
             {
                 "command": "azureFunctions.copyFunctionUrl",
                 "title": "%azFunc.copyFunctionUrl%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.executeFunction",
+                "title": "%azFunc.executeFunction%",
                 "category": "Azure Functions"
             },
             {
@@ -449,22 +455,27 @@
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionHttp(ReadOnly|)$/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.executeFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionTimer(ReadOnly|)$/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteFunction",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@2"
                 },
                 {

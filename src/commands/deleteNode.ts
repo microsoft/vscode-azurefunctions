@@ -6,7 +6,7 @@
 import { AzureTreeItem } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
-export async function deleteNode(expectedContextValue: string, node?: AzureTreeItem): Promise<void> {
+export async function deleteNode(expectedContextValue: string | RegExp, node?: AzureTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker(expectedContextValue);
     }
