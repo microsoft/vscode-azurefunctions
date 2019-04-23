@@ -24,7 +24,7 @@ function addSuite(source: TemplateSource | undefined): void {
         test('JavaScript v2', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const jsTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.JavaScript, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(jsTemplatesv2.length, 11);
+                assert.equal(jsTemplatesv2.length, 12);
             });
         });
 
@@ -38,35 +38,35 @@ function addSuite(source: TemplateSource | undefined): void {
         test('C# v1', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const cSharpTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);
-                assert.equal(cSharpTemplates.length, 11);
+                assert.equal(cSharpTemplates.length, 12);
             });
         });
 
         test('C# v2', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const cSharpTemplatesv2: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.CSharp, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(cSharpTemplatesv2.length, 8);
+                assert.equal(cSharpTemplatesv2.length, 9);
             });
         });
 
         test('Python v2', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const pythonTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(pythonTemplates.length, 8);
+                assert.equal(pythonTemplates.length, 9);
             });
         });
 
         test('TypeScript v2', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const tsTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(tsTemplates.length, 11);
+                assert.equal(tsTemplates.length, 12);
             });
         });
 
         test('PowerShell v2', async () => {
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const powershellTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.PowerShell, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(powershellTemplates.length, 8);
+                assert.equal(powershellTemplates.length, 9);
             });
         });
     });

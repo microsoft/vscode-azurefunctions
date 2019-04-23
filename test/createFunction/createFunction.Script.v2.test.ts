@@ -100,6 +100,16 @@ function addSuite(tester: FunctionTesterBase): void {
             );
         });
 
+        const eventHubTrigger: string = 'Azure Event Hub trigger';
+        test(eventHubTrigger, async () => {
+            await tester.testCreateFunction(
+                eventHubTrigger,
+                'AzureWebJobsStorage', // Use existing app setting
+                'eventHubName',
+                TestInput.UseDefaultValue // Use default consumer group
+            );
+        });
+
         const httpTrigger: string = 'HTTP trigger';
         test(httpTrigger, async () => {
             await tester.testCreateFunction(

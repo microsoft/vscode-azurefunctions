@@ -33,14 +33,15 @@ export function getNameFromId(id: string): string {
     return parseResourceId(id)[4];
 }
 
-interface IBaseResourceWithName extends BaseResource {
+export interface IBaseResourceWithName extends BaseResource {
     name?: string;
+    _description?: string;
 }
 
 export async function promptForResource<T extends IBaseResourceWithName>(placeHolder: string, resourcesTask: Promise<T[]>): Promise<T | undefined> {
     const picksTask: Promise<IAzureQuickPickItem<T | undefined>[]> = resourcesTask.then((resources: T[]) => {
         const picks: IAzureQuickPickItem<T | undefined>[] = !isArray(resources) ? [] : <IAzureQuickPickItem<T>[]>(resources
-            .map((r: T) => r.name ? { data: r, label: r.name } : undefined)
+            .map((r: T) => r.name ? { data: r, label: r.name, description: r._description } : undefined)
             .filter((p: IAzureQuickPickItem<T> | undefined) => p));
         picks.push({
             label: localize('skipForNow', '$(clock) Skip for now'),

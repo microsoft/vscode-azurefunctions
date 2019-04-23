@@ -13,6 +13,10 @@ import { IFunctionSetting, ResourceType } from '../../../templates/IFunctionSett
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { CosmosDBConnectionCreateStep } from './cosmosDB/CosmosDBConnectionCreateStep';
 import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
+import { EventHubAuthRuleListStep } from './eventHub/EventHubAuthRuleListStep';
+import { EventHubConnectionCreateStep } from './eventHub/EventHubConnectionCreateStep';
+import { EventHubListStep } from './eventHub/EventHubListStep';
+import { EventHubNamespaceListStep } from './eventHub/EventHubNamespaceListStep';
 import { LocalAppSettingCreateStep } from './LocalAppSettingCreateStep';
 import { LocalAppSettingNameStep } from './LocalAppSettingNameStep';
 import { LocalAppSettingValueStep } from './LocalAppSettingValueStep';
@@ -60,6 +64,10 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizar
                 case ResourceType.ServiceBus:
                     azurePromptSteps.push(new ServiceBusListStep());
                     azureExecuteSteps.push(new ServiceBusConnectionCreateStep(this._setting));
+                    break;
+                case ResourceType.EventHub:
+                    azurePromptSteps.push(new EventHubNamespaceListStep(), new EventHubListStep(), new EventHubAuthRuleListStep());
+                    azureExecuteSteps.push(new EventHubConnectionCreateStep(this._setting));
                     break;
                 default:
                     // Unsupported resource type - prompt user to enter connection string manually

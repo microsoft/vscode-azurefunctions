@@ -9,13 +9,17 @@ import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingNameStep } from "./BindingNameStep";
 import { BooleanPromptStep } from "./BooleanPromptStep";
 import { EnumPromptStep } from "./EnumPromptStep";
+import { EventHubNameStep } from "./eventHub/EventHubNameStep";
 import { LocalAppSettingListStep } from "./LocalAppSettingListStep";
 import { StringPromptStep } from "./StringPromptStep";
 
 export function addBindingSettingSteps(settings: IFunctionSetting[], promptSteps: AzureWizardPromptStep<IBindingWizardContext>[]): void {
     for (const setting of settings) {
-        if (setting.name.toLowerCase() === 'name') {
+        const name: string = setting.name.toLowerCase();
+        if (name === 'name') {
             promptSteps.push(new BindingNameStep(setting));
+        } else if (name === 'eventhubname') {
+            promptSteps.push(new EventHubNameStep(setting));
         } else if (setting.resourceType !== undefined) {
             promptSteps.push(new LocalAppSettingListStep(setting));
         } else {

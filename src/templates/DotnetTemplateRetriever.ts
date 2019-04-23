@@ -63,6 +63,7 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
 
 export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
     let verifiedTemplateIds: string[] = [
+        'EventHubTrigger',
         'HttpTrigger',
         'BlobTrigger',
         'QueueTrigger',
