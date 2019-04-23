@@ -91,8 +91,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public pickTreeItemImpl(expectedContextValue: string | RegExp): AzureTreeItem<ISiteTreeRoot> | undefined {
         switch (expectedContextValue) {
             case FunctionsTreeItem.contextValue:
-            case FunctionTreeItem.contextValue:
-            case FunctionTreeItem.readOnlyContextValue:
                 return this._functionsTreeItem;
             case AppSettingsTreeItem.contextValue:
             case AppSettingTreeItem.contextValue:
@@ -106,8 +104,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             case DeploymentTreeItem.contextValue:
                 return this.deploymentsNode;
             default:
-                // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                if (typeof expectedContextValue === 'string' && DeploymentTreeItem.contextValue.test(expectedContextValue)) { return this.deploymentsNode; }
+                if (typeof expectedContextValue === 'string') {
+                    // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
+                    if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
+                        return this.deploymentsNode;
+                    }
+                } else if (expectedContextValue.source.includes(FunctionTreeItem.contextValueBase)) {
+                    return this._functionsTreeItem;
+                }
                 return undefined;
         }
     }

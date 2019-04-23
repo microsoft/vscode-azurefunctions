@@ -12,6 +12,7 @@
     "azFunc.restartFunctionApp": "Restart",
     "azFunc.deleteFunctionApp": "Delete Function App...",
     "azFunc.copyFunctionUrl": "Copy Function Url",
+    "azFunc.executeFunction": "Execute Function Now",
     "azFunc.deleteFunction": "Delete Function...",
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
