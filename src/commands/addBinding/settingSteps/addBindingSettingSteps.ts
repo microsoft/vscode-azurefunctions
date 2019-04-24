@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
-import { IFunctionSetting, ValueType } from "../../../templates/IFunctionSetting";
+import { IBindingSetting, ValueType } from "../../../templates/IBindingTemplate";
 import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingNameStep } from "./BindingNameStep";
 import { BooleanPromptStep } from "./BooleanPromptStep";
@@ -13,7 +13,7 @@ import { EventHubNameStep } from "./eventHub/EventHubNameStep";
 import { LocalAppSettingListStep } from "./LocalAppSettingListStep";
 import { StringPromptStep } from "./StringPromptStep";
 
-export function addBindingSettingSteps(settings: IFunctionSetting[], promptSteps: AzureWizardPromptStep<IBindingWizardContext>[]): void {
+export function addBindingSettingSteps(settings: IBindingSetting[], promptSteps: AzureWizardPromptStep<IBindingWizardContext>[]): void {
     for (const setting of settings) {
         const name: string = setting.name.toLowerCase();
         if (name === 'name') {

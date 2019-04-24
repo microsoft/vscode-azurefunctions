@@ -11,7 +11,7 @@ import { mavenUtils } from "../../../utils/mavenUtils";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaFunctionFilePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { IFunctionWizardContext } from '../IFunctionWizardContext';
+import { getBindingSetting, IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
     private constructor() {
@@ -28,8 +28,11 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
 
         const args: string[] = [];
         for (const setting of template.userPromptedSettings) {
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            args.push(mavenUtils.formatMavenArg(`D${setting.name}`, wizardContext[setting.name] || ''));
+            const value: string | undefined = getBindingSetting(wizardContext, setting);
+            // NOTE: Explicitly checking against undefined. Empty string is a valid value
+            if (value !== undefined) {
+                args.push(mavenUtils.formatMavenArg(`D${setting.name}`, value));
+            }
         }
 
         const packageName: string = nonNullProp(wizardContext, 'javaPackageName');

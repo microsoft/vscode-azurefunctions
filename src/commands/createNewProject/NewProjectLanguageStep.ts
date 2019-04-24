@@ -32,12 +32,12 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
     public hideStepCount: boolean = true;
 
     private _templateId?: string;
-    private _caseSensitiveFunctionSettings?: { [key: string]: string | undefined };
+    private _triggerSettings?: { [key: string]: string | undefined };
 
-    public constructor(templateId: string | undefined, caseSensitiveFunctionSettings: { [key: string]: string | undefined } | undefined) {
+    public constructor(templateId: string | undefined, triggerSettings: { [key: string]: string | undefined } | undefined) {
         super();
         this._templateId = templateId;
-        this._caseSensitiveFunctionSettings = caseSensitiveFunctionSettings;
+        this._triggerSettings = triggerSettings;
     }
 
     public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
@@ -110,10 +110,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
         if (language !== ProjectLanguage.Java) {
-            promptSteps.push(await FunctionListStep.createFunctionListStep(wizardContext, {
+            promptSteps.push(await FunctionListStep.create(wizardContext, {
                 isProjectWizard: true,
                 templateId: this._templateId,
-                caseSensitiveFunctionSettings: this._caseSensitiveFunctionSettings
+                triggerSettings: this._triggerSettings
             }));
         }
 

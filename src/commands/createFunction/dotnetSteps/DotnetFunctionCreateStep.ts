@@ -12,6 +12,7 @@ import { cpUtils } from '../../../utils/cpUtils';
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
+import { getBindingSetting } from '../IFunctionWizardContext';
 import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunctionWizardContext> {
@@ -36,9 +37,12 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         args.push(cpUtils.wrapArgInQuotes(nonNullProp(wizardContext, 'namespace')));
 
         for (const setting of template.userPromptedSettings) {
-            args.push(`--arg:${setting.name}`);
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            args.push(cpUtils.wrapArgInQuotes(wizardContext[setting.name] || ''));
+            const value: string | undefined = getBindingSetting(wizardContext, setting);
+            // NOTE: Explicitly checking against undefined. Empty string is a valid value
+            if (value !== undefined) {
+                args.push(`--arg:${setting.name}`);
+                args.push(cpUtils.wrapArgInQuotes(value));
+            }
         }
 
         const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');

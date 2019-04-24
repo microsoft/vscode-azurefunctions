@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ProjectLanguage, ProjectRuntime } from '../constants';
-import { IFunctionSetting, ValueType } from './IFunctionSetting';
+import { IBindingSetting, ValueType } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 
 /**
@@ -30,12 +30,13 @@ interface IRawSetting {
     } | undefined;
 }
 
-function parseDotnetSetting(rawSetting: IRawSetting): IFunctionSetting {
+function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
     return {
         name: rawSetting.Name,
         resourceType: undefined, // Dotnet templates do not give us resourceType information
         valueType: rawSetting.DataType === 'choice' ? ValueType.enum : ValueType.string,
         defaultValue: rawSetting.DefaultValue,
+        required: true, // Dotnet templates do not give us this information. Assume it's required
         label: rawSetting.Name,
         description: rawSetting.Documentation,
         enums: rawSetting.Choices ? Object.keys(rawSetting.Choices).map((key: string) => { return { value: key, displayName: key }; }) : [],
@@ -44,9 +45,9 @@ function parseDotnetSetting(rawSetting: IRawSetting): IFunctionSetting {
 }
 
 function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
-    const userPromptedSettings: IFunctionSetting[] = [];
+    const userPromptedSettings: IBindingSetting[] = [];
     for (const rawSetting of rawTemplate.Parameters) {
-        const setting: IFunctionSetting = parseDotnetSetting(<IRawSetting>rawSetting);
+        const setting: IBindingSetting = parseDotnetSetting(<IRawSetting>rawSetting);
         // Exclude some of the default parameters like 'name' and 'namespace' that apply for every function and are handled separately
         if (!/^(name|namespace|type|language)$/i.test(setting.name)) {
             userPromptedSettings.push(setting);

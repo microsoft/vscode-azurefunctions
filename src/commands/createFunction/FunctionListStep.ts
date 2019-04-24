@@ -16,7 +16,6 @@ import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNa
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
-import { IDotnetFunctionWizardContext } from './dotnetSteps/IDotnetFunctionWizardContext';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -27,10 +26,17 @@ import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCr
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
 
-    private _defaultSettings: { [key: string]: string | undefined } = {};
+    private _triggerSettings: { [key: string]: string | undefined };
     private _isProjectWizard: boolean;
 
-    public static async createFunctionListStep(wizardContext: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
+    private constructor(triggerSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
+        super();
+        // tslint:disable-next-line: strict-boolean-expressions
+        this._triggerSettings = triggerSettings || {};
+        this._isProjectWizard = !!isProjectWizard;
+    }
+
+    public static async create(wizardContext: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
         if (options.templateId) {
             const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
             const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
@@ -44,12 +50,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             }
         }
 
-        const step: FunctionListStep = new FunctionListStep();
-        // tslint:disable-next-line: strict-boolean-expressions
-        const caseSensitiveFunctionSettings: { [key: string]: string | undefined } = options.caseSensitiveFunctionSettings || {};
-        Object.keys(caseSensitiveFunctionSettings).forEach((key: string) => step._defaultSettings[key.toLowerCase()] = caseSensitiveFunctionSettings[key]);
-        step._isProjectWizard = !!options.isProjectWizard;
-        return step;
+        return new FunctionListStep(options.triggerSettings, options.isProjectWizard);
     }
 
     public async getSubWizard(wizardContext: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
@@ -62,7 +63,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
                 case ProjectLanguage.CSharp:
                 case ProjectLanguage.FSharp:
-                    (<IDotnetFunctionWizardContext>wizardContext).namespace = this._defaultSettings.namespace;
                     promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
                     break;
                 default:
@@ -70,11 +70,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            for (const setting of template.userPromptedSettings) {
-                const lowerCaseKey: string = setting.name.toLowerCase();
-                if (this._defaultSettings[lowerCaseKey] !== undefined) {
-                    wizardContext[setting.name] = this._defaultSettings[lowerCaseKey];
-                }
+            // Add settings to wizardContext that were programatically passed in
+            for (const key of Object.keys(this._triggerSettings)) {
+                wizardContext[key.toLowerCase()] = this._triggerSettings[key];
             }
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
@@ -165,7 +163,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 interface IFunctionListStepOptions {
     isProjectWizard: boolean;
     templateId: string | undefined;
-    caseSensitiveFunctionSettings: { [key: string]: string | undefined } | undefined;
+    triggerSettings: { [key: string]: string | undefined } | undefined;
 }
 
 type TemplatePromptResult = 'changeFilter' | 'skipForNow';

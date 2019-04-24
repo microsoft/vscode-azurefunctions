@@ -7,8 +7,7 @@ import { isString } from 'util';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { IFunctionBinding, ParsedFunctionJson } from '../funcConfig/function';
-import { IBindingTemplate } from './IBindingTemplate';
-import { IEnumValue, IFunctionSetting, ResourceType, ValueType } from './IFunctionSetting';
+import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 
 /**
@@ -37,7 +36,7 @@ interface IRawSetting {
     label: string;
     help?: string;
     defaultValue?: string;
-    required: boolean;
+    required?: boolean;
     resource?: ResourceType;
     validators?: {
         expression: string;
@@ -108,7 +107,7 @@ export function getResourceValue(resources: IResources, data: string): string {
     }
 }
 
-function parseScriptSetting(data: object, resources: IResources, variables: IVariables): IFunctionSetting {
+function parseScriptSetting(data: object, resources: IResources, variables: IVariables): IBindingSetting {
     const rawSetting: IRawSetting = <IRawSetting>data;
     const enums: IEnumValue[] = [];
     if (rawSetting.enum) {
@@ -128,6 +127,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
         defaultValue: rawSetting.defaultValue ? getVariableValue(resources, variables, rawSetting.defaultValue) : undefined,
         label: getVariableValue(resources, variables, rawSetting.label),
         enums: enums,
+        required: rawSetting.required,
         validateSetting: (value: string | undefined): string | undefined => {
             if (rawSetting.validators) {
                 for (const validator of rawSetting.validators) {
@@ -144,7 +144,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
 
 export function parseScriptBindings(config: IConfig, resources: IResources): IBindingTemplate[] {
     return config.bindings.map((rawBinding: IRawBinding) => {
-        const settings: IFunctionSetting[] = rawBinding.settings.map((setting: object) => parseScriptSetting(setting, resources, config.variables));
+        const settings: IBindingSetting[] = rawBinding.settings.map((setting: object) => parseScriptSetting(setting, resources, config.variables));
         return {
             direction: rawBinding.direction,
             displayName: getResourceValue(resources, rawBinding.displayName),
@@ -173,14 +173,14 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         default:
     }
 
-    const userPromptedSettings: IFunctionSetting[] = [];
+    const userPromptedSettings: IBindingSetting[] = [];
     if (rawTemplate.metadata.userPrompt) {
         for (const settingName of rawTemplate.metadata.userPrompt) {
             if (functionJson.triggerBinding) {
                 const triggerBinding: IFunctionBinding = functionJson.triggerBinding;
                 const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === triggerBinding.type);
                 if (bindingTemplate) {
-                    const setting: IFunctionSetting | undefined = bindingTemplate.settings.find((bs: IFunctionSetting) => bs.name === settingName);
+                    const setting: IBindingSetting | undefined = bindingTemplate.settings.find((bs: IBindingSetting) => bs.name === settingName);
                     if (setting) {
                         const functionSpecificDefaultValue: string | undefined = triggerBinding[setting.name];
                         if (functionSpecificDefaultValue) {

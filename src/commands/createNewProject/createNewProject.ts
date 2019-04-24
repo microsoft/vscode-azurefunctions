@@ -23,7 +23,7 @@ export async function createNewProject(
     openFolder: boolean = true,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined }): Promise<void> {
+    triggerSettings?: { [key: string]: string | undefined }): Promise<void> {
     addLocalFuncTelemetry(actionContext);
 
     // tslint:disable-next-line: strict-boolean-expressions
@@ -45,7 +45,7 @@ export async function createNewProject(
 
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
-        promptSteps: [new FolderListStep(), new NewProjectLanguageStep(templateId, caseSensitiveFunctionSettings), new OpenBehaviorStep()],
+        promptSteps: [new FolderListStep(), new NewProjectLanguageStep(templateId, triggerSettings), new OpenBehaviorStep()],
         executeSteps: [new OpenFolderStep()]
     });
     await wizard.prompt(actionContext);
