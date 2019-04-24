@@ -4,27 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { QuickPickItem } from "vscode";
-import { AzureWizardPromptStep } from "vscode-azureextensionui";
 import { ext } from "../../../extensionVariables";
-import { IFunctionSetting } from "../../../templates/IFunctionSetting";
 import { IBindingWizardContext } from "../IBindingWizardContext";
+import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
-export class BooleanPromptStep extends AzureWizardPromptStep<IBindingWizardContext> {
-    private readonly _setting: IFunctionSetting;
-    constructor(setting: IFunctionSetting) {
-        super();
-        this._setting = setting;
-    }
-
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
+export class BooleanPromptStep extends BindingSettingStepBase {
+    public async promptCore(_wizardContext: IBindingWizardContext): Promise<string> {
         const picks: QuickPickItem[] = [
             { label: 'true', description: '' },
             { label: 'false', description: '' }
         ];
-        wizardContext[this._setting.name] = (await ext.ui.showQuickPick(picks, { placeHolder: this._setting.label })).label;
-    }
-
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext[this._setting.name];
+        return (await ext.ui.showQuickPick(picks, { placeHolder: this._setting.label })).label;
     }
 }

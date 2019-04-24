@@ -101,11 +101,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.pickProcess', pickFuncProcess);
         registerCommand('azureFunctions.loadMore', async (node: AzureTreeItem) => await ext.tree.loadMore(node));
         registerCommand('azureFunctions.openInPortal', openInPortal);
-        registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await createFunction(this, functionAppPath, templateId, functionName, functionSettings);
+        registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, triggerSettings?: {}): Promise<void> {
+            await createFunction(this, functionAppPath, templateId, functionName, triggerSettings);
         });
-        registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: ProjectLanguage, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, functionSettings?: {}): Promise<void> {
-            await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, functionSettings);
+        registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: ProjectLanguage, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, triggerSettings?: {}): Promise<void> {
+            await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, triggerSettings);
         });
         registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this); });
         registerCommand('azureFunctions.createFunctionApp', createFunctionApp);

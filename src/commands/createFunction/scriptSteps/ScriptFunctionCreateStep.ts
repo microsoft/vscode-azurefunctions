@@ -12,6 +12,7 @@ import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
+import { getBindingSetting } from '../IFunctionWizardContext';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export function getScriptFileNameFromLanguage(language: string): string | undefined {
@@ -50,8 +51,7 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
 
         const triggerBinding: IFunctionBinding = nonNullProp(template.functionJson, 'triggerBinding');
         for (const setting of template.userPromptedSettings) {
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            triggerBinding[setting.name] = wizardContext[setting.name] || '';
+            triggerBinding[setting.name] = getBindingSetting(wizardContext, setting);
         }
 
         const functionJson: IFunctionJson = template.functionJson.data;

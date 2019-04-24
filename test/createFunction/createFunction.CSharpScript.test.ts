@@ -42,7 +42,7 @@ suite('Create C# Script ~1 Function', async () => {
     // Intentionally testing IoTHub trigger since a partner team plans to use that
     const iotTemplateId: string = 'IoTHubTrigger-CSharp';
     const iotFunctionName: string = 'createFunctionApi';
-    const iotFunctionSettings: {} = { connection: 'test_EVENTHUB', path: 'sample-workitems', consumerGroup: '$Default' };
+    const iotTriggerSettings: {} = { connection: 'test_EVENTHUB', path: 'sample-workitems', consumerGroup: '$Default' };
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
@@ -51,7 +51,7 @@ suite('Create C# Script ~1 Function', async () => {
             const projectPath: string = path.join(tester.baseTestFolder, source);
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharpScript, async () => {
                 await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
-                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotFunctionSettings);
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotTriggerSettings);
                 });
             });
             await tester.validateFunction(projectPath, iotFunctionName);
@@ -62,7 +62,7 @@ suite('Create C# Script ~1 Function', async () => {
         await runForAllTemplateSources(async (source) => {
             const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
             ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotFunctionSettings);
+            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
             await tester.validateFunction(projectPath, iotFunctionName);
             await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, ProjectRuntime.v1));
         });

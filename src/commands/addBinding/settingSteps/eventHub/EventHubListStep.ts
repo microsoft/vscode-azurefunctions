@@ -19,11 +19,11 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
         const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
         const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.eventHubs.listByNamespace(resourceGroupName, namespaceName));
         if (result) {
-            wizardContext.eventHubName = nonNullProp(result, 'name');
+            wizardContext.eventhubname = nonNullProp(result, 'name');
         }
     }
 
     public shouldPrompt(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !wizardContext.eventHubName;
+        return !!wizardContext.namespaceName && !wizardContext.eventhubname;
     }
 }

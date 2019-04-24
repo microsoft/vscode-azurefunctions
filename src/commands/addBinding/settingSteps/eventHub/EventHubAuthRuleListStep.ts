@@ -14,7 +14,7 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
     public async prompt(wizardContext: IEventHubWizardContext): Promise<void> {
         const namespaceName: string = nonNullProp(wizardContext, 'namespaceName');
         const resourceGroupName: string = nonNullProp(wizardContext, 'resourceGroupName');
-        const eventHubName: string = nonNullProp(wizardContext, 'eventHubName');
+        const eventHubName: string = nonNullProp(wizardContext, 'eventhubname');
 
         const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
 
@@ -38,6 +38,6 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
     }
 
     public shouldPrompt(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !!wizardContext.eventHubName && !wizardContext.authRuleName;
+        return !!wizardContext.namespaceName && !!wizardContext.eventhubname && !wizardContext.authRuleName;
     }
 }

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IFunctionSetting } from './IFunctionSetting';
+import { IBindingSetting } from './IBindingTemplate';
 
 export enum TemplateCategory {
     Core = '$temp_category_core'
@@ -19,6 +19,6 @@ export interface IFunctionTemplate {
     language: string;
     isHttpTrigger: boolean;
     isTimerTrigger: boolean;
-    userPromptedSettings: IFunctionSetting[];
+    userPromptedSettings: IBindingSetting[];
     categories: TemplateCategory[];
 }

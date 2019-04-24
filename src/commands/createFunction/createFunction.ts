@@ -21,7 +21,7 @@ export async function createFunction(
     workspacePath?: string,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined },
+    triggerSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     runtime?: ProjectRuntime): Promise<void> {
     addLocalFuncTelemetry(actionContext);
@@ -43,7 +43,7 @@ export async function createFunction(
 
     const wizardContext: IFunctionWizardContext = { actionContext, projectPath, workspacePath, workspaceFolder, runtime, language, functionName };
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [await FunctionListStep.createFunctionListStep(wizardContext, { templateId, caseSensitiveFunctionSettings, isProjectWizard: false })]
+        promptSteps: [await FunctionListStep.create(wizardContext, { templateId, triggerSettings, isProjectWizard: false })]
     });
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);

@@ -9,8 +9,10 @@ import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
-import { IFunctionSetting, ResourceType } from '../../../templates/IFunctionSetting';
+import { ResourceType } from '../../../templates/IBindingTemplate';
+import { getBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { IBindingWizardContext } from '../IBindingWizardContext';
+import { BindingSettingStepBase } from './BindingSettingStepBase';
 import { CosmosDBConnectionCreateStep } from './cosmosDB/CosmosDBConnectionCreateStep';
 import { CosmosDBListStep } from './cosmosDB/CosmosDBListStep';
 import { EventHubAuthRuleListStep } from './eventHub/EventHubAuthRuleListStep';
@@ -24,29 +26,19 @@ import { ServiceBusConnectionCreateStep } from './serviceBus/ServiceBusConnectio
 import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 
-export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizardContext> {
-    private readonly _setting: IFunctionSetting;
-
-    constructor(setting: IFunctionSetting) {
-        super();
-        this._setting = setting;
-    }
-
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
+export class LocalAppSettingListStep extends BindingSettingStepBase {
+    public async promptCore(wizardContext: IBindingWizardContext): Promise<string | undefined> {
         const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
         picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));
         const placeHolder: string = localize('selectAppSetting', 'Select setting from "{0}"', localSettingsFileName);
-        const result: string | undefined = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
-        if (result) {
-            wizardContext[this._setting.name] = result;
-        }
+        return (await ext.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     public async getSubWizard(wizardContext: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
-        if (!wizardContext[this._setting.name]) {
+        if (!getBindingSetting(wizardContext, this._setting)) {
             const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
             const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
             switch (this._setting.resourceType) {
@@ -71,10 +63,10 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizar
                     break;
                 default:
                     // Unsupported resource type - prompt user to enter connection string manually
-                    const valueKey: string = this._setting.name + '_value';
+                    const valueKey: string = this._setting.name.toLowerCase() + '_value';
                     return {
                         promptSteps: [new LocalAppSettingNameStep(this._setting), new LocalAppSettingValueStep(valueKey)],
-                        executeSteps: [new LocalAppSettingCreateStep(this._setting.name, valueKey)]
+                        executeSteps: [new LocalAppSettingCreateStep(this._setting, valueKey)]
                     };
             }
 
@@ -86,9 +78,5 @@ export class LocalAppSettingListStep extends AzureWizardPromptStep<IBindingWizar
         } else {
             return undefined;
         }
-    }
-
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext[this._setting.name];
     }
 }

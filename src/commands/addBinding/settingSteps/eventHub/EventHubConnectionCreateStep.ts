@@ -14,7 +14,7 @@ export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<
     public async getConnection(wizardContext: IEventHubWizardContext): Promise<IConnection> {
         const namespaceName: string = nonNullProp(wizardContext, 'namespaceName');
         const resourceGroupName: string = nonNullProp(wizardContext, 'resourceGroupName');
-        const eventHubName: string = nonNullProp(wizardContext, 'eventHubName');
+        const eventHubName: string = nonNullProp(wizardContext, 'eventhubname');
         const authRuleName: string = nonNullProp(wizardContext, 'authRuleName');
 
         const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
@@ -34,6 +34,6 @@ export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<
     }
 
     public shouldExecute(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !!wizardContext.eventHubName && !!wizardContext.authRuleName;
+        return !!wizardContext.namespaceName && !!wizardContext.eventhubname && !!wizardContext.authRuleName;
     }
 }

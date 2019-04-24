@@ -9,6 +9,7 @@ import { IFunctionBinding, IFunctionJson } from "../../funcConfig/function";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { confirmEditJsonFile } from '../../utils/fs';
 import { nonNullProp } from "../../utils/nonNull";
+import { getBindingSetting } from "../createFunction/IFunctionWizardContext";
 import { IBindingWizardContext } from "./IBindingWizardContext";
 
 export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardContext> {
@@ -25,8 +26,7 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
         binding.direction = bindingTemplate.direction;
 
         for (const b of bindingTemplate.settings) {
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            binding[b.name] = wizardContext[b.name] || '';
+            binding[b.name] = getBindingSetting(wizardContext, b);
         }
 
         await confirmEditJsonFile(wizardContext.functionJsonPath, (functionJson: IFunctionJson) => {

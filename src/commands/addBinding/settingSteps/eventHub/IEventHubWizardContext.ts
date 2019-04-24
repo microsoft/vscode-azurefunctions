@@ -12,7 +12,7 @@ export interface IEventHubWizardContext extends ISubscriptionWizardContext {
     /**
      * NOTE: The name of this variable should not change. It matches the name of the binding setting written to function.json
      */
-    eventHubName?: string;
+    eventhubname?: string;
 
     authRuleName?: string;
     isNamespaceAuthRule?: boolean;
