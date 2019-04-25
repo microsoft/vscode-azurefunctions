@@ -22,6 +22,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public hostJson: IParsedHostJson;
     public runtime: ProjectRuntime;
+    public isConsumption: boolean;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
@@ -52,13 +53,16 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public get description(): string | undefined {
-        const stateDescription: string | undefined = this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
-        const previewDescription: string | undefined = this.root.client.isLinux ? localize('linuxPreview', 'Linux Preview') : undefined;
-        if (stateDescription && previewDescription) {
-            return `${previewDescription} - ${stateDescription}`;
-        } else {
-            return stateDescription || previewDescription;
+        const descriptions: string[] = [];
+        if (this.root.client.isLinux && this.isConsumption) {
+            descriptions.push(localize('preview', 'Preview'));
         }
+
+        if (this._state && this._state.toLowerCase() !== 'running') {
+            descriptions.push(this._state);
+        }
+
+        return descriptions.join(' - ');
     }
 
     public get iconPath(): string {
@@ -91,6 +95,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             // ignore and use default
         }
         this.hostJson = parseHostJson(data, this.runtime);
+
+        try {
+            const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
+            this.isConsumption = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
+        } catch {
+            // ignore and use default
+            this.isConsumption = true;
+        }
 
         try {
             this._state = await this.root.client.getState();

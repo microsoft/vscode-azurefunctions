@@ -70,24 +70,21 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
  * Only applies to Linux Consumption apps
  */
 async function verifyWebContentSettings(node: SlotTreeItemBase, actionContext: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    if (node.root.client.isLinux) {
-        const asp: WebSiteManagementModels.AppServicePlan | undefined = await node.root.client.getAppServicePlan();
-        if (!!asp && !!asp.sku && !!asp.sku.tier && asp.sku.tier.toLowerCase() === 'dynamic') {
-            const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
-            const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
-            if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
-                actionContext.properties.webContentSettingsRemoved = 'false';
-                await ext.ui.showWarningMessage(
-                    localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
-                    { modal: true },
-                    DialogResponses.yes,
-                    DialogResponses.cancel
-                );
-                delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
-                delete remoteProperties[WEBSITE_CONTENTSHARE];
-                actionContext.properties.webContentSettingsRemoved = 'true';
-                return true;
-            }
+    if (node.root.client.isLinux && node.isConsumption) {
+        const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
+        const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
+        if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
+            actionContext.properties.webContentSettingsRemoved = 'false';
+            await ext.ui.showWarningMessage(
+                localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
+                { modal: true },
+                DialogResponses.yes,
+                DialogResponses.cancel
+            );
+            delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
+            delete remoteProperties[WEBSITE_CONTENTSHARE];
+            actionContext.properties.webContentSettingsRemoved = 'true';
+            return true;
         }
     }
 
