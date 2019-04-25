@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import { IHookCallbackContext } from 'mocha';
 import { IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter, TemplateProvider, TemplateSource } from '../extension.bundle';
-import { runForTemplateSource, testFolderPath } from './global.test';
+import { longRunningTestsEnabled, runForTemplateSource, testFolderPath } from './global.test';
 
 addSuite(undefined);
 addSuite(TemplateSource.CliFeed);
@@ -28,7 +29,12 @@ function addSuite(source: TemplateSource | undefined): void {
             });
         });
 
-        test('Java v2', async () => {
+        test('Java v2', async function (this: IHookCallbackContext): Promise<void> {
+            if (!longRunningTestsEnabled) {
+                this.skip();
+            }
+            this.timeout(60 * 1000);
+
             await runForTemplateSource(source, async (templates: TemplateProvider) => {
                 const javaTemplates: IFunctionTemplate[] = await templates.getTemplates(ProjectLanguage.Java, ProjectRuntime.v2, testFolderPath, TemplateFilter.Verified);
                 assert.equal(javaTemplates.length, 4);
