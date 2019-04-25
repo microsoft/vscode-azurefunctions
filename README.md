@@ -134,6 +134,12 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 
 * [Python 3.6.x](https://www.python.org/downloads/)
 
+### PowerShell
+
+* [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
+* [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
+* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+
 ## Managing Azure Subscriptions
 
 If you are not signed in to Azure, you will see a "Sign in to Azure..." link. Alternatively, you can select "View->Command Palette" in the VS Code menu, and search for "Azure: Sign In".
