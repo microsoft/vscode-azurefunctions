@@ -74,7 +74,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const storageAccountName: string = getRandomHexString().toLowerCase();
         resourceGroupsToDelete.push(resourceGroupName);
         await runWithFuncSetting('advancedCreation', 'true', async () => {
-            const testInputs: string[] = [resourceName2, 'Windows', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
+            const testInputs: string[] = [resourceName2, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
             ext.ui = new TestUserInput(testInputs);
             await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
             const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName2);
@@ -135,7 +135,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         // Create another function app, but use the existing resource group and storage account through advanced creation
         await runWithFuncSetting('advancedCreation', 'true', async () => {
             const functionAppName2: string = getRandomHexString();
-            const testInputs2: string[] = [functionAppName2, 'Windows', 'JavaScript', appAndStorageName1];
+            const testInputs2: string[] = [functionAppName2, 'Windows', 'Consumption Plan', 'JavaScript', appAndStorageName1];
             ext.ui = new TestUserInput(testInputs2);
             const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
             const createdApp2: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, functionAppName2);
