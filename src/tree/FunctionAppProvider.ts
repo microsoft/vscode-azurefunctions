@@ -13,7 +13,7 @@ import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVe
 import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
@@ -73,7 +73,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
-        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting);
+        const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
         const wizardContext: IAppServiceWizardContext = {
             newSiteKind: AppKind.functionapp,
@@ -168,7 +168,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting));
+    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSettingFromAnyFolder(projectRuntimeSetting));
     actionContext.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {
