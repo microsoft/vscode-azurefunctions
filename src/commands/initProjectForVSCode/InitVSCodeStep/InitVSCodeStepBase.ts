@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, WorkspaceFolder } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, extensionPrefix, func, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -116,8 +116,22 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         // tslint:disable-next-line: strict-boolean-expressions
         existingTasks = existingTasks || [];
         // Remove tasks that match the ones we're about to add
-        existingTasks = existingTasks.filter(t1 => newTasks.find(t2 => {
-            return t1.type !== t2.type || t1.label !== t2.label || t1.command !== t2.command;
+        existingTasks = existingTasks.filter(t1 => !newTasks.find(t2 => {
+            if (t1.type === t2.type) {
+                switch (t1.type) {
+                    case func:
+                        return t1.command === t2.command;
+                    case 'shell':
+                    case 'process':
+                        return t1.label === t2.label && t1.identifier === t2.identifier;
+                    default:
+                        // Not worth throwing an error for unrecognized task type
+                        // Worst case the user has an extra task in their tasks.json
+                        return false;
+                }
+            } else {
+                return false;
+            }
         }));
         existingTasks.push(...newTasks);
         return existingTasks;
