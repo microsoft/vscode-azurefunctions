@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
+import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration, WorkspaceFolder } from "vscode";
 import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -41,6 +41,25 @@ export function getGlobalSetting<T>(key: string, prefix: string = extensionPrefi
 export function getWorkspaceSetting<T>(key: string, fsPath?: string, prefix: string = extensionPrefix): T | undefined {
     const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, fsPath ? Uri.file(fsPath) : undefined);
     return projectConfiguration.get<T>(key);
+}
+
+/**
+ * Searches through all open folders and gets the current workspace setting (as long as there are no conflicts)
+ */
+export function getWorkspaceSettingFromAnyFolder(key: string, prefix: string = extensionPrefix): string | undefined {
+    // tslint:disable-next-line: strict-boolean-expressions
+    const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
+    let result: string | undefined;
+    for (const folder of folders) {
+        const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, folder.uri);
+        const folderResult: string | undefined = projectConfiguration.get<string>(key);
+        if (!result) {
+            result = folderResult;
+        } else if (folderResult && result !== folderResult) {
+            return undefined;
+        }
+    }
+    return result;
 }
 
 export async function promptForProjectRuntime(message?: string): Promise<ProjectRuntime> {
