@@ -23,6 +23,7 @@ Install the prerequisites for your desired language:
 * [C#](#net)
 * [Java](#java)
 * [Python (Preview)](#python)
+* [PowerShell (Preview)](#powershell)
 
 ## Features
 
