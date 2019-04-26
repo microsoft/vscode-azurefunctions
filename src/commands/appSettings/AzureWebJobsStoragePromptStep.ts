@@ -18,18 +18,18 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         const message: string = localize('selectAzureWebJobsStorage', 'AzureWebJobsStorage must be set in "{0}" to debug non-HTTP triggers locally.', localSettingsFileName);
         const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, selectAccount, useEmulator);
         if (result === selectAccount) {
-            wizardContext.azureWebJobsStorage = 'azure';
+            wizardContext.azureWebJobsStorageType = 'azure';
         } else if (result === useEmulator) {
-            wizardContext.azureWebJobsStorage = 'emulator';
+            wizardContext.azureWebJobsStorageType = 'emulator';
         }
     }
 
     public shouldPrompt(wizardContext: T): boolean {
-        return !wizardContext.azureWebJobsStorage;
+        return !wizardContext.azureWebJobsStorageType;
     }
 
     public async getSubWizard(wizardContext: T): Promise<IWizardOptions<T & ISubscriptionWizardContext> | undefined> {
-        if (wizardContext.azureWebJobsStorage === 'azure') {
+        if (wizardContext.azureWebJobsStorageType === 'azure') {
             const promptSteps: AzureWizardPromptStep<T & ISubscriptionWizardContext>[] = [];
 
             const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.tree.getSubscriptionPromptStep(wizardContext);
