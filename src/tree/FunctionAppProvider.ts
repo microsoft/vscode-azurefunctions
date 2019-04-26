@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem } from 'vscode';
-import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
@@ -89,6 +89,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new SiteOSStep());
+        promptSteps.push(new SiteHostingPlanStep());
         promptSteps.push(new SiteRuntimeStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
@@ -101,6 +102,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
         actionContext.properties.advancedCreation = String(advancedCreation);
         if (!advancedCreation) {
+            wizardContext.useConsumptionPlan = true;
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
             wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
             // Pick a region that works for both windows and linux. Pricing seems to be same in all regions as of this writing anyways.
