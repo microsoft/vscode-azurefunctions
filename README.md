@@ -23,6 +23,7 @@ Install the prerequisites for your desired language:
 * [C#](#net)
 * [Java](#java)
 * [Python (Preview)](#python)
+* [PowerShell (Preview)](#powershell)
 
 ## Features
 
@@ -133,6 +134,14 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 ### Python
 
 * [Python 3.6.x](https://www.python.org/downloads/)
+
+### PowerShell
+
+* [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
+* [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
+* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+
+> **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/azure/azure-functions/functions-debug-powershell-local) for complete steps.
 
 ## Managing Azure Subscriptions
 
