@@ -141,7 +141,7 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 * [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
 * [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
 
-> **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/en-us/azure/azure-functions/functions-debug-powershell-local) for complete steps.
+> **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/azure/azure-functions/functions-debug-powershell-local) for complete steps.
 
 ## Managing Azure Subscriptions
 
