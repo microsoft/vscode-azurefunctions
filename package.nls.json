@@ -70,5 +70,6 @@
     "azFunc.advancedCreationDescription": "Enables advanced creation of Azure Function Apps, which will prompt for several additional values instead of using a default.",
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azFunc.addBinding": "Add binding...",
+    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
     "azFunc.enableProjectTree": "Enable preview support for a tree view of the local project."
 }

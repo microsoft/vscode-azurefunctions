@@ -14,6 +14,7 @@ import { addBinding } from './commands/addBinding/addBinding';
 import { decryptLocalSettings } from './commands/appSettings/decryptLocalSettings';
 import { downloadAppSettings } from './commands/appSettings/downloadAppSettings';
 import { encryptLocalSettings } from './commands/appSettings/encryptLocalSettings';
+import { setAzureWebJobsStorage } from './commands/appSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './commands/appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './commands/appSettings/uploadAppSettings';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
@@ -140,6 +141,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.addBinding', addBinding);
+        registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
         registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();

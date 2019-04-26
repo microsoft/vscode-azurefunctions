@@ -7,26 +7,25 @@ import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
+import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
-import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
-import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
-    if (!await validateFuncCoreToolsInstalled()) {
+    const result: IPreDebugValidateResult = await preDebugValidate(debugConfig);
+    if (!result.shouldContinue) {
         throw new UserCancelledError();
     }
 
-    const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
-    await stopFuncHost(workspace);
+    await stopFuncHost(result.workspace);
 
     // tslint:disable-next-line: no-unsafe-any
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
     const funcTask: vscode.Task | undefined = tasks.find(t => {
-        return t.scope === workspace && (preLaunchTaskName ? t.name === preLaunchTaskName : isFuncHostTask(t));
+        return t.scope === result.workspace && (preLaunchTaskName ? t.name === preLaunchTaskName : isFuncHostTask(t));
     });
 
     if (!funcTask) {
@@ -44,23 +43,6 @@ export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.
 
     const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
-}
-
-function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {
-    if (vscode.workspace.workspaceFolders) {
-        for (const workspace of vscode.workspace.workspaceFolders) {
-            try {
-                const configs: vscode.DebugConfiguration[] = getDebugConfigs(workspace);
-                if (configs.some(c => isDebugConfigEqual(c, debugConfig))) {
-                    return workspace;
-                }
-            } catch {
-                // ignore and try next workspace
-            }
-        }
-    }
-
-    throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
 }
 
 async function startFuncTask(funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {

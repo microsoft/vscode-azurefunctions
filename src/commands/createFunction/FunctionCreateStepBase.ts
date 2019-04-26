@@ -7,10 +7,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
-import { hostFileName, localSettingsFileName, ProjectRuntime } from '../../constants';
+import { hostFileName, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
-import { validateAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { writeFormattedJson } from '../../utils/fs';
@@ -97,14 +96,11 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
     callWithTelemetryAndErrorHandling('postFunctionCreate', async function (this: IActionContext): Promise<void> {
+        this.suppressTelemetry = true;
+
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {
                 window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
-            }
-
-            if (!func.isHttpTrigger) {
-                const localSettingsPath: string = path.join(func.projectPath, localSettingsFileName);
-                await validateAzureWebJobsStorage(this, localSettingsPath);
             }
         }
     });

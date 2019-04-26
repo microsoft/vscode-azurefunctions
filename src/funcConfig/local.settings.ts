@@ -6,11 +6,10 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import * as azUtil from '../utils/azure';
 import * as fsUtil from '../utils/fs';
 
 export interface ILocalSettingsJson {
@@ -21,45 +20,17 @@ export interface ILocalSettingsJson {
 
 export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 
-export async function validateAzureWebJobsStorage(actionContext: IActionContext, localSettingsPath: string): Promise<void> {
+export async function getAzureWebJobsStorage(projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[azureWebJobsStorageKey]) {
-        return;
+        return process.env[azureWebJobsStorageKey];
     }
 
-    const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
-    if (settings.Values && settings.Values[azureWebJobsStorageKey]) {
-        return;
-    }
-
-    const message: string = localize('azFunc.AzureWebJobsStorageWarning', 'All non-HTTP triggers require AzureWebJobsStorage to be set in \'{0}\' for local debugging.', localSettingsFileName);
-    const selectStorageAccount: vscode.MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
-    const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, selectStorageAccount, DialogResponses.skipForNow);
-    if (result === selectStorageAccount) {
-        const resourceResult: azUtil.IResourceResult = await azUtil.promptForStorageAccount(
-            actionContext,
-            {
-                kind: [
-                    StorageAccountKind.BlobStorage
-                ],
-                performance: [
-                    StorageAccountPerformance.Premium
-                ],
-                replication: [
-                    StorageAccountReplication.ZRS
-                ],
-                learnMoreLink: 'https://aka.ms/Cfqnrc'
-            }
-        );
-
-        // tslint:disable-next-line:strict-boolean-expressions
-        settings.Values = settings.Values || {};
-        settings.Values[azureWebJobsStorageKey] = resourceResult.connectionString;
-        await fsUtil.writeFormattedJson(localSettingsPath, settings);
-    }
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+    return settings.Values && settings.Values[azureWebJobsStorageKey];
 }
 
-export async function setLocalAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
+export async function setLocalAppSetting(functionAppPath: string, key: string, value: string, suppressPrompt: boolean = false): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
     const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
 
@@ -67,7 +38,7 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
     settings.Values = settings.Values || {};
     if (settings.Values[key] === value) {
         return;
-    } else if (settings.Values[key]) {
+    } else if (settings.Values[key] && !suppressPrompt) {
         const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
         if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
             return;

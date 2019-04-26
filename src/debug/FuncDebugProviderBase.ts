@@ -7,7 +7,7 @@ import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, Shel
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskName } from '../constants';
-import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
+import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     protected abstract defaultPortOrPipeName: number | string;
@@ -40,6 +40,8 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     }
 
     public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, _token?: CancellationToken): Promise<DebugConfiguration | undefined> {
+        let result: DebugConfiguration | undefined = debugConfiguration;
+
         // tslint:disable-next-line: no-this-assignment
         const me: FuncDebugProviderBase = this;
         await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async function (this: IActionContext): Promise<void> {
@@ -49,14 +51,16 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
 
             me._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
             if (debugConfiguration.preLaunchTask === hostStartTaskName) {
-                if (!await validateFuncCoreToolsInstalled()) {
-                    return undefined;
+                const preDebugResult: IPreDebugValidateResult = await preDebugValidate(debugConfiguration);
+                if (!preDebugResult.shouldContinue) {
+                    // Stop debugging only in this case
+                    result = undefined;
                 }
             }
         });
 
         // Always return the debugConfiguration passed in. If we return undefined we would block debugging and we don't want that.
-        return debugConfiguration;
+        return result;
     }
 
     protected getDebugPortOrPipeName(folder: WorkspaceFolder): number | string {
