@@ -112,7 +112,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
     const powerShellProject: string = 'PowerShellProject';
     test(powerShellProject, async () => {
         const projectPath: string = path.join(testFolderPath, powerShellProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell, { hiddenLanguage: true });
+        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell);
         await validateProject(projectPath, getPowerShellValidateOptions());
     });
 

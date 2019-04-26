@@ -10,7 +10,6 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
@@ -48,12 +47,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: ProjectLanguage.TypeScript },
             { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
             { label: ProjectLanguage.Python, description: previewDescription, data: ProjectLanguage.Python },
-            { label: ProjectLanguage.Java, data: ProjectLanguage.Java }
+            { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
+            { label: ProjectLanguage.PowerShell, description: previewDescription, data: ProjectLanguage.PowerShell }
         ];
-
-        if (getWorkspaceSetting('enablePowerShell')) {
-            languagePicks.push({ label: ProjectLanguage.PowerShell, description: previewDescription, data: ProjectLanguage.PowerShell });
-        }
 
         languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });
 
