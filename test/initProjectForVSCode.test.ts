@@ -24,6 +24,15 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         await validateProject(projectPath, getJavaScriptValidateOptions());
     });
 
+    const javaScriptProjectWithPackageJson: string = 'AutoDetectJavaScriptProjectWithPackageJson';
+    test(javaScriptProjectWithPackageJson, async () => {
+        const projectPath: string = path.join(testFolderPath, javaScriptProjectWithPackageJson);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS', 'index.js'));
+        await fse.ensureFile(path.join(projectPath, 'package.json'));
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
+    });
+
     const javaScriptProjectWithExtensions: string = 'AutoDetectJavaScriptProjectWithExtensions';
     test(javaScriptProjectWithExtensions, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProjectWithExtensions);
@@ -230,6 +239,30 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         });
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
         await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const overwriteMultipleTasks: string = 'Overwrite Multiple Existing Tasks';
+    test(overwriteMultipleTasks, async () => {
+        const projectPath: string = path.join(testFolderPath, overwriteMultipleTasks);
+        await fse.ensureFile(path.join(projectPath, 'package.json'));
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "2.0.0",
+            tasks: [
+                {
+                    type: "func",
+                    command: "host start"
+                },
+                {
+                    type: "shell",
+                    label: "npm install",
+                    command: "whoops"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     const oldTasksFile: string = 'Old Tasks File';

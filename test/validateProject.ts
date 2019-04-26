@@ -8,23 +8,30 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { extensionPrefix, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage, ProjectRuntime } from '../extension.bundle';
 
-export function getJavaScriptValidateOptions(): IValidateProjectOptions {
+export function getJavaScriptValidateOptions(hasPackageJson: boolean = false): IValidateProjectOptions {
+    const expectedSettings: { [key: string]: string } = {
+        projectLanguage: ProjectLanguage.JavaScript,
+        projectRuntime: ProjectRuntime.v2,
+        deploySubpath: '.'
+    };
+    const expectedPaths: string[] = [];
+    const expectedTasks: string[] = ['host start'];
+
+    if (hasPackageJson) {
+        expectedSettings.preDeployTask = 'npm prune';
+        expectedPaths.push('package.json');
+        expectedTasks.push('npm install', 'npm prune');
+    }
+
     return {
-        expectedSettings: {
-            projectLanguage: ProjectLanguage.JavaScript,
-            projectRuntime: ProjectRuntime.v2,
-            deploySubpath: '.'
-        },
-        expectedPaths: [
-        ],
+        expectedSettings,
+        expectedPaths,
         expectedExtensionRecs: [
         ],
         expectedDebugConfigs: [
             'Attach to Node Functions'
         ],
-        expectedTasks: [
-            'host start'
-        ]
+        expectedTasks
     };
 }
 

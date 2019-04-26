@@ -53,7 +53,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
     test(javaScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProject);
         await testCreateNewProject(projectPath, ProjectLanguage.JavaScript);
-        await validateProject(projectPath, getJavaScriptValidateOptions());
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     const csharpProject: string = 'CSharpProject';
@@ -142,7 +142,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         ext.ui = new TestUserInput([/skip for now/i]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
-        await validateProject(projectPath, getJavaScriptValidateOptions());
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
