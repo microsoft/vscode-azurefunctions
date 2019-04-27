@@ -6,12 +6,15 @@
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateFilterSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { TemplateProvider } from '../../templates/TemplateProvider';
 import { nonNullProp } from '../../utils/nonNull';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
+import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
+import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
@@ -92,6 +95,11 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 default:
                     executeSteps.push(new ScriptFunctionCreateStep());
                     break;
+            }
+
+            if (!template.isHttpTrigger && !await getAzureWebJobsStorage(wizardContext.projectPath)) {
+                promptSteps.push(new AzureWebJobsStoragePromptStep());
+                executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);

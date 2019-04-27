@@ -7,10 +7,8 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
-import { azureWebJobsStorageKey, getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
-import { writeFormattedJson } from '../../../utils/fs';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -32,7 +30,6 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
         }
 
         await ensureGitIgnoreContents(wizardContext.projectPath, this._venvName, zipPath);
-        await ensureAzureWebJobsStorage(wizardContext.projectPath);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
@@ -119,19 +116,6 @@ async function ensureGitIgnoreContents(projectPath: string, venvName: string | u
         if (writeFile) {
             await fse.writeFile(gitignorePath, gitignoreContents);
         }
-    }
-}
-
-async function ensureAzureWebJobsStorage(projectPath: string): Promise<void> {
-    if (!isWindows) {
-        // Make sure local settings isn't using Storage Emulator for non-windows
-        // https://github.com/Microsoft/vscode-azurefunctions/issues/583
-        const localSettingsPath: string = path.join(projectPath, localSettingsFileName);
-        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
-        // tslint:disable-next-line:strict-boolean-expressions
-        localSettings.Values = localSettings.Values || {};
-        localSettings.Values[azureWebJobsStorageKey] = '';
-        await writeFormattedJson(localSettingsPath, localSettings);
     }
 }
 

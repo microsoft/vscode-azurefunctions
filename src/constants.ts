@@ -92,3 +92,5 @@ export const localhost: string = '127.0.0.1';
 
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
+
+export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
