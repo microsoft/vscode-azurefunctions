@@ -38,17 +38,15 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
             }
 
             promptSteps.push(new StorageAccountListStep(
-                { kind: StorageAccountKind.Storage, performance: StorageAccountPerformance.Standard, replication: StorageAccountReplication.LRS },
-                {
-                    kind: [
-                        StorageAccountKind.BlobStorage
-                    ],
-                    performance: [
-                        StorageAccountPerformance.Premium
-                    ],
-                    replication: [
-                        StorageAccountReplication.ZRS
-                    ],
+                { // INewStorageAccountDefaults
+                    kind: StorageAccountKind.Storage,
+                    performance: StorageAccountPerformance.Standard,
+                    replication: StorageAccountReplication.LRS
+                },
+                { // IStorageAccountFilters
+                    kind: [StorageAccountKind.BlobStorage],
+                    performance: [StorageAccountPerformance.Premium],
+                    replication: [StorageAccountReplication.ZRS],
                     learnMoreLink: 'https://aka.ms/Cfqnrc'
                 }
             ));

@@ -75,6 +75,7 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
                     return true;
                 }
             } catch (error) {
+                // swallow UserCancelledError and return false instead
                 if (!parseError(error).isUserCancelledError) {
                     throw error;
                 }
