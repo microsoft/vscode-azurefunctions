@@ -17,12 +17,25 @@ export function nonNullProp<TSource, TKey extends keyof TSource>(source: TSource
 /**
  * Validates that a given value is not null and not undefined.
  */
-// tslint:disable-next-line:no-any
 export function nonNullValue<T>(value: T | undefined, propertyNameOrMessage?: string): T {
     if (isNullOrUndefined(value)) {
         throw new Error(
             // tslint:disable-next-line:prefer-template
             'Internal error: Expected value to be neither null nor undefined'
+            + (propertyNameOrMessage ? `: ${propertyNameOrMessage}` : ''));
+    }
+
+    return value;
+}
+
+/**
+ * Validates that a given string is not null, undefined, nor empty
+ */
+export function nonNullOrEmptyValue(value: string | undefined, propertyNameOrMessage?: string): string {
+    if (!value) {
+        throw new Error(
+            // tslint:disable-next-line:prefer-template
+            'Internal error: Expected value to be neither null, undefined, nor empty'
             + (propertyNameOrMessage ? `: ${propertyNameOrMessage}` : ''));
     }
 
