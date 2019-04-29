@@ -11,7 +11,7 @@ import * as fsUtils from './fs';
 
 export function isMultiRootWorkspace(): boolean {
     return !!vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
-        && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name;
+        && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name; // multi-root workspaces always have something like "(Workspace)" appended to their name
 }
 
 export async function selectWorkspaceFolder(ui: IAzureUserInput, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {
