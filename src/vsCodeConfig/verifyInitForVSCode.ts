@@ -23,8 +23,8 @@ export async function verifyInitForVSCode(actionContext: IActionContext, fsPath:
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         await initProjectForVSCode(actionContext, fsPath);
-        language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath));
-        runtime = nonNullOrEmptyValue(convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, fsPath)));
+        language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
+        runtime = nonNullOrEmptyValue(convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, fsPath)), projectRuntimeSetting);
     }
 
     return [<ProjectLanguage>language, <ProjectRuntime>runtime];
