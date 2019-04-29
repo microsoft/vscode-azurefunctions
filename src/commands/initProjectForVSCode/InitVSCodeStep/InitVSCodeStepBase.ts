@@ -11,6 +11,7 @@ import { deploySubpathSetting, extensionPrefix, func, gitignoreFileName, launchF
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
+import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { IExtensionsJson } from '../../../vsCodeConfig/extensions';
 import { getDebugConfigs, getLaunchVersion, ILaunchJson, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';
 import { updateWorkspaceSetting } from '../../../vsCodeConfig/settings';
@@ -87,7 +88,12 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
 
         const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', tasksFileName, tasksVersion));
-        if (wizardContext.workspaceFolder) { // Use VS Code api to update config if folder is open
+
+        // Use VS Code api to update config if folder is open and it's not a multi-root workspace (https://github.com/Microsoft/vscode-azurefunctions/issues/1235)
+        // The VS Code api is better for several reasons, including:
+        // 1. It handles comments in json files
+        // 2. It sends the 'onDidChangeConfiguration' event
+        if (wizardContext.workspaceFolder && !isMultiRootWorkspace()) {
             const currentVersion: string | undefined = getTasksVersion(wizardContext.workspaceFolder);
             if (!currentVersion) {
                 updateTasksVersion(wizardContext.workspaceFolder, tasksVersion);
@@ -141,7 +147,12 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         if (this.getDebugConfiguration) {
             const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(runtime);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
-            if (folder) { // Use VS Code api to update config if folder is open
+
+            // Use VS Code api to update config if folder is open and it's not a multi-root workspace (https://github.com/Microsoft/vscode-azurefunctions/issues/1235)
+            // The VS Code api is better for several reasons, including:
+            // 1. It handles comments in json files
+            // 2. It sends the 'onDidChangeConfiguration' event
+            if (folder && !isMultiRootWorkspace()) {
                 const currentVersion: string | undefined = getLaunchVersion(folder);
                 if (!currentVersion) {
                     updateLaunchVersion(folder, launchVersion);
