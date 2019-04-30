@@ -61,6 +61,7 @@ import { getProjectTreeItems } from './tree/localProject/getProjectTreeItems';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { SlotsTreeItem } from './tree/SlotsTreeItem';
+import { SlotTreeItemBase } from './tree/SlotTreeItemBase';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
@@ -114,7 +115,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
         registerCommand('azureFunctions.deleteFunctionApp', async (node?: AzureParentTreeItem) => await deleteNode(ProductionSlotTreeItem.contextValue, node));
-        registerCommand('azureFunctions.deploy', deploy);
+        registerCommand('azureFunctions.deploy', async function (this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+            await deploy(this, target, functionAppId);
+        });
         registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
         registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);
         registerCommand('azureFunctions.executeFunction', executeFunction);
