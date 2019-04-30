@@ -5,7 +5,7 @@
 
 import { MessageItem } from 'vscode';
 import { AzureWizardPromptStep, ISubscriptionWizardContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
-import { localSettingsFileName } from '../../constants';
+import { isWindows, localSettingsFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
@@ -14,14 +14,26 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     public async prompt(wizardContext: T): Promise<void> {
         const selectAccount: MessageItem = { title: localize('selectAzureAccount', 'Select storage account') };
         const useEmulator: MessageItem = { title: localize('userEmulator', 'Use local emulator') };
+        const skipForNow: MessageItem = { title: localize('skipForNow', 'Skip for now') };
 
         const message: string = localize('selectAzureWebJobsStorage', 'AzureWebJobsStorage must be set in "{0}" to debug non-HTTP triggers locally.', localSettingsFileName);
-        const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, selectAccount, useEmulator);
+
+        const buttons: MessageItem[] = [selectAccount];
+        if (isWindows) {
+            // Only show on Windows until this is fixed: https://github.com/Microsoft/vscode-azurefunctions/issues/1245
+            buttons.push(useEmulator);
+        }
+        buttons.push(skipForNow);
+
+        const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === selectAccount) {
             wizardContext.azureWebJobsStorageType = 'azure';
         } else if (result === useEmulator) {
             wizardContext.azureWebJobsStorageType = 'emulator';
         }
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        wizardContext.actionContext.properties.azureWebJobsStorageType = wizardContext.azureWebJobsStorageType || 'skipForNow';
     }
 
     public shouldPrompt(wizardContext: T): boolean {
