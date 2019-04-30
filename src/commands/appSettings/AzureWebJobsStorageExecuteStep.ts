@@ -14,7 +14,6 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
 
     public async execute(wizardContext: IAzureWebJobsStorageWizardContext): Promise<void> {
         let value: string;
-        wizardContext.actionContext.properties.azureWebJobsStorageType = wizardContext.azureWebJobsStorageType;
         if (wizardContext.azureWebJobsStorageType === 'emulator') {
             value = localEmulatorConnectionString;
         } else {
