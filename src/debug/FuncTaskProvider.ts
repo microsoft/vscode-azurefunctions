@@ -65,7 +65,8 @@ export class FuncTaskProvider implements TaskProvider {
                 }
 
                 if (!isNullOrUndefined(lastError)) {
-                    // throw the last error just for the sake of telemetry - shouldn't block providing tasks
+                    // throw the last error just for the sake of telemetry
+                    // (This won't block providing tasks since it's inside callWithTelemetryAndErrorHandling)
                     throw lastError;
                 }
             }
