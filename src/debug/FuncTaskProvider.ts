@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -30,37 +31,47 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     public async provideTasks(_token?: CancellationToken | undefined): Promise<Task[]> {
+        const result: Task[] = [];
+
         // tslint:disable-next-line: no-this-assignment
         const me: FuncTaskProvider = this;
-        const tasks: Task[] | undefined = await callWithTelemetryAndErrorHandling('provideTasks', async function (this: IActionContext): Promise<Task[]> {
+        await callWithTelemetryAndErrorHandling('provideTasks', async function (this: IActionContext): Promise<void> {
             this.properties.isActivationEvent = 'true';
             this.suppressErrorDisplay = true;
             this.suppressTelemetry = true;
 
-            const result: Task[] = [];
             if (workspace.workspaceFolders) {
+                // tslint:disable-next-line: no-any
+                let lastError: any;
                 for (const folder of workspace.workspaceFolders) {
-                    const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
-                    if (projectRoot) {
-                        result.push(getExtensionInstallTask(folder, projectRoot));
-                        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                        const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
-                        if (hostStartTask) {
-                            result.push(hostStartTask);
-                        }
+                    try {
+                        const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
+                        if (projectRoot) {
+                            result.push(getExtensionInstallTask(folder, projectRoot));
+                            const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
+                            const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
+                            if (hostStartTask) {
+                                result.push(hostStartTask);
+                            }
 
-                        if (language === ProjectLanguage.Python) {
-                            result.push(...getPythonTasks(folder, projectRoot));
+                            if (language === ProjectLanguage.Python) {
+                                result.push(...getPythonTasks(folder, projectRoot));
+                            }
                         }
+                    } catch (err) {
+                        // ignore and try next folder
+                        lastError = err;
                     }
                 }
-            }
 
-            return result;
+                if (!isNullOrUndefined(lastError)) {
+                    // throw the last error just for the sake of telemetry - shouldn't block providing tasks
+                    throw lastError;
+                }
+            }
         });
 
-        // tslint:disable-next-line: strict-boolean-expressions
-        return tasks || [];
+        return result;
     }
 
     public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
