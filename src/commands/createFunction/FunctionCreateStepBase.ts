@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
-import { hostFileName, ProjectRuntime } from '../../constants';
+import { extInstallCommand, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
@@ -54,7 +54,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(wizardContext);
-        if (wizardContext.runtime !== ProjectRuntime.v1 && !template.isHttpTrigger && !template.isTimerTrigger) {
+        if (await this.shouldUseExtensionBundle(wizardContext, template)) {
             await this.verifyExtensionBundle(wizardContext);
         }
 
@@ -89,6 +89,35 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public shouldExecute(wizardContext: T): boolean {
         return !!wizardContext.functionTemplate;
+    }
+
+    private async shouldUseExtensionBundle(wizardContext: T, template: IFunctionTemplate): Promise<boolean> {
+        // v1 doesn't support bundles
+        // http and timer triggers don't need a bundle
+        // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
+        if (wizardContext.runtime === ProjectRuntime.v1 ||
+            template.isHttpTrigger || template.isTimerTrigger ||
+            wizardContext.language === ProjectLanguage.CSharp || wizardContext.language === ProjectLanguage.FSharp) {
+            return false;
+        }
+
+        // Old projects setup to use "func extensions install" shouldn't use a bundle because it could lead to duplicate or conflicting binaries
+        try {
+            const filesToCheck: string[] = [tasksFileName, settingsFileName];
+            for (const file of filesToCheck) {
+                const filePath: string = path.join(wizardContext.workspacePath, vscodeFolderName, file);
+                if (await fse.pathExists(filePath)) {
+                    const contents: string = (await fse.readFile(filePath)).toString();
+                    if (contents.includes(extInstallCommand)) {
+                        return false;
+                    }
+                }
+            }
+        } catch {
+            // ignore and use bundles (the default for new projects)
+        }
+
+        return true;
     }
 }
 

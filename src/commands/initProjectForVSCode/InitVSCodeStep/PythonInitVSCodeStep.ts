@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -38,7 +38,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
 
     protected getTasks(): TaskDefinition[] {
         const pipInstallLabel: string = 'pipInstall';
-        const dependsOn: string | undefined = this.requiresFuncExtensionsInstall ? extInstallCommand : this._venvName ? pipInstallLabel : undefined;
+        const dependsOn: string | undefined = this.requiresFuncExtensionsInstall ? extInstallTaskName : this._venvName ? pipInstallLabel : undefined;
         const tasks: TaskDefinition[] = [
             {
                 type: func,
