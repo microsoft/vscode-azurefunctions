@@ -41,8 +41,7 @@ export class FuncTaskProvider implements TaskProvider {
             this.suppressTelemetry = true;
 
             if (workspace.workspaceFolders) {
-                // tslint:disable-next-line: no-any
-                let lastError: any;
+                let lastError: unknown;
                 for (const folder of workspace.workspaceFolders) {
                     try {
                         const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
