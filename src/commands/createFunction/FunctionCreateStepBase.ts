@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
-import { extInstallTaskName, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../../constants';
+import { extInstallCommand, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
@@ -108,7 +108,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 const filePath: string = path.join(wizardContext.workspacePath, vscodeFolderName, file);
                 if (await fse.pathExists(filePath)) {
                     const contents: string = (await fse.readFile(filePath)).toString();
-                    if (contents.includes(extInstallTaskName)) {
+                    if (contents.includes(extInstallCommand)) {
                         return false;
                     }
                 }
