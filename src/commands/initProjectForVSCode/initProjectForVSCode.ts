@@ -15,9 +15,10 @@ import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProj
 import { detectProjectLanguage } from './detectProjectLanguage';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 
-export async function initProjectForVSCode(actionContext: IActionContext, workspacePath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(actionContext: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
-    if (workspacePath === undefined) {
+    let workspacePath: string;
+    if (fsPath === undefined) {
         if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
             throw new NoWorkspaceError();
         } else {
@@ -30,7 +31,8 @@ export async function initProjectForVSCode(actionContext: IActionContext, worksp
             }
         }
     } else {
-        workspaceFolder = getContainingWorkspace(workspacePath);
+        workspaceFolder = getContainingWorkspace(fsPath);
+        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
     }
 
     const projectPath: string | undefined = await verifyAndPromptToCreateProject(actionContext, workspacePath);
