@@ -20,6 +20,7 @@ import { uploadAppSettings } from './commands/appSettings/uploadAppSettings';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
 import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { createChildNode } from './commands/createChildNode';
+import { createDeploymentSlot } from './commands/createDeploymentSlot';
 import { createFunction } from './commands/createFunction/createFunction';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { createFunctionApp } from './commands/createFunctionApp';
@@ -64,6 +65,7 @@ import { SlotsTreeItem } from './tree/SlotsTreeItem';
 import { SlotTreeItemBase } from './tree/SlotTreeItemBase';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
+// tslint:disable-next-line: max-func-body-length
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
@@ -145,7 +147,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.addBinding', addBinding);
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
-        registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
+        registerCommand('azureFunctions.createSlot', async function (this: IActionContext, node?: SlotsTreeItem): Promise<void> {
+            await createDeploymentSlot(this, node);
+        });
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
 
