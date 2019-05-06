@@ -10,7 +10,6 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
-    // tslint:disable-next-line: no-use-before-declare
     protected gitignore: string = nodeGitignore;
     protected packageJsonScripts: { [key: string]: string } = { test: 'echo \"No tests yet...\"' };
     protected packageJsonDeps: { [key: string]: string } = {};
