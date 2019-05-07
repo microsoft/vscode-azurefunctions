@@ -13,7 +13,7 @@ import { testFolderPath } from './global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(30 * 1000);
 
     const javaScriptProject: string = 'AutoDetectJavaScriptProject';
@@ -22,6 +22,15 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS', 'index.js'));
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const javaScriptProjectWithPackageJson: string = 'AutoDetectJavaScriptProjectWithPackageJson';
+    test(javaScriptProjectWithPackageJson, async () => {
+        const projectPath: string = path.join(testFolderPath, javaScriptProjectWithPackageJson);
+        await fse.ensureFile(path.join(projectPath, 'HttpTriggerJS', 'index.js'));
+        await fse.ensureFile(path.join(projectPath, 'package.json'));
+        await testInitProjectForVSCode(projectPath);
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     const javaScriptProjectWithExtensions: string = 'AutoDetectJavaScriptProjectWithExtensions';
@@ -178,6 +187,171 @@ suite('Init Project For VS Code Tests', async function (this: ISuiteCallbackCont
         await fse.ensureFile(settingsJson);
         await fse.writeFile(settingsJson, '{');
         // This should simply prompt the user to overwrite the file since we can't parse it
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const goodTasksFile: string = 'Existing Tasks File';
+    test(goodTasksFile, async () => {
+        const projectPath: string = path.join(testFolderPath, goodTasksFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "2.0.0",
+            tasks: [
+                {
+                    label: "hello world",
+                    command: "echo 'hello world'",
+                    type: "shell"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        const options: IValidateProjectOptions = getJavaScriptValidateOptions();
+        options.expectedTasks.push('hello world');
+        await validateProject(projectPath, options);
+    });
+
+    const badTasksFile: string = 'Poorly Formed Tasks File';
+    test(badTasksFile, async () => {
+        const projectPath: string = path.join(testFolderPath, badTasksFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeFile(filePath, '{');
+        // This should simply prompt the user to overwrite the file since we can't parse it
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const overwriteTask: string = 'Overwrite Existing Task';
+    test(overwriteTask, async () => {
+        const projectPath: string = path.join(testFolderPath, overwriteTask);
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "2.0.0",
+            tasks: [
+                {
+                    type: "func",
+                    command: "host start"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const overwriteMultipleTasks: string = 'Overwrite Multiple Existing Tasks';
+    test(overwriteMultipleTasks, async () => {
+        const projectPath: string = path.join(testFolderPath, overwriteMultipleTasks);
+        await fse.ensureFile(path.join(projectPath, 'package.json'));
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "2.0.0",
+            tasks: [
+                {
+                    type: "func",
+                    command: "host start"
+                },
+                {
+                    type: "shell",
+                    label: "npm install",
+                    command: "whoops"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
+    });
+
+    const oldTasksFile: string = 'Old Tasks File';
+    test(oldTasksFile, async () => {
+        const projectPath: string = path.join(testFolderPath, oldTasksFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'tasks.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "1.0.0",
+            tasks: [
+                {
+                    label: "hello world",
+                    command: "echo 'hello world'",
+                    type: "shell"
+                }
+            ]
+        });
+        // This should simply prompt the user to overwrite the file since the version is old
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const goodLaunchFile: string = 'Existing Launch File';
+    test(goodLaunchFile, async () => {
+        const projectPath: string = path.join(testFolderPath, goodLaunchFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'launch.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "0.2.0",
+            configurations: [
+                {
+                    name: "Launch 1",
+                    request: "attach",
+                    type: "node"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        const options: IValidateProjectOptions = getJavaScriptValidateOptions();
+        options.expectedDebugConfigs.push('Launch 1');
+        await validateProject(projectPath, options);
+    });
+
+    const badLaunchFile: string = 'Poorly Formed Launch File';
+    test(badLaunchFile, async () => {
+        const projectPath: string = path.join(testFolderPath, badLaunchFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'launch.json');
+        await fse.ensureFile(filePath);
+        await fse.writeFile(filePath, '{');
+        // This should simply prompt the user to overwrite the file since we can't parse it
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const overwriteConfig: string = 'Overwrite Existing Debug Config';
+    test(overwriteConfig, async () => {
+        const projectPath: string = path.join(testFolderPath, overwriteConfig);
+        const filePath: string = path.join(projectPath, '.vscode', 'launch.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "0.2.0",
+            configurations: [
+                {
+                    name: "Attach to Node Functions",
+                    type: "node",
+                    request: "attach"
+                }
+            ]
+        });
+        await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript);
+        await validateProject(projectPath, getJavaScriptValidateOptions());
+    });
+
+    const oldLaunchFile: string = 'Old Launch File';
+    test(oldLaunchFile, async () => {
+        const projectPath: string = path.join(testFolderPath, oldLaunchFile);
+        const filePath: string = path.join(projectPath, '.vscode', 'launch.json');
+        await fse.ensureFile(filePath);
+        await fse.writeJSON(filePath, {
+            version: "0.1.0",
+            configurations: [
+                {
+                    name: "Launch 1",
+                    request: "attach",
+                    type: "node"
+                }
+            ]
+        });
+        // This should simply prompt the user to overwrite the file since the version is old
         await testInitProjectForVSCode(projectPath, ProjectLanguage.JavaScript, DialogResponses.yes.title);
         await validateProject(projectPath, getJavaScriptValidateOptions());
     });

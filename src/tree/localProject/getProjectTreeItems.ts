@@ -21,7 +21,7 @@ export async function getProjectTreeItems(context: ExtensionContext): Promise<Az
         for (const folder of folders) {
             const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
             if (projectPath) {
-                const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(projectPath, folder.uri.fsPath);
+                const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(projectPath, folder.uri.fsPath, folder);
                 context.subscriptions.push(treeItem);
                 // tslint:disable-next-line: no-any
                 result.push(treeItem);

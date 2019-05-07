@@ -7,27 +7,29 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, isWindows, localSettingsFileName, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
-import { azureWebJobsStorageKey, getLocalAppSettings, ILocalAppSettings } from '../../../LocalAppSettings';
-import { writeFormattedJson } from '../../../utils/fs';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
-import { ensureVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
+import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     protected preDeployTask: string = packTaskName;
+    private _venvName: string | undefined;
 
     protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
+        await super.executeCore(wizardContext);
+
         const zipPath: string = this.setDeploySubpath(wizardContext, `${path.basename(wizardContext.projectPath)}.zip`);
 
-        const venvName: string = await ensureVenv(wizardContext.projectPath);
-        this.settings.push({ key: pythonVenvSetting, value: venvName });
+        this._venvName = await getExistingVenv(wizardContext.projectPath);
+        if (this._venvName) {
+            this.settings.push({ key: pythonVenvSetting, value: this._venvName });
+            await ensureVenvInFuncIgnore(wizardContext.projectPath, this._venvName);
+        }
 
-        await ensureVenvInFuncIgnore(wizardContext.projectPath, venvName);
-        await ensureGitIgnoreContents(wizardContext.projectPath, venvName, zipPath);
-        await ensureAzureWebJobsStorage(wizardContext.projectPath);
+        await ensureGitIgnoreContents(wizardContext.projectPath, this._venvName, zipPath);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
@@ -36,41 +38,52 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
 
     protected getTasks(): TaskDefinition[] {
         const pipInstallLabel: string = 'pipInstall';
-        const venvSettingReference: string = `\${config:${extensionPrefix}.${pythonVenvSetting}}`;
-
-        function getPipInstallCommand(platform: NodeJS.Platform): string {
-            return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);
-        }
-
-        return [
+        const dependsOn: string | undefined = this.requiresFuncExtensionsInstall ? extInstallTaskName : this._venvName ? pipInstallLabel : undefined;
+        const tasks: TaskDefinition[] = [
             {
                 type: func,
                 command: hostStartCommand,
                 problemMatcher: funcWatchProblemMatcher,
                 isBackground: true,
-                dependsOn: extInstallTaskName
-            },
-            {
-                type: func,
-                command: extInstallCommand,
-                dependsOn: pipInstallLabel,
-                problemMatcher: []
-            },
-            {
-                label: pipInstallLabel,
-                type: 'shell',
-                osx: {
-                    command: getPipInstallCommand(Platform.MacOS)
-                },
-                windows: {
-                    command: getPipInstallCommand(Platform.Windows)
-                },
-                linux: {
-                    command: getPipInstallCommand(Platform.Linux)
-                },
-                problemMatcher: []
+                dependsOn
             }
         ];
+
+        if (this._venvName) {
+            if (this.requiresFuncExtensionsInstall) {
+                tasks.push({
+                    type: func,
+                    command: extInstallCommand,
+                    dependsOn: pipInstallLabel,
+                    problemMatcher: []
+                });
+            }
+
+            const venvSettingReference: string = `\${config:${extensionPrefix}.${pythonVenvSetting}}`;
+
+            function getPipInstallCommand(platform: NodeJS.Platform): string {
+                return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);
+            }
+
+            tasks.push(
+                {
+                    label: pipInstallLabel,
+                    type: 'shell',
+                    osx: {
+                        command: getPipInstallCommand(Platform.MacOS)
+                    },
+                    windows: {
+                        command: getPipInstallCommand(Platform.Windows)
+                    },
+                    linux: {
+                        command: getPipInstallCommand(Platform.Linux)
+                    },
+                    problemMatcher: []
+                }
+            );
+        }
+
+        return tasks;
     }
 
     protected getRecommendedExtensions(): string[] {
@@ -78,7 +91,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 }
 
-async function ensureGitIgnoreContents(projectPath: string, venvName: string, zipPath: string): Promise<void> {
+async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined, zipPath: string): Promise<void> {
     // .gitignore is created by `func init`
     const gitignorePath: string = path.join(projectPath, gitignoreFileName);
     if (await fse.pathExists(gitignorePath)) {
@@ -92,7 +105,10 @@ async function ensureGitIgnoreContents(projectPath: string, venvName: string, zi
             }
         }
 
-        ensureInGitIgnore(venvName);
+        if (venvName) {
+            ensureInGitIgnore(venvName);
+        }
+
         ensureInGitIgnore('.python_packages');
         ensureInGitIgnore('__pycache__');
         ensureInGitIgnore(zipPath);
@@ -100,19 +116,6 @@ async function ensureGitIgnoreContents(projectPath: string, venvName: string, zi
         if (writeFile) {
             await fse.writeFile(gitignorePath, gitignoreContents);
         }
-    }
-}
-
-async function ensureAzureWebJobsStorage(projectPath: string): Promise<void> {
-    if (!isWindows) {
-        // Make sure local settings isn't using Storage Emulator for non-windows
-        // https://github.com/Microsoft/vscode-azurefunctions/issues/583
-        const localSettingsPath: string = path.join(projectPath, localSettingsFileName);
-        const localSettings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
-        // tslint:disable-next-line:strict-boolean-expressions
-        localSettings.Values = localSettings.Values || {};
-        localSettings.Values[azureWebJobsStorageKey] = '';
-        await writeFormattedJson(localSettingsPath, localSettings);
     }
 }
 

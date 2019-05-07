@@ -6,7 +6,7 @@
 import * as assert from 'assert';
 import { convertStringToRuntime, ProjectRuntime } from '../extension.bundle';
 
-suite('convertStringToRuntime Tests', () => {
+suite('convertStringToRuntime', () => {
     const specificOne: string = '1.0.0';
     test(specificOne, () => {
         assert.equal(convertStringToRuntime(specificOne), ProjectRuntime.v1);

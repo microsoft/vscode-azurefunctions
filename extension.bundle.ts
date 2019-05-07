@@ -17,13 +17,14 @@ export { activateInternal, deactivateInternal } from './src/extension';
 //
 // The tests should import '../extension.bundle'. At design-time they live in tests/ and so will pick up this file (extension.bundle.ts).
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
+export * from './src/commands/createFunction/createFunction';
 export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createNewProject/createNewProject';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/constants';
 export * from './src/extensionVariables';
-export * from './src/FunctionConfig';
+export * from './src/funcConfig/function';
 export * from './src/vsCodeConfig/settings';
 export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/ScriptTemplateRetriever';
@@ -32,5 +33,8 @@ export * from './src/tree/FunctionAppProvider';
 export * from './src/utils/fs';
 export * from './src/utils/cpUtils';
 export * from './src/utils/venvUtils';
+export * from './src/vsCodeConfig/extensions';
+export * from './src/vsCodeConfig/launch';
+export * from './src/vsCodeConfig/tasks';
 export * from 'vscode-azureappservice';
 export * from 'vscode-azureextensionui';

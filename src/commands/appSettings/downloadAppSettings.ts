@@ -9,12 +9,12 @@ import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { getLocalAppSettings, ILocalAppSettings } from "../../LocalAppSettings";
+import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
-import * as workspaceUtil from '../../utils/workspace';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
+import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
@@ -24,18 +24,18 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
     const client: SiteClient = node.root.client;
 
     const message: string = localize('selectLocalSettings', 'Select the destination file for your downloaded settings.');
-    const localSettingsPath: string = await workspaceUtil.selectWorkspaceFile(ext.ui, message, () => localSettingsFileName);
+    const localSettingsPath: string = await getLocalSettingsFile(message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLine(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
-        let localSettings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath, true /* allowOverwrite */);
+        let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
         if (localSettings.IsEncrypted) {
             await decryptLocalSettings(localSettingsUri);
-            localSettings = <ILocalAppSettings>await fse.readJson(localSettingsPath);
+            localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
         }
 
         try {

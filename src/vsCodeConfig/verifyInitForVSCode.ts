@@ -8,7 +8,7 @@ import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProje
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { nonNullValue } from '../utils/nonNull';
+import { nonNullOrEmptyValue } from '../utils/nonNull';
 import { convertStringToRuntime, getWorkspaceSetting } from './settings';
 
 /**
@@ -23,8 +23,8 @@ export async function verifyInitForVSCode(actionContext: IActionContext, fsPath:
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         await initProjectForVSCode(actionContext, fsPath);
-        language = nonNullValue(getWorkspaceSetting(projectLanguageSetting, fsPath));
-        runtime = nonNullValue(getWorkspaceSetting(projectRuntimeSetting, fsPath));
+        language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
+        runtime = nonNullOrEmptyValue(convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, fsPath)), projectRuntimeSetting);
     }
 
     return [<ProjectLanguage>language, <ProjectRuntime>runtime];

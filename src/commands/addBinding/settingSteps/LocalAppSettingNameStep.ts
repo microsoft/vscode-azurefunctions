@@ -3,31 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
-import { IFunctionSetting } from '../../../templates/IFunctionSetting';
 import { nonNullProp } from '../../../utils/nonNull';
 import { IBindingWizardContext } from '../IBindingWizardContext';
+import { BindingSettingStepBase } from './BindingSettingStepBase';
 
-export class LocalAppSettingNameStep extends AzureWizardPromptStep<IBindingWizardContext> {
-    private readonly _setting: IFunctionSetting;
-
-    public constructor(setting: IFunctionSetting) {
-        super();
-        this._setting = setting;
-    }
-
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
+export class LocalAppSettingNameStep extends BindingSettingStepBase {
+    public async promptCore(_wizardContext: IBindingWizardContext): Promise<string> {
         const appSettingSuffix: string = `_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
-        wizardContext[this._setting.name] = await ext.ui.showInputBox({
+        return await ext.ui.showInputBox({
             placeHolder: localize('appSettingKeyPlaceholder', 'Local app setting key'),
             prompt: localize('appSettingKeyPrompt', 'Provide a key for a connection string'),
             value: `example${appSettingSuffix}`
         });
-    }
-
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext[this._setting.name];
     }
 }

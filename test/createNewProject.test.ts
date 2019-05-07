@@ -25,7 +25,7 @@ import {
 } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Create New Project Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create New Project', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(60 * 1000);
 
     const javaProject: string = 'JavaProject';
@@ -53,7 +53,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     test(javaScriptProject, async () => {
         const projectPath: string = path.join(testFolderPath, javaScriptProject);
         await testCreateNewProject(projectPath, ProjectLanguage.JavaScript);
-        await validateProject(projectPath, getJavaScriptValidateOptions());
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     const csharpProject: string = 'CSharpProject';
@@ -112,7 +112,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
     const powerShellProject: string = 'PowerShellProject';
     test(powerShellProject, async () => {
         const projectPath: string = path.join(testFolderPath, powerShellProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell, { hiddenLanguage: true });
+        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell);
         await validateProject(projectPath, getPowerShellValidateOptions());
     });
 
@@ -142,7 +142,7 @@ suite('Create New Project Tests', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         ext.ui = new TestUserInput([/skip for now/i]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
-        await validateProject(projectPath, getJavaScriptValidateOptions());
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project

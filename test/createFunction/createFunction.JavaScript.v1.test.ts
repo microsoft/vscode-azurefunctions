@@ -3,12 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -18,19 +15,24 @@ class JSFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
     public runtime: ProjectRuntime = ProjectRuntime.v1;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, 'index.js')
+        ];
     }
 }
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
-suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create Function JavaScript ~1', async function (this: ISuiteCallbackContext): Promise<void> {
     const jsTester: JSFunctionTester = new JSFunctionTester();
 
     suiteSetup(async () => {
         await jsTester.initAsync();
+    });
+
+    suiteTeardown(async () => {
+        await jsTester.dispose();
     });
 
     const blobTrigger: string = 'Blob trigger';
@@ -38,29 +40,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             blobTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            TestInput.UseDefaultValue // Use default path
-        );
-    });
-
-    const cosmosDBTrigger: string = 'Cosmos DB trigger';
-    test(cosmosDBTrigger, async () => {
-        await jsTester.testCreateFunction(
-            cosmosDBTrigger,
-            'AzureWebJobsStorage', // Use existing app setting
-            'dbName',
-            'collectionName',
-            TestInput.UseDefaultValue, // Use default for 'create leases if doesn't exist'
-            TestInput.UseDefaultValue // Use default lease name
-        );
-    });
-
-    const eventHubTrigger: string = 'Event Hub trigger';
-    test(eventHubTrigger, async () => {
-        await jsTester.testCreateFunction(
-            eventHubTrigger,
-            'AzureWebJobsStorage', // Use existing app setting
-            TestInput.UseDefaultValue, // Use default event hub name
-            TestInput.UseDefaultValue // Use default event hub consumer group
+            'test-path/{name}'
         );
     });
 
@@ -78,7 +58,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(httpTrigger, async () => {
         await jsTester.testCreateFunction(
             httpTrigger,
-            TestInput.UseDefaultValue // Use default Authorization level
+            'Admin'
         );
     });
 
@@ -86,7 +66,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(httpTriggerWithParameters, async () => {
         await jsTester.testCreateFunction(
             httpTriggerWithParameters,
-            TestInput.UseDefaultValue // Use default Authorization level
+            'Anonymous'
         );
     });
 
@@ -100,28 +80,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
         await jsTester.testCreateFunction(
             queueTrigger,
             'AzureWebJobsStorage', // Use existing app setting
-            TestInput.UseDefaultValue // Use default queue name
-        );
-    });
-
-    const serviceBusQueueTrigger: string = 'Service Bus Queue trigger';
-    test(serviceBusQueueTrigger, async () => {
-        await jsTester.testCreateFunction(
-            serviceBusQueueTrigger,
-            'AzureWebJobsStorage', // Use existing app setting
-            TestInput.UseDefaultValue, // Use default access rights
-            TestInput.UseDefaultValue // Use default queue name
-        );
-    });
-
-    const serviceBusTopicTrigger: string = 'Service Bus Topic trigger';
-    test(serviceBusTopicTrigger, async () => {
-        await jsTester.testCreateFunction(
-            serviceBusTopicTrigger,
-            'AzureWebJobsStorage', // Use existing app setting
-            TestInput.UseDefaultValue, // Use default access rights
-            TestInput.UseDefaultValue, // Use default topic name
-            TestInput.UseDefaultValue // Use default subscription name
+            'testqueue'
         );
     });
 
@@ -129,7 +88,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
     test(timerTrigger, async () => {
         await jsTester.testCreateFunction(
             timerTrigger,
-            TestInput.UseDefaultValue // Use default schedule
+            '0 * 0/5 * * *'
         );
     });
 
@@ -146,7 +105,7 @@ suite('Create JavaScript ~1 Function Tests', async function (this: ISuiteCallbac
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                 });
             });
-            await jsTester.validateFunction(projectPath, functionName);
+            await jsTester.validateFunction(projectPath, functionName, [authLevel]);
         });
     });
 });

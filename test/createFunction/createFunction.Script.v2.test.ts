@@ -3,12 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestInput } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -20,10 +17,11 @@ class JavaScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
     public runtime: ProjectRuntime = ProjectRuntime.v2;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, 'index.js')), true, 'index.js does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, 'index.js')
+        ];
     }
 }
 
@@ -31,10 +29,11 @@ class TypeScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
     public runtime: ProjectRuntime = ProjectRuntime.v2;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, 'index.ts')), true, 'index.ts does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, 'index.ts')
+        ];
     }
 }
 
@@ -42,10 +41,11 @@ class PythonFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Python;
     public runtime: ProjectRuntime = ProjectRuntime.v2;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, '__init__.py')), true, 'run.py does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, '__init__.py')
+        ];
     }
 }
 
@@ -53,10 +53,11 @@ class PowerShellFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.PowerShell;
     public runtime: ProjectRuntime = ProjectRuntime.v2;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, 'run.ps1')), true, 'run.ps1 does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, 'run.ps1')
+        ];
     }
 }
 
@@ -67,9 +68,13 @@ addSuite(new PowerShellFunctionTester());
 
 function addSuite(tester: FunctionTesterBase): void {
     // tslint:disable-next-line:max-func-body-length no-function-expression
-    suite(`Create ${tester.language} ${tester.runtime} Function Tests`, async function (this: ISuiteCallbackContext): Promise<void> {
+    suite(`Create Function ${tester.language} ${tester.runtime}`, async function (this: ISuiteCallbackContext): Promise<void> {
         suiteSetup(async () => {
             await tester.initAsync();
+        });
+
+        suiteTeardown(async () => {
+            await tester.dispose();
         });
 
         const blobTrigger: string = 'Azure Blob Storage trigger';
@@ -77,7 +82,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 blobTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                TestInput.UseDefaultValue // Use default path
+                'test-path/{name}'
             );
         });
 
@@ -88,8 +93,8 @@ function addSuite(tester: FunctionTesterBase): void {
                 'AzureWebJobsStorage', // Use existing app setting
                 'dbName',
                 'collectionName',
-                TestInput.UseDefaultValue, // Use default for 'create leases if doesn't exist'
-                TestInput.UseDefaultValue // Use default lease name
+                'testLeases',
+                'false' // 'create leases if doesn't exist'
             );
         });
 
@@ -100,11 +105,21 @@ function addSuite(tester: FunctionTesterBase): void {
             );
         });
 
+        const eventHubTrigger: string = 'Azure Event Hub trigger';
+        test(eventHubTrigger, async () => {
+            await tester.testCreateFunction(
+                eventHubTrigger,
+                'AzureWebJobsStorage', // Use existing app setting
+                'eventHubName',
+                'testConsumerGroup'
+            );
+        });
+
         const httpTrigger: string = 'HTTP trigger';
         test(httpTrigger, async () => {
             await tester.testCreateFunction(
                 httpTrigger,
-                TestInput.UseDefaultValue // Use default Authorization level
+                'Admin'
             );
         });
 
@@ -113,7 +128,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 queueTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                TestInput.UseDefaultValue // Use default queue name
+                'testqueue'
             );
         });
 
@@ -122,7 +137,7 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 serviceBusQueueTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                TestInput.UseDefaultValue // Use default queue name
+                'testQueue'
             );
         });
 
@@ -131,8 +146,8 @@ function addSuite(tester: FunctionTesterBase): void {
             await tester.testCreateFunction(
                 serviceBusTopicTrigger,
                 'AzureWebJobsStorage', // Use existing app setting
-                TestInput.UseDefaultValue, // Use default topic name
-                TestInput.UseDefaultValue // Use default subscription name
+                'testTopic',
+                'testSubscription'
             );
         });
 
@@ -140,9 +155,33 @@ function addSuite(tester: FunctionTesterBase): void {
         test(timerTrigger, async () => {
             await tester.testCreateFunction(
                 timerTrigger,
-                TestInput.UseDefaultValue // Use default schedule
+                '0 * * */3 * *'
             );
         });
+
+        // For now - durable is only supported in these languaeges
+        if (tester.language === ProjectLanguage.TypeScript || tester.language === ProjectLanguage.JavaScript) {
+            const durableActivity: string = 'Durable Functions activity';
+            test(durableActivity, async () => {
+                await tester.testCreateFunction(
+                    durableActivity
+                );
+            });
+
+            const durableHttpStarter: string = 'Durable Functions HTTP starter';
+            test(durableHttpStarter, async () => {
+                await tester.testCreateFunction(
+                    durableHttpStarter
+                );
+            });
+
+            const durableOrchestrator: string = 'Durable Functions orchestrator';
+            test(durableOrchestrator, async () => {
+                await tester.testCreateFunction(
+                    durableOrchestrator
+                );
+            });
+        }
 
         // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
         test('createFunction API', async () => {
@@ -157,7 +196,7 @@ function addSuite(tester: FunctionTesterBase): void {
                         await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                     });
                 });
-                await tester.validateFunction(projectPath, functionName);
+                await tester.validateFunction(projectPath, functionName, [authLevel]);
             });
         });
     });

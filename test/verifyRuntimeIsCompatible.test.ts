@@ -8,7 +8,7 @@ import { TestUserInput } from 'vscode-azureextensionui';
 import { ext, ProjectLanguage, ProjectRuntime, verifyRuntimeIsCompatible } from '../extension.bundle';
 
 // tslint:disable-next-line: max-func-body-length
-suite('verifyRuntimeIsCompatible Tests', () => {
+suite('verifyRuntimeIsCompatible', () => {
     test('Local: ~1, Remote: none', async () => {
         const props: { [name: string]: string } = {};
         await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);

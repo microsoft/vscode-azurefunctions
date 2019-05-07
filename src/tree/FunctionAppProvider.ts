@@ -4,14 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { MessageItem } from 'vscode';
+import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { ext } from '../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
 export class FunctionAppProvider extends SubscriptionTreeItem {
@@ -51,10 +53,10 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             this,
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            (site: WebSiteManagementModels.Site) => {
+            async (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    return new ProductionSlotTreeItem(this, siteClient);
+                    return await ProductionSlotTreeItem.create(this, siteClient);
                 }
                 return undefined;
             },
@@ -71,7 +73,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
         const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
         const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
-        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting);
+        const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
         const wizardContext: IAppServiceWizardContext = {
             newSiteKind: AppKind.functionapp,
@@ -87,6 +89,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new SiteOSStep());
+        promptSteps.push(new SiteHostingPlanStep());
         promptSteps.push(new SiteRuntimeStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
@@ -99,6 +102,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
         actionContext.properties.advancedCreation = String(advancedCreation);
         if (!advancedCreation) {
+            wizardContext.useConsumptionPlan = true;
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
             wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
             // Pick a region that works for both windows and linux. Pricing seems to be same in all regions as of this writing anyways.
@@ -141,16 +145,32 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             wizardContext.newResourceGroupName = resourceGroup || newName;
             wizardContext.newStorageAccountName = newName;
         }
-        await wizard.execute(actionContext);
+
+        try {
+            await wizard.execute(actionContext);
+        } catch (error) {
+            if (!parseError(error).isUserCancelledError && !advancedCreation) {
+                const message: string = localize('tryAdvancedCreate', 'Modify the setting "{0}.{1}" if you want to change the default values when creating a Function App in Azure.', extensionPrefix, advancedCreationKey);
+                const btn: MessageItem = { title: localize('turnOn', 'Turn on advanced creation') };
+                // tslint:disable-next-line: no-floating-promises
+                ext.ui.showWarningMessage(message, btn).then(async result => {
+                    if (result === btn) {
+                        await updateGlobalSetting(advancedCreationKey, true);
+                    }
+                });
+            }
+
+            throw error;
+        }
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
-        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
+        return await ProductionSlotTreeItem.create(this, new SiteClient(site, this.root));
     }
 }
 
 async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting));
+    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSettingFromAnyFolder(projectRuntimeSetting));
     actionContext.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {

@@ -28,7 +28,9 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
 export async function tryGetFunctionProjectRoot(folderPath: string, suppressPrompt: boolean = false): Promise<string | undefined> {
     let subpath: string | undefined = getWorkspaceSetting(projectSubpathKey, folderPath);
     if (!subpath) {
-        if (await isFunctionProject(folderPath)) {
+        if (!(await fse.pathExists(folderPath))) {
+            return undefined;
+        } else if (await isFunctionProject(folderPath)) {
             return folderPath;
         } else {
             const subpaths: string[] = await fse.readdir(folderPath);

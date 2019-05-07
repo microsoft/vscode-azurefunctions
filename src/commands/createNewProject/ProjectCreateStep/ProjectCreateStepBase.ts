@@ -13,18 +13,19 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;
+    protected creatingMessage: string = localize('creating', 'Creating new project...');
 
-    public abstract async executeCore(wizardContext: IProjectWizardContext): Promise<void>;
+    public abstract async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 
     public async execute(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         wizardContext.actionContext.properties.projectLanguage = wizardContext.language;
         wizardContext.actionContext.properties.projectRuntime = wizardContext.runtime;
         wizardContext.actionContext.properties.openBehavior = wizardContext.openBehavior;
 
-        progress.report({ message: localize('creating', 'Creating new project...') });
+        progress.report({ message: this.creatingMessage });
         await fse.ensureDir(wizardContext.projectPath);
 
-        await this.executeCore(wizardContext);
+        await this.executeCore(wizardContext, progress);
 
         if (await gitUtils.isGitInstalled(wizardContext.workspacePath) && !await gitUtils.isInsideRepo(wizardContext.workspacePath)) {
             await gitUtils.gitInit(ext.outputChannel, wizardContext.workspacePath);

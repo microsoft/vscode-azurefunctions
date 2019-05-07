@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
-import { FunctionConfig } from '../../FunctionConfig';
+import { ParsedFunctionJson } from '../../funcConfig/function';
 import { nodeUtils } from '../../utils/nodeUtils';
 import { FunctionTreeItem } from '../FunctionTreeItem';
 import { IProjectRoot } from './IProjectRoot';
@@ -17,7 +17,7 @@ export class LocalFunctionTreeItem extends AzureParentTreeItem<IProjectRoot> {
     private readonly _name: string;
     private _bindingsNode: LocalBindingsTreeItem;
 
-    public constructor(parent: LocalFunctionsTreeItem, name: string, config: FunctionConfig, functionJsonPath: string) {
+    public constructor(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string) {
         super(parent);
         this._name = name;
         this._bindingsNode = new LocalBindingsTreeItem(this, config, functionJsonPath);
@@ -32,7 +32,7 @@ export class LocalFunctionTreeItem extends AzureParentTreeItem<IProjectRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionTreeItem.contextValue);
+        return nodeUtils.getIconPath(FunctionTreeItem.contextValueBase);
     }
 
     public hasMoreChildrenImpl(): boolean {

@@ -4,34 +4,32 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import { URL } from 'url';
+import * as url from 'url';
 import { ProgressLocation, window } from 'vscode';
 import { functionsAdminRequest, ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-import { FunctionConfig, HttpAuthLevel } from '../FunctionConfig';
+import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
-    public static contextValue: string = 'azFuncFunction';
-    public static readOnlyContextValue: string = 'azFuncFunctionReadOnly';
+    public static contextValueBase: string = 'azFuncFunction';
     public readonly parent: FunctionsTreeItem;
-    public readonly config: FunctionConfig;
+    public readonly config: ParsedFunctionJson;
+    public readonly name: string;
 
-    private readonly _name: string;
     private _triggerUrl: string | undefined;
     private _disabled: boolean;
 
     private constructor(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope) {
         super(parent);
-        this._name = getFunctionNameFromId(nonNullProp(func, 'id'));
+        this.name = getFunctionNameFromId(nonNullProp(func, 'id'));
 
-        this.config = new FunctionConfig(func.config);
+        this.config = new ParsedFunctionJson(func.config);
     }
 
     public static async createFunctionTreeItem(parent: FunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<FunctionTreeItem> {
@@ -42,23 +40,45 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public get id(): string {
-        return this._name;
+        return this.name;
     }
 
     public get label(): string {
-        return this._name;
+        return this.name;
     }
 
     public get contextValue(): string {
-        return this.parent.readOnly ? FunctionTreeItem.readOnlyContextValue : FunctionTreeItem.contextValue;
+        let contextValue: string = FunctionTreeItem.contextValueBase;
+        if (this.config.isHttpTrigger) {
+            contextValue += 'Http';
+        } else if (this.config.isTimerTrigger) {
+            contextValue += 'Timer';
+        }
+
+        if (this.parent.readOnly) {
+            contextValue += 'ReadOnly';
+        }
+
+        return contextValue;
     }
 
     public get description(): string | undefined {
-        return this._disabled ? localize('disabledFunction', 'Disabled') : undefined;
+        const descriptions: string[] = [];
+        if (this.config.isHttpTrigger) {
+            descriptions.push(localize('http', 'HTTP'));
+        } else if (this.config.isTimerTrigger) {
+            descriptions.push(localize('timer', 'Timer'));
+        }
+
+        if (this._disabled) {
+            descriptions.push(localize('disabledFunction', 'Disabled'));
+        }
+
+        return descriptions.join(' - ');
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionTreeItem.contextValue);
+        return nodeUtils.getIconPath(FunctionTreeItem.contextValueBase);
     }
 
     public get triggerUrl(): string | undefined {
@@ -66,11 +86,11 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public get logStreamLabel(): string {
-        return `${this.root.client.fullName}/${this._name}`;
+        return `${this.root.client.fullName}/${this.name}`;
     }
 
     public get logStreamPath(): string {
-        return `application/functions/function/${encodeURIComponent(this._name)}`;
+        return `application/functions/function/${encodeURIComponent(this.name)}`;
     }
 
     public async refreshImpl(): Promise<void> {
@@ -82,16 +102,20 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public async deleteTreeItemImpl(): Promise<void> {
-        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this._name);
-        const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this._name);
-        const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this._name);
+        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this.name);
+        const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this.name);
+        const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this.name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
             ext.outputChannel.appendLine(deleting);
-            await this.root.client.deleteFunction(this._name);
+            await this.root.client.deleteFunction(this.name);
             window.showInformationMessage(deleteSucceeded);
             ext.outputChannel.appendLine(deleteSucceeded);
         });
+    }
+
+    public isAncestorOfImpl(_contextValue: string | RegExp): boolean {
+        return false;
     }
 
     public async getKey(): Promise<string | undefined> {
@@ -101,7 +125,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
                 urlPath = '/host/systemkeys/_master';
                 break;
             case HttpAuthLevel.function:
-                urlPath = `functions/${this._name}/keys/default`;
+                urlPath = `functions/${this.name}/keys/default`;
                 break;
             case HttpAuthLevel.anonymous:
             default:
@@ -119,11 +143,16 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
             // ignore json parse error and throw better error below
         }
 
-        throw new Error(localize('keyFail', 'Failed to get key for trigger "{0}".', this._name));
+        throw new Error(localize('keyFail', 'Failed to get key for trigger "{0}".', this.name));
     }
 
     private async refreshTriggerUrl(): Promise<void> {
-        const triggerUrl: URL = new URL(`${this.root.client.defaultHostUrl}/api/${this._name}`);
+        const triggerUrl: url.URL = new url.URL(this.root.client.defaultHostUrl);
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        const route: string = (this.config.triggerBinding && this.config.triggerBinding.route) || this.name;
+        triggerUrl.pathname = `${this.parent.parent.hostJson.routePrefix}/${route}`;
+
         const key: string | undefined = await this.getKey();
         if (key) {
             triggerUrl.searchParams.set('code', key);
@@ -136,14 +165,13 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(): Promise<void> {
-        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-        // tslint:disable-next-line:strict-boolean-expressions
-        appSettings.properties = appSettings.properties || {};
-        const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
-        if (projectRuntime === ProjectRuntime.v1) {
+        if (this.parent.parent.runtime === ProjectRuntime.v1) {
             this._disabled = this.config.disabled;
         } else {
-            const key: string = `AzureWebJobs.${this._name}.Disabled`;
+            const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+            // tslint:disable-next-line:strict-boolean-expressions
+            appSettings.properties = appSettings.properties || {};
+            const key: string = `AzureWebJobs.${this.name}.Disabled`;
             /**
              * The docs only officially mentioned 'true' and 'false', but here is what I found:
              * The following resulted in a disabled function:

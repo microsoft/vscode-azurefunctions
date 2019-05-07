@@ -12,7 +12,7 @@ import { dotnetUtils } from '../utils/dotnetUtils';
 import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
 import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
-import { IFunctionSetting } from './IFunctionSetting';
+import { IBindingSetting } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { parseJavaTemplates } from './parseJavaTemplates';
 import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
@@ -72,7 +72,7 @@ export class TemplateProvider {
                     const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
                     if (jsTemplate) {
                         for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
-                            const jsSetting: IFunctionSetting | undefined = jsTemplate.userPromptedSettings.find((t: IFunctionSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
+                            const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
                             if (jsSetting) {
                                 cSharpSetting.resourceType = jsSetting.resourceType;
                                 cSharpSetting.validateSetting = jsSetting.validateSetting;

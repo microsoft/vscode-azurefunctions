@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { AzureParentTreeItem, AzureTreeItem, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
-import { FunctionConfig } from '../../FunctionConfig';
+import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nodeUtils } from '../../utils/nodeUtils';
 import { IProjectRoot } from './IProjectRoot';
@@ -47,7 +47,7 @@ export class LocalFunctionsTreeItem extends AzureParentTreeItem<IProjectRoot> {
             'azFuncInvalidLocalFunction',
             async func => {
                 const functionJsonPath: string = path.join(this.root.projectPath, func, functionJsonFileName);
-                const config: FunctionConfig = new FunctionConfig(await fse.readJSON(functionJsonPath));
+                const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
                 return new LocalFunctionTreeItem(this, func, config, functionJsonPath);
             },
             (func: string) => func

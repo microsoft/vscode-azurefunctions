@@ -6,12 +6,13 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
-import { IFunctionBinding, IFunctionJson } from '../../../FunctionConfig';
+import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
 import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
+import { getBindingSetting } from '../IFunctionWizardContext';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export function getScriptFileNameFromLanguage(language: string): string | undefined {
@@ -48,13 +49,12 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
             await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
         }));
 
-        const inBinding: IFunctionBinding = nonNullProp(template.functionConfig, 'inBinding');
+        const triggerBinding: IFunctionBinding = nonNullProp(template.functionJson, 'triggerBinding');
         for (const setting of template.userPromptedSettings) {
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
-            inBinding[setting.name] = wizardContext[setting.name] || '';
+            triggerBinding[setting.name] = getBindingSetting(wizardContext, setting);
         }
 
-        const functionJson: IFunctionJson = template.functionConfig.functionJson;
+        const functionJson: IFunctionJson = template.functionJson.data;
         if (this.editFunctionJson) {
             await this.editFunctionJson(wizardContext, functionJson);
         }

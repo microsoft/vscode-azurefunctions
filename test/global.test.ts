@@ -59,16 +59,28 @@ suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
 });
 
 export async function runForAllTemplateSources(callback: (source: TemplateSource, templates: TemplateProvider) => Promise<void>): Promise<void> {
+    for (const source of templatesMap.keys()) {
+        await runForTemplateSource(source, (templates: TemplateProvider) => callback(source, templates));
+    }
+}
+
+export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templates: TemplateProvider) => Promise<void>): Promise<void> {
     const oldProvider: Promise<TemplateProvider> = ext.templateProviderTask;
     try {
-        for (const [source, templates] of templatesMap) {
-            console.log(`Switching to template source "${source}".`);
+        let templates: TemplateProvider | undefined;
+        if (source === undefined) {
+            templates = await ext.templateProviderTask;
+        } else {
+            templates = templatesMap.get(source);
+            if (!templates) {
+                throw new Error(`Unrecognized source ${source}`);
+            }
             ext.templateSource = source;
             ext.templateProviderTask = Promise.resolve(templates);
-            await callback(source, templates);
         }
+
+        await callback(templates);
     } finally {
-        console.log(`Switching back to default template source.`);
         ext.templateSource = undefined;
         ext.templateProviderTask = oldProvider;
     }

@@ -12,6 +12,7 @@
     "azFunc.restartFunctionApp": "Restart",
     "azFunc.deleteFunctionApp": "Delete Function App...",
     "azFunc.copyFunctionUrl": "Copy Function Url",
+    "azFunc.executeFunction": "Execute Function Now",
     "azFunc.deleteFunction": "Delete Function...",
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
@@ -57,6 +58,7 @@
     "azFunc.projectRuntime.betaDescription": "DEPRECATED Use \"~2\" instead.",
     "azFunc.projectLanguage.previewDescription": "(Preview)",
     "azFunc.pythonVenvDescription": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",
+    "azFunc.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azFunc.enableSlotsDescription": "Enable preview support for slots.",
     "azFunc.redeploy": "Redeploy",
     "azFunc.viewDeploymentLogs": "View Deployment Logs",
@@ -67,7 +69,7 @@
     "azFunc.swapSlot": "Swap Slot...",
     "azFunc.advancedCreationDescription": "Enables advanced creation of Azure Function Apps, which will prompt for several additional values instead of using a default.",
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
-    "azFunc.enablePowerShell": "Enable preview support for PowerShell.",
     "azFunc.addBinding": "Add binding...",
+    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
     "azFunc.enableProjectTree": "Enable preview support for a tree view of the local project."
 }

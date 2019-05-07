@@ -5,10 +5,11 @@
 
 import { Progress } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { setLocalAppSetting } from '../../../LocalAppSettings';
+import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
-import { IFunctionSetting } from '../../../templates/IFunctionSetting';
+import { IBindingSetting } from '../../../templates/IBindingTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
+import { setBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 
 export interface IConnection {
@@ -19,9 +20,9 @@ export interface IConnection {
 export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
 
-    private readonly _setting: IFunctionSetting;
+    private readonly _setting: IBindingSetting;
 
-    constructor(setting: IFunctionSetting) {
+    constructor(setting: IBindingSetting) {
         super();
         this._setting = setting;
     }
@@ -33,7 +34,7 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
 
         const result: IConnection = await this.getConnection(wizardContext);
         const appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
-        wizardContext[this._setting.name] = appSettingKey;
+        setBindingSetting(wizardContext, this._setting, appSettingKey);
         await setLocalAppSetting(wizardContext.projectPath, appSettingKey, result.connectionString);
     }
 }

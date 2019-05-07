@@ -10,6 +10,7 @@ import { NoWorkspaceError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
+import { getContainingWorkspace } from '../../utils/workspace';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
@@ -20,13 +21,17 @@ export async function createFunction(
     workspacePath?: string,
     templateId?: string,
     functionName?: string,
-    caseSensitiveFunctionSettings?: { [key: string]: string | undefined },
+    triggerSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     runtime?: ProjectRuntime): Promise<void> {
     addLocalFuncTelemetry(actionContext);
 
+    let workspaceFolder: WorkspaceFolder | undefined;
     if (workspacePath === undefined) {
-        workspacePath = await getWorkspacePath(actionContext);
+        workspaceFolder = await getWorkspaceFolder(actionContext);
+        workspacePath = workspaceFolder.uri.fsPath;
+    } else {
+        workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
     const projectPath: string | undefined = await verifyAndPromptToCreateProject(actionContext, workspacePath);
@@ -36,15 +41,15 @@ export async function createFunction(
 
     [language, runtime] = await verifyInitForVSCode(actionContext, projectPath, language, runtime);
 
-    const wizardContext: IFunctionWizardContext = { actionContext, projectPath, workspacePath, runtime, language, functionName };
+    const wizardContext: IFunctionWizardContext = { actionContext, projectPath, workspacePath, workspaceFolder, runtime, language, functionName };
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [await FunctionListStep.createFunctionListStep(wizardContext, { templateId, caseSensitiveFunctionSettings, isProjectWizard: false })]
+        promptSteps: [await FunctionListStep.create(wizardContext, { templateId, triggerSettings, isProjectWizard: false })]
     });
     await wizard.prompt(actionContext);
     await wizard.execute(actionContext);
 }
 
-async function getWorkspacePath(actionContext: IActionContext): Promise<string> {
+async function getWorkspaceFolder(actionContext: IActionContext): Promise<WorkspaceFolder> {
     let folder: WorkspaceFolder | undefined;
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
@@ -80,5 +85,5 @@ async function getWorkspacePath(actionContext: IActionContext): Promise<string> 
         }
     }
 
-    return folder.uri.fsPath;
+    return folder;
 }

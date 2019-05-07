@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ProjectLanguage, ProjectRuntime } from '../constants';
-import { IFunctionSetting, ValueType } from './IFunctionSetting';
+import { IBindingSetting, ValueType } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 
 /**
@@ -30,12 +30,13 @@ interface IRawSetting {
     } | undefined;
 }
 
-function parseDotnetSetting(rawSetting: IRawSetting): IFunctionSetting {
+function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
     return {
         name: rawSetting.Name,
         resourceType: undefined, // Dotnet templates do not give us resourceType information
         valueType: rawSetting.DataType === 'choice' ? ValueType.enum : ValueType.string,
         defaultValue: rawSetting.DefaultValue,
+        required: true, // Dotnet templates do not give us this information. Assume it's required
         label: rawSetting.Name,
         description: rawSetting.Documentation,
         enums: rawSetting.Choices ? Object.keys(rawSetting.Choices).map((key: string) => { return { value: key, displayName: key }; }) : [],
@@ -44,9 +45,9 @@ function parseDotnetSetting(rawSetting: IRawSetting): IFunctionSetting {
 }
 
 function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
-    const userPromptedSettings: IFunctionSetting[] = [];
+    const userPromptedSettings: IBindingSetting[] = [];
     for (const rawSetting of rawTemplate.Parameters) {
-        const setting: IFunctionSetting = parseDotnetSetting(<IRawSetting>rawSetting);
+        const setting: IBindingSetting = parseDotnetSetting(<IRawSetting>rawSetting);
         // Exclude some of the default parameters like 'name' and 'namespace' that apply for every function and are handled separately
         if (!/^(name|namespace|type|language)$/i.test(setting.name)) {
             userPromptedSettings.push(setting);
@@ -54,11 +55,12 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     }
 
     return {
-        isHttpTrigger: rawTemplate.Name.toLowerCase().startsWith('http') || rawTemplate.Name.toLowerCase().endsWith('webhook'),
+        isHttpTrigger: /^http/i.test(rawTemplate.Name) || /webhook$/i.test(rawTemplate.Name),
+        isTimerTrigger: /^timer/i.test(rawTemplate.Name),
         id: rawTemplate.Identity,
         name: rawTemplate.Name,
         defaultFunctionName: rawTemplate.DefaultName,
-        language: ProjectLanguage.CSharp,
+        language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
         categories: [TemplateCategory.Core] // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
     };
@@ -73,7 +75,7 @@ export function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRun
     for (const rawTemplate of rawTemplates) {
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
-            if (template.id.startsWith('Azure.Function.CSharp.') &&
+            if (/^Azure\.Function\.(F|C)Sharp\./i.test(template.id) &&
                 ((runtime === ProjectRuntime.v1 && template.id.includes('1')) || (runtime === ProjectRuntime.v2 && template.id.includes('2')))) {
                 templates.push(template);
             }

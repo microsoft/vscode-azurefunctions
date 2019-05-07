@@ -6,14 +6,13 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, parseError, StorageAccountKind, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
-import { localSettingsFileName } from './constants';
-import { ext } from './extensionVariables';
-import { localize } from './localize';
-import * as azUtil from './utils/azure';
-import * as fsUtil from './utils/fs';
+import { DialogResponses, parseError } from 'vscode-azureextensionui';
+import { localSettingsFileName } from '../constants';
+import { ext } from '../extensionVariables';
+import { localize } from '../localize';
+import * as fsUtil from '../utils/fs';
 
-export interface ILocalAppSettings {
+export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
     Values?: { [key: string]: string };
     ConnectionStrings?: { [key: string]: string };
@@ -21,52 +20,25 @@ export interface ILocalAppSettings {
 
 export const azureWebJobsStorageKey: string = 'AzureWebJobsStorage';
 
-export async function validateAzureWebJobsStorage(actionContext: IActionContext, localSettingsPath: string): Promise<void> {
+export async function getAzureWebJobsStorage(projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[azureWebJobsStorageKey]) {
-        return;
+        return process.env[azureWebJobsStorageKey];
     }
 
-    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
-    if (settings.Values && settings.Values[azureWebJobsStorageKey]) {
-        return;
-    }
-
-    const message: string = localize('azFunc.AzureWebJobsStorageWarning', 'All non-HTTP triggers require AzureWebJobsStorage to be set in \'{0}\' for local debugging.', localSettingsFileName);
-    const selectStorageAccount: vscode.MessageItem = { title: localize('azFunc.SelectStorageAccount', 'Select Storage Account') };
-    const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, selectStorageAccount, DialogResponses.skipForNow);
-    if (result === selectStorageAccount) {
-        const resourceResult: azUtil.IResourceResult = await azUtil.promptForStorageAccount(
-            actionContext,
-            {
-                kind: [
-                    StorageAccountKind.BlobStorage
-                ],
-                performance: [
-                    StorageAccountPerformance.Premium
-                ],
-                replication: [
-                    StorageAccountReplication.ZRS
-                ],
-                learnMoreLink: 'https://aka.ms/Cfqnrc'
-            }
-        );
-
-        // tslint:disable-next-line:strict-boolean-expressions
-        settings.Values = settings.Values || {};
-        settings.Values[azureWebJobsStorageKey] = resourceResult.connectionString;
-        await fsUtil.writeFormattedJson(localSettingsPath, settings);
-    }
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+    return settings.Values && settings.Values[azureWebJobsStorageKey];
 }
-export async function setLocalAppSetting(functionAppPath: string, key: string, value: string): Promise<void> {
+
+export async function setLocalAppSetting(functionAppPath: string, key: string, value: string, suppressPrompt: boolean = false): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
-    const settings: ILocalAppSettings = await getLocalAppSettings(localSettingsPath);
+    const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
 
     // tslint:disable-next-line:strict-boolean-expressions
     settings.Values = settings.Values || {};
     if (settings.Values[key] === value) {
         return;
-    } else if (settings.Values[key]) {
+    } else if (settings.Values[key] && !suppressPrompt) {
         const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
         if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
             return;
@@ -77,12 +49,12 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
     await fsUtil.writeFormattedJson(localSettingsPath, settings);
 }
 
-export async function getLocalAppSettings(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalAppSettings> {
+export async function getLocalSettingsJson(localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalSettingsJson> {
     if (await fse.pathExists(localSettingsPath)) {
         const data: string = (await fse.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
-                return <ILocalAppSettings>JSON.parse(data);
+                return <ILocalSettingsJson>JSON.parse(data);
             } catch (error) {
                 if (allowOverwrite) {
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);

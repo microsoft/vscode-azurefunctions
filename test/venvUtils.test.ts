@@ -11,7 +11,7 @@ import { cpUtils, ext, getGlobalSetting, Platform, pythonVenvSetting, updateGlob
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
-suite('venvUtils Tests', () => {
+suite('venvUtils', () => {
     const command: string = 'do a thing';
     const terminalSetting: string = 'terminal.integrated.shell.windows';
     const venvName: string = '.env';

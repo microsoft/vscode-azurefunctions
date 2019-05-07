@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { Disposable, FileSystemWatcher, Uri, workspace } from 'vscode';
+import { Disposable, FileSystemWatcher, Uri, workspace, WorkspaceFolder } from 'vscode';
 import { AzureTreeItem, RootTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { localize } from '../../localize';
@@ -21,8 +21,8 @@ export class LocalProjectTreeItem extends RootTreeItem<IProjectRoot> implements 
     private _disposables: Disposable[] = [];
     private _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    public constructor(projectPath: string, workspacePath: string) {
-        super(<IProjectRoot>{ projectPath, workspacePath });
+    public constructor(projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder) {
+        super(<IProjectRoot>{ projectPath, workspacePath, workspaceFolder });
 
         this.projectName = path.basename(projectPath);
 

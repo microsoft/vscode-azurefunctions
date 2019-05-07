@@ -80,7 +80,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         this.properties.cancelStep = '';
     }
 
-    await runPreDeployTask(this, deployFsPath, siteConfig.scmType, language, runtime);
+    await runPreDeployTask(this, deployFsPath, siteConfig.scmType);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
@@ -112,7 +112,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         }
     );
 
-    await notifyDeployComplete(this, node);
+    await notifyDeployComplete(this, node, workspaceFolder.uri.fsPath);
 }
 
 async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {

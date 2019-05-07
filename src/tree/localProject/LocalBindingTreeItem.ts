@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureTreeItem } from 'vscode-azureextensionui';
-import { IFunctionBinding } from '../../FunctionConfig';
+import { IFunctionBinding } from '../../funcConfig/function';
 import { nonNullProp } from '../../utils/nonNull';
 import { IProjectRoot } from './IProjectRoot';
 import { LocalBindingsTreeItem } from './LocalBindingsTreeItem';

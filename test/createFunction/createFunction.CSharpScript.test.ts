@@ -3,11 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestInput, TestUserInput } from '../../extension.bundle';
+import { DialogResponses, ext, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TestUserInput } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getDotnetScriptValidateOptions, validateProject } from '../validateProject';
@@ -17,32 +15,33 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharpScript;
     public runtime: ProjectRuntime = ProjectRuntime.v1;
 
-    public async validateFunction(testFolder: string, funcName: string): Promise<void> {
-        const functionPath: string = path.join(testFolder, funcName);
-        assert.equal(await fse.pathExists(path.join(functionPath, 'run.csx')), true, 'run.csx does not exist');
-        assert.equal(await fse.pathExists(path.join(functionPath, 'function.json')), true, 'function.json does not exist');
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json'),
+            path.join(functionName, 'run.csx')
+        ];
     }
 }
 
-suite('Create C# Script ~1 Function Tests', async () => {
+suite('Create Function C# Script ~1', async () => {
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester();
 
     suiteSetup(async () => {
         await tester.initAsync();
     });
 
-    const httpTrigger: string = 'HTTP trigger';
-    test(httpTrigger, async () => {
-        await tester.testCreateFunction(
-            httpTrigger,
-            TestInput.UseDefaultValue // Use default Authorization level
-        );
+    suiteTeardown(async () => {
+        await tester.dispose();
     });
 
     // Intentionally testing IoTHub trigger since a partner team plans to use that
     const iotTemplateId: string = 'IoTHubTrigger-CSharp';
     const iotFunctionName: string = 'createFunctionApi';
-    const iotFunctionSettings: {} = { connection: 'test_EVENTHUB', path: 'sample-workitems', consumerGroup: '$Default' };
+    const iotConnection: string = 'test_EVENTHUB';
+    const iotPath: string = 'test-workitems';
+    const iotConsumerGroup: string = 'testconsumergroup';
+    const iotTriggerSettings: {} = { connection: iotConnection, path: iotPath, consumerGroup: iotConsumerGroup };
+    const iotExpectedContents: string[] = [iotConnection, iotPath, iotConsumerGroup];
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
     test('createFunction API', async () => {
@@ -51,10 +50,10 @@ suite('Create C# Script ~1 Function Tests', async () => {
             const projectPath: string = path.join(tester.baseTestFolder, source);
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharpScript, async () => {
                 await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
-                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotFunctionSettings);
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotTriggerSettings);
                 });
             });
-            await tester.validateFunction(projectPath, iotFunctionName);
+            await tester.validateFunction(projectPath, iotFunctionName, iotExpectedContents);
         });
     });
 
@@ -62,8 +61,8 @@ suite('Create C# Script ~1 Function Tests', async () => {
         await runForAllTemplateSources(async (source) => {
             const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
             ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotFunctionSettings);
-            await tester.validateFunction(projectPath, iotFunctionName);
+            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
+            await tester.validateFunction(projectPath, iotFunctionName, iotExpectedContents);
             await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, ProjectRuntime.v1));
         });
     });

@@ -4,7 +4,7 @@
 
 Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
 out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
-to get started with the Azure Functions extension.
+to get started with the Azure Functions extension and check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
 
 **Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for additional information about the extension.**
 
@@ -23,6 +23,7 @@ Install the prerequisites for your desired language:
 * [C#](#net)
 * [Java](#java)
 * [Python (Preview)](#python)
+* [PowerShell (Preview)](#powershell)
 
 ## Features
 
@@ -81,17 +82,17 @@ brew install azure-functions-core-tools
 ### Linux
 
 1. Set up package feed
+    * Ubuntu 18.10
+
+        ```bash
+        wget -q https://packages.microsoft.com/config/ubuntu/18.10/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        ```
+
     * Ubuntu 18.04
 
         ```bash
         wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        ```
-
-    * Ubuntu 17.10
-
-        ```bash
-        wget -q https://packages.microsoft.com/config/ubuntu/17.10/packages-microsoft-prod.deb
         sudo dpkg -i packages-microsoft-prod.deb
         ```
 
@@ -105,6 +106,7 @@ brew install azure-functions-core-tools
 1. Install
 
     ```bash
+    sudo apt-get update
     sudo apt-get install azure-functions-core-tools
     ```
 
@@ -133,6 +135,14 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 ### Python
 
 * [Python 3.6.x](https://www.python.org/downloads/)
+
+### PowerShell
+
+* [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
+* [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
+* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+
+> **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/azure/azure-functions/functions-debug-powershell-local) for complete steps.
 
 ## Managing Azure Subscriptions
 

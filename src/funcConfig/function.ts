@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from "./localize";
+import { localize } from "../localize";
 
 export interface IFunctionJson {
     disabled?: boolean;
@@ -15,6 +15,7 @@ export interface IFunctionBinding {
     // tslint:disable-next-line:no-reserved-keywords
     type?: string;
     name?: string;
+    route?: string;
     direction?: string;
     authLevel?: string;
     [propertyName: string]: string | undefined;
@@ -26,56 +27,54 @@ export enum HttpAuthLevel {
     anonymous = 'anonymous'
 }
 
-enum BindingDirection {
-    in = 'in',
-    out = 'out'
-}
-
 /**
  * Basic config for a function, stored in the 'function.json' file at the root of the function's folder
  * Since the user can manually edit their 'function.json' file, we can't assume it will have the proper schema
  */
-export class FunctionConfig {
-    public readonly functionJson: IFunctionJson;
+export class ParsedFunctionJson {
+    public readonly data: IFunctionJson;
 
     // tslint:disable-next-line:no-any
     public constructor(data: any) {
         // tslint:disable-next-line:no-unsafe-any
         if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
-            this.functionJson = <IFunctionJson>data;
+            this.data = <IFunctionJson>data;
         } else {
-            this.functionJson = {};
+            this.data = {};
         }
     }
 
     public get bindings(): IFunctionBinding[] {
         // tslint:disable-next-line: strict-boolean-expressions
-        return this.functionJson.bindings || [];
+        return this.data.bindings || [];
     }
 
     public get disabled(): boolean {
-        return this.functionJson.disabled === true;
+        return this.data.disabled === true;
     }
 
-    public get inBinding(): IFunctionBinding | undefined {
-        let inBinding: IFunctionBinding | undefined = this.bindings.find((b: IFunctionBinding) => b.direction === BindingDirection.in);
-        if (inBinding === undefined && this.bindings.length > 0) {
-            // The generated 'function.json' file for C# class libraries doesn't have direction information (by design), so just use the first
-            inBinding = this.bindings[0];
-        }
-
-        return inBinding;
+    /**
+     * A trigger defines how a function is invoked and a function must have exactly one trigger.
+     * https://docs.microsoft.com/azure/azure-functions/functions-triggers-bindings
+     */
+    public get triggerBinding(): IFunctionBinding | undefined {
+        // tslint:disable-next-line: strict-boolean-expressions
+        return this.bindings.find(b => /trigger$/i.test(b.type || ''));
     }
 
     public get isHttpTrigger(): boolean {
-        return !!this.inBinding && !!this.inBinding.type && this.inBinding.type.toLowerCase() === 'httptrigger';
+        return !!this.triggerBinding && !!this.triggerBinding.type && /^http/i.test(this.triggerBinding.type);
+    }
+
+    public get isTimerTrigger(): boolean {
+        return !!this.triggerBinding && !!this.triggerBinding.type && /^timer/i.test(this.triggerBinding.type);
     }
 
     public get authLevel(): HttpAuthLevel {
-        if (this.inBinding && this.inBinding.authLevel) {
-            const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.inBinding.authLevel.toLowerCase()];
+        if (this.triggerBinding && this.triggerBinding.authLevel) {
+            const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.triggerBinding.authLevel.toLowerCase()];
             if (authLevel === undefined) {
-                throw new Error(localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.inBinding.authLevel));
+                throw new Error(localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.triggerBinding.authLevel));
             } else {
                 return authLevel;
             }

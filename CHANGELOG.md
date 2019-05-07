@@ -4,6 +4,22 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.17.0 - 2019-05-01
+
+### Added
+
+- New projects will no longer have a dependency on .NET Core for non-.NET developers
+- Preview support to create, debug, and deploy PowerShell projects
+- Right click in a "function.json" file to add a binding from a template
+- New JavaScript projects will include a package.json, with automatic logic to install any dependencies before debug or deploy
+- Right click on a timer function to execute now
+- If in advanced create mode, you may use a premium plan when creating a Function App in Azure
+- Added templates to the "verified" category, including Event Hub and Durable functions
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.17.0%22+is%3Aclosed)
+
 ## 0.16.0 - 2019-03-28
 
 ### Added

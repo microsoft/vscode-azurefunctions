@@ -6,12 +6,13 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { localSettingsFileName } from '../../constants';
+import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
+import { extInstallCommand, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { validateAzureWebJobsStorage } from '../../LocalAppSettings';
+import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { writeFormattedJson } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -53,6 +54,10 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(wizardContext);
+        if (await this.shouldUseExtensionBundle(wizardContext, template)) {
+            await this.verifyExtensionBundle(wizardContext);
+        }
+
         const cachedFunc: ICachedFunction = { projectPath: wizardContext.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
 
         if (wizardContext.openBehavior) {
@@ -65,8 +70,54 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         runPostFunctionCreateSteps(cachedFunc);
     }
 
+    public async verifyExtensionBundle(wizardContext: T): Promise<void> {
+        const hostFilePath: string = path.join(wizardContext.projectPath, hostFileName);
+        try {
+            const hostJson: IHostJsonV2 = <IHostJsonV2>await fse.readJSON(hostFilePath);
+            if (!hostJson.extensionBundle) {
+                // https://github.com/Microsoft/vscode-azurefunctions/issues/1202
+                hostJson.extensionBundle = {
+                    id: 'Microsoft.Azure.Functions.ExtensionBundle',
+                    version: '[1.*, 2.0.0)'
+                };
+                await writeFormattedJson(hostFilePath, hostJson);
+            }
+        } catch (error) {
+            throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
+        }
+    }
+
     public shouldExecute(wizardContext: T): boolean {
         return !!wizardContext.functionTemplate;
+    }
+
+    private async shouldUseExtensionBundle(wizardContext: T, template: IFunctionTemplate): Promise<boolean> {
+        // v1 doesn't support bundles
+        // http and timer triggers don't need a bundle
+        // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
+        if (wizardContext.runtime === ProjectRuntime.v1 ||
+            template.isHttpTrigger || template.isTimerTrigger ||
+            wizardContext.language === ProjectLanguage.CSharp || wizardContext.language === ProjectLanguage.FSharp) {
+            return false;
+        }
+
+        // Old projects setup to use "func extensions install" shouldn't use a bundle because it could lead to duplicate or conflicting binaries
+        try {
+            const filesToCheck: string[] = [tasksFileName, settingsFileName];
+            for (const file of filesToCheck) {
+                const filePath: string = path.join(wizardContext.workspacePath, vscodeFolderName, file);
+                if (await fse.pathExists(filePath)) {
+                    const contents: string = (await fse.readFile(filePath)).toString();
+                    if (contents.includes(extInstallCommand)) {
+                        return false;
+                    }
+                }
+            }
+        } catch {
+            // ignore and use bundles (the default for new projects)
+        }
+
+        return true;
     }
 }
 
@@ -74,14 +125,11 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
     callWithTelemetryAndErrorHandling('postFunctionCreate', async function (this: IActionContext): Promise<void> {
+        this.suppressTelemetry = true;
+
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {
                 window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
-            }
-
-            if (!func.isHttpTrigger) {
-                const localSettingsPath: string = path.join(func.projectPath, localSettingsFileName);
-                await validateAzureWebJobsStorage(this, localSettingsPath);
             }
         }
     });
