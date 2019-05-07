@@ -20,11 +20,11 @@ import { uploadAppSettings } from './commands/appSettings/uploadAppSettings';
 import { configureDeploymentSource } from './commands/configureDeploymentSource';
 import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { createChildNode } from './commands/createChildNode';
-import { createDeploymentSlot } from './commands/createDeploymentSlot';
 import { createFunction } from './commands/createFunction/createFunction';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
+import { createSlot } from './commands/createSlot';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
@@ -61,11 +61,8 @@ import { FunctionAppProvider } from './tree/FunctionAppProvider';
 import { getProjectTreeItems } from './tree/localProject/getProjectTreeItems';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
-import { SlotsTreeItem } from './tree/SlotsTreeItem';
-import { SlotTreeItemBase } from './tree/SlotTreeItemBase';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
-// tslint:disable-next-line: max-func-body-length
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
@@ -117,9 +114,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
         registerCommand('azureFunctions.deleteFunctionApp', async (node?: AzureParentTreeItem) => await deleteNode(ProductionSlotTreeItem.contextValue, node));
-        registerCommand('azureFunctions.deploy', async function (this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-            await deploy(this, target, functionAppId);
-        });
+        registerCommand('azureFunctions.deploy', deploy);
         registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
         registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);
         registerCommand('azureFunctions.executeFunction', executeFunction);
@@ -147,9 +142,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.addBinding', addBinding);
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
-        registerCommand('azureFunctions.createSlot', async function (this: IActionContext, node?: SlotsTreeItem): Promise<void> {
-            await createDeploymentSlot(this, node);
-        });
+        registerCommand('azureFunctions.createSlot', createSlot);
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
 

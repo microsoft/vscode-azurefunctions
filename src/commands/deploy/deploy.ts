@@ -21,8 +21,8 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export async function deploy(actionContext: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    addLocalFuncTelemetry(actionContext);
+export async function deploy(this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+    addLocalFuncTelemetry(this);
 
     let node: SlotTreeItemBase | undefined;
     let deployFsPath: string = await getDeployFsPath(target);
@@ -57,30 +57,30 @@ export async function deploy(actionContext: IActionContext, target?: vscode.Uri 
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
     const isNewFunctionApp: boolean = newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
-    actionContext.properties.isNewFunctionApp = String(isNewFunctionApp);
+    this.properties.isNewFunctionApp = String(isNewFunctionApp);
 
     const client: appservice.SiteClient = node.root.client;
-    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(actionContext, deployFsPath);
-    actionContext.properties.projectLanguage = language;
-    actionContext.properties.projectRuntime = runtime;
+    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(this, deployFsPath);
+    this.properties.projectLanguage = language;
+    this.properties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
 
-    await verifyAppSettings(actionContext, node, runtime, language);
+    await verifyAppSettings(this, node, runtime, language);
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (!isNewFunctionApp && isZipDeploy) {
-        const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? actionContext will overwrite any previous deployment and cannot be undone.', client.fullName);
-        actionContext.properties.cancelStep = 'confirmDestructiveDeployment';
+        const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
+        this.properties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
         await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
-        actionContext.properties.cancelStep = '';
+        this.properties.cancelStep = '';
     }
 
-    await runPreDeployTask(actionContext, deployFsPath, siteConfig.scmType);
+    await runPreDeployTask(this, deployFsPath, siteConfig.scmType);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
@@ -89,7 +89,7 @@ export async function deploy(actionContext: IActionContext, target?: vscode.Uri 
 
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises
-        validateGlobSettings(actionContext, deployFsPath);
+        validateGlobSettings(this, deployFsPath);
     }
 
     await node.runWithTemporaryDescription(
@@ -102,7 +102,7 @@ export async function deploy(actionContext: IActionContext, target?: vscode.Uri 
                     ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                await appservice.deploy(client, deployFsPath, actionContext);
+                await appservice.deploy(client, deployFsPath, this);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
@@ -112,7 +112,7 @@ export async function deploy(actionContext: IActionContext, target?: vscode.Uri 
         }
     );
 
-    await notifyDeployComplete(actionContext, node, workspaceFolder.uri.fsPath);
+    await notifyDeployComplete(this, node, workspaceFolder.uri.fsPath);
 }
 
 async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {
