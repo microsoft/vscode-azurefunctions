@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getRandomHexString, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
+import { delay } from './msdelay';
 import { runWithFuncSetting } from './runWithSetting';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
@@ -25,7 +26,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     let webSiteClient: WebSiteManagementClient;
     const resourceName1: string = getRandomHexString().toLowerCase();
     const resourceName3: string = getRandomHexString().toLowerCase();
-    const projectPath: string = path.join('C:', 'testOutput');
+    const projectPath: string = path.join('D:', 'testOutput');
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -43,7 +44,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             this.skip();
         }
         this.timeout(1200 * 1000);
-
+        await clearnewprojectfile(projectPath);
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
         for (const resourceGroup of resourceGroupsToDelete) {
             if (await client.resourceGroups.checkExistence(resourceGroup)) {
@@ -72,13 +73,14 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
                     const templateId: string = 'HttpTrigger-JavaScript';
                     const authLevel: string = 'function';
                     await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, ProjectLanguage.JavaScript, ProjectRuntime.v2, false, templateId, functionName, { aUtHLevel: authLevel });
-                    await validateProject(projectPath, getJavaScriptValidateOptions());
+                    await validateProject(projectPath, getJavaScriptValidateOptions(true));
                 });
             });
         });
 
         ext.ui = new TestUserInput([resourceName1, 'Deploy']);
-        await vscode.commands.executeCommand('azureFunctions.deploy', projectPath);
+        await vscode.commands.executeCommand('azureFunctions.deploy');
+        await delay(5000);
         const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName1, resourceName1);
         assert.equal(getFunction[0].name, `${resourceName1}/${functionName}`);
 
@@ -98,7 +100,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const storageAccountName: string = getRandomHexString().toLowerCase();
         resourceGroupsToDelete.push(resourceGroupName);
         await runWithFuncSetting('advancedCreation', 'true', async () => {
-            const testInputs: string[] = [resourceName2, 'Windows', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
+            const testInputs: string[] = [resourceName2, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
             ext.ui = new TestUserInput(testInputs);
             await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
             const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName2);
@@ -163,8 +165,9 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             });
         });
 
-        ext.ui = new TestUserInput([resourceName3, 'Deploy']);
-        await vscode.commands.executeCommand('azureFunctions.deploy', projectPath);
+        ext.ui = new TestUserInput([resourceName3, 'Update remote runtime', 'Deploy']);
+        await vscode.commands.executeCommand('azureFunctions.deploy');
+        await delay(5000);
         const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName3, resourceName3);
         assert.equal(getFunction[0].name, `${resourceName3}/${functionName}`);
 
@@ -182,19 +185,22 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     test('createFunctionApp API', async () => {
         const resourceGroupName: string = getRandomHexString();
         resourceGroupsToDelete.push(resourceGroupName);
-
         const appAndStorageName1: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
-        const testInputs1: string[] = [appAndStorageName1];
-        ext.ui = new TestUserInput(testInputs1);
-        const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-        const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
-        assert.ok(createdApp1, 'Function app with new rg/sa failed.');
-        assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
+        await runWithFuncSetting('advancedCreation', undefined, async () => {
+            await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
+                const testInputs1: string[] = [appAndStorageName1];
+                ext.ui = new TestUserInput(testInputs1);
+                const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
+                const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
+                assert.ok(createdApp1, 'Function app with new rg/sa failed.');
+                assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
+            });
+        });
 
         // Create another function app, but use the existing resource group and storage account through advanced creation
         await runWithFuncSetting('advancedCreation', 'true', async () => {
             const functionAppName2: string = getRandomHexString();
-            const testInputs2: string[] = [functionAppName2, 'Windows', 'JavaScript', appAndStorageName1];
+            const testInputs2: string[] = [functionAppName2, 'Windows', 'Consumption Plan', 'JavaScript', appAndStorageName1];
             ext.ui = new TestUserInput(testInputs2);
             const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
             const createdApp2: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, functionAppName2);

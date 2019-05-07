@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%extension.description%",
-    "version": "0.16.1-alpha",
+    "version": "0.17.1-alpha",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -42,6 +42,7 @@
         "onCommand:azureFunctions.restartFunctionApp",
         "onCommand:azureFunctions.deleteFunctionApp",
         "onCommand:azureFunctions.copyFunctionUrl",
+        "onCommand:azureFunctions.executeFunction",
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.configureDeploymentSource",
@@ -69,6 +70,7 @@
         "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.swapSlot",
         "onCommand:azureFunctions.addBinding",
+        "onCommand:azureFunctions.setAzureWebJobsStorage",
         "workspaceContains:host.json",
         "workspaceContains:*/host.json",
         "onView:azureFunctionsExplorer",
@@ -174,6 +176,11 @@
             {
                 "command": "azureFunctions.copyFunctionUrl",
                 "title": "%azFunc.copyFunctionUrl%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.executeFunction",
+                "title": "%azFunc.executeFunction%",
                 "category": "Azure Functions"
             },
             {
@@ -307,6 +314,11 @@
             {
                 "command": "azureFunctions.addBinding",
                 "title": "%azFunc.addBinding%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.setAzureWebJobsStorage",
+                "title": "%azFunc.setAzureWebJobsStorage%",
                 "category": "Azure Functions"
             }
         ],
@@ -449,22 +461,27 @@
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionHttp(ReadOnly|)$/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.executeFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionTimer(ReadOnly|)$/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteFunction",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunction",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(ReadOnly|)$/",
+                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@2"
                 },
                 {
@@ -844,6 +861,11 @@
                         "type": "string",
                         "description": "%azFunc.pythonVenvDescription%"
                     },
+                    "azureFunctions.createPythonVenv": {
+                        "type": "boolean",
+                        "description": "%azFunc.createPythonVenv%",
+                        "default": true
+                    },
                     "azureFunctions.enableSlots": {
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",
@@ -852,11 +874,6 @@
                     "azureFunctions.advancedCreation": {
                         "type": "boolean",
                         "description": "%azFunc.advancedCreationDescription%",
-                        "default": false
-                    },
-                    "azureFunctions.enablePowerShell": {
-                        "type": "boolean",
-                        "description": "%azFunc.enablePowerShell%",
                         "default": false
                     },
                     "azureFunctions.enableProjectTree": {
@@ -917,10 +934,15 @@
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.1.2",
+        "azure-arm-eventhub": "^3.2.0",
         "azure-arm-sb": "^2.3.0-preview",
         "azure-arm-storage": "^4.0.0",
         "azure-arm-website": "^5.3.0",
+<<<<<<< HEAD
         "clipboardy": "^2.0.0",
+=======
+        "azure-storage": "^2.10.3",
+>>>>>>> master
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
         "ms-rest-azure": "^2.3.1",
@@ -928,8 +950,8 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.0",
-        "vscode-azureappservice": "^0.35.0",
-        "vscode-azureextensionui": "^0.23.1",
+        "vscode-azureappservice": "^0.37.3",
+        "vscode-azureextensionui": "^0.23.3",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.0",
         "websocket": "^1.0.25",
