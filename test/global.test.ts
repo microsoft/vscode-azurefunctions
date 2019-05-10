@@ -8,8 +8,8 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { TestOutputChannel } from 'vscode-azureextensiondev';
 import { ext, getRandomHexString, getTemplateProvider, parseError, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
-import { TestOutputChannel } from './TestOutputChannel';
 
 export let longRunningTestsEnabled: boolean;
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);

@@ -34,7 +34,6 @@ six==1.12.0
 `;
 
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
-    // tslint:disable-next-line: no-use-before-declare
     protected gitignore: string = pythonGitignore;
 
     public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
