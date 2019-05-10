@@ -10,6 +10,7 @@ import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
+import { delay } from '../utils/delay';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -112,8 +113,4 @@ async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, tim
     }
 
     throw timeoutError;
-}
-
-async function delay(ms: number): Promise<void> {
-    await new Promise<void>((resolve: () => void): NodeJS.Timer => setTimeout(resolve, ms));
 }

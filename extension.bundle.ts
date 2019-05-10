@@ -31,6 +31,7 @@ export * from './src/templates/ScriptTemplateRetriever';
 export * from './src/templates/TemplateProvider';
 export * from './src/tree/FunctionAppProvider';
 export * from './src/utils/fs';
+export * from './src/utils/delay';
 export * from './src/utils/cpUtils';
 export * from './src/utils/venvUtils';
 export * from './src/vsCodeConfig/extensions';

@@ -899,6 +899,7 @@
         "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats"
     },
     "devDependencies": {
+        "@types/clipboardy": "^2.0.0",
         "@types/fs-extra": "^4.0.3",
         "@types/glob": "^7.1.1",
         "@types/gulp": "^4.0.6",
