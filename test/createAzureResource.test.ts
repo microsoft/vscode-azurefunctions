@@ -7,7 +7,6 @@ import * as assert from 'assert';
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { execSync } from 'child_process';
-// tslint:disable-next-line: no-implicit-dependencies
 import * as clipboard from 'clipboardy';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
