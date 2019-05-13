@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, createAzureClient, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -37,7 +37,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
@@ -49,8 +49,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
 
         this._nextLink = webAppCollection.nextLink;
 
-        return await createTreeItemsWithErrorHandling(
-            this,
+        return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidSlot',
             async (site: WebSiteManagementModels.Site) => {

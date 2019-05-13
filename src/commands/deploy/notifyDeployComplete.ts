@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { MessageItem, window } from 'vscode';
-import { AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
@@ -40,10 +40,10 @@ export async function notifyDeployComplete(actionContext: IActionContext, node: 
 
 async function listHttpTriggerUrls(actionContext: IActionContext, node: SlotTreeItemBase): Promise<void> {
     try {
-        const children: AzureTreeItem[] = await node.getCachedChildren();
+        const children: AzExtTreeItem[] = await node.getCachedChildren();
         const functionsNode: FunctionsTreeItem = <FunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof FunctionsTreeItem);
         await node.treeDataProvider.refresh(functionsNode);
-        const functions: AzureTreeItem[] = await functionsNode.getCachedChildren();
+        const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren();
         const anonFunctions: FunctionTreeItem[] = <FunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
         if (anonFunctions.length > 0) {
             ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));

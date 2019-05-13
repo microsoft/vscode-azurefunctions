@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { isArray } from 'util';
 import { ISiteTreeRoot } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureParentTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { FunctionTreeItem, getFunctionNameFromId } from './FunctionTreeItem';
@@ -57,7 +57,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
@@ -71,8 +71,7 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
 
         this._nextLink = funcs.nextLink;
 
-        return await createTreeItemsWithErrorHandling(
-            this,
+        return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
             async (fe: WebSiteManagementModels.FunctionEnvelope) => await FunctionTreeItem.createFunctionTreeItem(this, fe),

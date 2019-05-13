@@ -6,7 +6,7 @@
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem } from 'vscode';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -14,9 +14,10 @@ import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
 import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { isLocalTreeItem } from './localProject/LocalTreeItem';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
-export class FunctionAppProvider extends SubscriptionTreeItem {
+export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App in Azure');
 
     private _nextLink: string | undefined;
@@ -25,7 +26,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzureTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
@@ -49,8 +50,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         this._nextLink = webAppCollection.nextLink;
 
-        return await createTreeItemsWithErrorHandling(
-            this,
+        return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
             async (site: WebSiteManagementModels.Site) => {
@@ -165,6 +165,10 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return await ProductionSlotTreeItem.create(this, new SiteClient(site, this.root));
+    }
+
+    public isAncestorOfImpl(contextValue: string | RegExp): boolean {
+        return !isLocalTreeItem(contextValue);
     }
 }
 
