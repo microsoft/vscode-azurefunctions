@@ -9,7 +9,7 @@ import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function swapSlot(sourceSlotNode: SlotTreeItem | undefined): Promise<void> {
     if (!sourceSlotNode) {
-        sourceSlotNode = <SlotTreeItem>await ext.tree.showTreeItemPicker(SlotTreeItem.contextValue);
+        sourceSlotNode = await ext.tree.showTreeItemPicker<SlotTreeItem>(SlotTreeItem.contextValue);
     }
 
     const deploymentSlots: SlotTreeItem[] = <SlotTreeItem[]>await sourceSlotNode.parent.getCachedChildren();

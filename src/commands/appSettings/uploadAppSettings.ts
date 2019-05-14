@@ -22,7 +22,7 @@ export async function uploadAppSettings(node?: AppSettingsTreeItem, workspacePat
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     if (!node) {
-        node = <AppSettingsTreeItem>await ext.tree.showTreeItemPicker(AppSettingsTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue);
     }
 
     const client: SiteClient = node.root.client;

@@ -20,7 +20,7 @@ const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:tra
 
 export async function remoteDebugFunctionApp(node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
     }
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();

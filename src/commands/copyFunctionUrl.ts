@@ -10,7 +10,7 @@ import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 
 export async function copyFunctionUrl(node?: FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <FunctionTreeItem>await ext.tree.showTreeItemPicker(/^azFuncFunctionHttp(ReadOnly|)$/i);
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItem>(/^azFuncFunctionHttp(ReadOnly|)$/i);
     }
 
     if (node.triggerUrl) {
