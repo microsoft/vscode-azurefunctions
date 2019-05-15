@@ -15,7 +15,7 @@ import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
 import { isLocalTreeItem } from './localProject/LocalTreeItem';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
-export const enableProjectTreeSetting: string = 'enableProjectTree';
+const enableProjectTreeSetting: string = 'enableProjectTree';
 
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     private _projectDisposables: Disposable[] = [];
