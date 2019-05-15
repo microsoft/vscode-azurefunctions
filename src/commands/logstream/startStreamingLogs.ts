@@ -14,7 +14,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function startStreamingLogs(treeItem?: SlotTreeItemBase | FunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
     }
 
     const client: appservice.SiteClient = treeItem.root.client;

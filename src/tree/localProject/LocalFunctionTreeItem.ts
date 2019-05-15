@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { nodeUtils } from '../../utils/nodeUtils';
 import { FunctionTreeItem } from '../FunctionTreeItem';
-import { IProjectRoot } from './IProjectRoot';
 import { LocalBindingsTreeItem } from './LocalBindingsTreeItem';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
+import { LocalParentTreeItem, LocalTreeItem } from './LocalTreeItem';
 
-export class LocalFunctionTreeItem extends AzureParentTreeItem<IProjectRoot> {
+export class LocalFunctionTreeItem extends LocalParentTreeItem {
     public static contextValue: string = 'azFuncLocalFunction';
     public contextValue: string = LocalFunctionTreeItem.contextValue;
     private readonly _name: string;
@@ -39,11 +38,11 @@ export class LocalFunctionTreeItem extends AzureParentTreeItem<IProjectRoot> {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzureTreeItem<IProjectRoot>[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<LocalTreeItem[]> {
         return [this._bindingsNode];
     }
 
-    public pickTreeItemImpl(): AzureTreeItem<IProjectRoot> {
+    public pickTreeItemImpl(): LocalTreeItem {
         return this._bindingsNode;
     }
 }

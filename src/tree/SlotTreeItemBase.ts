@@ -127,32 +127,35 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
     }
 
-    public pickTreeItemImpl(expectedContextValue: string | RegExp): AzureTreeItem<ISiteTreeRoot> | undefined {
-        switch (expectedContextValue) {
-            case FunctionsTreeItem.contextValue:
-                return this._functionsTreeItem;
-            case AppSettingsTreeItem.contextValue:
-            case AppSettingTreeItem.contextValue:
-                return this.appSettingsTreeItem;
-            case ProxiesTreeItem.contextValue:
-            case ProxyTreeItem.contextValue:
-            case ProxyTreeItem.readOnlyContextValue:
-                return this._proxiesTreeItem;
-            case DeploymentsTreeItem.contextValueConnected:
-            case DeploymentsTreeItem.contextValueUnconnected:
-            case DeploymentTreeItem.contextValue:
-                return this.deploymentsNode;
-            default:
-                if (typeof expectedContextValue === 'string') {
-                    // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                    if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
-                        return this.deploymentsNode;
-                    }
-                } else if (expectedContextValue.source.includes(FunctionTreeItem.contextValueBase)) {
+    public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzureTreeItem<ISiteTreeRoot> | undefined {
+        for (const expectedContextValue of expectedContextValues) {
+            switch (expectedContextValue) {
+                case FunctionsTreeItem.contextValue:
                     return this._functionsTreeItem;
-                }
-                return undefined;
+                case AppSettingsTreeItem.contextValue:
+                case AppSettingTreeItem.contextValue:
+                    return this.appSettingsTreeItem;
+                case ProxiesTreeItem.contextValue:
+                case ProxyTreeItem.contextValue:
+                case ProxyTreeItem.readOnlyContextValue:
+                    return this._proxiesTreeItem;
+                case DeploymentsTreeItem.contextValueConnected:
+                case DeploymentsTreeItem.contextValueUnconnected:
+                case DeploymentTreeItem.contextValue:
+                    return this.deploymentsNode;
+                default:
+                    if (typeof expectedContextValue === 'string') {
+                        // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
+                        if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
+                            return this.deploymentsNode;
+                        }
+                    } else if (expectedContextValue.source.includes(FunctionTreeItem.contextValueBase)) {
+                        return this._functionsTreeItem;
+                    }
+            }
         }
+
+        return undefined;
     }
 
     public async isReadOnly(): Promise<boolean> {

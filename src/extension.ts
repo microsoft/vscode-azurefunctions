@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+import { AzExtTreeDataProvider, AzureParentTreeItem, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { addBinding } from './commands/addBinding/addBinding';
@@ -56,8 +56,7 @@ import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFun
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { getTemplateProvider } from './templates/TemplateProvider';
-import { FunctionAppProvider } from './tree/FunctionAppProvider';
-import { getProjectTreeItems } from './tree/localProject/getProjectTreeItems';
+import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { SlotsTreeItem } from './tree/SlotsTreeItem';
@@ -82,9 +81,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         // tslint:disable-next-line:no-floating-promises
         validateFuncCoreToolsIsLatest();
 
-        ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.loadMore', await getProjectTreeItems(context));
-        context.subscriptions.push(ext.tree);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider('azureFunctionsExplorer', ext.tree));
+        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
+        context.subscriptions.push(ext.azureAccountTreeItem);
+        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
+        context.subscriptions.push(vscode.window.createTreeView('azureFunctionsExplorer', { treeDataProvider: ext.tree }));
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises

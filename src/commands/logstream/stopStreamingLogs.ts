@@ -11,7 +11,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function stopStreamingLogs(node?: SlotTreeItemBase | FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
     }
 
     await appservice.stopStreamingLogs(node.root.client, node.logStreamPath);

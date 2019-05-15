@@ -11,7 +11,7 @@ import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
 
 export async function connectToGitHub(this: IActionContext, node?: ProductionSlotTreeItem | DeploymentsTreeItem): Promise<void> {
     if (!node) {
-        node = <ProductionSlotTreeItem>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue);
     }
     await editScmType(node.root.client, node, this, ScmType.GitHub);
     if (node instanceof ProductionSlotTreeItem) {

@@ -5,15 +5,15 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { AzureParentTreeItem, AzureTreeItem, createTreeItemsWithErrorHandling } from 'vscode-azureextensionui';
+import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nodeUtils } from '../../utils/nodeUtils';
-import { IProjectRoot } from './IProjectRoot';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
+import { LocalParentTreeItem } from './LocalTreeItem';
 
-export class LocalFunctionsTreeItem extends AzureParentTreeItem<IProjectRoot> {
+export class LocalFunctionsTreeItem extends LocalParentTreeItem {
     public static contextValue: string = 'azFuncLocalFunctions';
     public readonly contextValue: string = LocalFunctionsTreeItem.contextValue;
     public readonly label: string = localize('functions', 'Functions');
@@ -31,7 +31,7 @@ export class LocalFunctionsTreeItem extends AzureParentTreeItem<IProjectRoot> {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzureTreeItem<IProjectRoot>[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         const subpaths: string[] = await fse.readdir(this.root.projectPath);
 
         const functions: string[] = [];
@@ -41,8 +41,7 @@ export class LocalFunctionsTreeItem extends AzureParentTreeItem<IProjectRoot> {
             }
         }));
 
-        return await createTreeItemsWithErrorHandling(
-            this,
+        return await this.createTreeItemsWithErrorHandling(
             functions,
             'azFuncInvalidLocalFunction',
             async func => {

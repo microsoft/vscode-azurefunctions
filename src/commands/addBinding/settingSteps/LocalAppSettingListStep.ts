@@ -70,7 +70,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
                     };
             }
 
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.tree.getSubscriptionPromptStep(wizardContext);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(wizardContext);
             if (subscriptionPromptStep) {
                 azurePromptSteps.unshift(subscriptionPromptStep);
             }

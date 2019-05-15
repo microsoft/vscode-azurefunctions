@@ -44,7 +44,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         if (wizardContext.azureWebJobsStorageType === 'azure') {
             const promptSteps: AzureWizardPromptStep<T & ISubscriptionWizardContext>[] = [];
 
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.tree.getSubscriptionPromptStep(wizardContext);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(wizardContext);
             if (subscriptionPromptStep) {
                 promptSteps.push(subscriptionPromptStep);
             }

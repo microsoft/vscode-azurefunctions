@@ -9,7 +9,7 @@ import { ext } from "../../extensionVariables";
 
 export async function disconnectRepo(this: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
     if (!node) {
-        node = <DeploymentsTreeItem>(await ext.tree.showTreeItemPicker(DeploymentsTreeItem.contextValueConnected));
+        node = await ext.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected);
     }
     await node.disconnectRepo(this);
 }

@@ -8,7 +8,7 @@ import { ext } from '../extensionVariables';
 
 export async function renameAppSetting(node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
-        node = <AppSettingTreeItem>await ext.tree.showTreeItemPicker(AppSettingTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AppSettingTreeItem>(AppSettingTreeItem.contextValue);
     }
 
     await node.rename();
