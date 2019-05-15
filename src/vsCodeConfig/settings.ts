@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration, WorkspaceFolder } from "vscode";
+import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -45,21 +45,24 @@ export function getWorkspaceSetting<T>(key: string, fsPath?: string, prefix: str
 
 /**
  * Searches through all open folders and gets the current workspace setting (as long as there are no conflicts)
+ * Uses extensionPrefix 'azureFunctions' unless otherwise specified
  */
 export function getWorkspaceSettingFromAnyFolder(key: string, prefix: string = extensionPrefix): string | undefined {
-    // tslint:disable-next-line: strict-boolean-expressions
-    const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
-    let result: string | undefined;
-    for (const folder of folders) {
-        const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, folder.uri);
-        const folderResult: string | undefined = projectConfiguration.get<string>(key);
-        if (!result) {
-            result = folderResult;
-        } else if (folderResult && result !== folderResult) {
-            return undefined;
+    if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
+        let result: string | undefined;
+        for (const folder of workspace.workspaceFolders) {
+            const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, folder.uri);
+            const folderResult: string | undefined = projectConfiguration.get<string>(key);
+            if (!result) {
+                result = folderResult;
+            } else if (folderResult && result !== folderResult) {
+                return undefined;
+            }
         }
+        return result;
+    } else {
+        return getGlobalSetting(key, prefix);
     }
-    return result;
 }
 
 export async function promptForProjectRuntime(message?: string): Promise<ProjectRuntime> {
