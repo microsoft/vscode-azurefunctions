@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { Disposable, FileSystemWatcher, Uri, workspace, WorkspaceFolder } from 'vscode';
-import { AzureTreeItem, RootTreeItem } from 'vscode-azureextensionui';
+import { Disposable, WorkspaceFolder } from 'vscode';
+import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { localize } from '../../localize';
 import { nodeUtils } from '../../utils/nodeUtils';
-import { IProjectRoot } from './IProjectRoot';
+import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
+import { IProjectRoot, isLocalTreeItem, LocalParentTreeItem } from './LocalTreeItem';
 
-export class LocalProjectTreeItem extends RootTreeItem<IProjectRoot> implements Disposable {
+export class LocalProjectTreeItem extends LocalParentTreeItem implements Disposable {
     public static contextValue: string = 'azFuncLocalProject';
     public contextValue: string = LocalProjectTreeItem.contextValue;
     public readonly label: string = localize('localProject', 'Local Project');
@@ -20,19 +21,21 @@ export class LocalProjectTreeItem extends RootTreeItem<IProjectRoot> implements 
 
     private _disposables: Disposable[] = [];
     private _localFunctionsTreeItem: LocalFunctionsTreeItem;
+    private _root: IProjectRoot;
 
-    public constructor(projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder) {
-        super(<IProjectRoot>{ projectPath, workspacePath, workspaceFolder });
+    public constructor(parent: AzExtParentTreeItem, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder) {
+        super(parent);
+        this._root = { projectPath, workspacePath, workspaceFolder };
 
         this.projectName = path.basename(projectPath);
 
-        const watcher: FileSystemWatcher = workspace.createFileSystemWatcher(path.join(projectPath, '*', functionJsonFileName));
-        this._disposables.push(watcher);
-        this._disposables.push(watcher.onDidChange(async e => await this.functionsChanged(e)));
-        this._disposables.push(watcher.onDidCreate(async e => await this.functionsChanged(e)));
-        this._disposables.push(watcher.onDidDelete(async e => await this.functionsChanged(e)));
+        this._disposables.push(createRefreshFileWatcher(this, path.join(projectPath, '*', functionJsonFileName)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
+    }
+
+    public get root(): IProjectRoot {
+        return this._root;
     }
 
     public get iconPath(): nodeUtils.IThemedIconPath {
@@ -48,26 +51,22 @@ export class LocalProjectTreeItem extends RootTreeItem<IProjectRoot> implements 
     }
 
     public dispose(): void {
-        this._disposables.forEach(d => { d.dispose(); });
+        Disposable.from(...this._disposables).dispose();
     }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzureTreeItem<IProjectRoot>[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._localFunctionsTreeItem];
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {
-        return typeof contextValue === 'string' && /^azFuncLocal/.test(contextValue);
+        return isLocalTreeItem(contextValue);
     }
 
-    public pickTreeItemImpl(): AzureTreeItem<IProjectRoot> {
+    public pickTreeItemImpl(): AzExtTreeItem {
         return this._localFunctionsTreeItem;
-    }
-
-    private async functionsChanged(_uri: Uri): Promise<void> {
-        await this.refresh();
     }
 }

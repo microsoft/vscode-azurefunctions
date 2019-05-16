@@ -41,7 +41,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
             // event is fired from azure-extensionui if node was created during deployment
             const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
             try {
-                node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
             } finally {
                 disposable.dispose();
             }

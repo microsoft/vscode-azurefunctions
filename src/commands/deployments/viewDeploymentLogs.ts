@@ -8,7 +8,7 @@ import { ext } from "../../extensionVariables";
 
 export async function viewDeploymentLogs(node?: DeploymentTreeItem): Promise<void> {
     if (!node) {
-        node = <DeploymentTreeItem>(await ext.tree.showTreeItemPicker(DeploymentTreeItem.contextValue));
+        node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue);
     }
     await node.viewDeploymentLogs();
 }

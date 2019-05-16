@@ -3,16 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureParentTreeItem, AzureTreeItem, IActionContext, SubscriptionTreeItem } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
-import { nodeUtils } from '../utils/nodeUtils';
+import { localize } from '../localize';
+import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
 export async function createFunctionApp(this: IActionContext, subscription?: AzureParentTreeItem | string, resourceGroup?: string): Promise<string> {
-    let node: AzureParentTreeItem;
+    let node: AzureParentTreeItem | undefined;
     if (typeof subscription === 'string') {
-        node = await nodeUtils.getSubscriptionNode(ext.tree, subscription);
+        node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`);
+        if (!node) {
+            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscription));
+        }
     } else if (!subscription) {
-        node = <AzureParentTreeItem>await ext.tree.showTreeItemPicker(SubscriptionTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AzureParentTreeItem>(SubscriptionTreeItem.contextValue);
     } else {
         node = subscription;
     }

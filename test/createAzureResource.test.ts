@@ -12,7 +12,7 @@ import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, delay, DialogResponses, ext, FunctionAppProvider, getRandomHexString, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
+import { AzureTreeDataProvider, delay, AzureAccountTreeItemWithProjects, DialogResponses, ext, FunctionAppProvider, getGlobalSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, ProjectRuntime, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
@@ -33,7 +33,8 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
 
         this.timeout(120 * 1000);
         await testAccount.signIn();
-        ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
+        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects(testAccount);
+        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
         webSiteClient = getWebsiteManagementClient(testAccount);
     });
 
@@ -54,7 +55,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
                 console.log(`Ignoring resource group "${resourceGroup}" because it does not exist.`);
             }
         }
-        ext.tree.dispose();
+        ext.azureAccountTreeItem.dispose();
     });
 
     test('Create windows function app (Basic) and deploy JavaScript project', async () => {

@@ -11,7 +11,7 @@ import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 export async function stopFunctionApp(node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
     }
 
     const client: SiteClient = node.root.client;

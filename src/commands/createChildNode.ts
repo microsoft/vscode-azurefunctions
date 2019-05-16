@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureParentTreeItem, ISubscriptionRoot } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
-export async function createChildNode<T extends ISubscriptionRoot>(expectedContextValue: string, node?: AzureParentTreeItem<T>): Promise<void> {
+export async function createChildNode(expectedContextValue: string, node?: AzExtParentTreeItem): Promise<void> {
     if (!node) {
-        node = <AzureParentTreeItem<T>>await ext.tree.showTreeItemPicker(expectedContextValue);
+        node = await ext.tree.showTreeItemPicker<AzExtParentTreeItem>(expectedContextValue);
     }
 
     await node.createChild();

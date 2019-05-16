@@ -14,7 +14,7 @@ import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 
 export async function executeFunction(node?: FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <FunctionTreeItem>await ext.tree.showTreeItemPicker(/^azFuncFunctionTimer(ReadOnly|)$/i);
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItem>(/^azFuncFunctionTimer(ReadOnly|)$/i);
     }
 
     const name: string = node.name;
