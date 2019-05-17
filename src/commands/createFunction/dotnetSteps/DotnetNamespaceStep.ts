@@ -11,8 +11,8 @@ import { localize } from "../../../localize";
 import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWizardContext> {
-    public async prompt(wizardContext: IDotnetFunctionWizardContext): Promise<void> {
-        wizardContext.namespace = await ext.ui.showInputBox({
+    public async prompt(context: IDotnetFunctionWizardContext): Promise<void> {
+        context.namespace = await ext.ui.showInputBox({
             placeHolder: localize('namespacePlaceHolder', 'Namespace'),
             prompt: localize('namespacePrompt', 'Provide a namespace'),
             validateInput: validateCSharpNamespace,
@@ -20,8 +20,8 @@ export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWi
         });
     }
 
-    public shouldPrompt(wizardContext: IDotnetFunctionWizardContext): boolean {
-        return !wizardContext.namespace;
+    public shouldPrompt(context: IDotnetFunctionWizardContext): boolean {
+        return !context.namespace;
     }
 }
 

@@ -10,17 +10,17 @@ import { localize } from "../../../localize";
 import { IJavaProjectWizardContext, validateMavenIdentifier } from "./IJavaProjectWizardContext";
 
 export class JavaGroupIdStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
-    public async prompt(wizardContext: IJavaProjectWizardContext): Promise<void> {
+    public async prompt(context: IJavaProjectWizardContext): Promise<void> {
         const options: InputBoxOptions = {
             placeHolder: localize('groupIdPlaceholder', 'Group id'),
             prompt: localize('groupIdPrompt', 'Provide a group id'),
             validateInput: validateMavenIdentifier,
             value: 'com.function'
         };
-        wizardContext.javaGroupId = await ext.ui.showInputBox(options);
+        context.javaGroupId = await ext.ui.showInputBox(options);
     }
 
-    public shouldPrompt(wizardContext: IJavaProjectWizardContext): boolean {
-        return !wizardContext.javaGroupId;
+    public shouldPrompt(context: IJavaProjectWizardContext): boolean {
+        return !context.javaGroupId;
     }
 }

@@ -15,10 +15,10 @@ import { IBindingWizardContext } from "./IBindingWizardContext";
 export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardContext> {
     public priority: number = 220;
 
-    public async execute(wizardContext: IBindingWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const bindingTemplate: IBindingTemplate = nonNullProp(wizardContext, 'bindingTemplate');
-        wizardContext.properties.bindingType = bindingTemplate.type;
-        wizardContext.properties.bindingDirection = bindingTemplate.direction;
+    public async execute(context: IBindingWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        const bindingTemplate: IBindingTemplate = nonNullProp(context, 'bindingTemplate');
+        context.properties.bindingType = bindingTemplate.type;
+        context.properties.bindingDirection = bindingTemplate.direction;
 
         const binding: IFunctionBinding = {};
 
@@ -26,21 +26,21 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
         binding.direction = bindingTemplate.direction;
 
         for (const b of bindingTemplate.settings) {
-            binding[b.name] = getBindingSetting(wizardContext, b);
+            binding[b.name] = getBindingSetting(context, b);
         }
 
-        await confirmEditJsonFile(wizardContext.functionJsonPath, (functionJson: IFunctionJson) => {
+        await confirmEditJsonFile(context.functionJsonPath, (functionJson: IFunctionJson) => {
             // tslint:disable-next-line: strict-boolean-expressions
             functionJson.bindings = functionJson.bindings || [];
             functionJson.bindings.push(binding);
             return functionJson;
         });
-        wizardContext.binding = binding;
+        context.binding = binding;
 
-        window.showTextDocument(await workspace.openTextDocument(Uri.file(wizardContext.functionJsonPath)));
+        window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
     }
 
-    public shouldExecute(wizardContext: IBindingWizardContext): boolean {
-        return !!wizardContext.bindingTemplate && !wizardContext.binding;
+    public shouldExecute(context: IBindingWizardContext): boolean {
+        return !!context.bindingTemplate && !context.binding;
     }
 }

@@ -12,11 +12,11 @@ import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCr
 import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
 export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IBindingWizardContext & ICosmosDBWizardContext> {
-    public async getConnection(wizardContext: ICosmosDBWizardContext): Promise<IConnection> {
-        const databaseAccount: CosmosDBManagementModels.DatabaseAccount = nonNullProp(wizardContext, 'databaseAccount');
+    public async getConnection(context: ICosmosDBWizardContext): Promise<IConnection> {
+        const databaseAccount: CosmosDBManagementModels.DatabaseAccount = nonNullProp(context, 'databaseAccount');
         const name: string = nonNullProp(databaseAccount, 'name');
 
-        const client: CosmosDBManagementClient = createAzureClient(wizardContext, CosmosDBManagementClient);
+        const client: CosmosDBManagementClient = createAzureClient(context, CosmosDBManagementClient);
         const resourceGroup: string = getResourceGroupFromId(nonNullProp(databaseAccount, 'id'));
         // NOTE: We have to generate the connection string ourselves rather than calling client.databaseAccounts.listConnectionStrings
         // (The runtime currently only handles Cosmos DB connection strings _not_ mongo connection strings)
@@ -27,7 +27,7 @@ export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<
         };
     }
 
-    public shouldExecute(wizardContext: ICosmosDBWizardContext): boolean {
-        return !!wizardContext.databaseAccount;
+    public shouldExecute(context: ICosmosDBWizardContext): boolean {
+        return !!context.databaseAccount;
     }
 }

@@ -12,18 +12,18 @@ import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardC
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 
-    public async execute(wizardContext: IAzureWebJobsStorageWizardContext): Promise<void> {
+    public async execute(context: IAzureWebJobsStorageWizardContext): Promise<void> {
         let value: string;
-        if (wizardContext.azureWebJobsStorageType === 'emulator') {
+        if (context.azureWebJobsStorageType === 'emulator') {
             value = localEmulatorConnectionString;
         } else {
-            value = (await getStorageConnectionString(<IStorageAccountWizardContext>wizardContext)).connectionString;
+            value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;
         }
 
-        await setLocalAppSetting(wizardContext.projectPath, azureWebJobsStorageKey, value, true /* suppressPrompt */);
+        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, value, true /* suppressPrompt */);
     }
 
-    public shouldExecute(wizardContext: IAzureWebJobsStorageWizardContext): boolean {
-        return !!wizardContext.azureWebJobsStorageType;
+    public shouldExecute(context: IAzureWebJobsStorageWizardContext): boolean {
+        return !!context.azureWebJobsStorageType;
     }
 }

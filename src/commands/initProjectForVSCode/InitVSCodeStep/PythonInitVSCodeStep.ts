@@ -18,18 +18,18 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     protected preDeployTask: string = packTaskName;
     private _venvName: string | undefined;
 
-    protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        await super.executeCore(wizardContext);
+    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+        await super.executeCore(context);
 
-        const zipPath: string = this.setDeploySubpath(wizardContext, `${path.basename(wizardContext.projectPath)}.zip`);
+        const zipPath: string = this.setDeploySubpath(context, `${path.basename(context.projectPath)}.zip`);
 
-        this._venvName = await getExistingVenv(wizardContext.projectPath);
+        this._venvName = await getExistingVenv(context.projectPath);
         if (this._venvName) {
             this.settings.push({ key: pythonVenvSetting, value: this._venvName });
-            await ensureVenvInFuncIgnore(wizardContext.projectPath, this._venvName);
+            await ensureVenvInFuncIgnore(context.projectPath, this._venvName);
         }
 
-        await ensureGitIgnoreContents(wizardContext.projectPath, this._venvName, zipPath);
+        await ensureGitIgnoreContents(context.projectPath, this._venvName, zipPath);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {

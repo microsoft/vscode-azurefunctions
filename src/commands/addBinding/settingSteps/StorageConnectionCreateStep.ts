@@ -9,11 +9,11 @@ import { IBindingWizardContext } from '../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
 
 export class StorageConnectionCreateStep extends AzureConnectionCreateStepBase<IStorageAccountWizardContext & IBindingWizardContext> {
-    public async getConnection(wizardContext: IStorageAccountWizardContext): Promise<IConnection> {
-        return await getStorageConnectionString(wizardContext);
+    public async getConnection(context: IStorageAccountWizardContext): Promise<IConnection> {
+        return await getStorageConnectionString(context);
     }
 
-    public shouldExecute(wizardContext: IStorageAccountWizardContext): boolean {
-        return !!wizardContext.storageAccount;
+    public shouldExecute(context: IStorageAccountWizardContext): boolean {
+        return !!context.storageAccount;
     }
 }

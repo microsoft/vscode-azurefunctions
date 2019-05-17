@@ -11,7 +11,7 @@ import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
-    public async prompt(wizardContext: T): Promise<void> {
+    public async prompt(context: T): Promise<void> {
         const selectAccount: MessageItem = { title: localize('selectAzureAccount', 'Select storage account') };
         const useEmulator: MessageItem = { title: localize('userEmulator', 'Use local emulator') };
         const skipForNow: MessageItem = { title: localize('skipForNow', 'Skip for now') };
@@ -27,24 +27,24 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
 
         const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === selectAccount) {
-            wizardContext.azureWebJobsStorageType = 'azure';
+            context.azureWebJobsStorageType = 'azure';
         } else if (result === useEmulator) {
-            wizardContext.azureWebJobsStorageType = 'emulator';
+            context.azureWebJobsStorageType = 'emulator';
         }
 
         // tslint:disable-next-line: strict-boolean-expressions
-        wizardContext.properties.azureWebJobsStorageType = wizardContext.azureWebJobsStorageType || 'skipForNow';
+        context.properties.azureWebJobsStorageType = context.azureWebJobsStorageType || 'skipForNow';
     }
 
-    public shouldPrompt(wizardContext: T): boolean {
-        return !wizardContext.azureWebJobsStorageType;
+    public shouldPrompt(context: T): boolean {
+        return !context.azureWebJobsStorageType;
     }
 
-    public async getSubWizard(wizardContext: T): Promise<IWizardOptions<T & ISubscriptionWizardContext> | undefined> {
-        if (wizardContext.azureWebJobsStorageType === 'azure') {
+    public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionWizardContext> | undefined> {
+        if (context.azureWebJobsStorageType === 'azure') {
             const promptSteps: AzureWizardPromptStep<T & ISubscriptionWizardContext>[] = [];
 
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(wizardContext);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
             if (subscriptionPromptStep) {
                 promptSteps.push(subscriptionPromptStep);
             }

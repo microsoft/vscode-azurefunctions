@@ -13,13 +13,13 @@ import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export class ScriptFunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
-    protected async getUniqueFunctionName(wizardContext: IScriptFunctionWizardContext): Promise<string | undefined> {
-        const template: IScriptFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
-        return await fsUtil.getUniqueFsPath(wizardContext.projectPath, template.defaultFunctionName);
+    protected async getUniqueFunctionName(context: IScriptFunctionWizardContext): Promise<string | undefined> {
+        const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        return await fsUtil.getUniqueFsPath(context.projectPath, template.defaultFunctionName);
     }
 
-    protected async validateFunctionNameCore(wizardContext: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
-        if (await fse.pathExists(path.join(wizardContext.projectPath, name))) {
+    protected async validateFunctionNameCore(context: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
+        if (await fse.pathExists(path.join(context.projectPath, name))) {
             return localize('existingFolderError', 'A folder with the name "{0}" already exists.', name);
         } else {
             return undefined;

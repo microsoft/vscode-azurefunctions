@@ -13,13 +13,13 @@ import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCr
 import { IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IBindingWizardContext> {
-    public async getConnection(wizardContext: IServiceBusWizardContext): Promise<IConnection> {
-        const sbNamespace: ServiceBusManagementModels.SBNamespace = nonNullProp(wizardContext, 'sbNamespace');
+    public async getConnection(context: IServiceBusWizardContext): Promise<IConnection> {
+        const sbNamespace: ServiceBusManagementModels.SBNamespace = nonNullProp(context, 'sbNamespace');
         const id: string = nonNullProp(sbNamespace, 'id');
         const name: string = nonNullProp(sbNamespace, 'name');
 
         const resourceGroup: string = getResourceGroupFromId(id);
-        const client: ServiceBusManagementClient = createAzureClient(wizardContext, ServiceBusManagementClient);
+        const client: ServiceBusManagementClient = createAzureClient(context, ServiceBusManagementClient);
         const authRules: ServiceBusManagementModels.SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
         const authRule: ServiceBusManagementModels.SBAuthorizationRule | undefined = authRules.find(ar => ar.rights.some(r => r.toLowerCase() === 'listen'));
         if (!authRule) {
@@ -32,7 +32,7 @@ export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBas
         };
     }
 
-    public shouldExecute(wizardContext: IServiceBusWizardContext): boolean {
-        return !!wizardContext.sbNamespace;
+    public shouldExecute(context: IServiceBusWizardContext): boolean {
+        return !!context.sbNamespace;
     }
 }

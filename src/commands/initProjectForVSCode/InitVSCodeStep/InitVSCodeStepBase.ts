@@ -60,8 +60,8 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     protected getDebugConfiguration?(runtime: ProjectRuntime): DebugConfiguration;
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
-    protected setDeploySubpath(wizardContext: IProjectWizardContext, deploySubpath: string): string {
-        deploySubpath = this.addSubDir(wizardContext, deploySubpath);
+    protected setDeploySubpath(context: IProjectWizardContext, deploySubpath: string): string {
+        deploySubpath = this.addSubDir(context, deploySubpath);
         this.settings.push({ key: deploySubpathSetting, value: deploySubpath });
         return deploySubpath;
     }

@@ -12,15 +12,15 @@ import { StringPromptStep } from './StringPromptStep';
 export class BindingNameStep extends StringPromptStep {
     private _functionJson: ParsedFunctionJson | undefined;
 
-    public async getDefaultValue(wizardContext: IBindingWizardContext): Promise<string | undefined> {
-        const defaultValue: string | undefined = await super.getDefaultValue(wizardContext);
+    public async getDefaultValue(context: IBindingWizardContext): Promise<string | undefined> {
+        const defaultValue: string | undefined = await super.getDefaultValue(context);
         if (defaultValue) {
             let uniqueValue: string = defaultValue;
 
             let count: number = 1;
             const maxTries: number = 1000;
             while (count < maxTries) {
-                if (!await this.bindingExists(wizardContext, uniqueValue)) {
+                if (!await this.bindingExists(context, uniqueValue)) {
                     return uniqueValue;
                 } else {
                     count += 1;
@@ -32,20 +32,20 @@ export class BindingNameStep extends StringPromptStep {
         return defaultValue;
     }
 
-    public async validateInput(wizardContext: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
+    public async validateInput(context: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
         if (!val) {
             return localize('emptyTemplateNameError', 'The binding name cannot be empty.');
-        } else if (await this.bindingExists(wizardContext, val)) {
+        } else if (await this.bindingExists(context, val)) {
             return localize('existingBindingError', 'A binding with the name "{0}" already exists.', val);
         } else {
-            return await super.validateInput(wizardContext, val);
+            return await super.validateInput(context, val);
         }
     }
 
-    private async bindingExists(wizardContext: IBindingWizardContext, val: string): Promise<boolean> {
+    private async bindingExists(context: IBindingWizardContext, val: string): Promise<boolean> {
         try {
             if (!this._functionJson) {
-                this._functionJson = new ParsedFunctionJson(await fse.readJSON(wizardContext.functionJsonPath));
+                this._functionJson = new ParsedFunctionJson(await fse.readJSON(context.functionJsonPath));
             }
 
             return !!this._functionJson.bindings.find(b => b.name === val);

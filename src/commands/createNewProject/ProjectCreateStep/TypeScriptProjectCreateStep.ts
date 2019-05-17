@@ -26,10 +26,10 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         typescript: '^3.3.3'
     };
 
-    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        await super.executeCore(wizardContext, progress);
+    public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await super.executeCore(context, progress);
 
-        const tsconfigPath: string = path.join(wizardContext.projectPath, tsConfigFileName);
+        const tsconfigPath: string = path.join(context.projectPath, tsConfigFileName);
         if (await confirmOverwriteFile(tsconfigPath)) {
             await writeFormattedJson(tsconfigPath, {
                 compilerOptions: {

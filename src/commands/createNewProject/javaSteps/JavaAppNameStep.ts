@@ -11,16 +11,16 @@ import { nonNullProp } from "../../../utils/nonNull";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 export class JavaAppNameStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
-    public async prompt(wizardContext: IJavaProjectWizardContext): Promise<void> {
+    public async prompt(context: IJavaProjectWizardContext): Promise<void> {
         const options: InputBoxOptions = {
             placeHolder: localize('appNamePlaceHolder', 'App name'),
             prompt: localize('appNamePrompt', 'Provide an app name'),
-            value: `${nonNullProp(wizardContext, 'javaArtifactId')}-${Date.now()}`
+            value: `${nonNullProp(context, 'javaArtifactId')}-${Date.now()}`
         };
-        wizardContext.javaAppName = await ext.ui.showInputBox(options);
+        context.javaAppName = await ext.ui.showInputBox(options);
     }
 
-    public shouldPrompt(wizardContext: IJavaProjectWizardContext): boolean {
-        return !wizardContext.javaAppName;
+    public shouldPrompt(context: IJavaProjectWizardContext): boolean {
+        return !context.javaAppName;
     }
 }

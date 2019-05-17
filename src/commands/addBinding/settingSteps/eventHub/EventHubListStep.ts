@@ -11,19 +11,19 @@ import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
-    public async prompt(wizardContext: IEventHubWizardContext): Promise<void> {
-        const namespaceName: string = nonNullProp(wizardContext, 'namespaceName');
-        const resourceGroupName: string = nonNullProp(wizardContext, 'resourceGroupName');
+    public async prompt(context: IEventHubWizardContext): Promise<void> {
+        const namespaceName: string = nonNullProp(context, 'namespaceName');
+        const resourceGroupName: string = nonNullProp(context, 'resourceGroupName');
 
         const placeHolder: string = localize('placeHolder', 'Select an event hub');
-        const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
+        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
         const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.eventHubs.listByNamespace(resourceGroupName, namespaceName));
         if (result) {
-            wizardContext.eventhubname = nonNullProp(result, 'name');
+            context.eventhubname = nonNullProp(result, 'name');
         }
     }
 
-    public shouldPrompt(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !wizardContext.eventhubname;
+    public shouldPrompt(context: IEventHubWizardContext): boolean {
+        return !!context.namespaceName && !context.eventhubname;
     }
 }
