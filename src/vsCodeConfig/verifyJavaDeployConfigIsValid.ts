@@ -10,19 +10,19 @@ import { localize } from '../localize';
 import { promptToReinitializeProject } from './promptToReinitializeProject';
 import { getWorkspaceSetting } from './settings';
 
-export async function verifyJavaDeployConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, actionContext: IActionContext): Promise<void> {
+export async function verifyJavaDeployConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, context: IActionContext): Promise<void> {
     const preDeployTask: string | undefined = getWorkspaceSetting<string>(preDeployTaskSetting, workspacePath);
     const deploySubPath: string | undefined = getWorkspaceSetting<string>(deploySubpathSetting, workspacePath);
 
     if (!preDeployTask && !deploySubPath) {
-        actionContext.properties.verifyConfigPrompt = 'updateJavaDeployConfig';
+        context.properties.verifyConfigPrompt = 'updateJavaDeployConfig';
 
         const settingKey: string = 'showJavaDeployConfigWarning';
         const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
         const learnMoreLink: string = 'https://aka.ms/AA41zno';
-        if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, actionContext)) {
-            actionContext.suppressErrorDisplay = false;
-            await initProjectForVSCode(actionContext, workspacePath, projectLanguage);
+        if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, context)) {
+            context.suppressErrorDisplay = false;
+            await initProjectForVSCode(context, workspacePath, projectLanguage);
         }
     }
 }

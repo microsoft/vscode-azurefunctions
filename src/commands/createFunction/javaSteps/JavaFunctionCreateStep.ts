@@ -18,29 +18,29 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
         super();
     }
 
-    public static async createStep(actionContext: IActionContext): Promise<JavaFunctionCreateStep> {
-        await mavenUtils.validateMavenInstalled(actionContext);
+    public static async createStep(context: IActionContext): Promise<JavaFunctionCreateStep> {
+        await mavenUtils.validateMavenInstalled(context);
         return new JavaFunctionCreateStep();
     }
 
-    public async executeCore(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string> {
-        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
+    public async executeCore(context: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string> {
+        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
 
         const args: string[] = [];
         for (const setting of template.userPromptedSettings) {
-            const value: string | undefined = getBindingSetting(wizardContext, setting);
+            const value: string | undefined = getBindingSetting(context, setting);
             // NOTE: Explicitly checking against undefined. Empty string is a valid value
             if (value !== undefined) {
                 args.push(mavenUtils.formatMavenArg(`D${setting.name}`, value));
             }
         }
 
-        const packageName: string = nonNullProp(wizardContext, 'javaPackageName');
-        const functionName: string = nonNullProp(wizardContext, 'functionName');
+        const packageName: string = nonNullProp(context, 'javaPackageName');
+        const functionName: string = nonNullProp(context, 'functionName');
         await mavenUtils.executeMvnCommand(
-            wizardContext.actionContext.properties,
+            context.properties,
             ext.outputChannel,
-            wizardContext.projectPath,
+            context.projectPath,
             'azure-functions:add',
             '-B',
             mavenUtils.formatMavenArg('Dfunctions.package', packageName),
@@ -49,6 +49,6 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
             ...args
         );
 
-        return getJavaFunctionFilePath(wizardContext.projectPath, packageName, functionName);
+        return getJavaFunctionFilePath(context.projectPath, packageName, functionName);
     }
 }

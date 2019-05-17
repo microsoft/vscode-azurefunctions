@@ -21,8 +21,8 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export async function deploy(this: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    addLocalFuncTelemetry(this);
+export async function deploy(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+    addLocalFuncTelemetry(context);
 
     let node: SlotTreeItemBase | undefined;
     let deployFsPath: string = await getDeployFsPath(target);
@@ -41,12 +41,12 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
             // event is fired from azure-extensionui if node was created during deployment
             const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
             try {
-                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue);
+                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
             } finally {
                 disposable.dispose();
             }
         } else {
-            const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId);
+            const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId, context);
             if (functionAppNode) {
                 node = <SlotTreeItemBase>functionAppNode;
             } else {
@@ -57,30 +57,30 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
     const isNewFunctionApp: boolean = newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
-    this.properties.isNewFunctionApp = String(isNewFunctionApp);
+    context.properties.isNewFunctionApp = String(isNewFunctionApp);
 
     const client: appservice.SiteClient = node.root.client;
-    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(this, deployFsPath);
-    this.properties.projectLanguage = language;
-    this.properties.projectRuntime = runtime;
+    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, deployFsPath);
+    context.properties.projectLanguage = language;
+    context.properties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
 
-    await verifyAppSettings(this, node, runtime, language);
+    await verifyAppSettings(context, node, runtime, language);
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (!isNewFunctionApp && isZipDeploy) {
         const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
-        this.properties.cancelStep = 'confirmDestructiveDeployment';
+        context.properties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
         await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
-        this.properties.cancelStep = '';
+        context.properties.cancelStep = '';
     }
 
-    await runPreDeployTask(this, deployFsPath, siteConfig.scmType);
+    await runPreDeployTask(context, deployFsPath, siteConfig.scmType);
 
     if (siteConfig.scmType === ScmType.LocalGit) {
         // preDeploy tasks are not required for LocalGit so subpath may not exist
@@ -89,7 +89,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
 
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises
-        validateGlobSettings(this, deployFsPath);
+        validateGlobSettings(context, deployFsPath);
     }
 
     await node.runWithTemporaryDescription(
@@ -102,7 +102,7 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
                     ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                await appservice.deploy(client, deployFsPath, this);
+                await appservice.deploy(client, deployFsPath, context);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
@@ -112,16 +112,16 @@ export async function deploy(this: IActionContext, target?: vscode.Uri | string 
         }
     );
 
-    await notifyDeployComplete(this, node, workspaceFolder.uri.fsPath);
+    await notifyDeployComplete(context, node, workspaceFolder.uri.fsPath);
 }
 
-async function validateGlobSettings(actionContext: IActionContext, fsPath: string): Promise<void> {
+async function validateGlobSettings(context: IActionContext, fsPath: string): Promise<void> {
     const includeKey: string = 'zipGlobPattern';
     const excludeKey: string = 'zipIgnorePattern';
     const includeSetting: string | undefined = getWorkspaceSetting(includeKey, fsPath);
     const excludeSetting: string | string[] | undefined = getWorkspaceSetting(excludeKey, fsPath);
     if (includeSetting || excludeSetting) {
-        actionContext.properties.hasOldGlobSettings = 'true';
+        context.properties.hasOldGlobSettings = 'true';
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
         await ext.ui.showWarningMessage(message);
     }

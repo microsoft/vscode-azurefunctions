@@ -28,14 +28,14 @@ export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
     }
 }
 
-export function addLocalFuncTelemetry(actionContext: IActionContext): void {
-    actionContext.properties.funcCliVersion = 'unknown';
+export function addLocalFuncTelemetry(context: IActionContext): void {
+    context.properties.funcCliVersion = 'unknown';
 
     // tslint:disable-next-line:no-floating-promises
     getLocalFuncCoreToolsVersion().then((version: string) => {
         // tslint:disable-next-line:strict-boolean-expressions
-        actionContext.properties.funcCliVersion = version || 'none';
+        context.properties.funcCliVersion = version || 'none';
     }).catch(() => {
-        actionContext.properties.funcCliVersion = 'none';
+        context.properties.funcCliVersion = 'none';
     });
 }

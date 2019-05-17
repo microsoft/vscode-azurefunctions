@@ -17,39 +17,39 @@ import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
 export async function createFunction(
-    actionContext: IActionContext,
+    context: IActionContext,
     workspacePath?: string,
     templateId?: string,
     functionName?: string,
     triggerSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     runtime?: ProjectRuntime): Promise<void> {
-    addLocalFuncTelemetry(actionContext);
+    addLocalFuncTelemetry(context);
 
     let workspaceFolder: WorkspaceFolder | undefined;
     if (workspacePath === undefined) {
-        workspaceFolder = await getWorkspaceFolder(actionContext);
+        workspaceFolder = await getWorkspaceFolder(context);
         workspacePath = workspaceFolder.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(actionContext, workspacePath);
+    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath);
     if (!projectPath) {
         return;
     }
 
-    [language, runtime] = await verifyInitForVSCode(actionContext, projectPath, language, runtime);
+    [language, runtime] = await verifyInitForVSCode(context, projectPath, language, runtime);
 
-    const wizardContext: IFunctionWizardContext = { actionContext, projectPath, workspacePath, workspaceFolder, runtime, language, functionName };
+    const wizardContext: IFunctionWizardContext = Object.assign(context, { projectPath, workspacePath, workspaceFolder, runtime, language, functionName });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [await FunctionListStep.create(wizardContext, { templateId, triggerSettings, isProjectWizard: false })]
     });
-    await wizard.prompt(actionContext);
-    await wizard.execute(actionContext);
+    await wizard.prompt();
+    await wizard.execute();
 }
 
-async function getWorkspaceFolder(actionContext: IActionContext): Promise<WorkspaceFolder> {
+async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFolder> {
     let folder: WorkspaceFolder | undefined;
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
@@ -60,7 +60,7 @@ async function getWorkspaceFolder(actionContext: IActionContext): Promise<Worksp
         if (result === newProject) {
             // don't wait
             commands.executeCommand('azureFunctions.createNewProject');
-            actionContext.properties.noWorkspaceResult = 'createNewProject';
+            context.properties.noWorkspaceResult = 'createNewProject';
         } else {
             const uri: Uri[] = await ext.ui.showOpenDialog({
                 canSelectFiles: false,
@@ -70,10 +70,10 @@ async function getWorkspaceFolder(actionContext: IActionContext): Promise<Worksp
             });
             // don't wait
             commands.executeCommand('vscode.openFolder', uri[0]);
-            actionContext.properties.noWorkspaceResult = 'openExistingProject';
+            context.properties.noWorkspaceResult = 'openExistingProject';
         }
 
-        actionContext.suppressErrorDisplay = true;
+        context.suppressErrorDisplay = true;
         throw new NoWorkspaceError();
     } else if (workspace.workspaceFolders.length === 1) {
         folder = workspace.workspaceFolders[0];

@@ -39,7 +39,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         this._triggerSettings = triggerSettings;
     }
 
-    public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
+    public async prompt(context: IProjectWizardContext): Promise<void> {
         const previewDescription: string = localize('previewDescription', '(Preview)');
         // Only display 'supported' languages that can be debugged in VS Code
         const languagePicks: IAzureQuickPickItem<ProjectLanguage | undefined>[] = [
@@ -57,19 +57,19 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const result: ProjectLanguage | undefined = (await ext.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
             await openUrl('https://aka.ms/AA4ul9b');
-            wizardContext.actionContext.properties.cancelStep = 'viewSampleProjects';
+            context.properties.cancelStep = 'viewSampleProjects';
             throw new UserCancelledError();
         } else {
-            wizardContext.language = result;
+            context.language = result;
         }
     }
 
-    public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
-        return wizardContext.language === undefined;
+    public shouldPrompt(context: IProjectWizardContext): boolean {
+        return context.language === undefined;
     }
 
-    public async getSubWizard(wizardContext: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext>> {
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+    public async getSubWizard(context: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext>> {
+        const language: ProjectLanguage = nonNullProp(context, 'language');
         const executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[] = [];
 
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [new ProjectRuntimeStep()];
@@ -82,7 +82,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                executeSteps.push(await DotnetProjectCreateStep.createStep(wizardContext.actionContext));
+                executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
                 executeSteps.push(new PythonProjectCreateStep());
@@ -92,21 +92,21 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Java:
                 promptSteps.push(new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
-                executeSteps.push(await JavaProjectCreateStep.createStep(wizardContext.actionContext));
+                executeSteps.push(await JavaProjectCreateStep.createStep(context));
                 break;
             default:
                 executeSteps.push(new ScriptProjectCreateStep());
                 break;
         }
 
-        await addInitVSCodeStep(wizardContext, executeSteps);
+        await addInitVSCodeStep(context, executeSteps);
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
         if (language !== ProjectLanguage.Java) {
-            promptSteps.push(await FunctionListStep.create(wizardContext, {
+            promptSteps.push(await FunctionListStep.create(context, {
                 isProjectWizard: true,
                 templateId: this._templateId,
                 triggerSettings: this._triggerSettings

@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -62,8 +62,8 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         );
     }
 
-    public async createChildImpl(showCreatingTreeItem: (label: string) => void): Promise<AzureTreeItem<ISiteTreeRoot>> {
-        const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren();
+    public async createChildImpl(showCreatingTreeItem: (label: string) => void, context: IActionContext): Promise<AzureTreeItem<ISiteTreeRoot>> {
+        const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
         const newSite: WebSiteManagementModels.Site = await createSlot(this.root, existingSlots, showCreatingTreeItem);
         return await SlotTreeItem.create(this, new SiteClient(newSite, this.root));
     }

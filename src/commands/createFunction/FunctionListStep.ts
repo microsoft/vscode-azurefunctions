@@ -39,28 +39,28 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         this._isProjectWizard = !!isProjectWizard;
     }
 
-    public static async create(wizardContext: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
+    public static async create(context: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
         if (options.templateId) {
-            const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
-            const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
+            const language: ProjectLanguage = nonNullProp(context, 'language');
+            const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
             const templateProvider: TemplateProvider = await ext.templateProviderTask;
-            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, wizardContext.projectPath, TemplateFilter.All, wizardContext.actionContext.properties);
+            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, context.projectPath, TemplateFilter.All, context.properties);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
-                wizardContext.functionTemplate = foundTemplate;
+                context.functionTemplate = foundTemplate;
             } else {
-                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", runtime "{1}", and id "{2}".', wizardContext.language, wizardContext.runtime, options.templateId));
+                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", runtime "{1}", and id "{2}".', context.language, context.runtime, options.templateId));
             }
         }
 
         return new FunctionListStep(options.triggerSettings, options.isProjectWizard);
     }
 
-    public async getSubWizard(wizardContext: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const template: IFunctionTemplate | undefined = wizardContext.functionTemplate;
+    public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
+        const template: IFunctionTemplate | undefined = context.functionTemplate;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-            switch (wizardContext.language) {
+            switch (context.language) {
                 case ProjectLanguage.Java:
                     promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
                     break;
@@ -73,21 +73,21 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            // Add settings to wizardContext that were programatically passed in
+            // Add settings to context that were programatically passed in
             for (const key of Object.keys(this._triggerSettings)) {
-                wizardContext[key.toLowerCase()] = this._triggerSettings[key];
+                context[key.toLowerCase()] = this._triggerSettings[key];
             }
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-            switch (wizardContext.language) {
+            switch (context.language) {
                 case ProjectLanguage.Java:
-                    executeSteps.push(await JavaFunctionCreateStep.createStep(wizardContext.actionContext));
+                    executeSteps.push(await JavaFunctionCreateStep.createStep(context));
                     break;
                 case ProjectLanguage.CSharp:
                 case ProjectLanguage.FSharp:
-                    executeSteps.push(await DotnetFunctionCreateStep.createStep(wizardContext.actionContext));
+                    executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
                     break;
                 case ProjectLanguage.TypeScript:
                     executeSteps.push(new TypeScriptFunctionCreateStep());
@@ -97,7 +97,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            if (!template.isHttpTrigger && !await getAzureWebJobsStorage(wizardContext.projectPath)) {
+            if (!template.isHttpTrigger && !await getAzureWebJobsStorage(context.projectPath)) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
                 executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }
@@ -109,42 +109,42 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         }
     }
 
-    public async prompt(wizardContext: IFunctionWizardContext): Promise<void> {
+    public async prompt(context: IFunctionWizardContext): Promise<void> {
         // tslint:disable-next-line: strict-boolean-expressions
-        let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, wizardContext.projectPath) || TemplateFilter.Verified;
+        let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
-        while (!wizardContext.functionTemplate) {
+        while (!context.functionTemplate) {
             const placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
                 localize('selectFuncTemplate', 'Select a template for your function');
-            const result: IFunctionTemplate | TemplatePromptResult = (await ext.ui.showQuickPick(this.getPicks(wizardContext, templateFilter), { placeHolder })).data;
+            const result: IFunctionTemplate | TemplatePromptResult = (await ext.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
-                wizardContext.actionContext.properties.templateId = 'skipForNow';
+                context.properties.templateId = 'skipForNow';
                 break;
             } else if (result === 'changeFilter') {
                 templateFilter = await promptForTemplateFilter();
                 // can only update setting if it's open in a workspace
-                if (!this._isProjectWizard || wizardContext.openBehavior === 'AlreadyOpen') {
-                    await updateWorkspaceSetting(templateFilterSetting, templateFilter, wizardContext.projectPath);
+                if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
+                    await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
                 }
             } else {
-                wizardContext.functionTemplate = result;
+                context.functionTemplate = result;
             }
         }
 
-        wizardContext.actionContext.properties.templateFilter = templateFilter;
+        context.properties.templateFilter = templateFilter;
     }
 
-    public shouldPrompt(wizardContext: IFunctionWizardContext): boolean {
-        return !wizardContext.functionTemplate;
+    public shouldPrompt(context: IFunctionWizardContext): boolean {
+        return !context.functionTemplate;
     }
 
-    private async getPicks(wizardContext: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
-        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
+    private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
+        const language: ProjectLanguage = nonNullProp(context, 'language');
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
 
         const provider: TemplateProvider = await ext.templateProviderTask;
-        let templates: IFunctionTemplate[] = await provider.getTemplates(language, runtime, wizardContext.projectPath, templateFilter, wizardContext.actionContext.properties);
+        let templates: IFunctionTemplate[] = await provider.getTemplates(language, runtime, context.projectPath, templateFilter, context.properties);
         templates = templates.sort((a, b) => sortTemplates(a, b, templateFilter));
 
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates.map(t => { return { label: t.name, data: t }; });

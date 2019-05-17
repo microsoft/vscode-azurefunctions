@@ -8,19 +8,19 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
-export async function createFunctionApp(this: IActionContext, subscription?: AzureParentTreeItem | string, resourceGroup?: string): Promise<string> {
+export async function createFunctionApp(context: IActionContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
     let node: AzureParentTreeItem | undefined;
     if (typeof subscription === 'string') {
-        node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`);
+        node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`, context);
         if (!node) {
             throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscription));
         }
     } else if (!subscription) {
-        node = await ext.tree.showTreeItemPicker<AzureParentTreeItem>(SubscriptionTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AzureParentTreeItem>(SubscriptionTreeItem.contextValue, context);
     } else {
         node = subscription;
     }
 
-    const funcAppNode: AzureTreeItem = await node.createChild({ actionContext: this, resourceGroup });
+    const funcAppNode: AzureTreeItem = await node.createChild(Object.assign(context, { newResourceGroupName }));
     return funcAppNode.fullId;
 }

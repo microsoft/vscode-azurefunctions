@@ -20,9 +20,9 @@ import { uninstallFuncCoreTools } from './uninstallFuncCoreTools';
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
-    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', async function (this: IActionContext): Promise<void> {
-        this.suppressErrorDisplay = true;
-        this.properties.isActivationEvent = 'true';
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', async (context: IActionContext) => {
+        context.suppressErrorDisplay = true;
+        context.properties.isActivationEvent = 'true';
 
         const showMultiCoreToolsWarningKey: string = 'showMultiCoreToolsWarning';
         const showMultiCoreToolsWarning: boolean = !!getWorkspaceSetting<boolean>(showMultiCoreToolsWarningKey);
@@ -38,13 +38,13 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             } else if (packageManagers.length === 1) {
                 packageManager = packageManagers[0];
             } else {
-                this.properties.multiFunc = 'true';
+                context.properties.multiFunc = 'true';
                 if (showMultiCoreToolsWarning) {
                     const message: string = localize('multipleInstalls', 'Detected multiple installs of the func cli.');
                     const selectUninstall: vscode.MessageItem = { title: localize('selectUninstall', 'Select version to uninstall') };
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, selectUninstall, DialogResponses.dontWarnAgain);
                     if (result === selectUninstall) {
-                        await uninstallFuncCoreTools(packageManagers);
+                        await uninstallFuncCoreTools(context, packageManagers);
                     } else if (result === DialogResponses.dontWarnAgain) {
                         await updateGlobalSetting(showMultiCoreToolsWarningKey, false);
                     }
@@ -58,20 +58,20 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 if (!localVersion) {
                     return;
                 }
-                this.properties.localVersion = localVersion;
+                context.properties.localVersion = localVersion;
 
                 const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(localVersion);
                 if (projectRuntime === undefined) {
                     return;
                 }
 
-                const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(packageManager, projectRuntime, this);
+                const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(packageManager, projectRuntime, context);
                 if (!newestVersion) {
                     return;
                 }
 
                 if (semver.gt(newestVersion, localVersion)) {
-                    this.properties.outOfDateFunc = 'true';
+                    context.properties.outOfDateFunc = 'true';
                     const message: string = localize(
                         'azFunc.outdatedFunctionRuntime',
                         'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
@@ -100,7 +100,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     });
 }
 
-async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, projectRuntime: ProjectRuntime, actionContext: IActionContext): Promise<string | undefined> {
+async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, projectRuntime: ProjectRuntime, context: IActionContext): Promise<string | undefined> {
     try {
         if (packageManager === PackageManager.brew) {
             const brewRegistryUri: string = 'https://aka.ms/AA1t7go';
@@ -113,7 +113,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
             return (await getNpmDistTag(projectRuntime)).value;
         }
     } catch (error) {
-        actionContext.properties.latestRuntimeError = parseError(error).message;
+        context.properties.latestRuntimeError = parseError(error).message;
     }
 
     return undefined;

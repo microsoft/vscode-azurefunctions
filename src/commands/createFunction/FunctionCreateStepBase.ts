@@ -47,9 +47,9 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public async execute(wizardContext: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
 
-        wizardContext.actionContext.properties.projectLanguage = wizardContext.language;
-        wizardContext.actionContext.properties.projectRuntime = wizardContext.runtime;
-        wizardContext.actionContext.properties.templateId = template.id;
+        wizardContext.properties.projectLanguage = wizardContext.language;
+        wizardContext.properties.projectRuntime = wizardContext.runtime;
+        wizardContext.properties.templateId = template.id;
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
@@ -124,8 +124,8 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
-    callWithTelemetryAndErrorHandling('postFunctionCreate', async function (this: IActionContext): Promise<void> {
-        this.suppressTelemetry = true;
+    callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+        context.suppressTelemetry = true;
 
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {

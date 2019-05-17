@@ -110,40 +110,40 @@ export async function getTemplateProvider(): Promise<TemplateProvider> {
         for (const key of Object.keys(ProjectRuntime)) {
             const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
 
-            await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionTemplates', async function (this: IActionContext): Promise<void> {
-                this.suppressErrorDisplay = true;
-                this.properties.isActivationEvent = 'true';
-                this.properties.runtime = runtime;
-                this.properties.templateType = templateRetriever.templateType;
-                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(this, cliFeedJson, runtime);
+            await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionTemplates', async (context: IActionContext) => {
+                context.suppressErrorDisplay = true;
+                context.properties.isActivationEvent = 'true';
+                context.properties.runtime = runtime;
+                context.properties.templateType = templateRetriever.templateType;
+                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(context, cliFeedJson, runtime);
                 let templates: IFunctionTemplate[] | undefined;
 
                 // 1. Use the cached templates if they match templateVersion
                 // tslint:disable-next-line:strict-boolean-expressions
                 if (!ext.templateSource && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
-                    templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
-                    this.properties.templateSource = 'matchingCache';
+                    templates = await templateRetriever.tryGetTemplatesFromCache(context, runtime);
+                    context.properties.templateSource = 'matchingCache';
                 }
 
                 // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
                 // tslint:disable-next-line:strict-boolean-expressions
                 if ((!ext.templateSource || ext.templateSource === TemplateSource.CliFeed || ext.templateSource === TemplateSource.StagingCliFeed) && !templates && cliFeedJson && templateVersion) {
-                    templates = await templateRetriever.tryGetTemplatesFromCliFeed(this, cliFeedJson, templateVersion, runtime);
-                    this.properties.templateSource = 'cliFeed';
+                    templates = await templateRetriever.tryGetTemplatesFromCliFeed(context, cliFeedJson, templateVersion, runtime);
+                    context.properties.templateSource = 'cliFeed';
                 }
 
                 // 3. Use the cached templates, even if they don't match templateVersion
                 // tslint:disable-next-line:strict-boolean-expressions
                 if (!ext.templateSource && !templates) {
-                    templates = await templateRetriever.tryGetTemplatesFromCache(this, runtime);
-                    this.properties.templateSource = 'mismatchCache';
+                    templates = await templateRetriever.tryGetTemplatesFromCache(context, runtime);
+                    context.properties.templateSource = 'mismatchCache';
                 }
 
                 // 4. Use backup templates shipped with the extension
                 // tslint:disable-next-line:strict-boolean-expressions
                 if ((!ext.templateSource || ext.templateSource === TemplateSource.Backup) && !templates) {
-                    templates = await templateRetriever.tryGetTemplatesFromBackup(this, runtime);
-                    this.properties.templateSource = 'backupFromExtension';
+                    templates = await templateRetriever.tryGetTemplatesFromBackup(context, runtime);
+                    context.properties.templateSource = 'backupFromExtension';
                 }
 
                 if (templates) {
@@ -151,7 +151,7 @@ export async function getTemplateProvider(): Promise<TemplateProvider> {
                     templatesMap[runtime] = (templatesMap[runtime] || []).concat(templates);
                 } else {
                     // Failed to get templates for this runtime
-                    this.properties.templateSource = 'None';
+                    context.properties.templateSource = 'None';
                 }
             });
         }

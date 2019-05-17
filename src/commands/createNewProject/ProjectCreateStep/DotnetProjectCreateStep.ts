@@ -21,23 +21,23 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         super();
     }
 
-    public static async createStep(actionContext: IActionContext): Promise<DotnetProjectCreateStep> {
-        await dotnetUtils.validateDotnetInstalled(actionContext);
+    public static async createStep(context: IActionContext): Promise<DotnetProjectCreateStep> {
+        await dotnetUtils.validateDotnetInstalled(context);
         return new DotnetProjectCreateStep();
     }
 
-    public async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+    public async executeCore(context: IProjectWizardContext): Promise<void> {
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        const language: ProjectLanguage = nonNullProp(context, 'language');
 
-        const projectName: string = path.basename(wizardContext.projectPath);
+        const projectName: string = path.basename(context.projectPath);
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
-        await this.confirmOverwriteExisting(wizardContext.projectPath, projName);
+        await this.confirmOverwriteExisting(context.projectPath, projName);
 
         const templateLanguage: string = language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
         const functionsVersion: string = runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
-        await executeDotnetTemplateCommand(runtime, wizardContext.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        await executeDotnetTemplateCommand(runtime, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
     }
 
     private async confirmOverwriteExisting(projectPath: string, projName: string): Promise<void> {

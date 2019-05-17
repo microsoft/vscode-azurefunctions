@@ -33,12 +33,10 @@ export class FuncTaskProvider implements TaskProvider {
     public async provideTasks(_token?: CancellationToken | undefined): Promise<Task[]> {
         const result: Task[] = [];
 
-        // tslint:disable-next-line: no-this-assignment
-        const me: FuncTaskProvider = this;
-        await callWithTelemetryAndErrorHandling('provideTasks', async function (this: IActionContext): Promise<void> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        await callWithTelemetryAndErrorHandling('provideTasks', async (context: IActionContext) => {
+            context.properties.isActivationEvent = 'true';
+            context.suppressErrorDisplay = true;
+            context.suppressTelemetry = true;
 
             if (workspace.workspaceFolders) {
                 let lastError: unknown;
@@ -48,7 +46,7 @@ export class FuncTaskProvider implements TaskProvider {
                         if (projectRoot) {
                             result.push(getExtensionInstallTask(folder, projectRoot));
                             const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                            const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
+                            const hostStartTask: Task | undefined = await this.getHostStartTask(folder, projectRoot, language);
                             if (hostStartTask) {
                                 result.push(hostStartTask);
                             }
@@ -75,10 +73,10 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
-        await callWithTelemetryAndErrorHandling('resolveTask', async function (this: IActionContext): Promise<void> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        await callWithTelemetryAndErrorHandling('resolveTask', async (context: IActionContext) => {
+            context.properties.isActivationEvent = 'true';
+            context.suppressErrorDisplay = true;
+            context.suppressTelemetry = true;
         });
 
         // The resolveTask method returns undefined and is currently not called by VS Code. It is there to optimize task loading in the future.

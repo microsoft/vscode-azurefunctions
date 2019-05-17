@@ -17,8 +17,8 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
 
     public async execute(wizardContext: IBindingWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const bindingTemplate: IBindingTemplate = nonNullProp(wizardContext, 'bindingTemplate');
-        wizardContext.actionContext.properties.bindingType = bindingTemplate.type;
-        wizardContext.actionContext.properties.bindingDirection = bindingTemplate.direction;
+        wizardContext.properties.bindingType = bindingTemplate.type;
+        wizardContext.properties.bindingDirection = bindingTemplate.direction;
 
         const binding: IFunctionBinding = {};
 

@@ -19,33 +19,33 @@ export class JavaProjectCreateStep extends ProjectCreateStepBase {
         super();
     }
 
-    public static async createStep(actionContext: IActionContext): Promise<JavaProjectCreateStep> {
-        await mavenUtils.validateMavenInstalled(actionContext);
+    public static async createStep(context: IActionContext): Promise<JavaProjectCreateStep> {
+        await mavenUtils.validateMavenInstalled(context);
         return new JavaProjectCreateStep();
     }
 
-    public async executeCore(wizardContext: IJavaProjectWizardContext): Promise<void> {
-        const artifactId: string = nonNullProp(wizardContext, 'javaArtifactId');
+    public async executeCore(context: IJavaProjectWizardContext): Promise<void> {
+        const artifactId: string = nonNullProp(context, 'javaArtifactId');
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
         await fse.ensureDir(tempFolder);
         try {
             // Use maven command to init Java function project.
             ext.outputChannel.show();
             await mavenUtils.executeMvnCommand(
-                wizardContext.actionContext.properties,
+                context.properties,
                 ext.outputChannel,
                 tempFolder,
                 'archetype:generate',
                 mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure'),
                 mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype'),
-                mavenUtils.formatMavenArg('DgroupId', nonNullProp(wizardContext, 'javaGroupId')),
+                mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId')),
                 mavenUtils.formatMavenArg('DartifactId', artifactId),
-                mavenUtils.formatMavenArg('Dversion', nonNullProp(wizardContext, 'javaVersion')),
-                mavenUtils.formatMavenArg('Dpackage', nonNullProp(wizardContext, 'javaPackageName')),
-                mavenUtils.formatMavenArg('DappName', nonNullProp(wizardContext, 'javaAppName')),
+                mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaVersion')),
+                mavenUtils.formatMavenArg('Dpackage', nonNullProp(context, 'javaPackageName')),
+                mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName')),
                 '-B' // in Batch Mode
             );
-            await fsUtil.copyFolder(path.join(tempFolder, artifactId), wizardContext.projectPath);
+            await fsUtil.copyFolder(path.join(tempFolder, artifactId), context.projectPath);
         } finally {
             await fse.remove(tempFolder);
         }

@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureAccountTreeItemBase, ISubscriptionRoot, TestAzureAccount } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureAccountTreeItemBase, IActionContext, ISubscriptionContext, TestAzureAccount } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { hostFileName } from '../constants';
 import { localize } from '../localize';
@@ -32,12 +32,12 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         Disposable.from(...this._projectDisposables).dispose();
     }
 
-    public createSubscriptionTreeItem(root: ISubscriptionRoot): SubscriptionTreeItem {
+    public createSubscriptionTreeItem(root: ISubscriptionContext): SubscriptionTreeItem {
         return new SubscriptionTreeItem(this, root);
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache);
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache, context);
 
         if (getWorkspaceSetting(enableProjectTreeSetting)) {
             Disposable.from(...this._projectDisposables).dispose();
