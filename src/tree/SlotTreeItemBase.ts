@@ -9,7 +9,7 @@ import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
-import { nodeUtils } from '../utils/nodeUtils';
+import { treeUtils } from '../utils/treeUtils';
 import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 import { FunctionTreeItem } from './FunctionTreeItem';
@@ -66,7 +66,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(this.contextValue);
+        return treeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {

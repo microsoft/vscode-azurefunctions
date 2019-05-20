@@ -12,8 +12,8 @@ import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { localize } from '../localize';
-import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
+import { treeUtils } from '../utils/treeUtils';
 import { FunctionsTreeItem } from './FunctionsTreeItem';
 
 export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
@@ -78,7 +78,7 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionTreeItem.contextValueBase);
+        return treeUtils.getIconPath(FunctionTreeItem.contextValueBase);
     }
 
     public get triggerUrl(): string | undefined {
