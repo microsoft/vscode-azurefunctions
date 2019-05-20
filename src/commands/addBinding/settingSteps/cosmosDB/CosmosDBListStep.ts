@@ -10,13 +10,13 @@ import { promptForResource } from '../../../../utils/azure';
 import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
 export class CosmosDBListStep extends AzureWizardPromptStep<ICosmosDBWizardContext> {
-    public async prompt(wizardContext: ICosmosDBWizardContext): Promise<void> {
+    public async prompt(context: ICosmosDBWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select a database account');
-        const client: CosmosDBManagementClient = createAzureClient(wizardContext, CosmosDBManagementClient);
-        wizardContext.databaseAccount = await promptForResource(placeHolder, client.databaseAccounts.list());
+        const client: CosmosDBManagementClient = createAzureClient(context, CosmosDBManagementClient);
+        context.databaseAccount = await promptForResource(placeHolder, client.databaseAccounts.list());
     }
 
-    public shouldPrompt(wizardContext: ICosmosDBWizardContext): boolean {
-        return !wizardContext.databaseAccount;
+    public shouldPrompt(context: ICosmosDBWizardContext): boolean {
+        return !context.databaseAccount;
     }
 }

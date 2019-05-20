@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DeploymentTreeItem } from "vscode-azureappservice";
+import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 
-export async function redeployDeployment(node?: DeploymentTreeItem): Promise<void> {
+export async function redeployDeployment(context: IActionContext, node?: DeploymentTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context);
     }
     await node.redeployDeployment();
 }

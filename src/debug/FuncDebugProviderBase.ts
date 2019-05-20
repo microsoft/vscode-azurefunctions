@@ -18,17 +18,15 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     public abstract getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution>;
 
     public async provideDebugConfigurations(folder: WorkspaceFolder | undefined, _token?: CancellationToken): Promise<DebugConfiguration[]> {
-        // tslint:disable-next-line: no-this-assignment
-        const me: FuncDebugProviderBase = this;
-        const configs: DebugConfiguration[] | undefined = await callWithTelemetryAndErrorHandling('provideDebugConfigurations', async function (this: IActionContext): Promise<DebugConfiguration[]> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        const configs: DebugConfiguration[] | undefined = await callWithTelemetryAndErrorHandling('provideDebugConfigurations', async (context: IActionContext) => {
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
             const result: DebugConfiguration[] = [];
             if (folder) {
                 if (await isFunctionProject(folder.uri.fsPath)) {
-                    result.push(me.debugConfig);
+                    result.push(this.debugConfig);
                 }
             }
 
@@ -42,14 +40,12 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DebugConfiguration, _token?: CancellationToken): Promise<DebugConfiguration | undefined> {
         let result: DebugConfiguration | undefined = debugConfiguration;
 
-        // tslint:disable-next-line: no-this-assignment
-        const me: FuncDebugProviderBase = this;
-        await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async function (this: IActionContext): Promise<void> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async (context: IActionContext) => {
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
-            me._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
+            this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
             if (debugConfiguration.preLaunchTask === hostStartTaskName) {
                 const preDebugResult: IPreDebugValidateResult = await preDebugValidate(debugConfiguration);
                 if (!preDebugResult.shouldContinue) {

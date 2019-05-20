@@ -10,23 +10,23 @@ import { IProjectWizardContext } from './IProjectWizardContext';
 export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 250;
 
-    public async execute(wizardContext: IProjectWizardContext): Promise<void> {
+    public async execute(context: IProjectWizardContext): Promise<void> {
         // tslint:disable-next-line:strict-boolean-expressions
         const openFolders: WorkspaceFolder[] = workspace.workspaceFolders || [];
-        if (wizardContext.openBehavior === 'AddToWorkspace' && openFolders.length === 0) {
+        if (context.openBehavior === 'AddToWorkspace' && openFolders.length === 0) {
             // no point in adding to an empty workspace
-            wizardContext.openBehavior = 'OpenInCurrentWindow';
+            context.openBehavior = 'OpenInCurrentWindow';
         }
 
-        const uri: Uri = Uri.file(wizardContext.workspacePath);
-        if (wizardContext.openBehavior === 'AddToWorkspace') {
+        const uri: Uri = Uri.file(context.workspacePath);
+        if (context.openBehavior === 'AddToWorkspace') {
             workspace.updateWorkspaceFolders(openFolders.length, 0, { uri: uri });
         } else {
-            await commands.executeCommand('vscode.openFolder', uri, wizardContext.openBehavior === 'OpenInNewWindow' /* forceNewWindow */);
+            await commands.executeCommand('vscode.openFolder', uri, context.openBehavior === 'OpenInNewWindow' /* forceNewWindow */);
         }
     }
 
-    public shouldExecute(wizardContext: IProjectWizardContext): boolean {
-        return !!wizardContext.openBehavior && wizardContext.openBehavior !== 'AlreadyOpen' && wizardContext.openBehavior !== 'DontOpen';
+    public shouldExecute(context: IProjectWizardContext): boolean {
+        return !!context.openBehavior && context.openBehavior !== 'AlreadyOpen' && context.openBehavior !== 'DontOpen';
     }
 }

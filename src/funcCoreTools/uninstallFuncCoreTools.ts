@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 
-export async function uninstallFuncCoreTools(packageManagers?: PackageManager[]): Promise<void> {
+export async function uninstallFuncCoreTools(_context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
     ext.outputChannel.show();
     // tslint:disable-next-line: strict-boolean-expressions
     packageManagers = packageManagers || await getFuncPackageManagers(true /* isFuncInstalled */);

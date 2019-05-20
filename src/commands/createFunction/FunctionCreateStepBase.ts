@@ -42,25 +42,25 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     /**
      * Returns the full path to the new function file
      */
-    public abstract executeCore(wizardContext: T): Promise<string>;
+    public abstract executeCore(context: T): Promise<string>;
 
-    public async execute(wizardContext: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
+    public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
 
-        wizardContext.actionContext.properties.projectLanguage = wizardContext.language;
-        wizardContext.actionContext.properties.projectRuntime = wizardContext.runtime;
-        wizardContext.actionContext.properties.templateId = template.id;
+        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectRuntime = context.runtime;
+        context.telemetry.properties.templateId = template.id;
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
-        const newFilePath: string = await this.executeCore(wizardContext);
-        if (await this.shouldUseExtensionBundle(wizardContext, template)) {
-            await this.verifyExtensionBundle(wizardContext);
+        const newFilePath: string = await this.executeCore(context);
+        if (await this.shouldUseExtensionBundle(context, template)) {
+            await this.verifyExtensionBundle(context);
         }
 
-        const cachedFunc: ICachedFunction = { projectPath: wizardContext.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
+        const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
 
-        if (wizardContext.openBehavior) {
+        if (context.openBehavior) {
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
             ext.context.globalState.update(cacheKey, cachedFunc);
             // Delete cached information if the extension host was not restarted after 5 seconds
@@ -70,8 +70,8 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         runPostFunctionCreateSteps(cachedFunc);
     }
 
-    public async verifyExtensionBundle(wizardContext: T): Promise<void> {
-        const hostFilePath: string = path.join(wizardContext.projectPath, hostFileName);
+    public async verifyExtensionBundle(context: T): Promise<void> {
+        const hostFilePath: string = path.join(context.projectPath, hostFileName);
         try {
             const hostJson: IHostJsonV2 = <IHostJsonV2>await fse.readJSON(hostFilePath);
             if (!hostJson.extensionBundle) {
@@ -87,17 +87,17 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         }
     }
 
-    public shouldExecute(wizardContext: T): boolean {
-        return !!wizardContext.functionTemplate;
+    public shouldExecute(context: T): boolean {
+        return !!context.functionTemplate;
     }
 
-    private async shouldUseExtensionBundle(wizardContext: T, template: IFunctionTemplate): Promise<boolean> {
+    private async shouldUseExtensionBundle(context: T, template: IFunctionTemplate): Promise<boolean> {
         // v1 doesn't support bundles
         // http and timer triggers don't need a bundle
         // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
-        if (wizardContext.runtime === ProjectRuntime.v1 ||
+        if (context.runtime === ProjectRuntime.v1 ||
             template.isHttpTrigger || template.isTimerTrigger ||
-            wizardContext.language === ProjectLanguage.CSharp || wizardContext.language === ProjectLanguage.FSharp) {
+            context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
             return false;
         }
 
@@ -105,7 +105,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         try {
             const filesToCheck: string[] = [tasksFileName, settingsFileName];
             for (const file of filesToCheck) {
-                const filePath: string = path.join(wizardContext.workspacePath, vscodeFolderName, file);
+                const filePath: string = path.join(context.workspacePath, vscodeFolderName, file);
                 if (await fse.pathExists(filePath)) {
                     const contents: string = (await fse.readFile(filePath)).toString();
                     if (contents.includes(extInstallCommand)) {
@@ -124,8 +124,8 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
-    callWithTelemetryAndErrorHandling('postFunctionCreate', async function (this: IActionContext): Promise<void> {
-        this.suppressTelemetry = true;
+    callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+        context.telemetry.suppressIfSuccessful = true;
 
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {

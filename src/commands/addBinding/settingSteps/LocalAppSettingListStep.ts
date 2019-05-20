@@ -27,8 +27,8 @@ import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 
 export class LocalAppSettingListStep extends BindingSettingStepBase {
-    public async promptCore(wizardContext: IBindingWizardContext): Promise<string | undefined> {
-        const localSettingsPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
+    public async promptCore(context: IBindingWizardContext): Promise<string | undefined> {
+        const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
@@ -37,8 +37,8 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
         return (await ext.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
-    public async getSubWizard(wizardContext: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
-        if (!getBindingSetting(wizardContext, this._setting)) {
+    public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
+        if (!getBindingSetting(context, this._setting)) {
             const azurePromptSteps: AzureWizardPromptStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
             const azureExecuteSteps: AzureWizardExecuteStep<IBindingWizardContext & ISubscriptionWizardContext>[] = [];
             switch (this._setting.resourceType) {
@@ -70,7 +70,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
                     };
             }
 
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(wizardContext);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
             if (subscriptionPromptStep) {
                 azurePromptSteps.unshift(subscriptionPromptStep);
             }

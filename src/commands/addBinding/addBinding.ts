@@ -13,18 +13,18 @@ import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
 import { createBindingWizard } from "./createBindingWizard";
 import { IBindingWizardContext } from "./IBindingWizardContext";
 
-export async function addBinding(this: IActionContext, data: Uri | LocalBindingsTreeItem | undefined): Promise<void> {
+export async function addBinding(context: IActionContext, data: Uri | LocalBindingsTreeItem | undefined): Promise<void> {
     if (data instanceof Uri) {
         const functionJsonPath: string = data.fsPath;
         const workspaceFolder: WorkspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
         const workspacePath: string = workspaceFolder.uri.fsPath;
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
 
-        const wizardContext: IBindingWizardContext = { actionContext: this, functionJsonPath: data.fsPath, workspacePath, projectPath, workspaceFolder };
+        const wizardContext: IBindingWizardContext = Object.assign(context, { functionJsonPath: data.fsPath, workspacePath, projectPath, workspaceFolder });
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
-        await wizard.prompt(this);
-        await wizard.execute(this);
+        await wizard.prompt();
+        await wizard.execute();
     } else {
-        await createChildNode(LocalBindingsTreeItem.contextValue, data);
+        await createChildNode(context, LocalBindingsTreeItem.contextValue, data);
     }
 }

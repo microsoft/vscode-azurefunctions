@@ -14,7 +14,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
-export async function notifyDeployComplete(actionContext: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
+export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
     ext.outputChannel.appendLine(deployComplete);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
@@ -23,27 +23,27 @@ export async function notifyDeployComplete(actionContext: IActionContext, node: 
 
     // Don't wait
     window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
-        await callWithTelemetryAndErrorHandling('postDeploy', async function (this: IActionContext): Promise<void> {
-            this.properties.dialogResult = result && result.title;
+        await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
+            postDeployContext.telemetry.properties.dialogResult = result && result.title;
             if (result === viewOutput) {
                 ext.outputChannel.show();
             } else if (result === streamLogs) {
-                await startStreamingLogs(node);
+                await startStreamingLogs(postDeployContext, node);
             } else if (result === uploadSettings) {
-                await uploadAppSettings(node.appSettingsTreeItem, workspacePath);
+                await uploadAppSettings(postDeployContext, node.appSettingsTreeItem, workspacePath);
             }
         });
     });
 
-    await listHttpTriggerUrls(actionContext, node);
+    await listHttpTriggerUrls(context, node);
 }
 
-async function listHttpTriggerUrls(actionContext: IActionContext, node: SlotTreeItemBase): Promise<void> {
+async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
     try {
-        const children: AzExtTreeItem[] = await node.getCachedChildren();
+        const children: AzExtTreeItem[] = await node.getCachedChildren(context);
         const functionsNode: FunctionsTreeItem = <FunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof FunctionsTreeItem);
         await node.treeDataProvider.refresh(functionsNode);
-        const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren();
+        const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
         const anonFunctions: FunctionTreeItem[] = <FunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
         if (anonFunctions.length > 0) {
             ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
@@ -57,7 +57,7 @@ async function listHttpTriggerUrls(actionContext: IActionContext, node: SlotTree
         }
     } catch (error) {
         // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
-        actionContext.suppressErrorDisplay = true;
+        context.errorHandling.suppressDisplay = true;
         ext.outputChannel.appendLine(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
         throw error;
     }

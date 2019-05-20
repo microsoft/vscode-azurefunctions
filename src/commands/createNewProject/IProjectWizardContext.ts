@@ -7,8 +7,7 @@ import { WorkspaceFolder } from "vscode";
 import { IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage, ProjectRuntime } from "../../constants";
 
-export interface IProjectWizardContext {
-    actionContext: IActionContext;
+export interface IProjectWizardContext extends IActionContext {
     projectPath: string;
     workspacePath: string;
     workspaceFolder: WorkspaceFolder | undefined;

@@ -18,7 +18,7 @@ import { ITask, ITasksJson } from './tasks';
  * JavaScript debugging in the func cli had breaking changes in v2.0.1-beta.30 (~6/2018). This verifies users are up-to-date with the latest working debug config.
  * See https://aka.ms/AA1vrxa for more info
  */
-export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, actionContext: IActionContext): Promise<void> {
+export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, context: IActionContext): Promise<void> {
     const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
     if (localProjectRuntime === ProjectRuntime.v2) {
         const tasksJsonPath: string = path.join(workspacePath, vscodeFolderName, tasksFileName);
@@ -33,14 +33,14 @@ export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguag
             // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
             const funcTask: ITask | undefined = tasksContent.tasks && tasksContent.tasks.find((t: ITask) => !!t.label && oldFuncHostNameRegEx.test(t.label));
             if (funcTask) {
-                actionContext.properties.verifyConfigPrompt = 'updateJSDebugConfig';
+                context.telemetry.properties.verifyConfigPrompt = 'updateJSDebugConfig';
 
                 const settingKey: string = 'showDebugConfigWarning';
                 const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
                 const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
-                if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, actionContext)) {
-                    actionContext.suppressErrorDisplay = false;
-                    await initProjectForVSCode(actionContext, workspacePath, projectLanguage);
+                if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, context)) {
+                    context.errorHandling.suppressDisplay = false;
+                    await initProjectForVSCode(context, workspacePath, projectLanguage);
                 }
             }
         }

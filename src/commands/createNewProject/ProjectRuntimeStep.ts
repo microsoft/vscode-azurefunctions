@@ -8,11 +8,11 @@ import { promptForProjectRuntime } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class ProjectRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
-    public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
-        wizardContext.runtime = await promptForProjectRuntime();
+    public async prompt(context: IProjectWizardContext): Promise<void> {
+        context.runtime = await promptForProjectRuntime();
     }
 
-    public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
-        return wizardContext.runtime === undefined;
+    public shouldPrompt(context: IProjectWizardContext): boolean {
+        return context.runtime === undefined;
     }
 }

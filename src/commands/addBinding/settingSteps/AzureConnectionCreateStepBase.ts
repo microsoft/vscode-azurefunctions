@@ -27,14 +27,14 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         this._setting = setting;
     }
 
-    public abstract async getConnection(wizardContext: T): Promise<IConnection>;
+    public abstract async getConnection(context: T): Promise<IConnection>;
 
-    public async execute(wizardContext: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+    public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('retrieving', 'Retrieving connection string...') });
 
-        const result: IConnection = await this.getConnection(wizardContext);
+        const result: IConnection = await this.getConnection(context);
         const appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
-        setBindingSetting(wizardContext, this._setting, appSettingKey);
-        await setLocalAppSetting(wizardContext.projectPath, appSettingKey, result.connectionString);
+        setBindingSetting(context, this._setting, appSettingKey);
+        await setLocalAppSetting(context.projectPath, appSettingKey, result.connectionString);
     }
 }

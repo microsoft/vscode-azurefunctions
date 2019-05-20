@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
-export async function deleteNode(expectedContextValue: string | RegExp, node?: AzExtTreeItem): Promise<void> {
+export async function deleteNode(context: IActionContext, expectedContextValue: string | RegExp, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker(expectedContextValue);
+        node = await ext.tree.showTreeItemPicker(expectedContextValue, context);
     }
 
-    await node.deleteTreeItem();
+    await node.deleteTreeItem(context);
 }

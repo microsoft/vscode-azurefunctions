@@ -16,13 +16,13 @@ export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IBind
         this._setting = setting;
     }
 
-    public abstract promptCore(wizardContext: IBindingWizardContext): Promise<string | undefined>;
+    public abstract promptCore(context: IBindingWizardContext): Promise<string | undefined>;
 
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
-        setBindingSetting(wizardContext, this._setting, await this.promptCore(wizardContext));
+    public async prompt(context: IBindingWizardContext): Promise<void> {
+        setBindingSetting(context, this._setting, await this.promptCore(context));
     }
 
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !getBindingSetting(wizardContext, this._setting);
+    public shouldPrompt(context: IBindingWizardContext): boolean {
+        return !getBindingSetting(context, this._setting);
     }
 }

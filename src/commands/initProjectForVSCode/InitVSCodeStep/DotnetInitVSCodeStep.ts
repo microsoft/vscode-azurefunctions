@@ -43,9 +43,9 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
      * Detects the runtime based on the targetFramework from the proj file
      * Also performs a few validations and sets a few properties based on that targetFramework
      */
-    protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        const projectPath: string = wizardContext.projectPath;
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+        const projectPath: string = context.projectPath;
+        const language: ProjectLanguage = nonNullProp(context, 'language');
 
         const projFileName: string | undefined = language === ProjectLanguage.FSharp ? await tryGetFsprojFile(projectPath) : await tryGetCsprojFile(projectPath);
         if (!projFileName) {
@@ -57,11 +57,11 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         if (!targetFramework) {
             throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projFileName));
         } else {
-            wizardContext.actionContext.properties.dotnetTargetFramework = targetFramework;
+            context.telemetry.properties.dotnetTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
-                wizardContext.runtime = ProjectRuntime.v2;
+                context.runtime = ProjectRuntime.v2;
             } else {
-                wizardContext.runtime = ProjectRuntime.v1;
+                context.runtime = ProjectRuntime.v1;
                 const settingKey: string = 'show64BitWarning';
                 if (getWorkspaceSetting<boolean>(settingKey)) {
                     const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
@@ -80,7 +80,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                     }
                 }
             }
-            this.setDeploySubpath(wizardContext, `bin/Release/${targetFramework}/publish`);
+            this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
             this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
     }

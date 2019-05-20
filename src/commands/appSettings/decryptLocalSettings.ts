@@ -5,12 +5,13 @@
 
 import * as path from 'path';
 import { Uri } from "vscode";
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 import { getLocalSettingsFile } from './getLocalSettingsFile';
 
-export async function decryptLocalSettings(uri?: Uri): Promise<void> {
+export async function decryptLocalSettings(_context: IActionContext, uri?: Uri): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the settings file to decrypt.');
     const localSettingsPath: string = uri ? uri.fsPath : await getLocalSettingsFile(message);
     ext.outputChannel.show(true);

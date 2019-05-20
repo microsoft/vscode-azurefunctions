@@ -24,7 +24,7 @@ import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeS
 export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
 
-    public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
+    public async prompt(context: IProjectWizardContext): Promise<void> {
         const previewDescription: string = localize('previewDescription', '(Preview)');
         // Display all languages, even if we don't have full support for them
         const languagePicks: QuickPickItem[] = [
@@ -43,19 +43,19 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
         ];
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', "Select your project's language") };
-        wizardContext.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;
+        context.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;
     }
 
-    public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
-        return wizardContext.language === undefined;
+    public shouldPrompt(context: IProjectWizardContext): boolean {
+        return context.language === undefined;
     }
 
-    public async getSubWizard(wizardContext: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext>> {
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+    public async getSubWizard(context: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext>> {
+        const language: ProjectLanguage = nonNullProp(context, 'language');
         const executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[] = [];
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
 
-        await addInitVSCodeStep(wizardContext, executeSteps);
+        await addInitVSCodeStep(context, executeSteps);
         if (language !== ProjectLanguage.CSharp && language !== ProjectLanguage.FSharp) { // runtime will be detected from proj file
             promptSteps.push(new ProjectRuntimeStep());
         }
@@ -64,8 +64,8 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
     }
 }
 
-export async function addInitVSCodeStep(wizardContext: IProjectWizardContext, executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
-    switch (wizardContext.language) {
+export async function addInitVSCodeStep(context: IProjectWizardContext, executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
+    switch (context.language) {
         case ProjectLanguage.JavaScript:
             executeSteps.push(new JavaScriptInitVSCodeStep());
             break;
@@ -77,14 +77,14 @@ export async function addInitVSCodeStep(wizardContext: IProjectWizardContext, ex
             executeSteps.push(new DotnetInitVSCodeStep());
             break;
         case ProjectLanguage.Python:
-            wizardContext.runtime = ProjectRuntime.v2; // only supports v2
+            context.runtime = ProjectRuntime.v2; // only supports v2
             executeSteps.push(new PythonInitVSCodeStep());
             break;
         case ProjectLanguage.PowerShell:
             executeSteps.push(new PowerShellInitVSCodeStep());
             break;
         case ProjectLanguage.Java:
-            wizardContext.runtime = ProjectRuntime.v2; // only supports v2
+            context.runtime = ProjectRuntime.v2; // only supports v2
             executeSteps.push(new JavaInitVSCodeStep());
             break;
         case ProjectLanguage.CSharpScript:
@@ -96,7 +96,7 @@ export async function addInitVSCodeStep(wizardContext: IProjectWizardContext, ex
             break;
     }
 
-    if (wizardContext.runtime === undefined) {
-        wizardContext.runtime = await tryGetLocalRuntimeVersion();
+    if (context.runtime === undefined) {
+        context.runtime = await tryGetLocalRuntimeVersion();
     }
 }

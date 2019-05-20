@@ -13,13 +13,13 @@ import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetFunctionNameStep extends FunctionNameStepBase<IDotnetFunctionWizardContext> {
-    protected async getUniqueFunctionName(wizardContext: IDotnetFunctionWizardContext): Promise<string | undefined> {
-        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
-        return await fsUtil.getUniqueFsPath(wizardContext.projectPath, template.defaultFunctionName, getFileExtension(wizardContext));
+    protected async getUniqueFunctionName(context: IDotnetFunctionWizardContext): Promise<string | undefined> {
+        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        return await fsUtil.getUniqueFsPath(context.projectPath, template.defaultFunctionName, getFileExtension(context));
     }
 
-    protected async validateFunctionNameCore(wizardContext: IDotnetFunctionWizardContext, name: string): Promise<string | undefined> {
-        if (await fse.pathExists(path.join(wizardContext.projectPath, name + getFileExtension(wizardContext)))) {
+    protected async validateFunctionNameCore(context: IDotnetFunctionWizardContext, name: string): Promise<string | undefined> {
+        if (await fse.pathExists(path.join(context.projectPath, name + getFileExtension(context)))) {
             return localize('existingFile', 'A file with the name "{0}" already exists.', name);
         } else {
             return undefined;

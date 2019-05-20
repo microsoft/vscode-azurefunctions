@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
+import { AzureWizard, ICreateChildImplContext } from 'vscode-azureextensionui';
 import { createBindingWizard } from '../../commands/addBinding/createBindingWizard';
 import { IBindingWizardContext } from '../../commands/addBinding/IBindingWizardContext';
 import { ParsedFunctionJson } from '../../funcConfig/function';
@@ -45,20 +45,17 @@ export class LocalBindingsTreeItem extends LocalParentTreeItem {
         return this._config.bindings.map(b => new LocalBindingTreeItem(this, b));
     }
 
-    public async createChildImpl(_showCreatingTreeItem: (label: string) => void): Promise<LocalBindingTreeItem> {
-        // https://github.com/Microsoft/vscode-azuretools/issues/120
-        const actionContext: IActionContext = { properties: {}, measurements: {} };
-        const wizardContext: IBindingWizardContext = {
-            actionContext,
+    public async createChildImpl(context: ICreateChildImplContext): Promise<LocalBindingTreeItem> {
+        const wizardContext: IBindingWizardContext = Object.assign(context, {
             functionJsonPath: this.functionJsonPath,
             workspacePath: this.root.workspacePath,
             projectPath: this.root.projectPath,
             workspaceFolder: this.root.workspaceFolder
-        };
+        });
 
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
-        await wizard.prompt(actionContext);
-        await wizard.execute(actionContext);
+        await wizard.prompt();
+        await wizard.execute();
 
         return new LocalBindingTreeItem(this, nonNullProp(wizardContext, 'binding'));
     }
