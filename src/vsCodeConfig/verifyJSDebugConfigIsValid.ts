@@ -33,13 +33,13 @@ export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguag
             // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go
             const funcTask: ITask | undefined = tasksContent.tasks && tasksContent.tasks.find((t: ITask) => !!t.label && oldFuncHostNameRegEx.test(t.label));
             if (funcTask) {
-                context.properties.verifyConfigPrompt = 'updateJSDebugConfig';
+                context.telemetry.properties.verifyConfigPrompt = 'updateJSDebugConfig';
 
                 const settingKey: string = 'showDebugConfigWarning';
                 const message: string = localize('uninitializedWarning', 'Your debug configuration is out of date and may not work with the latest version of the Azure Functions Core Tools.');
                 const learnMoreLink: string = 'https://aka.ms/AA1vrxa';
                 if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, context)) {
-                    context.suppressErrorDisplay = false;
+                    context.errorHandling.suppressDisplay = false;
                     await initProjectForVSCode(context, workspacePath, projectLanguage);
                 }
             }

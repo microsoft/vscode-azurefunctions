@@ -74,7 +74,7 @@ async function verifyWebContentSettings(node: SlotTreeItemBase, context: IAction
         const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
         const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
         if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
-            context.properties.webContentSettingsRemoved = 'false';
+            context.telemetry.properties.webContentSettingsRemoved = 'false';
             await ext.ui.showWarningMessage(
                 localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
                 { modal: true },
@@ -83,7 +83,7 @@ async function verifyWebContentSettings(node: SlotTreeItemBase, context: IAction
             );
             delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
             delete remoteProperties[WEBSITE_CONTENTSHARE];
-            context.properties.webContentSettingsRemoved = 'true';
+            context.telemetry.properties.webContentSettingsRemoved = 'true';
             return true;
         }
     }

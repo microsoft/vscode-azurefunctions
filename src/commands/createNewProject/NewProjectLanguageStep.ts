@@ -57,7 +57,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const result: ProjectLanguage | undefined = (await ext.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
             await openUrl('https://aka.ms/AA4ul9b');
-            context.properties.cancelStep = 'viewSampleProjects';
+            context.telemetry.properties.cancelStep = 'viewSampleProjects';
             throw new UserCancelledError();
         } else {
             context.language = result;

@@ -34,9 +34,9 @@ export class FuncTaskProvider implements TaskProvider {
         const result: Task[] = [];
 
         await callWithTelemetryAndErrorHandling('provideTasks', async (context: IActionContext) => {
-            context.properties.isActivationEvent = 'true';
-            context.suppressErrorDisplay = true;
-            context.suppressTelemetry = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
             if (workspace.workspaceFolders) {
                 let lastError: unknown;
@@ -74,9 +74,9 @@ export class FuncTaskProvider implements TaskProvider {
 
     public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
         await callWithTelemetryAndErrorHandling('resolveTask', async (context: IActionContext) => {
-            context.properties.isActivationEvent = 'true';
-            context.suppressErrorDisplay = true;
-            context.suppressTelemetry = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
         });
 
         // The resolveTask method returns undefined and is currently not called by VS Code. It is there to optimize task loading in the future.

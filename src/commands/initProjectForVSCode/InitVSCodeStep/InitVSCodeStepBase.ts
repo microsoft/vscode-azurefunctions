@@ -28,12 +28,12 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         await this.executeCore(context);
 
         const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        context.properties.projectRuntime = runtime;
+        context.telemetry.properties.projectRuntime = runtime;
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
-        context.properties.projectLanguage = language;
+        context.telemetry.properties.projectLanguage = language;
 
-        context.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
+        context.telemetry.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
 
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);

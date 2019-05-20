@@ -19,7 +19,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
     const install: MessageItem = { title: localize('install', 'Install') };
 
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (context: IActionContext) => {
-        context.suppressErrorDisplay = true;
+        context.errorHandling.suppressDisplay = true;
 
         if (await funcToolsInstalled()) {
             installed = true;
@@ -36,7 +36,7 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
             // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
             input = await ext.ui.showWarningMessage(message, { modal: true }, ...items);
 
-            context.properties.dialogResult = input.title;
+            context.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
                 await installFuncCoreTools(packageManagers);

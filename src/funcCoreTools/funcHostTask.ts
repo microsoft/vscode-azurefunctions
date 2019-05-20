@@ -31,16 +31,16 @@ export function isFuncHostTask(task: vscode.Task): boolean {
 
 export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTask, async (context: IActionContext, e: vscode.TaskStartEvent) => {
-        context.suppressErrorDisplay = true;
-        context.suppressTelemetry = true;
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             isFuncHostRunningMap.set(e.execution.task.scope, true);
         }
     });
 
     registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTask, async (context: IActionContext, e: vscode.TaskEndEvent) => {
-        context.suppressErrorDisplay = true;
-        context.suppressTelemetry = true;
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             isFuncHostRunningMap.set(e.execution.task.scope, false);
         }
@@ -50,8 +50,8 @@ export function registerFuncHostTaskEvents(): void {
 }
 
 async function stopFuncTaskIfRunning(context: IActionContext, debugSession: vscode.DebugSession): Promise<void> {
-    context.suppressErrorDisplay = true;
-    context.suppressTelemetry = true;
+    context.errorHandling.suppressDisplay = true;
+    context.telemetry.suppressIfSuccessful = true;
 
     if (debugSession.workspaceFolder) {
         const funcExecution: vscode.TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: vscode.TaskExecution) => {
@@ -59,7 +59,7 @@ async function stopFuncTaskIfRunning(context: IActionContext, debugSession: vsco
         });
 
         if (funcExecution && isFuncHostRunning(debugSession.workspaceFolder)) {
-            context.suppressTelemetry = false; // only track telemetry if it's actually the func task
+            context.telemetry.suppressIfSuccessful = false; // only track telemetry if it's actually the func task
             const stopFuncHostPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
                 const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
                     if (e.execution === funcExecution) {

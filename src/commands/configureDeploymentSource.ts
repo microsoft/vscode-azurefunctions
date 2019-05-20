@@ -16,6 +16,6 @@ export async function configureDeploymentSource(context: IActionContext, node?: 
 
     const updatedScmType: string | undefined = await editScmType(node.root.client, node, context);
     if (updatedScmType !== undefined) {
-        context.properties.updatedScmType = updatedScmType;
+        context.telemetry.properties.updatedScmType = updatedScmType;
     }
 }

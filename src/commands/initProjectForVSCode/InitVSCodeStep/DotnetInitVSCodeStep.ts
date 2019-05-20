@@ -57,7 +57,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         if (!targetFramework) {
             throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projFileName));
         } else {
-            context.properties.dotnetTargetFramework = targetFramework;
+            context.telemetry.properties.dotnetTargetFramework = targetFramework;
             if (/net(standard|core)/i.test(targetFramework)) {
                 context.runtime = ProjectRuntime.v2;
             } else {

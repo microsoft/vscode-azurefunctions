@@ -24,7 +24,7 @@ export namespace mavenUtils {
                     await openUrl('https://aka.ms/azurefunction_maven');
                 }
             });
-            context.suppressErrorDisplay = true; // Swallow errors in case show two error message
+            context.errorHandling.suppressDisplay = true; // Swallow errors in case show two error message
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
     }

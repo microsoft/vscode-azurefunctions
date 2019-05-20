@@ -40,7 +40,7 @@ export async function createNewProject(
         wizardContext.openBehavior = 'DontOpen';
     } else {
         wizardContext.openBehavior = getWorkspaceSetting(projectOpenBehaviorSetting);
-        context.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
+        context.telemetry.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
     }
 
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {

@@ -39,16 +39,16 @@ async function promptToBuildNativeDeps(context: IActionContext, deployFsPath: st
     const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?');
     const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
     if (result === DialogResponses.yes) {
-        context.properties.preDeployTaskResponse = 'packNativeDeps';
+        context.telemetry.properties.preDeployTaskResponse = 'packNativeDeps';
         const flag: string = '--build-native-deps';
         await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${flag}`, deployFsPath);
         return await tryRunPreDeployTask(context, deployFsPath, scmType, extensionPrefix);
     } else if (result === DialogResponses.learnMore) {
-        context.properties.preDeployTaskResponse = 'packLearnMore';
+        context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';
         await openUrl('https://aka.ms/func-python-publish');
         throw new UserCancelledError();
     } else {
-        context.properties.preDeployTaskResponse = 'cancel';
+        context.telemetry.properties.preDeployTaskResponse = 'cancel';
         throw new UserCancelledError();
     }
 }

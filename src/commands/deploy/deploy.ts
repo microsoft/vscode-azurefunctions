@@ -57,12 +57,12 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
 
     // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
     const isNewFunctionApp: boolean = newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
-    context.properties.isNewFunctionApp = String(isNewFunctionApp);
+    context.telemetry.properties.isNewFunctionApp = String(isNewFunctionApp);
 
     const client: appservice.SiteClient = node.root.client;
     const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, deployFsPath);
-    context.properties.projectLanguage = language;
-    context.properties.projectRuntime = runtime;
+    context.telemetry.properties.projectLanguage = language;
+    context.telemetry.properties.projectRuntime = runtime;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
@@ -74,10 +74,10 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (!isNewFunctionApp && isZipDeploy) {
         const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
-        context.properties.cancelStep = 'confirmDestructiveDeployment';
+        context.telemetry.properties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
         await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
-        context.properties.cancelStep = '';
+        context.telemetry.properties.cancelStep = '';
     }
 
     await runPreDeployTask(context, deployFsPath, siteConfig.scmType);
@@ -121,7 +121,7 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
     const includeSetting: string | undefined = getWorkspaceSetting(includeKey, fsPath);
     const excludeSetting: string | string[] | undefined = getWorkspaceSetting(excludeKey, fsPath);
     if (includeSetting || excludeSetting) {
-        context.properties.hasOldGlobSettings = 'true';
+        context.telemetry.properties.hasOldGlobSettings = 'true';
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
         await ext.ui.showWarningMessage(message);
     }

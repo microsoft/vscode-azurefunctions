@@ -28,7 +28,7 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
 
                 const mismatchTargetFramework: string | undefined = (tasksResult && tasksResult.mismatchTargetFramework) || (settingsResult && settingsResult.mismatchTargetFramework);
                 if (mismatchTargetFramework) {
-                    context.properties.verifyConfigPrompt = 'updateTargetFramework';
+                    context.telemetry.properties.verifyConfigPrompt = 'updateTargetFramework';
 
                     // This won't handle the case where there are multiple different target frameworks, but it's good enough for the message
                     const message: string = localize('mismatchTargetFramework', 'The targetFramework "{0}" in your project file does not match the targetFramework "{1}" in your VS Code config.', targetFramework, mismatchTargetFramework);
@@ -36,10 +36,10 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
 
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, update, DialogResponses.dontWarnAgain);
                     if (result === DialogResponses.dontWarnAgain) {
-                        context.properties.verifyConfigResult = 'dontWarnAgain';
+                        context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
                         await updateWorkspaceSetting(settingKey, false, folder.uri.fsPath);
                     } else if (result === update) {
-                        context.properties.verifyConfigResult = 'update';
+                        context.telemetry.properties.verifyConfigResult = 'update';
                         if (tasksResult) {
                             await tasksResult.update();
                         }
@@ -52,7 +52,7 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
             }
         }
     } else {
-        context.properties.verifyConfigResult = 'suppressed';
+        context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
 }
 

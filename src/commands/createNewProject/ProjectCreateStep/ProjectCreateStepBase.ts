@@ -18,9 +18,9 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
     public abstract async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 
     public async execute(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        context.properties.projectLanguage = context.language;
-        context.properties.projectRuntime = context.runtime;
-        context.properties.openBehavior = context.openBehavior;
+        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectRuntime = context.runtime;
+        context.telemetry.properties.openBehavior = context.openBehavior;
 
         progress.report({ message: this.creatingMessage });
         await fse.ensureDir(context.projectPath);

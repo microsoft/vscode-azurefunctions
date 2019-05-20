@@ -6,7 +6,7 @@
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem } from 'vscode';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -66,7 +66,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(showCreatingTreeItem: (label: string) => void, context: IActionContext & { newResourceGroupName?: string }): Promise<AzureTreeItem> {
+    public async createChildImpl(context: ICreateChildImplContext & { newResourceGroupName?: string }): Promise<AzureTreeItem> {
         const runtime: ProjectRuntime = await getDefaultRuntime(context);
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
@@ -90,7 +90,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const advancedCreationKey: string = 'advancedCreation';
         const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
-        context.properties.advancedCreation = String(advancedCreation);
+        context.telemetry.properties.advancedCreation = String(advancedCreation);
         if (!advancedCreation) {
             wizardContext.useConsumptionPlan = true;
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
@@ -124,9 +124,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt();
-        showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
-        context.properties.os = wizardContext.newSiteOS;
-        context.properties.runtime = wizardContext.newSiteRuntime;
+        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        context.telemetry.properties.os = wizardContext.newSiteOS;
+        context.telemetry.properties.runtime = wizardContext.newSiteRuntime;
         if (!advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
@@ -165,21 +165,21 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 async function getDefaultRuntime(context: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
     let runtime: string | undefined = convertStringToRuntime(getWorkspaceSettingFromAnyFolder(projectRuntimeSetting));
-    context.properties.runtimeSource = 'VSCodeSetting';
+    context.telemetry.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {
         // Try to get the runtime that matches their local func cli version
         runtime = await tryGetLocalRuntimeVersion();
-        context.properties.runtimeSource = 'LocalFuncCli';
+        context.telemetry.properties.runtimeSource = 'LocalFuncCli';
     }
 
     if (!runtime) {
         // Default to v2 if all else fails
         runtime = ProjectRuntime.v2;
-        context.properties.runtimeSource = 'Backup';
+        context.telemetry.properties.runtimeSource = 'Backup';
     }
 
-    context.properties.projectRuntime = runtime;
+    context.telemetry.properties.projectRuntime = runtime;
 
     return <ProjectRuntime>runtime;
 }

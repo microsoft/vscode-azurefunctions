@@ -29,13 +29,13 @@ export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
 }
 
 export function addLocalFuncTelemetry(context: IActionContext): void {
-    context.properties.funcCliVersion = 'unknown';
+    context.telemetry.properties.funcCliVersion = 'unknown';
 
     // tslint:disable-next-line:no-floating-promises
     getLocalFuncCoreToolsVersion().then((version: string) => {
         // tslint:disable-next-line:strict-boolean-expressions
-        context.properties.funcCliVersion = version || 'none';
+        context.telemetry.properties.funcCliVersion = version || 'none';
     }).catch(() => {
-        context.properties.funcCliVersion = 'none';
+        context.telemetry.properties.funcCliVersion = 'none';
     });
 }

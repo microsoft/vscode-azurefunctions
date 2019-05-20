@@ -21,8 +21,8 @@ import { updateFuncCoreTools } from './updateFuncCoreTools';
 
 export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsIsLatest', async (context: IActionContext) => {
-        context.suppressErrorDisplay = true;
-        context.properties.isActivationEvent = 'true';
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.properties.isActivationEvent = 'true';
 
         const showMultiCoreToolsWarningKey: string = 'showMultiCoreToolsWarning';
         const showMultiCoreToolsWarning: boolean = !!getWorkspaceSetting<boolean>(showMultiCoreToolsWarningKey);
@@ -38,7 +38,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             } else if (packageManagers.length === 1) {
                 packageManager = packageManagers[0];
             } else {
-                context.properties.multiFunc = 'true';
+                context.telemetry.properties.multiFunc = 'true';
                 if (showMultiCoreToolsWarning) {
                     const message: string = localize('multipleInstalls', 'Detected multiple installs of the func cli.');
                     const selectUninstall: vscode.MessageItem = { title: localize('selectUninstall', 'Select version to uninstall') };
@@ -58,7 +58,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 if (!localVersion) {
                     return;
                 }
-                context.properties.localVersion = localVersion;
+                context.telemetry.properties.localVersion = localVersion;
 
                 const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(localVersion);
                 if (projectRuntime === undefined) {
@@ -71,7 +71,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 }
 
                 if (semver.gt(newestVersion, localVersion)) {
-                    context.properties.outOfDateFunc = 'true';
+                    context.telemetry.properties.outOfDateFunc = 'true';
                     const message: string = localize(
                         'azFunc.outdatedFunctionRuntime',
                         'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
@@ -113,7 +113,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
             return (await getNpmDistTag(projectRuntime)).value;
         }
     } catch (error) {
-        context.properties.latestRuntimeError = parseError(error).message;
+        context.telemetry.properties.latestRuntimeError = parseError(error).message;
     }
 
     return undefined;

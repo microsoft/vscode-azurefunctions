@@ -60,7 +60,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
         if (result === newProject) {
             // don't wait
             commands.executeCommand('azureFunctions.createNewProject');
-            context.properties.noWorkspaceResult = 'createNewProject';
+            context.telemetry.properties.noWorkspaceResult = 'createNewProject';
         } else {
             const uri: Uri[] = await ext.ui.showOpenDialog({
                 canSelectFiles: false,
@@ -70,10 +70,10 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
             });
             // don't wait
             commands.executeCommand('vscode.openFolder', uri[0]);
-            context.properties.noWorkspaceResult = 'openExistingProject';
+            context.telemetry.properties.noWorkspaceResult = 'openExistingProject';
         }
 
-        context.suppressErrorDisplay = true;
+        context.errorHandling.suppressDisplay = true;
         throw new NoWorkspaceError();
     } else if (workspace.workspaceFolders.length === 1) {
         folder = workspace.workspaceFolders[0];

@@ -38,7 +38,7 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
         const packageName: string = nonNullProp(context, 'javaPackageName');
         const functionName: string = nonNullProp(context, 'functionName');
         await mavenUtils.executeMvnCommand(
-            context.properties,
+            context.telemetry.properties,
             ext.outputChannel,
             context.projectPath,
             'azure-functions:add',

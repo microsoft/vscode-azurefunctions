@@ -15,13 +15,13 @@ export async function verifyJavaDeployConfigIsValid(projectLanguage: ProjectLang
     const deploySubPath: string | undefined = getWorkspaceSetting<string>(deploySubpathSetting, workspacePath);
 
     if (!preDeployTask && !deploySubPath) {
-        context.properties.verifyConfigPrompt = 'updateJavaDeployConfig';
+        context.telemetry.properties.verifyConfigPrompt = 'updateJavaDeployConfig';
 
         const settingKey: string = 'showJavaDeployConfigWarning';
         const message: string = localize('updateJavaDeployConfig', 'Your deploy configuration is out of date and may not work with the latest version of the Azure Functions extension for VS Code.');
         const learnMoreLink: string = 'https://aka.ms/AA41zno';
         if (await promptToReinitializeProject(workspacePath, settingKey, message, learnMoreLink, context)) {
-            context.suppressErrorDisplay = false;
+            context.errorHandling.suppressDisplay = false;
             await initProjectForVSCode(context, workspacePath, projectLanguage);
         }
     }

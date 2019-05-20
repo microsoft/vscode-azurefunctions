@@ -24,7 +24,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
     // Don't wait
     window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
         await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
-            postDeployContext.properties.dialogResult = result && result.title;
+            postDeployContext.telemetry.properties.dialogResult = result && result.title;
             if (result === viewOutput) {
                 ext.outputChannel.show();
             } else if (result === streamLogs) {
@@ -57,7 +57,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         }
     } catch (error) {
         // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
-        context.suppressErrorDisplay = true;
+        context.errorHandling.suppressDisplay = true;
         ext.outputChannel.appendLine(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
         throw error;
     }

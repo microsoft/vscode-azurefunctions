@@ -9,20 +9,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensionui';
-import { createNewProject, DialogResponses, ext, IActionContext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
+import { createNewProject, DialogResponses, ext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
-import {
-    getCSharpValidateOptions,
-    getDotnetScriptValidateOptions,
-    getFSharpValidateOptions,
-    getJavaScriptValidateOptions,
-    getJavaValidateOptions,
-    getPowerShellValidateOptions,
-    getPythonValidateOptions,
-    getScriptValidateOptions,
-    getTypeScriptValidateOptions,
-    validateProject
-} from './validateProject';
+import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Create New Project', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -182,7 +171,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         }
 
         ext.ui = new TestUserInput(inputs);
-        await createNewProject(<IActionContext>{ properties: {}, measurements: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
+        await createNewProject({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
         assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
     }
 });

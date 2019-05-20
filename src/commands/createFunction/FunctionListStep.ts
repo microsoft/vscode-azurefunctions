@@ -44,7 +44,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
             const templateProvider: TemplateProvider = await ext.templateProviderTask;
-            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, context.projectPath, TemplateFilter.All, context.properties);
+            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, context.projectPath, TemplateFilter.All, context.telemetry.properties);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
@@ -119,7 +119,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 localize('selectFuncTemplate', 'Select a template for your function');
             const result: IFunctionTemplate | TemplatePromptResult = (await ext.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
-                context.properties.templateId = 'skipForNow';
+                context.telemetry.properties.templateId = 'skipForNow';
                 break;
             } else if (result === 'changeFilter') {
                 templateFilter = await promptForTemplateFilter();
@@ -132,7 +132,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             }
         }
 
-        context.properties.templateFilter = templateFilter;
+        context.telemetry.properties.templateFilter = templateFilter;
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
@@ -144,7 +144,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
 
         const provider: TemplateProvider = await ext.templateProviderTask;
-        let templates: IFunctionTemplate[] = await provider.getTemplates(language, runtime, context.projectPath, templateFilter, context.properties);
+        let templates: IFunctionTemplate[] = await provider.getTemplates(language, runtime, context.projectPath, templateFilter, context.telemetry.properties);
         templates = templates.sort((a, b) => sortTemplates(a, b, templateFilter));
 
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates.map(t => { return { label: t.name, data: t }; });

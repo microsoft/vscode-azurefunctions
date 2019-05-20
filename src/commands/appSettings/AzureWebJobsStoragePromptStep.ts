@@ -33,7 +33,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         }
 
         // tslint:disable-next-line: strict-boolean-expressions
-        context.properties.azureWebJobsStorageType = context.azureWebJobsStorageType || 'skipForNow';
+        context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType || 'skipForNow';
     }
 
     public shouldPrompt(context: T): boolean {

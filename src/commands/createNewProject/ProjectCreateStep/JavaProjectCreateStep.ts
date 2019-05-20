@@ -32,7 +32,7 @@ export class JavaProjectCreateStep extends ProjectCreateStepBase {
             // Use maven command to init Java function project.
             ext.outputChannel.show();
             await mavenUtils.executeMvnCommand(
-                context.properties,
+                context.telemetry.properties,
                 ext.outputChannel,
                 tempFolder,
                 'archetype:generate',

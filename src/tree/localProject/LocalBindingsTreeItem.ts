@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
+import { AzureWizard, ICreateChildImplContext } from 'vscode-azureextensionui';
 import { createBindingWizard } from '../../commands/addBinding/createBindingWizard';
 import { IBindingWizardContext } from '../../commands/addBinding/IBindingWizardContext';
 import { ParsedFunctionJson } from '../../funcConfig/function';
@@ -45,7 +45,7 @@ export class LocalBindingsTreeItem extends LocalParentTreeItem {
         return this._config.bindings.map(b => new LocalBindingTreeItem(this, b));
     }
 
-    public async createChildImpl(_showCreatingTreeItem: (label: string) => void, context: IActionContext): Promise<LocalBindingTreeItem> {
+    public async createChildImpl(context: ICreateChildImplContext): Promise<LocalBindingTreeItem> {
         const wizardContext: IBindingWizardContext = Object.assign(context, {
             functionJsonPath: this.functionJsonPath,
             workspacePath: this.root.workspacePath,

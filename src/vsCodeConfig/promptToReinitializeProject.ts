@@ -14,14 +14,14 @@ export async function promptToReinitializeProject(fsPath: string, settingKey: st
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, updateConfig, DialogResponses.dontWarnAgain);
         if (result === DialogResponses.dontWarnAgain) {
-            context.properties.verifyConfigResult = 'dontWarnAgain';
+            context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
             await updateWorkspaceSetting(settingKey, false, fsPath);
         } else {
-            context.properties.verifyConfigResult = 'update';
+            context.telemetry.properties.verifyConfigResult = 'update';
             return true;
         }
     } else {
-        context.properties.verifyConfigResult = 'suppressed';
+        context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
 
     return false;

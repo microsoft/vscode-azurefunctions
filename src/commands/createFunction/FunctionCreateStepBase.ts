@@ -47,9 +47,9 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
 
-        context.properties.projectLanguage = context.language;
-        context.properties.projectRuntime = context.runtime;
-        context.properties.templateId = template.id;
+        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectRuntime = context.runtime;
+        context.telemetry.properties.templateId = template.id;
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
@@ -125,7 +125,7 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
     // tslint:disable-next-line: no-floating-promises
     callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
-        context.suppressTelemetry = true;
+        context.telemetry.suppressIfSuccessful = true;
 
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {

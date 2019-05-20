@@ -19,9 +19,9 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
 
     public async provideDebugConfigurations(folder: WorkspaceFolder | undefined, _token?: CancellationToken): Promise<DebugConfiguration[]> {
         const configs: DebugConfiguration[] | undefined = await callWithTelemetryAndErrorHandling('provideDebugConfigurations', async (context: IActionContext) => {
-            context.properties.isActivationEvent = 'true';
-            context.suppressErrorDisplay = true;
-            context.suppressTelemetry = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
             const result: DebugConfiguration[] = [];
             if (folder) {
@@ -41,9 +41,9 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
         let result: DebugConfiguration | undefined = debugConfiguration;
 
         await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async (context: IActionContext) => {
-            context.properties.isActivationEvent = 'true';
-            context.suppressErrorDisplay = true;
-            context.suppressTelemetry = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
             this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
             if (debugConfiguration.preLaunchTask === hostStartTaskName) {
