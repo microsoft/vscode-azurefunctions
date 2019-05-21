@@ -17,62 +17,62 @@ import { verifyJSDebugConfigIsValid } from './verifyJSDebugConfigIsValid';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
 
-export async function verifyVSCodeConfigOnActivate(actionContext: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
-    actionContext.suppressTelemetry = true;
-    actionContext.properties.isActivationEvent = 'true';
-    actionContext.suppressErrorDisplay = true; // Swallow errors when verifying. No point in showing an error if we can't understand the project anyways
+export async function verifyVSCodeConfigOnActivate(context: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+    context.telemetry.suppressIfSuccessful = true;
+    context.telemetry.properties.isActivationEvent = 'true';
+    context.errorHandling.suppressDisplay = true; // Swallow errors when verifying. No point in showing an error if we can't understand the project anyways
 
     if (folders) {
         for (const folder of folders) {
             const workspacePath: string = folder.uri.fsPath;
             const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspacePath);
             if (projectPath) {
-                actionContext.suppressTelemetry = false;
+                context.telemetry.suppressIfSuccessful = false;
 
                 if (isInitializedProject(projectPath)) {
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);
-                    actionContext.properties.projectLanguage = projectLanguage;
+                    context.telemetry.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
                         case ProjectLanguage.JavaScript:
-                            await verifyJSDebugConfigIsValid(projectLanguage, workspacePath, actionContext);
+                            await verifyJSDebugConfigIsValid(projectLanguage, workspacePath, context);
                             break;
                         case ProjectLanguage.Java:
-                            await verifyJavaDeployConfigIsValid(projectLanguage, workspacePath, actionContext);
+                            await verifyJavaDeployConfigIsValid(projectLanguage, workspacePath, context);
                             break;
                         case ProjectLanguage.Python:
-                            await verifyPythonVenv(projectPath, actionContext);
+                            await verifyPythonVenv(projectPath, context);
                             break;
                         case ProjectLanguage.CSharp:
                         case ProjectLanguage.FSharp:
-                            await verifyTargetFramework(projectLanguage, folder, projectPath, actionContext);
+                            await verifyTargetFramework(projectLanguage, folder, projectPath, context);
                             break;
                         default:
                     }
                 } else {
-                    await promptToInitializeProject(workspacePath, actionContext);
+                    await promptToInitializeProject(workspacePath, context);
                 }
             }
         }
     }
 }
 
-async function promptToInitializeProject(workspacePath: string, actionContext: IActionContext): Promise<void> {
+async function promptToInitializeProject(workspacePath: string, context: IActionContext): Promise<void> {
     const settingKey: string = 'showProjectWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
-        actionContext.properties.verifyConfigPrompt = 'initProject';
+        context.telemetry.properties.verifyConfigPrompt = 'initProject';
 
         const learnMoreLink: string = 'https://aka.ms/azFuncProject';
         const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(workspacePath));
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, DialogResponses.yes, DialogResponses.dontWarnAgain);
         if (result === DialogResponses.dontWarnAgain) {
-            actionContext.properties.verifyConfigResult = 'dontWarnAgain';
+            context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
             await updateGlobalSetting(settingKey, false);
         } else {
-            actionContext.properties.verifyConfigResult = 'update';
-            await initProjectForVSCode(actionContext, workspacePath);
+            context.telemetry.properties.verifyConfigResult = 'update';
+            await initProjectForVSCode(context, workspacePath);
         }
     } else {
-        actionContext.properties.verifyConfigResult = 'suppressed';
+        context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
 }
 

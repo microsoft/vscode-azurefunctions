@@ -376,7 +376,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         await fse.ensureDir(path.join(projectPath, '.git'));
 
         ext.ui = new TestUserInput(inputs);
-        await initProjectForVSCode({ properties: {}, measurements: {} }, projectPath);
+        await initProjectForVSCode({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, projectPath);
         assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
     }
 });

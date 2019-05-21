@@ -29,14 +29,14 @@ export abstract class TemplateRetriever {
         } catch (error) {
             const errorMessage: string = parseError(error).message;
             ext.outputChannel.appendLine(errorMessage);
-            context.properties.cacheError = errorMessage;
+            context.telemetry.properties.cacheError = errorMessage;
             return undefined;
         }
     }
 
     public async tryGetTemplatesFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
         try {
-            context.properties.templateVersion = templateVersion;
+            context.telemetry.properties.templateVersion = templateVersion;
             ext.outputChannel.appendLine(localize('updatingTemplates', 'Updating {0} templates for runtime "{1}" to version "{2}"...', this.templateType, runtime, templateVersion));
             const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime, context);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), templateVersion);
@@ -46,7 +46,7 @@ export abstract class TemplateRetriever {
         } catch (error) {
             const errorMessage: string = parseError(error).message;
             ext.outputChannel.appendLine(errorMessage);
-            context.properties.cliFeedError = errorMessage;
+            context.telemetry.properties.cliFeedError = errorMessage;
             return undefined;
         }
     }
@@ -62,7 +62,7 @@ export abstract class TemplateRetriever {
         } catch (error) {
             const errorMessage: string = parseError(error).message;
             ext.outputChannel.appendLine(errorMessage);
-            context.properties.backupError = errorMessage;
+            context.telemetry.properties.backupError = errorMessage;
             return undefined;
         }
     }

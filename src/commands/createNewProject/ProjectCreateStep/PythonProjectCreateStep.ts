@@ -36,20 +36,20 @@ six==1.12.0
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 
-    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+    public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const settingKey: string = 'createPythonVenv';
-        const createPythonVenv: boolean = !!getWorkspaceSetting(settingKey, wizardContext.workspacePath);
-        wizardContext.actionContext.properties.createPythonVenv = String(createPythonVenv);
-        if (createPythonVenv && !await getExistingVenv(wizardContext.projectPath)) {
+        const createPythonVenv: boolean = !!getWorkspaceSetting(settingKey, context.workspacePath);
+        context.telemetry.properties.createPythonVenv = String(createPythonVenv);
+        if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
             progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
             const defaultVenvName: string = '.env';
-            await createVirtualEnviornment(defaultVenvName, wizardContext.projectPath);
+            await createVirtualEnviornment(defaultVenvName, context.projectPath);
             progress.report({ message: this.creatingMessage });
         }
 
-        await super.executeCore(wizardContext, progress);
+        await super.executeCore(context, progress);
 
-        const requirementsPath: string = path.join(wizardContext.projectPath, 'requirements.txt');
+        const requirementsPath: string = path.join(context.projectPath, 'requirements.txt');
         if (await confirmOverwriteFile(requirementsPath)) {
             let isOldFuncCli: boolean;
             try {

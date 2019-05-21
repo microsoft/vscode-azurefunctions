@@ -24,26 +24,26 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     protected preDeployTask?: string;
     protected settings: ISettingToAdd[] = [];
 
-    public async execute(wizardContext: IProjectWizardContext): Promise<void> {
-        await this.executeCore(wizardContext);
+    public async execute(context: IProjectWizardContext): Promise<void> {
+        await this.executeCore(context);
 
-        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
-        wizardContext.actionContext.properties.projectRuntime = runtime;
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        context.telemetry.properties.projectRuntime = runtime;
 
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
-        wizardContext.actionContext.properties.projectLanguage = language;
+        const language: ProjectLanguage = nonNullProp(context, 'language');
+        context.telemetry.properties.projectLanguage = language;
 
-        wizardContext.actionContext.properties.isProjectInSubDir = String(isSubpath(wizardContext.workspacePath, wizardContext.projectPath));
+        context.telemetry.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
 
-        const vscodePath: string = path.join(wizardContext.workspacePath, '.vscode');
+        const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);
-        await this.writeTasksJson(wizardContext, vscodePath);
-        await this.writeLaunchJson(wizardContext.workspaceFolder, vscodePath, runtime);
-        await this.writeSettingsJson(wizardContext.workspaceFolder, vscodePath, language, runtime);
+        await this.writeTasksJson(context, vscodePath);
+        await this.writeLaunchJson(context.workspaceFolder, vscodePath, runtime);
+        await this.writeSettingsJson(context.workspaceFolder, vscodePath, language, runtime);
         await this.writeExtensionsJson(vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
-        const gitignorePath: string = path.join(wizardContext.workspacePath, gitignoreFileName);
+        const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
             gitignoreContents = gitignoreContents.replace(/^\.vscode\s*$/gm, '');
@@ -51,33 +51,33 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
     }
 
-    public shouldExecute(_wizardContext: IProjectWizardContext): boolean {
+    public shouldExecute(_context: IProjectWizardContext): boolean {
         return true;
     }
 
-    protected abstract executeCore(wizardContext: IProjectWizardContext): Promise<void>;
+    protected abstract executeCore(context: IProjectWizardContext): Promise<void>;
     protected abstract getTasks(): TaskDefinition[];
     protected getDebugConfiguration?(runtime: ProjectRuntime): DebugConfiguration;
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
-    protected setDeploySubpath(wizardContext: IProjectWizardContext, deploySubpath: string): string {
-        deploySubpath = this.addSubDir(wizardContext, deploySubpath);
+    protected setDeploySubpath(context: IProjectWizardContext, deploySubpath: string): string {
+        deploySubpath = this.addSubDir(context, deploySubpath);
         this.settings.push({ key: deploySubpathSetting, value: deploySubpath });
         return deploySubpath;
     }
 
-    protected addSubDir(wizardContext: IProjectWizardContext, fsPath: string): string {
-        const subDir: string = path.relative(wizardContext.workspacePath, wizardContext.projectPath);
+    protected addSubDir(context: IProjectWizardContext, fsPath: string): string {
+        const subDir: string = path.relative(context.workspacePath, context.projectPath);
         // always use posix for debug config
         return path.posix.join(subDir, fsPath);
     }
 
-    private async writeTasksJson(wizardContext: IProjectWizardContext, vscodePath: string): Promise<void> {
+    private async writeTasksJson(context: IProjectWizardContext, vscodePath: string): Promise<void> {
         const newTasks: TaskDefinition[] = this.getTasks();
         for (const task of newTasks) {
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
             let cwd: string = (task.options && task.options.cwd) || '.';
-            cwd = this.addSubDir(wizardContext, cwd);
+            cwd = this.addSubDir(context, cwd);
             if (!isPathEqual(cwd, '.')) {
                 // tslint:disable-next-line: strict-boolean-expressions
                 task.options = task.options || {};
@@ -93,14 +93,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         // The VS Code api is better for several reasons, including:
         // 1. It handles comments in json files
         // 2. It sends the 'onDidChangeConfiguration' event
-        if (wizardContext.workspaceFolder && !isMultiRootWorkspace()) {
-            const currentVersion: string | undefined = getTasksVersion(wizardContext.workspaceFolder);
+        if (context.workspaceFolder && !isMultiRootWorkspace()) {
+            const currentVersion: string | undefined = getTasksVersion(context.workspaceFolder);
             if (!currentVersion) {
-                updateTasksVersion(wizardContext.workspaceFolder, tasksVersion);
+                updateTasksVersion(context.workspaceFolder, tasksVersion);
             } else if (currentVersion !== tasksVersion) {
                 throw versionMismatchError;
             }
-            updateTasks(wizardContext.workspaceFolder, this.insertNewTasks(getTasks(wizardContext.workspaceFolder), newTasks));
+            updateTasks(context.workspaceFolder, this.insertNewTasks(getTasks(context.workspaceFolder), newTasks));
         } else { // otherwise manually edit json
             const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
             await confirmEditJsonFile(

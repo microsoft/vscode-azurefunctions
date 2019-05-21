@@ -39,7 +39,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this.appSettingsTreeItem = new AppSettingsTreeItem(this, 'azureFunctions.toggleAppSettingVisibility');
     }
 
-    // overrides ISubscriptionRoot with an object that also has SiteClient
+    // overrides ISubscriptionContext with an object that also has SiteClient
     public get root(): ISiteTreeRoot {
         return this._root;
     }

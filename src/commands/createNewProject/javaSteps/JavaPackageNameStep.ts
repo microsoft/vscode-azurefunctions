@@ -10,19 +10,19 @@ import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 export class JavaPackageNameStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
-    public async prompt(wizardContext: IJavaProjectWizardContext): Promise<void> {
+    public async prompt(context: IJavaProjectWizardContext): Promise<void> {
         const options: InputBoxOptions = {
             placeHolder: localize('packagePlaceHolder', 'Package name'),
             prompt: localize('packagePrompt', 'Provide a package name'),
             validateInput: validatePackageName,
             // tslint:disable-next-line: strict-boolean-expressions
-            value: wizardContext.javaGroupId || 'com.function'
+            value: context.javaGroupId || 'com.function'
         };
-        wizardContext.javaPackageName = await ext.ui.showInputBox(options);
+        context.javaPackageName = await ext.ui.showInputBox(options);
     }
 
-    public shouldPrompt(wizardContext: IJavaProjectWizardContext): boolean {
-        return !wizardContext.javaPackageName;
+    public shouldPrompt(context: IJavaProjectWizardContext): boolean {
+        return !context.javaPackageName;
     }
 }
 

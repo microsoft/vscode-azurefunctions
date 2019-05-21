@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 
-export async function restartFunctionApp(node?: SlotTreeItemBase): Promise<void> {
-    await stopFunctionApp(node);
-    await startFunctionApp(node);
+export async function restartFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+    await stopFunctionApp(context, node);
+    await startFunctionApp(context, node);
 }

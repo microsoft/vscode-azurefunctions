@@ -10,6 +10,6 @@ export interface IDotnetFunctionWizardContext extends IFunctionWizardContext {
     namespace?: string;
 }
 
-export function getFileExtension(wizardContext: IDotnetFunctionWizardContext): string {
-    return wizardContext.language === ProjectLanguage.FSharp ? '.fs' : '.cs';
+export function getFileExtension(context: IDotnetFunctionWizardContext): string {
+    return context.language === ProjectLanguage.FSharp ? '.fs' : '.cs';
 }

@@ -13,33 +13,33 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting, updateGlobalSetting } from './settings';
 
-export async function verifyPythonVenv(projectPath: string, actionContext: IActionContext): Promise<void> {
+export async function verifyPythonVenv(projectPath: string, context: IActionContext): Promise<void> {
     const settingKey: string = 'showPythonVenvWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
         const venvName: string | undefined = getWorkspaceSetting(pythonVenvSetting, projectPath);
         if (venvName && !await fse.pathExists(path.join(projectPath, venvName))) {
-            actionContext.properties.verifyConfigPrompt = 'createVenv';
+            context.telemetry.properties.verifyConfigPrompt = 'createVenv';
 
             const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
             const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is expected based on the setting "{1}.{2}".', venvName, extensionPrefix, pythonVenvSetting);
             const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
             if (result === createVenv) {
-                actionContext.suppressErrorDisplay = false;
+                context.errorHandling.suppressDisplay = false;
                 await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
                     // create venv
                     await createVirtualEnviornment(venvName, projectPath);
                 });
 
-                actionContext.properties.verifyConfigResult = 'update';
+                context.telemetry.properties.verifyConfigResult = 'update';
                 // don't wait
                 vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
             } else if (result === DialogResponses.dontWarnAgain) {
-                actionContext.properties.verifyConfigResult = 'dontWarnAgain';
+                context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
                 await updateGlobalSetting(settingKey, false);
             }
         }
     } else {
-        actionContext.properties.verifyConfigResult = 'suppressed';
+        context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
 }

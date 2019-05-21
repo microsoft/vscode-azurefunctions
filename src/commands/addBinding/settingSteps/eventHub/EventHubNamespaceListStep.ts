@@ -11,17 +11,17 @@ import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubNamespaceListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
-    public async prompt(wizardContext: IEventHubWizardContext): Promise<void> {
+    public async prompt(context: IEventHubWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select an event hub namespace');
-        const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
+        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
         const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.namespaces.list());
         if (result) {
-            wizardContext.namespaceName = nonNullProp(result, 'name');
-            wizardContext.resourceGroupName = getResourceGroupFromId(nonNullProp(result, 'id'));
+            context.namespaceName = nonNullProp(result, 'name');
+            context.resourceGroupName = getResourceGroupFromId(nonNullProp(result, 'id'));
         }
     }
 
-    public shouldPrompt(wizardContext: IEventHubWizardContext): boolean {
-        return !wizardContext.namespaceName;
+    public shouldPrompt(context: IEventHubWizardContext): boolean {
+        return !context.namespaceName;
     }
 }

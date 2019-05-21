@@ -11,16 +11,16 @@ import { IBindingWizardContext } from './IBindingWizardContext';
 export class BindingDirectionStep extends AzureWizardPromptStep<IBindingWizardContext> {
     public hideStepCount: boolean = true;
 
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
+    public async prompt(context: IBindingWizardContext): Promise<void> {
         const placeHolder: string = localize('selectDirection', 'Select binding direction');
         const picks: IAzureQuickPickItem<string>[] = [
             { label: 'in', data: 'in' },
             { label: 'out', data: 'out' }
         ];
-        wizardContext.bindingDirection = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        context.bindingDirection = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext.bindingDirection;
+    public shouldPrompt(context: IBindingWizardContext): boolean {
+        return !context.bindingDirection;
     }
 }

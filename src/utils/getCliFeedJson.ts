@@ -34,10 +34,10 @@ export type cliFeedJsonResponse = {
 };
 
 export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefined> {
-    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async function (this: IActionContext): Promise<cliFeedJsonResponse> {
-        this.properties.isActivationEvent = 'true';
-        this.suppressErrorDisplay = true;
-        this.suppressTelemetry = true;
+    return await callWithTelemetryAndErrorHandling('azureFunctions.tryGetCliFeedJson', async (context: IActionContext) => {
+        context.telemetry.properties.isActivationEvent = 'true';
+        context.errorHandling.suppressDisplay = true;
+        context.telemetry.suppressIfSuccessful = true;
         const funcJsonOptions: request.OptionsWithUri = {
             method: 'GET',
             uri: funcCliFeedUrl

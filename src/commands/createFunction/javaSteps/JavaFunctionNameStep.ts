@@ -13,15 +13,15 @@ import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class JavaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
-    protected async getUniqueFunctionName(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string | undefined> {
-        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
-        const packageName: string = nonNullProp(wizardContext, 'javaPackageName');
-        return await getUniqueFsPath(getJavaPackagePath(wizardContext.projectPath, packageName), getJavaClassName(template.defaultFunctionName), '.java');
+    protected async getUniqueFunctionName(context: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string | undefined> {
+        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
+        const packageName: string = nonNullProp(context, 'javaPackageName');
+        return await getUniqueFsPath(getJavaPackagePath(context.projectPath, packageName), getJavaClassName(template.defaultFunctionName), '.java');
     }
 
-    protected async validateFunctionNameCore(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext, name: string): Promise<string | undefined> {
-        const packageName: string = nonNullProp(wizardContext, 'javaPackageName');
-        if (await fse.pathExists(getJavaFunctionFilePath(wizardContext.projectPath, packageName, name))) {
+    protected async validateFunctionNameCore(context: IFunctionWizardContext & IJavaProjectWizardContext, name: string): Promise<string | undefined> {
+        const packageName: string = nonNullProp(context, 'javaPackageName');
+        if (await fse.pathExists(getJavaFunctionFilePath(context.projectPath, packageName, name))) {
             return localize('existingError', 'A function with name "{0}" already exists in package "{1}".', getJavaClassName(name), packageName);
         } else {
             return undefined;

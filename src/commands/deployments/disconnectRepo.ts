@@ -7,9 +7,9 @@ import { DeploymentsTreeItem } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 
-export async function disconnectRepo(this: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
+export async function disconnectRepo(context: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected);
+        node = await ext.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected, context);
     }
-    await node.disconnectRepo(this);
+    await node.disconnectRepo(context);
 }

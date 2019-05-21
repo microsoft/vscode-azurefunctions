@@ -9,11 +9,11 @@ import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
 
-export async function connectToGitHub(this: IActionContext, node?: ProductionSlotTreeItem | DeploymentsTreeItem): Promise<void> {
+export async function connectToGitHub(context: IActionContext, node?: ProductionSlotTreeItem | DeploymentsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
     }
-    await editScmType(node.root.client, node, this, ScmType.GitHub);
+    await editScmType(node.root.client, node, context, ScmType.GitHub);
     if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
             await node.deploymentsNode.refresh();

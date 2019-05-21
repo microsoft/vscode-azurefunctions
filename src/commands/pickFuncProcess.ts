@@ -14,7 +14,7 @@ import { delay } from '../utils/delay';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
-export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
+export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(debugConfig);
     if (!result.shouldContinue) {
         throw new UserCancelledError();
@@ -39,7 +39,7 @@ export async function pickFuncProcess(this: IActionContext, debugConfig: vscode.
     if (isNaN(timeoutInSeconds)) {
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
     }
-    this.properties.timeoutInSeconds = timeoutInSeconds.toString();
+    context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
     const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
 
     const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);

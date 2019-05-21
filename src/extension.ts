@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzExtTreeDataProvider, AzureParentTreeItem, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { addBinding } from './commands/addBinding/addBinding';
@@ -44,7 +44,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
-import { func, ProjectLanguage } from './constants';
+import { func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -72,9 +72,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
 
-    await callWithTelemetryAndErrorHandling('azureFunctions.activate', async function (this: IActionContext): Promise<void> {
-        this.properties.isActivationEvent = 'true';
-        this.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
+    await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
+        activateContext.telemetry.properties.isActivationEvent = 'true';
+        activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         runPostFunctionCreateStepsFromCache();
 
@@ -88,50 +88,46 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
-        callWithTelemetryAndErrorHandling(validateEventId, async function (this: IActionContext): Promise<void> {
-            await verifyVSCodeConfigOnActivate(this, vscode.workspace.workspaceFolders);
+        callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
+            await verifyVSCodeConfigOnActivate(actionContext, vscode.workspace.workspaceFolders);
         });
-        registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async function (this: IActionContext, event: vscode.WorkspaceFoldersChangeEvent): Promise<void> {
-            await verifyVSCodeConfigOnActivate(this, event.added);
+        registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async (actionContext: IActionContext, event: vscode.WorkspaceFoldersChangeEvent) => {
+            await verifyVSCodeConfigOnActivate(actionContext, event.added);
         });
 
         ext.templateProviderTask = getTemplateProvider();
 
         registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
-        registerCommand('azureFunctions.refresh', async (node?: AzureTreeItem) => await ext.tree.refresh(node));
+        registerCommand('azureFunctions.refresh', async (_actionContext: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(node));
         registerCommand('azureFunctions.pickProcess', pickFuncProcess);
-        registerCommand('azureFunctions.loadMore', async (node: AzureTreeItem) => await ext.tree.loadMore(node));
+        registerCommand('azureFunctions.loadMore', async (actionContext: IActionContext, node: AzureTreeItem) => await ext.tree.loadMore(node, actionContext));
         registerCommand('azureFunctions.openInPortal', openInPortal);
-        registerCommand('azureFunctions.createFunction', async function (this: IActionContext, functionAppPath?: string, templateId?: string, functionName?: string, triggerSettings?: {}): Promise<void> {
-            await createFunction(this, functionAppPath, templateId, functionName, triggerSettings);
-        });
-        registerCommand('azureFunctions.createNewProject', async function (this: IActionContext, functionAppPath?: string, language?: ProjectLanguage, runtime?: string, openFolder?: boolean | undefined, templateId?: string, functionName?: string, triggerSettings?: {}): Promise<void> {
-            await createNewProject(this, functionAppPath, language, runtime, openFolder, templateId, functionName, triggerSettings);
-        });
-        registerCommand('azureFunctions.initProjectForVSCode', async function (this: IActionContext): Promise<void> { await initProjectForVSCode(this); });
+        registerCommand('azureFunctions.createFunction', createFunction);
+        registerCommand('azureFunctions.createNewProject', createNewProject);
+        registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
         registerCommand('azureFunctions.createFunctionApp', createFunctionApp);
         registerCommand('azureFunctions.startFunctionApp', startFunctionApp);
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
-        registerCommand('azureFunctions.deleteFunctionApp', async (node?: AzureParentTreeItem) => await deleteNode(ProductionSlotTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deleteFunctionApp', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, ProductionSlotTreeItem.contextValue, node));
         registerCommand('azureFunctions.deploy', deploy);
         registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
         registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);
         registerCommand('azureFunctions.executeFunction', executeFunction);
         registerCommand('azureFunctions.startStreamingLogs', startStreamingLogs);
         registerCommand('azureFunctions.stopStreamingLogs', stopStreamingLogs);
-        registerCommand('azureFunctions.deleteFunction', async (node?: AzureTreeItem) => await deleteNode(/^azFuncFunction(Http|Timer|)$/i, node));
-        registerCommand('azureFunctions.appSettings.add', async (node?: AzureParentTreeItem) => await createChildNode(AppSettingsTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deleteFunction', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, /^azFuncFunction(Http|Timer|)$/i, node));
+        registerCommand('azureFunctions.appSettings.add', async (actionContext: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(actionContext, AppSettingsTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
         registerCommand('azureFunctions.appSettings.upload', uploadAppSettings);
         registerCommand('azureFunctions.appSettings.edit', editAppSetting);
         registerCommand('azureFunctions.appSettings.rename', renameAppSetting);
         registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
         registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
-        registerCommand('azureFunctions.appSettings.delete', async (node?: AppSettingTreeItem) => await deleteNode(AppSettingTreeItem.contextValue, node));
+        registerCommand('azureFunctions.appSettings.delete', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, AppSettingTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.toggleSlotSetting', toggleSlotSetting);
         registerCommand('azureFunctions.debugFunctionAppOnAzure', remoteDebugFunctionApp);
-        registerCommand('azureFunctions.deleteProxy', async (node?: AzureTreeItem) => await deleteNode(ProxyTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deleteProxy', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
         registerCommand('azureFunctions.redeploy', redeployDeployment);
@@ -142,8 +138,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.addBinding', addBinding);
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
-        registerCommand('azureFunctions.createSlot', async (node?: AzureParentTreeItem) => await createChildNode(SlotsTreeItem.contextValue, node));
-        registerCommand('azureFunctions.toggleAppSettingVisibility', async (node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
+        registerCommand('azureFunctions.createSlot', async (actionContext: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(actionContext, SlotsTreeItem.contextValue, node));
+        registerCommand('azureFunctions.toggleAppSettingVisibility', async (_actionContext: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();

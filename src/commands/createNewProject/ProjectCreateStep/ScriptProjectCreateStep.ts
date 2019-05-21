@@ -21,15 +21,15 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected gitignore: string = '';
     protected supportsManagedDependencies: boolean = false;
 
-    public async executeCore(wizardContext: IProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
-        const hostJsonPath: string = path.join(wizardContext.projectPath, hostFileName);
+    public async executeCore(context: IProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
             const hostJson: IHostJsonV2 | IHostJsonV1 = this.getHostContent(runtime);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
-        const localSettingsJsonPath: string = path.join(wizardContext.projectPath, localSettingsFileName);
+        const localSettingsJsonPath: string = path.join(context.projectPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath)) {
             const localSettingsJson: ILocalSettingsJson = {
                 IsEncrypted: false,
@@ -38,7 +38,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
                 }
             };
 
-            const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(wizardContext.language);
+            const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
                 // tslint:disable-next-line:no-non-null-assertion
                 localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = functionsWorkerRuntime;
@@ -47,7 +47,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             await writeFormattedJson(localSettingsJsonPath, localSettingsJson);
         }
 
-        const proxiesJsonPath: string = path.join(wizardContext.projectPath, proxiesFileName);
+        const proxiesJsonPath: string = path.join(context.projectPath, proxiesFileName);
         if (await confirmOverwriteFile(proxiesJsonPath)) {
             await writeFormattedJson(proxiesJsonPath, {
                 // tslint:disable-next-line:no-http-string
@@ -56,7 +56,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             });
         }
 
-        const gitignorePath: string = path.join(wizardContext.projectPath, gitignoreFileName);
+        const gitignorePath: string = path.join(context.projectPath, gitignoreFileName);
         if (await confirmOverwriteFile(gitignorePath)) {
             await fse.writeFile(gitignorePath, this.gitignore.concat(`
 # Azure Functions artifacts
@@ -66,7 +66,7 @@ appsettings.json
 local.settings.json`));
         }
 
-        const funcIgnorePath: string = path.join(wizardContext.projectPath, '.funcignore');
+        const funcIgnorePath: string = path.join(context.projectPath, '.funcignore');
         if (await confirmOverwriteFile(funcIgnorePath)) {
             await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
         }

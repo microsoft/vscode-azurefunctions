@@ -13,10 +13,10 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { getCliFeedAppSettings } from '../../utils/getCliFeedJson';
 import { convertStringToRuntime, getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
 
-export async function verifyAppSettings(actionContext: IActionContext, node: SlotTreeItemBase, runtime: ProjectRuntime, language: ProjectLanguage): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, runtime: ProjectRuntime, language: ProjectLanguage): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
-        const updateAppSettings: boolean = await verifyWebContentSettings(node, actionContext, appSettings.properties) || await verifyRuntimeIsCompatible(runtime, language, appSettings.properties);
+        const updateAppSettings: boolean = await verifyWebContentSettings(node, context, appSettings.properties) || await verifyRuntimeIsCompatible(runtime, language, appSettings.properties);
         if (updateAppSettings) {
             await node.root.client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
@@ -69,12 +69,12 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
  * We need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
  * Only applies to Linux Consumption apps
  */
-async function verifyWebContentSettings(node: SlotTreeItemBase, actionContext: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+async function verifyWebContentSettings(node: SlotTreeItemBase, context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
     if (node.root.client.isLinux && node.isConsumption) {
         const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
         const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
         if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
-            actionContext.properties.webContentSettingsRemoved = 'false';
+            context.telemetry.properties.webContentSettingsRemoved = 'false';
             await ext.ui.showWarningMessage(
                 localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
                 { modal: true },
@@ -83,7 +83,7 @@ async function verifyWebContentSettings(node: SlotTreeItemBase, actionContext: I
             );
             delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
             delete remoteProperties[WEBSITE_CONTENTSHARE];
-            actionContext.properties.webContentSettingsRemoved = 'true';
+            context.telemetry.properties.webContentSettingsRemoved = 'true';
             return true;
         }
     }

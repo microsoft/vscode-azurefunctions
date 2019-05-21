@@ -9,12 +9,12 @@ import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class StringPromptStep extends BindingSettingStepBase {
-    public async promptCore(wizardContext: IBindingWizardContext): Promise<string> {
+    public async promptCore(context: IBindingWizardContext): Promise<string> {
         return await ext.ui.showInputBox({
             placeHolder: this._setting.label,
             prompt: this._setting.description || localize('stringSettingPrompt', 'Provide a \'{0}\'', this._setting.label),
-            validateInput: async (s): Promise<string | undefined> => await this.validateInput(wizardContext, s),
-            value: await this.getDefaultValue(wizardContext)
+            validateInput: async (s): Promise<string | undefined> => await this.validateInput(context, s),
+            value: await this.getDefaultValue(context)
         });
     }
 

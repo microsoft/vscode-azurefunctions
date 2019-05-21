@@ -7,6 +7,7 @@ import { WebSiteManagementModels } from "azure-arm-website";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
+import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -16,9 +17,9 @@ import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<void> {
+export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: SiteClient = node.root.client;
@@ -34,7 +35,7 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
         if (localSettings.IsEncrypted) {
-            await decryptLocalSettings(localSettingsUri);
+            await decryptLocalSettings(context, localSettingsUri);
             localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
         }
 
@@ -52,7 +53,7 @@ export async function downloadAppSettings(node?: AppSettingsTreeItem): Promise<v
             await fse.writeJson(localSettingsPath, localSettings, { spaces: 2 });
         } finally {
             if (isEncrypted) {
-                await encryptLocalSettings(localSettingsUri);
+                await encryptLocalSettings(context, localSettingsUri);
             }
         }
     });

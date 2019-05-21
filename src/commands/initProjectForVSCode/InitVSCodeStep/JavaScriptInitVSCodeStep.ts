@@ -17,10 +17,10 @@ const npmPruneTaskLabel: string = 'npm prune';
 export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     private hasPackageJson: boolean;
 
-    protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        await super.executeCore(wizardContext);
+    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+        await super.executeCore(context);
 
-        this.hasPackageJson = await fse.pathExists(path.join(wizardContext.projectPath, 'package.json'));
+        this.hasPackageJson = await fse.pathExists(path.join(context.projectPath, 'package.json'));
         if (this.hasPackageJson) {
             this.preDeployTask = npmPruneTaskLabel;
         }

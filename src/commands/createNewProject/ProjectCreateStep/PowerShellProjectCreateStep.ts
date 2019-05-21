@@ -47,15 +47,15 @@ const requirementspsd1: string = `# This file enables modules to be automaticall
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     protected supportsManagedDependencies: boolean = true;
 
-    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        await super.executeCore(wizardContext, progress);
+    public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await super.executeCore(context, progress);
 
-        const profileps1Path: string = path.join(wizardContext.projectPath, profileps1FileName);
+        const profileps1Path: string = path.join(context.projectPath, profileps1FileName);
         if (await confirmOverwriteFile(profileps1Path)) {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
-        const requirementspsd1Path: string = path.join(wizardContext.projectPath, requirementspsd1FileName);
+        const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
         if (await confirmOverwriteFile(requirementspsd1Path)) {
             await fse.writeFile(requirementspsd1Path, requirementspsd1);
         }
