@@ -7,7 +7,7 @@ import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappser
 import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { nodeUtils } from '../utils/nodeUtils';
+import { treeUtils } from '../utils/treeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
@@ -43,8 +43,8 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this._readOnly ? localize('readOnly', 'Read only') : '';
     }
 
-    public get iconPath(): nodeUtils.IThemedIconPath {
-        return nodeUtils.getThemedIconPath('BulletList');
+    public get iconPath(): treeUtils.IThemedIconPath {
+        return treeUtils.getThemedIconPath('BulletList');
     }
 
     public get readOnly(): boolean {

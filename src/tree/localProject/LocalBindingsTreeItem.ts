@@ -8,8 +8,8 @@ import { createBindingWizard } from '../../commands/addBinding/createBindingWiza
 import { IBindingWizardContext } from '../../commands/addBinding/IBindingWizardContext';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
-import { nodeUtils } from '../../utils/nodeUtils';
 import { nonNullProp } from '../../utils/nonNull';
+import { treeUtils } from '../../utils/treeUtils';
 import { LocalBindingTreeItem } from './LocalBindingTreeItem';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalParentTreeItem } from './LocalTreeItem';
@@ -33,8 +33,8 @@ export class LocalBindingsTreeItem extends LocalParentTreeItem {
         return 'bindings';
     }
 
-    public get iconPath(): nodeUtils.IThemedIconPath {
-        return nodeUtils.getThemedIconPath('BulletList');
+    public get iconPath(): treeUtils.IThemedIconPath {
+        return treeUtils.getThemedIconPath('BulletList');
     }
 
     public hasMoreChildrenImpl(): boolean {

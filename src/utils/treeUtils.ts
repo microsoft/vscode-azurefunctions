@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { ext } from '../extensionVariables';
 
-export namespace nodeUtils {
+export namespace treeUtils {
     export interface IThemedIconPath {
         light: string;
         dark: string;

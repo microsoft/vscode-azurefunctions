@@ -5,7 +5,7 @@
 
 import { ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzureTreeItem } from 'vscode-azureextensionui';
-import { nodeUtils } from '../utils/nodeUtils';
+import { treeUtils } from '../utils/treeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
 export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
@@ -28,7 +28,7 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(ProxyTreeItem.contextValue);
+        return treeUtils.getIconPath(ProxyTreeItem.contextValue);
     }
 
     public async deleteTreeItemImpl(): Promise<void> {

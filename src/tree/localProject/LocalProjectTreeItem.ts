@@ -8,7 +8,7 @@ import { Disposable, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { localize } from '../../localize';
-import { nodeUtils } from '../../utils/nodeUtils';
+import { treeUtils } from '../../utils/treeUtils';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 import { IProjectRoot, isLocalTreeItem, LocalParentTreeItem } from './LocalTreeItem';
@@ -38,8 +38,8 @@ export class LocalProjectTreeItem extends LocalParentTreeItem implements Disposa
         return this._root;
     }
 
-    public get iconPath(): nodeUtils.IThemedIconPath {
-        return nodeUtils.getThemedIconPath('CreateNewProject');
+    public get iconPath(): treeUtils.IThemedIconPath {
+        return treeUtils.getThemedIconPath('CreateNewProject');
     }
 
     public get id(): string {

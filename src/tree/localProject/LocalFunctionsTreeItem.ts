@@ -9,7 +9,7 @@ import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
-import { nodeUtils } from '../../utils/nodeUtils';
+import { treeUtils } from '../../utils/treeUtils';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalParentTreeItem } from './LocalTreeItem';
 
@@ -23,8 +23,8 @@ export class LocalFunctionsTreeItem extends LocalParentTreeItem {
         return 'functions';
     }
 
-    public get iconPath(): nodeUtils.IThemedIconPath {
-        return nodeUtils.getThemedIconPath('BulletList');
+    public get iconPath(): treeUtils.IThemedIconPath {
+        return treeUtils.getThemedIconPath('BulletList');
     }
 
     public hasMoreChildrenImpl(): boolean {
