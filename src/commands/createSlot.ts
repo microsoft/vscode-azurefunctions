@@ -8,12 +8,12 @@ import { ext } from '../extensionVariables';
 import { SlotsTreeItem } from '../tree/SlotsTreeItem';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function createSlot(this: IActionContext, node?: SlotsTreeItem, resourceGroup?: string): Promise<string> {
+export async function createSlot(context: IActionContext, node?: SlotsTreeItem, resourceGroup?: string): Promise<string> {
     if (!node) {
-        node = <SlotsTreeItem>await ext.tree.showTreeItemPicker(SlotsTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
     }
 
-    const slotNode: SlotTreeItem = <SlotTreeItem>(await node.createChild({ actionContext: this, resourceGroup }));
+    const slotNode: SlotTreeItem = await node.createChild(Object.assign(context, { resourceGroup }));
     slotNode.showCreatedOutput();
 
     return slotNode.fullId;

@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureParentTreeItem, AzureTreeItem, IActionContext } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
 export async function createFunctionApp(context: IActionContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
@@ -21,6 +22,8 @@ export async function createFunctionApp(context: IActionContext, subscription?: 
         node = subscription;
     }
 
-    const funcAppNode: AzureTreeItem = await node.createChild(Object.assign(context, { newResourceGroupName }));
+    const funcAppNode: ProductionSlotTreeItem = await node.createChild(Object.assign(context, { newResourceGroupName }));
+    funcAppNode.showCreatedOutput();
+
     return funcAppNode.fullId;
 }
