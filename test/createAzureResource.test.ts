@@ -9,9 +9,10 @@ import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-webs
 import { execSync } from 'child_process';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, delay, DialogResponses, ext, FunctionTreeItem, getRandomHexString, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
+import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, delay, DialogResponses, ext, FunctionTreeItem, getRandomHexString, IActionContext, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
@@ -23,7 +24,10 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     const testAccount: TestAzureAccount = new TestAzureAccount();
     let webSiteClient: WebSiteManagementClient;
     const resourceName1: string = getRandomHexString().toLowerCase();
-    const projectPath: string = path.join('D:', 'testOutput');
+    // Get the *.code-workspace workspace file path
+    const projectPath: string = vscode.workspace.rootPath || os.tmpdir();
+    // tslint:disable-next-line: prefer-const
+    let context: IActionContext | undefined;
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -64,7 +68,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
             await runWithFuncSetting('advancedCreation', undefined, async () => {
                 ext.ui = new TestUserInput([resourceName1]);
-                await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId());
+                await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
                 const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName1, resourceName1);
                 assert.ok(createdApp);
                 await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
@@ -76,15 +80,15 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             });
         });
 
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName1, 'Deploy']);
+        ext.ui = new TestUserInput([resourceName1, 'Deploy']);
         await vscode.commands.executeCommand('azureFunctions.deploy');
         await delay(500);
 
-        //Verify the deployment result through triggerUrl
+        // Verify the deployment result through triggerUrl
         const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName1, resourceName1);
         assert.equal(getFunction[0].name, `${resourceName1}/${functionName}`);
         const fullId: string = <string>(getFunction[0].id);
-        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId)).triggerUrl;
+        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId, <IActionContext>context)).triggerUrl;
         const result: string = execSync(`curl ${triggerUrl}"&"name=${resourceName1}`).toString();
         assert.equal(result, `Hello ${resourceName1}`, `The result should be "Hello ${resourceName1}" rather than ${result} and the triggerUrl is ${triggerUrl}`);
     });
@@ -97,7 +101,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await runWithFuncSetting('projectLanguage', ProjectLanguage.CSharp, async () => {
             await runWithFuncSetting('advancedCreation', undefined, async () => {
                 ext.ui = new TestUserInput([resourceName2]);
-                await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId());
+                await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
                 const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName2, resourceName2);
                 assert.ok(createdApp);
                 await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
@@ -110,15 +114,15 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             });
         });
 
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName2, 'Update remote runtime', 'Deploy']);
+        ext.ui = new TestUserInput([resourceName2, 'Update remote runtime', 'Deploy']);
         await vscode.commands.executeCommand('azureFunctions.deploy');
         await delay(500);
 
-        //Verify the deployment result through triggerUrl
+        // Verify the deployment result through triggerUrl
         const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName2, resourceName2);
         assert.equal(getFunction[0].name, `${resourceName2}/${functionName}`);
         const fullId: string = <string>(getFunction[0].id);
-        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId)).triggerUrl;
+        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId, <IActionContext>context)).triggerUrl;
         const result: string = execSync(`curl ${triggerUrl}"&"name=${resourceName2}`).toString();
         assert.equal(result, `Hello, ${resourceName2}`, `The result should be "Hello, ${resourceName2}" rather than ${result} and the triggerUrl is ${triggerUrl}`);
     });
@@ -131,7 +135,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await runWithFuncSetting('advancedCreation', 'true', async () => {
             const testInputs: string[] = [resourceName3, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
             ext.ui = new TestUserInput(testInputs);
-            await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId());
+            await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
             const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName3);
             assert.ok(createdApp, 'Create windows Function App with new rg/sa failed.');
         });
@@ -141,7 +145,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         let createdApp: WebSiteManagementModels.Site;
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state} before stop.`);
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName1]);
+        ext.ui = new TestUserInput([resourceName1]);
         await vscode.commands.executeCommand('azureFunctions.stopFunctionApp');
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Stopped', `Function App state should be 'Stopped' rather than ${createdApp.state}.`);
@@ -151,7 +155,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         let createdApp: WebSiteManagementModels.Site;
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Stopped', `Function App state should be 'Stopped' rather than ${createdApp.state} before start.`);
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName1]);
+        ext.ui = new TestUserInput([resourceName1]);
         await vscode.commands.executeCommand('azureFunctions.startFunctionApp');
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state}.`);
@@ -161,14 +165,14 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         let createdApp: WebSiteManagementModels.Site;
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state} before restart.`);
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName1, testAccount.getSubscriptionId(), resourceName1]);
+        ext.ui = new TestUserInput([resourceName1, resourceName1]);
         await vscode.commands.executeCommand('azureFunctions.restartFunctionApp');
         createdApp = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state}.`);
     });
 
     test('deleteFunctionApp', async () => {
-        ext.ui = new TestUserInput([testAccount.getSubscriptionId(), resourceName1, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
+        ext.ui = new TestUserInput([resourceName1, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
         await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         const deletedApp: WebSiteManagementModels.Site | undefined = await webSiteClient.webApps.get(resourceName1, resourceName1);
         assert.ifError(deletedApp);
