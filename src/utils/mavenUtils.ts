@@ -13,7 +13,7 @@ import { openUrl } from './openUrl';
 
 export namespace mavenUtils {
     const mvnCommand: string = 'mvn';
-    export async function validateMavenInstalled(actionContext: IActionContext): Promise<void> {
+    export async function validateMavenInstalled(context: IActionContext): Promise<void> {
         try {
             await cpUtils.executeCommand(undefined, undefined, mvnCommand, '--version');
         } catch (error) {
@@ -24,7 +24,7 @@ export namespace mavenUtils {
                     await openUrl('https://aka.ms/azurefunction_maven');
                 }
             });
-            actionContext.suppressErrorDisplay = true; // Swallow errors in case show two error message
+            context.errorHandling.suppressDisplay = true; // Swallow errors in case show two error message
             throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
         }
     }

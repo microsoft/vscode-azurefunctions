@@ -6,10 +6,10 @@
 import { ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureTreeItem } from 'vscode-azureextensionui';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { FunctionAppProvider } from './FunctionAppProvider';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
+import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class ProductionSlotTreeItem extends SlotTreeItemBase {
     public static contextValue: string = 'azFuncProductionSlot';
@@ -17,12 +17,12 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    private constructor(parent: FunctionAppProvider, client: SiteClient) {
+    private constructor(parent: SubscriptionTreeItem, client: SiteClient) {
         super(parent, client);
         this._slotsTreeItem = new SlotsTreeItem(this);
     }
 
-    public static async create(parent: FunctionAppProvider, client: SiteClient): Promise<ProductionSlotTreeItem> {
+    public static async create(parent: SubscriptionTreeItem, client: SiteClient): Promise<ProductionSlotTreeItem> {
         const result: ProductionSlotTreeItem = new ProductionSlotTreeItem(parent, client);
         await result.refreshImpl();
         return result;
@@ -40,13 +40,16 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
         return children;
     }
 
-    public pickTreeItemImpl(expectedContextValue: string): AzureTreeItem<ISiteTreeRoot> | undefined {
-        switch (expectedContextValue) {
-            case SlotsTreeItem.contextValue:
-            case SlotTreeItem.contextValue:
-                return this._slotsTreeItem;
-            default:
-                return super.pickTreeItemImpl(expectedContextValue);
+    public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzureTreeItem<ISiteTreeRoot> | undefined {
+        for (const expectedContextValue of expectedContextValues) {
+            switch (expectedContextValue) {
+                case SlotsTreeItem.contextValue:
+                case SlotTreeItem.contextValue:
+                    return this._slotsTreeItem;
+                default:
+            }
         }
+
+        return super.pickTreeItemImpl(expectedContextValues);
     }
 }

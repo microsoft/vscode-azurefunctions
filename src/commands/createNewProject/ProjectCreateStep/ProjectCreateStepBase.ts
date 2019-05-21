@@ -15,29 +15,29 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
     public priority: number = 10;
     protected creatingMessage: string = localize('creating', 'Creating new project...');
 
-    public abstract async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
+    public abstract async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 
-    public async execute(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        wizardContext.actionContext.properties.projectLanguage = wizardContext.language;
-        wizardContext.actionContext.properties.projectRuntime = wizardContext.runtime;
-        wizardContext.actionContext.properties.openBehavior = wizardContext.openBehavior;
+    public async execute(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        context.telemetry.properties.projectLanguage = context.language;
+        context.telemetry.properties.projectRuntime = context.runtime;
+        context.telemetry.properties.openBehavior = context.openBehavior;
 
         progress.report({ message: this.creatingMessage });
-        await fse.ensureDir(wizardContext.projectPath);
+        await fse.ensureDir(context.projectPath);
 
-        await this.executeCore(wizardContext, progress);
+        await this.executeCore(context, progress);
 
-        if (await gitUtils.isGitInstalled(wizardContext.workspacePath) && !await gitUtils.isInsideRepo(wizardContext.workspacePath)) {
-            await gitUtils.gitInit(ext.outputChannel, wizardContext.workspacePath);
+        if (await gitUtils.isGitInstalled(context.workspacePath) && !await gitUtils.isInsideRepo(context.workspacePath)) {
+            await gitUtils.gitInit(ext.outputChannel, context.workspacePath);
         }
 
         // OpenFolderStep sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
-        await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', function (this: IActionContext): void {
-            Object.assign(this, wizardContext.actionContext);
+        await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', (startedContext: IActionContext) => {
+            Object.assign(startedContext, context);
         });
     }
 
-    public shouldExecute(_wizardContext: IProjectWizardContext): boolean {
+    public shouldExecute(_context: IProjectWizardContext): boolean {
         return true;
     }
 }

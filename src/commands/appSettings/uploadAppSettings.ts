@@ -7,6 +7,7 @@ import { WebSiteManagementModels } from "azure-arm-website";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
+import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -16,13 +17,13 @@ import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function uploadAppSettings(node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
+export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
     const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     if (!node) {
-        node = <AppSettingsTreeItem>await ext.tree.showTreeItemPicker(AppSettingsTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: SiteClient = node.root.client;
@@ -32,11 +33,11 @@ export async function uploadAppSettings(node?: AppSettingsTreeItem, workspacePat
         ext.outputChannel.appendLine(localize('uploadStart', 'Uploading settings to "{0}"...', client.fullName));
         let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
         if (localSettings.IsEncrypted) {
-            await decryptLocalSettings(localSettingsUri);
+            await decryptLocalSettings(context, localSettingsUri);
             try {
                 localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
             } finally {
-                await encryptLocalSettings(localSettingsUri);
+                await encryptLocalSettings(context, localSettingsUri);
             }
         }
 

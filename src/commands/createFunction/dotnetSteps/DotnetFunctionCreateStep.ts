@@ -20,24 +20,24 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         super();
     }
 
-    public static async createStep(actionContext: IActionContext): Promise<DotnetFunctionCreateStep> {
-        await dotnetUtils.validateDotnetInstalled(actionContext);
+    public static async createStep(context: IActionContext): Promise<DotnetFunctionCreateStep> {
+        await dotnetUtils.validateDotnetInstalled(context);
         return new DotnetFunctionCreateStep();
     }
 
-    public async executeCore(wizardContext: IDotnetFunctionWizardContext): Promise<string> {
-        const template: IFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
+    public async executeCore(context: IDotnetFunctionWizardContext): Promise<string> {
+        const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
 
-        const functionName: string = nonNullProp(wizardContext, 'functionName');
+        const functionName: string = nonNullProp(context, 'functionName');
         const args: string[] = [];
         args.push('--arg:name');
         args.push(cpUtils.wrapArgInQuotes(functionName));
 
         args.push('--arg:namespace');
-        args.push(cpUtils.wrapArgInQuotes(nonNullProp(wizardContext, 'namespace')));
+        args.push(cpUtils.wrapArgInQuotes(nonNullProp(context, 'namespace')));
 
         for (const setting of template.userPromptedSettings) {
-            const value: string | undefined = getBindingSetting(wizardContext, setting);
+            const value: string | undefined = getBindingSetting(context, setting);
             // NOTE: Explicitly checking against undefined. Empty string is a valid value
             if (value !== undefined) {
                 args.push(`--arg:${setting.name}`);
@@ -45,9 +45,9 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             }
         }
 
-        const runtime: ProjectRuntime = nonNullProp(wizardContext, 'runtime');
-        await executeDotnetTemplateCommand(runtime, wizardContext.projectPath, 'create', '--identity', template.id, ...args);
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        await executeDotnetTemplateCommand(runtime, context.projectPath, 'create', '--identity', template.id, ...args);
 
-        return path.join(wizardContext.projectPath, functionName + getFileExtension(wizardContext));
+        return path.join(context.projectPath, functionName + getFileExtension(context));
     }
 }

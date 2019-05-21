@@ -59,16 +59,16 @@ export interface IResourceResult {
     connectionString: string;
 }
 
-export async function getStorageConnectionString(wizardContext: IStorageAccountWizardContext): Promise<IResourceResult> {
-    const client: StorageManagementClient = createAzureClient(wizardContext, StorageManagementClient);
-    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>nonNullProp(wizardContext, 'storageAccount');
+export async function getStorageConnectionString(context: IStorageAccountWizardContext): Promise<IResourceResult> {
+    const client: StorageManagementClient = createAzureClient(context, StorageManagementClient);
+    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>nonNullProp(context, 'storageAccount');
     const name: string = nonNullProp(storageAccount, 'name');
 
     const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));
     const result: StorageManagementModels.StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
     const key: string = nonNullProp(nonNullValue(nonNullProp(result, 'keys')[0], 'keys[0]'), 'value');
 
-    let endpointSuffix: string = nonNullProp(wizardContext.environment, 'storageEndpointSuffix');
+    let endpointSuffix: string = nonNullProp(context.environment, 'storageEndpointSuffix');
     // https://github.com/Azure/azure-sdk-for-node/issues/4706
     if (endpointSuffix.startsWith('.')) {
         endpointSuffix = endpointSuffix.substr(1);

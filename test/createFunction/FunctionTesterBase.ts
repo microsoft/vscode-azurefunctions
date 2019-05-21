@@ -82,7 +82,7 @@ export abstract class FunctionTesterBase implements Disposable {
         await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
             await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
                 await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
-                    await createFunction({ properties: {}, measurements: {} }, testFolder);
+                    await createFunction({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, testFolder);
                 });
             });
         });

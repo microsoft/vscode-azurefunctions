@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTreeItem } from 'vscode-azureextensionui';
 import { IFunctionBinding } from '../../funcConfig/function';
 import { nonNullProp } from '../../utils/nonNull';
-import { IProjectRoot } from './IProjectRoot';
 import { LocalBindingsTreeItem } from './LocalBindingsTreeItem';
+import { LocalTreeItem } from './LocalTreeItem';
 
-export class LocalBindingTreeItem extends AzureTreeItem<IProjectRoot> {
+export class LocalBindingTreeItem extends LocalTreeItem {
     public static contextValue: string = 'azFuncLocalBinding';
     public readonly contextValue: string = LocalBindingTreeItem.contextValue;
 

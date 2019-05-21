@@ -8,9 +8,9 @@ import { StringPromptStep } from '../StringPromptStep';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubNameStep extends StringPromptStep {
-    public shouldPrompt(wizardContext: IEventHubWizardContext & IBindingWizardContext): boolean {
+    public shouldPrompt(context: IEventHubWizardContext & IBindingWizardContext): boolean {
         // If the user decides to create a new app setting, `EventHubListStep` will take care of prompting
         // Otherwise, prompt to manually enter the name of the event hub using this step
-        return !wizardContext.namespaceName && !wizardContext.eventhubname;
+        return !context.namespaceName && !context.eventhubname;
     }
 }

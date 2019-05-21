@@ -11,12 +11,12 @@ import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
-    public async prompt(wizardContext: IEventHubWizardContext): Promise<void> {
-        const namespaceName: string = nonNullProp(wizardContext, 'namespaceName');
-        const resourceGroupName: string = nonNullProp(wizardContext, 'resourceGroupName');
-        const eventHubName: string = nonNullProp(wizardContext, 'eventhubname');
+    public async prompt(context: IEventHubWizardContext): Promise<void> {
+        const namespaceName: string = nonNullProp(context, 'namespaceName');
+        const resourceGroupName: string = nonNullProp(context, 'resourceGroupName');
+        const eventHubName: string = nonNullProp(context, 'eventhubname');
 
-        const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
+        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
 
         const namespaceDescription: string = localize('namespacePolicy', '(namespace policy)');
         const hubDescription: string = localize('hubPolicy', '(hub policy)');
@@ -32,12 +32,12 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
         const placeHolder: string = localize('placeHolder', 'Select an event hub policy');
         const result: (EventHubManagementModels.AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(placeHolder, getEventHubAuthRules());
         if (result) {
-            wizardContext.authRuleName = nonNullProp(result, 'name');
-            wizardContext.isNamespaceAuthRule = result._description === namespaceDescription;
+            context.authRuleName = nonNullProp(result, 'name');
+            context.isNamespaceAuthRule = result._description === namespaceDescription;
         }
     }
 
-    public shouldPrompt(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !!wizardContext.eventhubname && !wizardContext.authRuleName;
+    public shouldPrompt(context: IEventHubWizardContext): boolean {
+        return !!context.namespaceName && !!context.eventhubname && !context.authRuleName;
     }
 }

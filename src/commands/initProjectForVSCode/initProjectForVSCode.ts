@@ -15,9 +15,10 @@ import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProj
 import { detectProjectLanguage } from './detectProjectLanguage';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 
-export async function initProjectForVSCode(actionContext: IActionContext, workspacePath?: string, language?: ProjectLanguage): Promise<void> {
+export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
-    if (workspacePath === undefined) {
+    let workspacePath: string;
+    if (fsPath === undefined) {
         if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
             throw new NoWorkspaceError();
         } else {
@@ -30,10 +31,11 @@ export async function initProjectForVSCode(actionContext: IActionContext, worksp
             }
         }
     } else {
-        workspaceFolder = getContainingWorkspace(workspacePath);
+        workspaceFolder = getContainingWorkspace(fsPath);
+        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(actionContext, workspacePath);
+    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath);
     if (!projectPath) {
         return;
     }
@@ -41,10 +43,10 @@ export async function initProjectForVSCode(actionContext: IActionContext, worksp
     // tslint:disable-next-line: strict-boolean-expressions
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(projectPath);
 
-    const wizardContext: IProjectWizardContext = { projectPath, workspacePath, actionContext, language, workspaceFolder };
+    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, workspaceFolder });
     const wizard: AzureWizard<IProjectWizardContext> = new AzureWizard(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
-    await wizard.prompt(actionContext);
-    await wizard.execute(actionContext);
+    await wizard.prompt();
+    await wizard.execute();
 
     // don't wait
     window.showInformationMessage(localize('finishedInitializing', 'Finished initializing for use with VS Code.'));

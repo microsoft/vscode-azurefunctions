@@ -41,9 +41,9 @@ export function getScriptFileNameFromLanguage(language: string): string | undefi
 }
 
 export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
-    public async executeCore(wizardContext: IScriptFunctionWizardContext): Promise<string> {
-        const functionPath: string = path.join(wizardContext.projectPath, nonNullProp(wizardContext, 'functionName'));
-        const template: IScriptFunctionTemplate = nonNullProp(wizardContext, 'functionTemplate');
+    public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
+        const functionPath: string = path.join(context.projectPath, nonNullProp(context, 'functionName'));
+        const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
         await fse.ensureDir(functionPath);
         await Promise.all(Object.keys(template.templateFiles).map(async f => {
             await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
@@ -51,17 +51,17 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
 
         const triggerBinding: IFunctionBinding = nonNullProp(template.functionJson, 'triggerBinding');
         for (const setting of template.userPromptedSettings) {
-            triggerBinding[setting.name] = getBindingSetting(wizardContext, setting);
+            triggerBinding[setting.name] = getBindingSetting(context, setting);
         }
 
         const functionJson: IFunctionJson = template.functionJson.data;
         if (this.editFunctionJson) {
-            await this.editFunctionJson(wizardContext, functionJson);
+            await this.editFunctionJson(context, functionJson);
         }
 
         await fsUtil.writeFormattedJson(path.join(functionPath, functionJsonFileName), functionJson);
 
-        const language: ProjectLanguage = nonNullProp(wizardContext, 'language');
+        const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
         if (!fileName) {
             throw new RangeError(localize('invalidLanguage', 'Invalid language "{0}".', language));
@@ -69,5 +69,5 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         return path.join(functionPath, fileName);
     }
 
-    protected editFunctionJson?(wizardContext: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;
+    protected editFunctionJson?(context: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;
 }

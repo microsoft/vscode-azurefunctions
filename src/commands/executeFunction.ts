@@ -7,14 +7,14 @@
 import request = require('request-promise');
 import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { appendExtensionUserAgent } from 'vscode-azureextensionui';
+import { appendExtensionUserAgent, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItem } from '../tree/FunctionTreeItem';
 
-export async function executeFunction(node?: FunctionTreeItem): Promise<void> {
+export async function executeFunction(context: IActionContext, node?: FunctionTreeItem): Promise<void> {
     if (!node) {
-        node = <FunctionTreeItem>await ext.tree.showTreeItemPicker(/^azFuncFunctionTimer(ReadOnly|)$/i);
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItem>(/^azFuncFunctionTimer(ReadOnly|)$/i, context);
     }
 
     const name: string = node.name;

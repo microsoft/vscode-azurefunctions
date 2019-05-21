@@ -6,7 +6,7 @@
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem } from 'vscode';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, createTreeItemsWithErrorHandling, IActionContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -14,9 +14,10 @@ import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
 import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { isLocalTreeItem } from './localProject/LocalTreeItem';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
-export class FunctionAppProvider extends SubscriptionTreeItem {
+export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App in Azure');
 
     private _nextLink: string | undefined;
@@ -25,7 +26,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         return this._nextLink !== undefined;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzureTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
@@ -49,8 +50,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         this._nextLink = webAppCollection.nextLink;
 
-        return await createTreeItemsWithErrorHandling(
-            this,
+        return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
             async (site: WebSiteManagementModels.Site) => {
@@ -66,24 +66,14 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         );
     }
 
-    public async createChildImpl(showCreatingTreeItem: (label: string) => void, userOptions?: { actionContext: IActionContext; resourceGroup?: string }): Promise<AzureTreeItem> {
-        // Ideally actionContext should always be defined, but there's a bug with the NodePicker. Create a 'fake' actionContext until that bug is fixed
-        // https://github.com/Microsoft/vscode-azuretools/issues/120
-        // tslint:disable-next-line:strict-boolean-expressions
-        const actionContext: IActionContext = userOptions ? userOptions.actionContext : <IActionContext>{ properties: {}, measurements: {} };
-        const resourceGroup: string | undefined = userOptions ? userOptions.resourceGroup : undefined;
-        const runtime: ProjectRuntime = await getDefaultRuntime(actionContext);
+    public async createChildImpl(context: ICreateChildImplContext & { newResourceGroupName?: string }): Promise<AzureTreeItem> {
+        const runtime: ProjectRuntime = await getDefaultRuntime(context);
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
-        const wizardContext: IAppServiceWizardContext = {
+        const wizardContext: IAppServiceWizardContext = Object.assign(context, this.root, {
             newSiteKind: AppKind.functionapp,
-            subscriptionId: this.root.subscriptionId,
-            subscriptionDisplayName: this.root.subscriptionDisplayName,
-            credentials: this.root.credentials,
-            environment: this.root.environment,
-            newResourceGroupName: resourceGroup,
             resourceGroupDeferLocationStep: true
-        };
+        });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
@@ -100,7 +90,7 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
 
         const advancedCreationKey: string = 'advancedCreation';
         const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
-        actionContext.properties.advancedCreation = String(advancedCreation);
+        context.telemetry.properties.advancedCreation = String(advancedCreation);
         if (!advancedCreation) {
             wizardContext.useConsumptionPlan = true;
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
@@ -128,26 +118,26 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
             ));
         }
 
-        executeSteps.push(new SiteCreateStep(async (context): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(context, runtime, language)));
+        executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, runtime, language)));
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
-        await wizard.prompt(actionContext);
-        showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
-        actionContext.properties.os = wizardContext.newSiteOS;
-        actionContext.properties.runtime = wizardContext.newSiteRuntime;
+        await wizard.prompt();
+        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
+        context.telemetry.properties.os = wizardContext.newSiteOS;
+        context.telemetry.properties.runtime = wizardContext.newSiteRuntime;
         if (!advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
                 throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Modify the setting "{0}" to manually enter resource names.', `${extensionPrefix}.${advancedCreationKey}`));
             }
-            wizardContext.newResourceGroupName = resourceGroup || newName;
+            wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
             wizardContext.newStorageAccountName = newName;
         }
 
         try {
-            await wizard.execute(actionContext);
+            await wizard.execute();
         } catch (error) {
             if (!parseError(error).isUserCancelledError && !advancedCreation) {
                 const message: string = localize('tryAdvancedCreate', 'Modify the setting "{0}.{1}" if you want to change the default values when creating a Function App in Azure.', extensionPrefix, advancedCreationKey);
@@ -166,26 +156,30 @@ export class FunctionAppProvider extends SubscriptionTreeItem {
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return await ProductionSlotTreeItem.create(this, new SiteClient(site, this.root));
     }
+
+    public isAncestorOfImpl(contextValue: string | RegExp): boolean {
+        return !isLocalTreeItem(contextValue);
+    }
 }
 
-async function getDefaultRuntime(actionContext: IActionContext): Promise<ProjectRuntime> {
+async function getDefaultRuntime(context: IActionContext): Promise<ProjectRuntime> {
     // Try to get VS Code setting for runtime (aka if they have a project open)
     let runtime: string | undefined = convertStringToRuntime(getWorkspaceSettingFromAnyFolder(projectRuntimeSetting));
-    actionContext.properties.runtimeSource = 'VSCodeSetting';
+    context.telemetry.properties.runtimeSource = 'VSCodeSetting';
 
     if (!runtime) {
         // Try to get the runtime that matches their local func cli version
         runtime = await tryGetLocalRuntimeVersion();
-        actionContext.properties.runtimeSource = 'LocalFuncCli';
+        context.telemetry.properties.runtimeSource = 'LocalFuncCli';
     }
 
     if (!runtime) {
         // Default to v2 if all else fails
         runtime = ProjectRuntime.v2;
-        actionContext.properties.runtimeSource = 'Backup';
+        context.telemetry.properties.runtimeSource = 'Backup';
     }
 
-    actionContext.properties.projectRuntime = runtime;
+    context.telemetry.properties.projectRuntime = runtime;
 
     return <ProjectRuntime>runtime;
 }

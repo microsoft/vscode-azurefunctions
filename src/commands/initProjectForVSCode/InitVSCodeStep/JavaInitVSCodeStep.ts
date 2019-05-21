@@ -18,8 +18,8 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
 
     private _debugSubpath: string;
 
-    protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        const pomFilePath: string = path.join(wizardContext.projectPath, 'pom.xml');
+    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+        const pomFilePath: string = path.join(context.projectPath, 'pom.xml');
         if (!await fse.pathExists(pomFilePath)) {
             throw new Error(localize('pomNotFound', 'Cannot find pom.xml file in current project, please make sure the language setting is correct.'));
         }
@@ -31,7 +31,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
             this._debugSubpath = `target/azure-functions/${functionAppName}/`;
         }
 
-        this.setDeploySubpath(wizardContext, this._debugSubpath);
+        this.setDeploySubpath(context, this._debugSubpath);
     }
 
     protected getTasks(): TaskDefinition[] {

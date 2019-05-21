@@ -10,7 +10,6 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
-    // tslint:disable-next-line: no-use-before-declare
     protected gitignore: string = nodeGitignore;
     protected packageJsonScripts: { [key: string]: string } = { test: 'echo \"No tests yet...\"' };
     protected packageJsonDeps: { [key: string]: string } = {};
@@ -21,13 +20,13 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         this.funcignore.push('*.js.map', '*.ts', 'tsconfig.json');
     }
 
-    public async executeCore(wizardContext: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        await super.executeCore(wizardContext, progress);
+    public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await super.executeCore(context, progress);
 
-        const packagePath: string = path.join(wizardContext.projectPath, 'package.json');
+        const packagePath: string = path.join(context.projectPath, 'package.json');
         if (await confirmOverwriteFile(packagePath)) {
             await writeFormattedJson(packagePath, {
-                name: path.basename(wizardContext.projectPath),
+                name: path.basename(context.projectPath),
                 version: '1.0.0',
                 description: '',
                 scripts: this.packageJsonScripts,

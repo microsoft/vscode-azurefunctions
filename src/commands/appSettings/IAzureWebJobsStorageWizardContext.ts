@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IStorageAccountWizardContext } from "vscode-azureextensionui";
+import { IActionContext, ISubscriptionContext } from "vscode-azureextensionui";
 
-export interface IAzureWebJobsStorageWizardContext extends Partial<IStorageAccountWizardContext> {
+export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
-    actionContext: IActionContext;
     azureWebJobsStorageType?: 'emulator' | 'azure';
 }

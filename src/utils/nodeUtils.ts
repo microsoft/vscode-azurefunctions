@@ -4,9 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { AzureParentTreeItem, AzureTreeDataProvider, AzureTreeItem } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
-import { localize } from '../localize';
 
 export namespace nodeUtils {
     export interface IThemedIconPath {
@@ -27,14 +25,5 @@ export namespace nodeUtils {
 
     function getResourcesPath(): string {
         return ext.context.asAbsolutePath('resources');
-    }
-
-    export async function getSubscriptionNode(tree: AzureTreeDataProvider, subscriptionId: string): Promise<AzureParentTreeItem> {
-        const node: AzureParentTreeItem | undefined = <AzureParentTreeItem | undefined>(await tree.getChildren()).find((n: AzureTreeItem) => n.root.subscriptionId === subscriptionId);
-        if (node) {
-            return node;
-        } else {
-            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscriptionId));
-        }
     }
 }

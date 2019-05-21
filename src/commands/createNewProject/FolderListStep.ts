@@ -12,21 +12,21 @@ import { IProjectWizardContext } from './IProjectWizardContext';
 export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
 
-    public static setProjectPath(wizardContext: Partial<IProjectWizardContext>, projectPath: string): void {
-        wizardContext.projectPath = projectPath;
-        wizardContext.workspaceFolder = getContainingWorkspace(projectPath);
-        wizardContext.workspacePath = (wizardContext.workspaceFolder && wizardContext.workspaceFolder.uri.fsPath) || projectPath;
-        if (wizardContext.workspaceFolder) {
-            wizardContext.openBehavior = 'AlreadyOpen';
+    public static setProjectPath(context: Partial<IProjectWizardContext>, projectPath: string): void {
+        context.projectPath = projectPath;
+        context.workspaceFolder = getContainingWorkspace(projectPath);
+        context.workspacePath = (context.workspaceFolder && context.workspaceFolder.uri.fsPath) || projectPath;
+        if (context.workspaceFolder) {
+            context.openBehavior = 'AlreadyOpen';
         }
     }
 
-    public async prompt(wizardContext: IProjectWizardContext): Promise<void> {
+    public async prompt(context: IProjectWizardContext): Promise<void> {
         const placeHolder: string = localize('selectNewProjectFolder', 'Select the folder that will contain your function project');
-        FolderListStep.setProjectPath(wizardContext, await selectWorkspaceFolder(ext.ui, placeHolder));
+        FolderListStep.setProjectPath(context, await selectWorkspaceFolder(ext.ui, placeHolder));
     }
 
-    public shouldPrompt(wizardContext: IProjectWizardContext): boolean {
-        return !wizardContext.projectPath;
+    public shouldPrompt(context: IProjectWizardContext): boolean {
+        return !context.projectPath;
     }
 }

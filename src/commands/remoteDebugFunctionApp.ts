@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { DebugProxy } from '../DebugProxy';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -18,9 +18,9 @@ import { openUrl } from '../utils/openUrl';
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugFunctionApp(node?: SlotTreeItemBase): Promise<void> {
+export async function remoteDebugFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = <SlotTreeItemBase>await ext.tree.showTreeItemPicker(ProductionSlotTreeItem.contextValue);
+        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();

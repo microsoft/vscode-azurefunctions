@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -30,44 +31,52 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     public async provideTasks(_token?: CancellationToken | undefined): Promise<Task[]> {
-        // tslint:disable-next-line: no-this-assignment
-        const me: FuncTaskProvider = this;
-        const tasks: Task[] | undefined = await callWithTelemetryAndErrorHandling('provideTasks', async function (this: IActionContext): Promise<Task[]> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        const result: Task[] = [];
 
-            const result: Task[] = [];
+        await callWithTelemetryAndErrorHandling('provideTasks', async (context: IActionContext) => {
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
+
             if (workspace.workspaceFolders) {
+                let lastError: unknown;
                 for (const folder of workspace.workspaceFolders) {
-                    const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
-                    if (projectRoot) {
-                        result.push(getExtensionInstallTask(folder, projectRoot));
-                        const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                        const hostStartTask: Task | undefined = await me.getHostStartTask(folder, projectRoot, language);
-                        if (hostStartTask) {
-                            result.push(hostStartTask);
-                        }
+                    try {
+                        const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
+                        if (projectRoot) {
+                            result.push(getExtensionInstallTask(folder, projectRoot));
+                            const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
+                            const hostStartTask: Task | undefined = await this.getHostStartTask(folder, projectRoot, language);
+                            if (hostStartTask) {
+                                result.push(hostStartTask);
+                            }
 
-                        if (language === ProjectLanguage.Python) {
-                            result.push(...getPythonTasks(folder, projectRoot));
+                            if (language === ProjectLanguage.Python) {
+                                result.push(...getPythonTasks(folder, projectRoot));
+                            }
                         }
+                    } catch (err) {
+                        // ignore and try next folder
+                        lastError = err;
                     }
                 }
-            }
 
-            return result;
+                if (!isNullOrUndefined(lastError)) {
+                    // throw the last error just for the sake of telemetry
+                    // (This won't block providing tasks since it's inside callWithTelemetryAndErrorHandling)
+                    throw lastError;
+                }
+            }
         });
 
-        // tslint:disable-next-line: strict-boolean-expressions
-        return tasks || [];
+        return result;
     }
 
     public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
-        await callWithTelemetryAndErrorHandling('resolveTask', async function (this: IActionContext): Promise<void> {
-            this.properties.isActivationEvent = 'true';
-            this.suppressErrorDisplay = true;
-            this.suppressTelemetry = true;
+        await callWithTelemetryAndErrorHandling('resolveTask', async (context: IActionContext) => {
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
         });
 
         // The resolveTask method returns undefined and is currently not called by VS Code. It is there to optimize task loading in the future.

@@ -28,8 +28,8 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
         ];
     }
 
-    protected async executeCore(wizardContext: IProjectWizardContext): Promise<void> {
-        if (wizardContext.runtime === ProjectRuntime.v2) {
+    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+        if (context.runtime === ProjectRuntime.v2) {
             try {
                 const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
                 // Starting after this version, projects can use extension bundle instead of running "func extensions install"
@@ -49,6 +49,6 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
             }
         }
 
-        this.setDeploySubpath(wizardContext, '.');
+        this.setDeploySubpath(context, '.');
     }
 }

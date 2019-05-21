@@ -11,15 +11,15 @@ import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCr
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<IEventHubWizardContext & IBindingWizardContext> {
-    public async getConnection(wizardContext: IEventHubWizardContext): Promise<IConnection> {
-        const namespaceName: string = nonNullProp(wizardContext, 'namespaceName');
-        const resourceGroupName: string = nonNullProp(wizardContext, 'resourceGroupName');
-        const eventHubName: string = nonNullProp(wizardContext, 'eventhubname');
-        const authRuleName: string = nonNullProp(wizardContext, 'authRuleName');
+    public async getConnection(context: IEventHubWizardContext): Promise<IConnection> {
+        const namespaceName: string = nonNullProp(context, 'namespaceName');
+        const resourceGroupName: string = nonNullProp(context, 'resourceGroupName');
+        const eventHubName: string = nonNullProp(context, 'eventhubname');
+        const authRuleName: string = nonNullProp(context, 'authRuleName');
 
-        const client: EventHubManagementClient = createAzureClient(wizardContext, EventHubManagementClient);
+        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
         let connectionString: string;
-        if (wizardContext.isNamespaceAuthRule) {
+        if (context.isNamespaceAuthRule) {
             const keys: EventHubManagementModels.AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRuleName);
             connectionString = `${nonNullProp(keys, 'primaryConnectionString')};EntityPath=${eventHubName}`;
         } else {
@@ -33,7 +33,7 @@ export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<
         };
     }
 
-    public shouldExecute(wizardContext: IEventHubWizardContext): boolean {
-        return !!wizardContext.namespaceName && !!wizardContext.eventhubname && !!wizardContext.authRuleName;
+    public shouldExecute(context: IEventHubWizardContext): boolean {
+        return !!context.namespaceName && !!context.eventhubname && !!context.authRuleName;
     }
 }

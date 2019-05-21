@@ -16,7 +16,7 @@ import { OpenBehaviorStep } from './OpenBehaviorStep';
 import { OpenFolderStep } from './OpenFolderStep';
 
 export async function createNewProject(
-    actionContext: IActionContext,
+    context: IActionContext,
     projectPath?: string,
     language?: ProjectLanguage,
     runtime?: string,
@@ -24,13 +24,13 @@ export async function createNewProject(
     templateId?: string,
     functionName?: string,
     triggerSettings?: { [key: string]: string | undefined }): Promise<void> {
-    addLocalFuncTelemetry(actionContext);
+    addLocalFuncTelemetry(context);
 
     // tslint:disable-next-line: strict-boolean-expressions
     language = language || getGlobalSetting(projectLanguageSetting);
     runtime = runtime || getGlobalSetting(projectRuntimeSetting);
 
-    const wizardContext: Partial<IFunctionWizardContext> = { actionContext, functionName, language, runtime: convertStringToRuntime(runtime) };
+    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, { functionName, language, runtime: convertStringToRuntime(runtime) });
 
     if (projectPath) {
         FolderListStep.setProjectPath(wizardContext, projectPath);
@@ -40,7 +40,7 @@ export async function createNewProject(
         wizardContext.openBehavior = 'DontOpen';
     } else {
         wizardContext.openBehavior = getWorkspaceSetting(projectOpenBehaviorSetting);
-        actionContext.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
+        context.telemetry.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
     }
 
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
@@ -48,8 +48,8 @@ export async function createNewProject(
         promptSteps: [new FolderListStep(), new NewProjectLanguageStep(templateId, triggerSettings), new OpenBehaviorStep()],
         executeSteps: [new OpenFolderStep()]
     });
-    await wizard.prompt(actionContext);
-    await wizard.execute(actionContext);
+    await wizard.prompt();
+    await wizard.execute();
 
     // don't wait
     window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));

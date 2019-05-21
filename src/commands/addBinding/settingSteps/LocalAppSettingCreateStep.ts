@@ -25,14 +25,14 @@ export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IBindingWi
         this._valueKey = valueKey;
     }
 
-    public async execute(wizardContext: IBindingWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+    public async execute(context: IBindingWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('updatingLocalSettings', 'Updating {0}...', localSettingsFileName) });
-        const appSettingName: string | undefined = nonNullValue(getBindingSetting(wizardContext, this._setting), this._setting.name);
+        const appSettingName: string | undefined = nonNullValue(getBindingSetting(context, this._setting), this._setting.name);
         // tslint:disable-next-line: no-unsafe-any no-any
-        await setLocalAppSetting(wizardContext.projectPath, appSettingName, nonNullProp(wizardContext, <any>this._valueKey));
+        await setLocalAppSetting(context.projectPath, appSettingName, nonNullProp(context, <any>this._valueKey));
     }
 
-    public shouldExecute(wizardContext: IBindingWizardContext): boolean {
-        return !!wizardContext[this._valueKey];
+    public shouldExecute(context: IBindingWizardContext): boolean {
+        return !!context[this._valueKey];
     }
 }

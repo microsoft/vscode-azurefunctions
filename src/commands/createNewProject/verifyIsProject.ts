@@ -28,7 +28,9 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
 export async function tryGetFunctionProjectRoot(folderPath: string, suppressPrompt: boolean = false): Promise<string | undefined> {
     let subpath: string | undefined = getWorkspaceSetting(projectSubpathKey, folderPath);
     if (!subpath) {
-        if (await isFunctionProject(folderPath)) {
+        if (!(await fse.pathExists(folderPath))) {
+            return undefined;
+        } else if (await isFunctionProject(folderPath)) {
             return folderPath;
         } else {
             const subpaths: string[] = await fse.readdir(folderPath);
@@ -70,13 +72,13 @@ async function promptForProjectSubpath(workspacePath: string, matchingSubpaths: 
 /**
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
-export async function verifyAndPromptToCreateProject(actionContext: IActionContext, fsPath: string): Promise<string | undefined> {
+export async function verifyAndPromptToCreateProject(context: IActionContext, fsPath: string): Promise<string | undefined> {
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(fsPath);
     if (!projectPath) {
         const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
-        await createNewProject(actionContext, fsPath);
+        await createNewProject(context, fsPath);
         return undefined;
     } else {
         return projectPath;

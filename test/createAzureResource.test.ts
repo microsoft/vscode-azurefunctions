@@ -8,7 +8,7 @@ import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { AzureTreeDataProvider, DialogResponses, ext, FunctionAppProvider, getGlobalSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
+import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, DialogResponses, ext, getGlobalSetting, getRandomHexString, ProjectLanguage, projectLanguageSetting, TestAzureAccount, TestUserInput, updateGlobalSetting } from '../extension.bundle';
 import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 
@@ -32,7 +32,8 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
 
         this.timeout(120 * 1000);
         await testAccount.signIn();
-        ext.tree = new AzureTreeDataProvider(FunctionAppProvider, 'azureFunctions.startTesting', undefined, testAccount);
+        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects(testAccount);
+        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
         webSiteClient = getWebsiteManagementClient(testAccount);
     });
 
@@ -55,7 +56,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
                 console.log(`Ignoring resource group "${resourceGroup}" because it does not exist.`);
             }
         }
-        ext.tree.dispose();
+        ext.azureAccountTreeItem.dispose();
     });
 
     test('createFunctionApp (Basic)', async () => {

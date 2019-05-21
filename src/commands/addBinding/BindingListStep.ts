@@ -14,18 +14,18 @@ import { addBindingSettingSteps } from './settingSteps/addBindingSettingSteps';
 export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext> {
     public hideStepCount: boolean = true;
 
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
-        const direction: string = nonNullProp(wizardContext, 'bindingDirection');
+    public async prompt(context: IBindingWizardContext): Promise<void> {
+        const direction: string = nonNullProp(context, 'bindingDirection');
         const placeHolder: string = localize('selectBinding', 'Select binding with direction "{0}"', direction);
-        wizardContext.bindingTemplate = (await ext.ui.showQuickPick(this.getPicks(direction), { placeHolder })).data;
+        context.bindingTemplate = (await ext.ui.showQuickPick(this.getPicks(direction), { placeHolder })).data;
     }
 
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext.bindingTemplate;
+    public shouldPrompt(context: IBindingWizardContext): boolean {
+        return !context.bindingTemplate;
     }
 
-    public async getSubWizard(wizardContext: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
-        const binding: IBindingTemplate | undefined = wizardContext.bindingTemplate;
+    public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
+        const binding: IBindingTemplate | undefined = context.bindingTemplate;
         if (binding) {
             const promptSteps: AzureWizardPromptStep<IBindingWizardContext>[] = [];
             addBindingSettingSteps(binding.settings, promptSteps);

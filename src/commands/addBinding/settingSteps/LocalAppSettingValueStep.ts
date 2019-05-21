@@ -16,14 +16,14 @@ export class LocalAppSettingValueStep extends AzureWizardPromptStep<IBindingWiza
         this._key = key;
     }
 
-    public async prompt(wizardContext: IBindingWizardContext): Promise<void> {
-        wizardContext[this._key] = await ext.ui.showInputBox({
+    public async prompt(context: IBindingWizardContext): Promise<void> {
+        context[this._key] = await ext.ui.showInputBox({
             placeHolder: localize('appSettingValuePlaceholder', 'App setting value'),
             prompt: localize('appSettingValuePrompt', 'Provide a connection string')
         });
     }
 
-    public shouldPrompt(wizardContext: IBindingWizardContext): boolean {
-        return !wizardContext[this._key];
+    public shouldPrompt(context: IBindingWizardContext): boolean {
+        return !context[this._key];
     }
 }
