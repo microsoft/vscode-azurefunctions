@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
+import { MessageItem, window } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
+import { ext } from '../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
@@ -165,5 +167,24 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async deleteTreeItemImpl(): Promise<void> {
         await deleteSite(this.root.client);
+    }
+
+    public showCreatedOutput(): void {
+        const slot: string = localize('createdNewSlot', 'Created new slot "{0}": {1}', this.root.client.fullName, `https://${this.root.client.defaultHostName}`);
+        const functionApp: string = localize('createdNewApp', 'Created new function app "{0}": {1}', this.root.client.fullName, `https://${this.root.client.defaultHostName}`);
+        const createdNewSlotTree: string = this.root.client.isSlot ? slot : functionApp;
+
+        ext.outputChannel.appendLine(createdNewSlotTree);
+        ext.outputChannel.appendLine('');
+        const viewOutput: MessageItem = {
+            title: localize('viewOutput', 'View Output')
+        };
+
+        // Note: intentionally not waiting for the result of this before returning
+        window.showInformationMessage(createdNewSlotTree, viewOutput).then(async (result: MessageItem | undefined) => {
+            if (result === viewOutput) {
+                ext.outputChannel.show();
+            }
+        });
     }
 }
