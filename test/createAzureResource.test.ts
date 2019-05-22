@@ -215,4 +215,3 @@ function getWebsiteManagementClient(testAccount: TestAzureAccount): WebSiteManag
 function getResourceManagementClient(testAccount: TestAzureAccount): ResourceManagementClient {
     return new ResourceManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId());
 }
-
