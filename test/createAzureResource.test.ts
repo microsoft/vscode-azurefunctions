@@ -9,11 +9,9 @@ import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-webs
 import { execSync } from 'child_process';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, delay, DialogResponses, ext, FunctionTreeItem, getRandomHexString, IActionContext, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
-import { longRunningTestsEnabled } from './global.test';
+import { getTestRootFolder, longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
@@ -25,7 +23,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     let webSiteClient: WebSiteManagementClient;
     const resourceName1: string = getRandomHexString().toLowerCase();
     // Get the *.code-workspace workspace file path
-    const projectPath: string = vscode.workspace.rootPath || os.tmpdir();
+    const projectPath: string = getTestRootFolder();
     // tslint:disable-next-line: prefer-const
     let context: IActionContext | undefined;
 
@@ -46,7 +44,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             this.skip();
         }
         this.timeout(1200 * 1000);
-        await clearProjectFile(projectPath);
+        fse.emptyDirSync(projectPath);
         const client: ResourceManagementClient = getResourceManagementClient(testAccount);
         for (const resourceGroup of resourceGroupsToDelete) {
             if (await client.resourceGroups.checkExistence(resourceGroup)) {
@@ -64,7 +62,6 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     test('Create windows function app (Basic) and deploy JavaScript project', async () => {
         const functionName: string = 'HttpTrigger';
         resourceGroupsToDelete.push(resourceName1);
-        await clearProjectFile(projectPath);
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
             await runWithFuncSetting('advancedCreation', undefined, async () => {
                 ext.ui = new TestUserInput([resourceName1]);
@@ -74,6 +71,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
                 await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
                     const templateId: string = 'HttpTrigger-JavaScript';
                     const authLevel: string = 'function';
+                    ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
                     await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, ProjectLanguage.JavaScript, ProjectRuntime.v2, false, templateId, functionName, { AuthLevel: authLevel });
                     await validateProject(projectPath, getJavaScriptValidateOptions(true));
                 });
@@ -95,7 +93,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
 
     test('Deploy CSharp project (windows)', async () => {
         const resourceName2: string = getRandomHexString().toLowerCase();
-        await clearProjectFile(projectPath);
+        fse.emptyDirSync(projectPath);
         const functionName: string = 'HttpTriggerCSharp';
         resourceGroupsToDelete.push(resourceName2);
         await runWithFuncSetting('projectLanguage', ProjectLanguage.CSharp, async () => {
@@ -108,6 +106,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
                     const templateId: string = 'Azure.Function.CSharp.HttpTrigger.2.x';
                     const nameSpace: string = 'Company.Function';
                     const accessRights: string = 'function';
+                    ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
                     await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, ProjectLanguage.CSharp, ProjectRuntime.v2, false, templateId, functionName, { namespace: nameSpace, AccessRights: accessRights });
                     await validateProject(projectPath, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'));
                 });
@@ -217,15 +216,3 @@ function getResourceManagementClient(testAccount: TestAzureAccount): ResourceMan
     return new ResourceManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId());
 }
 
-async function clearProjectFile(projectPath: string): Promise<void> {
-    let files: string[] = [];
-    if (fse.existsSync(projectPath)) {
-        files = fse.readdirSync(projectPath);
-        console.log(`Deleting all files from "${projectPath}"...`);
-        files.forEach((file: string) => {
-            const curPath: string = path.join(projectPath, file);
-            fse.removeSync(curPath);
-        });
-    }
-    console.log(`The folder "${projectPath}" is cleared`);
-}
