@@ -24,6 +24,7 @@ import { createFunction } from './commands/createFunction/createFunction';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { createFunctionApp } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
+import { createSlot } from './commands/createSlot';
 import { deleteNode } from './commands/deleteNode';
 import { deploy } from './commands/deploy/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
@@ -59,7 +60,6 @@ import { getTemplateProvider } from './templates/TemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
-import { SlotsTreeItem } from './tree/SlotsTreeItem';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
@@ -84,7 +84,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         context.subscriptions.push(ext.azureAccountTreeItem);
         ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
-        context.subscriptions.push(vscode.window.createTreeView('azureFunctionsExplorer', { treeDataProvider: ext.tree }));
+        context.subscriptions.push(vscode.window.createTreeView('azFuncTree', { treeDataProvider: ext.tree }));
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
@@ -138,7 +138,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.swapSlot', swapSlot);
         registerCommand('azureFunctions.addBinding', addBinding);
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
-        registerCommand('azureFunctions.createSlot', async (actionContext: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(actionContext, SlotsTreeItem.contextValue, node));
+        registerCommand('azureFunctions.createSlot', createSlot);
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (_actionContext: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
         registerFuncHostTaskEvents();
 

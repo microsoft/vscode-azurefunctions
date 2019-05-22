@@ -7,7 +7,7 @@ import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-webs
 import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient, ICreateChildImplContext } from 'vscode-azureextensionui';
 import { localize } from '../localize';
-import { nodeUtils } from '../utils/nodeUtils';
+import { treeUtils } from '../utils/treeUtils';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 
@@ -30,7 +30,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(this.contextValue);
+        return treeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {

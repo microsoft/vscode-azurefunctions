@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ParsedFunctionJson } from '../../funcConfig/function';
-import { nodeUtils } from '../../utils/nodeUtils';
+import { treeUtils } from '../../utils/treeUtils';
 import { FunctionTreeItem } from '../FunctionTreeItem';
 import { LocalBindingsTreeItem } from './LocalBindingsTreeItem';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
@@ -31,7 +31,7 @@ export class LocalFunctionTreeItem extends LocalParentTreeItem {
     }
 
     public get iconPath(): string {
-        return nodeUtils.getIconPath(FunctionTreeItem.contextValueBase);
+        return treeUtils.getIconPath(FunctionTreeItem.contextValueBase);
     }
 
     public hasMoreChildrenImpl(): boolean {

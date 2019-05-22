@@ -8,7 +8,7 @@ import { isArray } from 'util';
 import { ISiteTreeRoot } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../localize';
-import { nodeUtils } from '../utils/nodeUtils';
+import { treeUtils } from '../utils/treeUtils';
 import { FunctionTreeItem, getFunctionNameFromId } from './FunctionTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
@@ -41,8 +41,8 @@ export class FunctionsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return 'functions';
     }
 
-    public get iconPath(): nodeUtils.IThemedIconPath {
-        return nodeUtils.getThemedIconPath('BulletList');
+    public get iconPath(): treeUtils.IThemedIconPath {
+        return treeUtils.getThemedIconPath('BulletList');
     }
 
     public get readOnly(): boolean {

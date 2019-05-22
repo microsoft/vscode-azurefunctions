@@ -73,7 +73,7 @@
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "workspaceContains:host.json",
         "workspaceContains:*/host.json",
-        "onView:azureFunctionsExplorer",
+        "onView:azFuncTree",
         "onDebugInitialConfigurations"
     ],
     "main": "./main.js",
@@ -334,7 +334,7 @@
         "views": {
             "azure": [
                 {
-                    "id": "azureFunctionsExplorer",
+                    "id": "azFuncTree",
                     "name": "Functions",
                     "when": "config.azureFunctions.showExplorer == true"
                 }
@@ -344,234 +344,234 @@
             "view/title": [
                 {
                     "command": "azureFunctions.createNewProject",
-                    "when": "view == azureFunctionsExplorer",
+                    "when": "view == azFuncTree",
                     "group": "navigation@1"
                 },
                 {
                     "command": "azureFunctions.createFunction",
-                    "when": "view == azureFunctionsExplorer",
+                    "when": "view == azFuncTree",
                     "group": "navigation@2"
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureFunctionsExplorer",
+                    "when": "view == azFuncTree",
                     "group": "navigation@3"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer",
+                    "when": "view == azFuncTree",
                     "group": "navigation@3"
                 }
             ],
             "view/item/context": [
                 {
                     "command": "azureFunctions.selectSubscriptions",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azureextensionui.azureSubscription",
+                    "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncProductionSlot",
+                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@3"
                 },
                 {
                     "command": "azureFunctions.swapSlot",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlot",
+                    "when": "view == azFuncTree && viewItem == azFuncSlot",
                     "group": "2@4"
                 },
                 {
                     "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@5"
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "4@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "4@2"
                 },
                 {
                     "command": "azureFunctions.debugFunctionAppOnAzure",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableRemoteDebugging == true",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "6@1"
                 },
                 {
                     "command": "azureFunctions.createSlot",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlots",
+                    "when": "view == azFuncTree && viewItem == azFuncSlots",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncSlots",
+                    "when": "view == azFuncTree && viewItem == azFuncSlots",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncFunctions",
+                    "when": "view == azFuncTree && viewItem == azFuncFunctions",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionHttp(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunctionHttp(ReadOnly|)$/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.executeFunction",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunctionTimer(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunctionTimer(ReadOnly|)$/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteFunction",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.add",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "when": "view == azFuncTree && viewItem == applicationSettings",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.download",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "when": "view == azFuncTree && viewItem == applicationSettings",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.upload",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "when": "view == azFuncTree && viewItem == applicationSettings",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettings",
+                    "when": "view == azFuncTree && viewItem == applicationSettings",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.edit",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.rename",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.delete",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem && config.azureFunctions.enableSlots == true",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem && config.azureFunctions.enableSlots == true",
                     "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "view == azureFunctionsExplorer && viewItem == applicationSettingItem",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "inline"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncProxies",
+                    "when": "view == azFuncTree && viewItem == azFuncProxies",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteProxy",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncProxy",
+                    "when": "view == azFuncTree && viewItem == azFuncProxy",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.disconnectRepo",
-                    "when": "view == azureFunctionsExplorer && viewItem == deploymentsConnected",
+                    "when": "view == azFuncTree && viewItem == deploymentsConnected",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^deployments(C|Unc)onnected$/",
+                    "when": "view == azFuncTree && viewItem =~ /^deployments(C|Unc)onnected$/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.redeploy",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^deployment//",
+                    "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^deployment//",
+                    "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.viewCommitInGitHub",
-                    "when": "view == azureFunctionsExplorer && viewItem == deployment/github",
+                    "when": "view == azFuncTree && viewItem == deployment/github",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.viewDeploymentLogs",
-                    "when": "view == azureFunctionsExplorer && viewItem =~ /^deployment//",
+                    "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "inline"
                 },
                 {
                     "command": "azureFunctions.addBinding",
-                    "when": "view == azureFunctionsExplorer && viewItem == azFuncLocalBindings"
+                    "when": "view == azFuncTree && viewItem == azFuncLocalBindings"
                 }
             ],
             "explorer/context": [
