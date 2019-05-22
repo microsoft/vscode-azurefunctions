@@ -4,15 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DeploymentsTreeItem, editScmType } from "vscode-azureappservice";
-import { IActionContext } from "vscode-azureextensionui";
+import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
 import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
 
-export async function connectToGitHub(context: IActionContext, node?: ProductionSlotTreeItem | DeploymentsTreeItem): Promise<void> {
-    if (!node) {
+export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
+    let node: ProductionSlotTreeItem | DeploymentsTreeItem;
+
+    if (!target) {
         node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
+    } else {
+        node = <DeploymentsTreeItem>target.parent;
     }
+
     await editScmType(node.root.client, node, context, ScmType.GitHub);
     if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
