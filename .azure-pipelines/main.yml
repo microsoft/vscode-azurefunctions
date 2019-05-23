@@ -6,7 +6,6 @@ jobs:
   - template: common/build.yml
   - template: common/lint.yml
   - template: common/test.yml
-  - template: windows/intellinav.yml
 
 - job: Linux
   pool:
