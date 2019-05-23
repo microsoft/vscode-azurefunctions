@@ -22,7 +22,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
-    public isConsumption: boolean;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
@@ -31,8 +30,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _state?: string;
     private _functionsTreeItem: FunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
-    private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedRuntime: ProjectRuntime | undefined;
+    private _cachedHostJson: IParsedHostJson | undefined;
+    private _cachedIsConsumption: boolean | undefined;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient) {
         super(parent);
@@ -56,7 +56,11 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public get description(): string | undefined {
         const descriptions: string[] = [];
-        if (this.root.client.isLinux && this.isConsumption) {
+
+        // getting `isConsumption` is an async operation that's not worth delaying the loading of all function apps just for this description
+        // thus if the cached value is `undefined`, we will assume it's consumption (the default and most common case)
+        const isConsumption: boolean = this._cachedIsConsumption === undefined ? true : this._cachedIsConsumption;
+        if (this.root.client.isLinux && isConsumption) {
             descriptions.push(localize('preview', 'Preview'));
         }
 
@@ -81,14 +85,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public async refreshImpl(): Promise<void> {
         this._cachedRuntime = undefined;
         this._cachedHostJson = undefined;
-
-        try {
-            const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
-            this.isConsumption = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
-        } catch {
-            // ignore and use default
-            this.isConsumption = true;
-        }
+        this._cachedIsConsumption = undefined;
 
         try {
             this._state = await this.root.client.getState();
@@ -128,6 +125,22 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             const runtime: ProjectRuntime = await this.getRuntime();
             result = parseHostJson(data, runtime);
             this._cachedHostJson = result;
+        }
+
+        return result;
+    }
+
+    public async getIsConsumption(): Promise<boolean> {
+        let result: boolean | undefined = this._cachedIsConsumption;
+        if (result === undefined) {
+            try {
+                const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
+                result = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
+            } catch {
+                // ignore and use default
+                result = true;
+            }
+            this._cachedIsConsumption = result;
         }
 
         return result;
