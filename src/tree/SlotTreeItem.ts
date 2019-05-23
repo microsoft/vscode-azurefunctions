@@ -12,14 +12,8 @@ export class SlotTreeItem extends SlotTreeItemBase {
     public readonly contextValue: string = SlotTreeItem.contextValue;
     public readonly parent: SlotsTreeItem;
 
-    private constructor(parent: SlotsTreeItem, client: SiteClient) {
+    public constructor(parent: SlotsTreeItem, client: SiteClient) {
         super(parent, client);
-    }
-
-    public static async create(parent: SlotsTreeItem, client: SiteClient): Promise<SlotTreeItem> {
-        const result: SlotTreeItem = new SlotTreeItem(parent, client);
-        await result.refreshImpl();
-        return result;
     }
 
     public get label(): string {

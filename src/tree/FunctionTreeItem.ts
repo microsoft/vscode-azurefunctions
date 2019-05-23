@@ -11,6 +11,7 @@ import { AzureTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
+import { IParsedHostJson } from '../funcConfig/host';
 import { localize } from '../localize';
 import { nodeUtils } from '../utils/nodeUtils';
 import { nonNullProp } from '../utils/nonNull';
@@ -151,7 +152,8 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
 
         // tslint:disable-next-line: strict-boolean-expressions
         const route: string = (this.config.triggerBinding && this.config.triggerBinding.route) || this.name;
-        triggerUrl.pathname = `${this.parent.parent.hostJson.routePrefix}/${route}`;
+        const hostJson: IParsedHostJson = await this.parent.parent.getHostJson();
+        triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
 
         const key: string | undefined = await this.getKey();
         if (key) {
@@ -165,7 +167,8 @@ export class FunctionTreeItem extends AzureTreeItem<ISiteTreeRoot> {
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(): Promise<void> {
-        if (this.parent.parent.runtime === ProjectRuntime.v1) {
+        const runtime: ProjectRuntime = await this.parent.parent.getRuntime();
+        if (runtime === ProjectRuntime.v1) {
             this._disabled = this.config.disabled;
         } else {
             const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();

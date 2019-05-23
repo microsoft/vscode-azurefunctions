@@ -55,7 +55,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             'azFuncInvalidSlot',
             async (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
-                return await SlotTreeItem.create(this, siteClient);
+                return new SlotTreeItem(this, siteClient);
             },
             (site: WebSiteManagementModels.Site) => {
                 return site.name;
@@ -66,6 +66,6 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public async createChildImpl(showCreatingTreeItem: (label: string) => void): Promise<AzureTreeItem<ISiteTreeRoot>> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren();
         const newSite: WebSiteManagementModels.Site = await createSlot(this.root, existingSlots, showCreatingTreeItem);
-        return await SlotTreeItem.create(this, new SiteClient(newSite, this.root));
+        return new SlotTreeItem(this, new SiteClient(newSite, this.root));
     }
 }
