@@ -22,8 +22,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
-    public hostJson: IParsedHostJson;
-    public runtime: ProjectRuntime;
     public isConsumption: boolean;
 
     public abstract readonly contextValue: string;
@@ -33,6 +31,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _state?: string;
     private _functionsTreeItem: FunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
+    private _cachedHostJson: IParsedHostJson | undefined;
+    private _cachedRuntime: ProjectRuntime | undefined;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient) {
         super(parent);
@@ -79,24 +79,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
     public async refreshImpl(): Promise<void> {
-        let runtime: ProjectRuntime | undefined;
-        try {
-            const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-            runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
-        } catch {
-            // ignore and use default
-        }
-        // tslint:disable-next-line: strict-boolean-expressions
-        this.runtime = runtime || ProjectRuntime.v2;
-
-        // tslint:disable-next-line: no-any
-        let data: any;
-        try {
-            data = await this.root.client.kudu.functionModel.getHostSettings();
-        } catch {
-            // ignore and use default
-        }
-        this.hostJson = parseHostJson(data, this.runtime);
+        this._cachedRuntime = undefined;
+        this._cachedHostJson = undefined;
 
         try {
             const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
@@ -111,6 +95,42 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         } catch {
             this._state = 'Unknown';
         }
+    }
+
+    public async getRuntime(): Promise<ProjectRuntime> {
+        let result: ProjectRuntime | undefined = this._cachedRuntime;
+        if (result === undefined) {
+            let runtime: ProjectRuntime | undefined;
+            try {
+                const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+                runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
+            } catch {
+                // ignore and use default
+            }
+            // tslint:disable-next-line: strict-boolean-expressions
+            result = runtime || ProjectRuntime.v2;
+            this._cachedRuntime = result;
+        }
+
+        return result;
+    }
+
+    public async getHostJson(): Promise<IParsedHostJson> {
+        let result: IParsedHostJson | undefined = this._cachedHostJson;
+        if (!result) {
+            // tslint:disable-next-line: no-any
+            let data: any;
+            try {
+                data = await this.root.client.kudu.functionModel.getHostSettings();
+            } catch {
+                // ignore and use default
+            }
+            const runtime: ProjectRuntime = await this.getRuntime();
+            result = parseHostJson(data, runtime);
+            this._cachedHostJson = result;
+        }
+
+        return result;
     }
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
