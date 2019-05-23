@@ -17,15 +17,9 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    private constructor(parent: SubscriptionTreeItem, client: SiteClient) {
+    public constructor(parent: SubscriptionTreeItem, client: SiteClient) {
         super(parent, client);
         this._slotsTreeItem = new SlotsTreeItem(this);
-    }
-
-    public static async create(parent: SubscriptionTreeItem, client: SiteClient): Promise<ProductionSlotTreeItem> {
-        const result: ProductionSlotTreeItem = new ProductionSlotTreeItem(parent, client);
-        await result.refreshImpl();
-        return result;
     }
 
     public get label(): string {

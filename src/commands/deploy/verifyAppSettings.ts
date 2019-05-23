@@ -70,7 +70,8 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
  * Only applies to Linux Consumption apps
  */
 async function verifyWebContentSettings(node: SlotTreeItemBase, context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    if (node.root.client.isLinux && node.isConsumption) {
+    const isConsumption: boolean = await node.getIsConsumption();
+    if (node.root.client.isLinux && isConsumption) {
         const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
         const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
         if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
