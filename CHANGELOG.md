@@ -4,6 +4,12 @@
 
 All notable changes to the "azurefunctions" extension will be documented in this file.
 
+## 0.17.1 - 2019-05-24
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.17.1%22+is%3Aclosed)
+
+- Improve performance of loading Function Apps
+
 ## 0.17.0 - 2019-05-01
 
 ### Added
