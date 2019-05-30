@@ -9,6 +9,6 @@ import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 
 export async function restartFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
-    await stopFunctionApp(context, node);
+    node = await stopFunctionApp(context, node);
     await startFunctionApp(context, node);
 }
