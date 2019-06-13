@@ -56,7 +56,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             async (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
-                    return await ProductionSlotTreeItem.create(this, siteClient);
+                    return new ProductionSlotTreeItem(this, siteClient);
                 }
                 return undefined;
             },
@@ -154,7 +154,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
-        return await ProductionSlotTreeItem.create(this, new SiteClient(site, this.root));
+        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

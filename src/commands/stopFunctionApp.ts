@@ -10,7 +10,7 @@ import { localize } from '../localize';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
-export async function stopFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function stopFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<SlotTreeItemBase> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
@@ -22,4 +22,5 @@ export async function stopFunctionApp(context: IActionContext, node?: SlotTreeIt
             await client.stop();
         }
     );
+    return node;
 }

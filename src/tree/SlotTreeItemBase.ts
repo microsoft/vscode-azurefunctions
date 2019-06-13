@@ -22,9 +22,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
-    public hostJson: IParsedHostJson;
-    public runtime: ProjectRuntime;
-    public isConsumption: boolean;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
@@ -33,6 +30,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _state?: string;
     private _functionsTreeItem: FunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
+    private _cachedRuntime: ProjectRuntime | undefined;
+    private _cachedHostJson: IParsedHostJson | undefined;
+    private _cachedIsConsumption: boolean | undefined;
 
     public constructor(parent: AzureParentTreeItem, client: SiteClient) {
         super(parent);
@@ -56,7 +56,11 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public get description(): string | undefined {
         const descriptions: string[] = [];
-        if (this.root.client.isLinux && this.isConsumption) {
+
+        // getting `isConsumption` is an async operation that's not worth delaying the loading of all function apps just for this description
+        // thus if the cached value is `undefined`, we will assume it's consumption (the default and most common case)
+        const isConsumption: boolean = this._cachedIsConsumption === undefined ? true : this._cachedIsConsumption;
+        if (this.root.client.isLinux && isConsumption) {
             descriptions.push(localize('preview', 'Preview'));
         }
 
@@ -79,38 +83,67 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
     public async refreshImpl(): Promise<void> {
-        let runtime: ProjectRuntime | undefined;
-        try {
-            const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-            runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
-        } catch {
-            // ignore and use default
-        }
-        // tslint:disable-next-line: strict-boolean-expressions
-        this.runtime = runtime || ProjectRuntime.v2;
-
-        // tslint:disable-next-line: no-any
-        let data: any;
-        try {
-            data = await this.root.client.kudu.functionModel.getHostSettings();
-        } catch {
-            // ignore and use default
-        }
-        this.hostJson = parseHostJson(data, this.runtime);
-
-        try {
-            const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
-            this.isConsumption = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
-        } catch {
-            // ignore and use default
-            this.isConsumption = true;
-        }
+        this._cachedRuntime = undefined;
+        this._cachedHostJson = undefined;
+        this._cachedIsConsumption = undefined;
 
         try {
             this._state = await this.root.client.getState();
         } catch {
             this._state = 'Unknown';
         }
+    }
+
+    public async getRuntime(): Promise<ProjectRuntime> {
+        let result: ProjectRuntime | undefined = this._cachedRuntime;
+        if (result === undefined) {
+            let runtime: ProjectRuntime | undefined;
+            try {
+                const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+                runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
+            } catch {
+                // ignore and use default
+            }
+            // tslint:disable-next-line: strict-boolean-expressions
+            result = runtime || ProjectRuntime.v2;
+            this._cachedRuntime = result;
+        }
+
+        return result;
+    }
+
+    public async getHostJson(): Promise<IParsedHostJson> {
+        let result: IParsedHostJson | undefined = this._cachedHostJson;
+        if (!result) {
+            // tslint:disable-next-line: no-any
+            let data: any;
+            try {
+                data = await this.root.client.kudu.functionModel.getHostSettings();
+            } catch {
+                // ignore and use default
+            }
+            const runtime: ProjectRuntime = await this.getRuntime();
+            result = parseHostJson(data, runtime);
+            this._cachedHostJson = result;
+        }
+
+        return result;
+    }
+
+    public async getIsConsumption(): Promise<boolean> {
+        let result: boolean | undefined = this._cachedIsConsumption;
+        if (result === undefined) {
+            try {
+                const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
+                result = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
+            } catch {
+                // ignore and use default
+                result = true;
+            }
+            this._cachedIsConsumption = result;
+        }
+
+        return result;
     }
 
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
