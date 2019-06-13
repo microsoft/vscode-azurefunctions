@@ -74,7 +74,8 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/dist/test"
+                "--extensionTestsPath=${workspaceFolder}/dist/test",
+                "${workspaceFolder}/test/test.code-workspace"
             ],
             "stopOnEntry": false,
             "sourceMaps": true,
