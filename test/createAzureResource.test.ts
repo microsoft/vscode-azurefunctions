@@ -6,12 +6,13 @@
 import * as assert from 'assert';
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { execSync } from 'child_process';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import * as path from 'path';
+import * as request from 'request-promise';
 import * as vscode from 'vscode';
-import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, delay, DialogResponses, ext, FunctionTreeItem, getRandomHexString, IActionContext, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
-import { getTestRootFolder, longRunningTestsEnabled } from './global.test';
+import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, delay, DialogResponses, ext, getRandomHexString, ProjectLanguage, ProjectRuntime, TestAzureAccount, TestUserInput } from '../extension.bundle';
+import { longRunningTestsEnabled } from './global.test';
 import { runWithFuncSetting } from './runWithSetting';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
@@ -24,8 +25,6 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     const resourceName1: string = getRandomHexString().toLowerCase();
     // Get the *.code-workspace workspace file path
     const projectPath: string = getTestRootFolder();
-    // tslint:disable-next-line: prefer-const
-    let context: IActionContext | undefined;
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -60,70 +59,58 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     });
 
     test('Create windows function app (Basic) and deploy JavaScript project', async () => {
-        const functionName: string = 'HttpTrigger';
         resourceGroupsToDelete.push(resourceName1);
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            await runWithFuncSetting('advancedCreation', undefined, async () => {
-                ext.ui = new TestUserInput([resourceName1]);
-                await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
-                const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName1, resourceName1);
-                assert.ok(createdApp);
-                await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
-                    const templateId: string = 'HttpTrigger-JavaScript';
-                    const authLevel: string = 'function';
-                    ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-                    await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, ProjectLanguage.JavaScript, ProjectRuntime.v2, false, templateId, functionName, { AuthLevel: authLevel });
-                    await validateProject(projectPath, getJavaScriptValidateOptions(true));
+            await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
+                const functionName: string = 'HttpTrigger';
+                const templateId: string = 'HTTP trigger';
+                const authLevel: string = 'Function';
+                ext.ui = new TestUserInput([projectPath, templateId, functionName, authLevel]);
+                await vscode.commands.executeCommand('azureFunctions.createNewProject');
+                await validateProject(projectPath, getJavaScriptValidateOptions(true));
+                await runWithFuncSetting('advancedCreation', undefined, async () => {
+                    ext.ui = new TestUserInput(['$(plus) Create New Function App in Azure', resourceName1]);
+                    await vscode.commands.executeCommand('azureFunctions.deploy');
+                    await delay(500);
+                    // Verify the deployment result through copyFunctionUrl
+                    await vscode.env.clipboard.writeText(''); // Clear the clipboard
+                    ext.ui = new TestUserInput([resourceName1, functionName]);
+                    await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
+                    const functionUrl: string = await vscode.env.clipboard.readText();
+                    const result: string = await getBody(functionUrl, resourceName1);
+                    assert.equal(result, `Hello ${resourceName1}`, `The result should be "Hello ${resourceName1}" rather than ${result} and the triggerUrl is ${functionUrl}`);
                 });
             });
         });
-
-        ext.ui = new TestUserInput([resourceName1, 'Deploy']);
-        await vscode.commands.executeCommand('azureFunctions.deploy');
-        await delay(500);
-
-        // Verify the deployment result through triggerUrl
-        const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName1, resourceName1);
-        assert.equal(getFunction[0].name, `${resourceName1}/${functionName}`);
-        const fullId: string = <string>(getFunction[0].id);
-        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId, <IActionContext>context)).triggerUrl;
-        const result: string = execSync(`curl ${triggerUrl}"&"name=${resourceName1}`).toString();
-        assert.equal(result, `Hello ${resourceName1}`, `The result should be "Hello ${resourceName1}" rather than ${result} and the triggerUrl is ${triggerUrl}`);
     });
 
     test('Deploy CSharp project (windows)', async () => {
         const resourceName2: string = getRandomHexString().toLowerCase();
         fse.emptyDirSync(projectPath);
-        const functionName: string = 'HttpTriggerCSharp';
         resourceGroupsToDelete.push(resourceName2);
         await runWithFuncSetting('projectLanguage', ProjectLanguage.CSharp, async () => {
-            await runWithFuncSetting('advancedCreation', undefined, async () => {
-                ext.ui = new TestUserInput([resourceName2]);
-                await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
-                const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName2, resourceName2);
-                assert.ok(createdApp);
-                await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
-                    const templateId: string = 'Azure.Function.CSharp.HttpTrigger.2.x';
-                    const nameSpace: string = 'Company.Function';
-                    const accessRights: string = 'function';
-                    ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
-                    await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, ProjectLanguage.CSharp, ProjectRuntime.v2, false, templateId, functionName, { namespace: nameSpace, AccessRights: accessRights });
-                    await validateProject(projectPath, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'));
+            await runWithFuncSetting('projectRuntime', ProjectRuntime.v2, async () => {
+                const functionName: string = 'HttpTriggerCSharp';
+                const templateId: string = 'HttpTrigger';
+                const nameSpace: string = 'Company.Function';
+                const accessRights: string = 'Function';
+                ext.ui = new TestUserInput([projectPath, templateId, functionName, nameSpace, accessRights]);
+                await vscode.commands.executeCommand('azureFunctions.createNewProject');
+                await validateProject(projectPath, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'));
+                await runWithFuncSetting('advancedCreation', undefined, async () => {
+                    ext.ui = new TestUserInput(['$(plus) Create New Function App in Azure', resourceName2]);
+                    await vscode.commands.executeCommand('azureFunctions.deploy');
+                    await delay(500);
+                    // Verify the deployment result through copyFunctionUrl
+                    await vscode.env.clipboard.writeText(''); // Clear the clipboard
+                    ext.ui = new TestUserInput([resourceName2, functionName]);
+                    await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
+                    const functionUrl: string = await vscode.env.clipboard.readText();
+                    const result: string = await getBody(functionUrl, resourceName2);
+                    assert.equal(result, `Hello, ${resourceName2}`, `The result should be "Hello, ${resourceName2}" rather than ${result} and the triggerUrl is ${functionUrl}`);
                 });
             });
         });
-
-        ext.ui = new TestUserInput([resourceName2, 'Update remote runtime', 'Deploy']);
-        await vscode.commands.executeCommand('azureFunctions.deploy');
-        await delay(500);
-
-        // Verify the deployment result through triggerUrl
-        const getFunction: WebSiteManagementModels.FunctionEnvelopeCollection = await webSiteClient.webApps.listFunctions(resourceName2, resourceName2);
-        assert.equal(getFunction[0].name, `${resourceName2}/${functionName}`);
-        const fullId: string = <string>(getFunction[0].id);
-        const triggerUrl: string | undefined = (<FunctionTreeItem>await ext.tree.findTreeItem(fullId, <IActionContext>context)).triggerUrl;
-        const result: string = execSync(`curl ${triggerUrl}"&"name=${resourceName2}`).toString();
-        assert.equal(result, `Hello, ${resourceName2}`, `The result should be "Hello, ${resourceName2}" rather than ${result} and the triggerUrl is ${triggerUrl}`);
     });
 
     test('createFunctionApp (Advanced)', async () => {
@@ -214,4 +201,45 @@ function getWebsiteManagementClient(testAccount: TestAzureAccount): WebSiteManag
 
 function getResourceManagementClient(testAccount: TestAzureAccount): ResourceManagementClient {
     return new ResourceManagementClient(testAccount.getSubscriptionCredentials(), testAccount.getSubscriptionId());
+}
+
+// The root workspace folder that vscode is opened against for tests
+function getTestRootFolder(): string {
+    let testRootFolder: string = '';
+    const testOutputName: string = 'testOutput';
+    if (!testRootFolder) {
+        // We're expecting to be opened against the test/test.code-workspace
+        // workspace.
+        const workspaceFolders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            console.error("No workspace is open.");
+            process.exit(1);
+        } else {
+            if (workspaceFolders.length > 1) {
+                console.error("There are unexpected multiple workspaces open");
+                process.exit(1);
+            }
+            testRootFolder = workspaceFolders[0].uri.fsPath;
+            console.log(`testRootFolder: ${testRootFolder}`);
+            if (path.basename(testRootFolder) !== testOutputName) {
+                console.error("vscode is opened against the wrong folder for tests");
+                process.exit(1);
+            }
+            fse.ensureDirSync(testRootFolder);
+            fse.emptyDirSync(testRootFolder);
+        }
+    }
+    return testRootFolder;
+}
+
+async function getBody(url: string, name: string): Promise<string> {
+    const options: request.OptionsWithUri = {
+        method: 'GET',
+        uri: url,
+        body: {
+            name: name
+        },
+        json: true
+    };
+    return await <Thenable<string>>request(options).promise();
 }
