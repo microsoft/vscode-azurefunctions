@@ -63,8 +63,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const templateId: string = 'HTTP trigger';
         const authLevel: string = 'Function';
         const testInputs: string[] = [projectPath, ProjectLanguage.JavaScript, templateId, functionName, authLevel];
-        const result: string[] = await testCreateProjectAndDeploy(testInputs, getJavaScriptValidateOptions(true), resourceName1, functionName);
-        assert.equal(result[0], `Hello ${resourceName1}`, `The result should be "Hello ${resourceName1}" rather than ${result[0]} and the triggerUrl is ${result[1]}`);
+        await testCreateProjectAndDeploy(testInputs, getJavaScriptValidateOptions(true), resourceName1, functionName, `Hello ${resourceName1}`);
     });
 
     test('Create CSharp project and deploy', async () => {
@@ -74,8 +73,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const accessRights: string = 'Function';
         const resourceName2: string = getRandomHexString().toLowerCase();
         const testInputs: string[] = [projectPath, ProjectLanguage.CSharp, templateId, functionName, nameSpace, accessRights];
-        const result: string[] = await testCreateProjectAndDeploy(testInputs, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'), resourceName2, functionName);
-        assert.equal(result[0], `Hello, ${resourceName2}`, `The result should be "Hello, ${resourceName2}" rather than ${result[0]} and the triggerUrl is ${result[1]}`);
+        await testCreateProjectAndDeploy(testInputs, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'), resourceName2, functionName, `Hello, ${resourceName2}`);
     });
 
     test('createFunctionApp (Advanced)', async () => {
@@ -159,7 +157,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });
 
-    async function testCreateProjectAndDeploy(createProjectInputs: string[], projectVerification: IValidateProjectOptions, resourceName: string, functionName: string): Promise<string[]> {
+    async function testCreateProjectAndDeploy(createProjectInputs: string[], projectVerification: IValidateProjectOptions, resourceName: string, functionName: string, expectResult: string): Promise<void> {
         await fse.emptyDir(projectPath);
         resourceGroupsToDelete.push(resourceName);
         ext.ui = new TestUserInput(createProjectInputs);
@@ -176,7 +174,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
         const functionUrl: string = await vscode.env.clipboard.readText();
         const result: string = await getBody(functionUrl, resourceName);
-        return [result, functionUrl];
+        assert.equal(result, expectResult, `The result should be "${expectResult}" rather than ${result} and the triggerUrl is ${functionUrl}`);
     }
 });
 
