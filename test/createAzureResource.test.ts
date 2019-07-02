@@ -25,6 +25,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
     const resourceName1: string = getRandomHexString().toLowerCase();
     // Get the *.code-workspace workspace file path
     const projectPath: string = getTestRootFolder();
+    const applicationSettings: string[] = ['FUNCTION_EXTENSION_URL', "https://github.com/microsoft/vscode-azurefunctions"];
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -120,6 +121,16 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         assert.equal(createdApp.state, 'Running', `Function App state should be 'Running' rather than ${createdApp.state}.`);
     });
 
+    test('Add new setting', async () => {
+        const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceName1, resourceName1);
+        assert.ok(createdApp, `Function App ${resourceName1} not found`);
+        ext.ui = new TestUserInput([resourceName1, applicationSettings[0], applicationSettings[1]]);
+        await vscode.commands.executeCommand('azureFunctions.appSettings.add');
+        const listapplicationSettings: WebSiteManagementModels.StringDictionary = await webSiteClient.webApps.listApplicationSettings(resourceName1, resourceName1);
+        const applicationSettingsValue: string | undefined = applicationsettings(listapplicationSettings.properties, applicationSettings[0]);
+        assert.equal(applicationSettingsValue, applicationSettings[1], `The expected setting value should be "${applicationSettings[1]}" rather than "${applicationSettingsValue}"`);
+    });
+
     test('deleteFunctionApp', async () => {
         ext.ui = new TestUserInput([resourceName1, DialogResponses.deleteResponse.title, DialogResponses.yes.title]);
         await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
@@ -175,6 +186,19 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const functionUrl: string = await vscode.env.clipboard.readText();
         const result: string = await getBody(functionUrl, resourceName);
         assert.equal(result, expectResult, `The result should be "${expectResult}" rather than ${result} and the triggerUrl is ${functionUrl}`);
+    }
+
+    function applicationsettings(listApplicationSettings: { [propertyName: string]: string } | undefined, applicationSettingsKey: string): string | undefined {
+        let applicationValue: string | undefined;
+        if (listApplicationSettings !== undefined) {
+            // tslint:disable-next-line: no-for-in
+            for (const key in listApplicationSettings) {
+                if (key === applicationSettingsKey) {
+                    applicationValue = listApplicationSettings[key];
+                }
+            }
+        }
+        return applicationValue;
     }
 });
 
