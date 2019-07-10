@@ -42,7 +42,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
         context.telemetry.properties.createPythonVenv = String(createPythonVenv);
         if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
             progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
-            const defaultVenvName: string = '.env';
+            const defaultVenvName: string = '.venv';
             await createVirtualEnviornment(defaultVenvName, context.projectPath);
             progress.report({ message: this.creatingMessage });
         }

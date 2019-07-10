@@ -14,7 +14,7 @@ import { runWithSetting } from './runWithSetting';
 suite('venvUtils', () => {
     const command: string = 'do a thing';
     const terminalSetting: string = 'terminal.integrated.shell.windows';
-    const venvName: string = '.env';
+    const venvName: string = '.venv';
     const testFolder: string = path.join(testFolderPath, 'venvUtils');
     let oldVenvValue: string | undefined;
 
