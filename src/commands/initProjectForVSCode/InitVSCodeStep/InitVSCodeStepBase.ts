@@ -46,7 +46,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
         if (await fse.pathExists(gitignorePath)) {
             let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
-            gitignoreContents = gitignoreContents.replace(/^\.vscode\s*$/gm, '');
+            gitignoreContents = gitignoreContents.replace(/^\.vscode(\/|\\)?\s*$/gm, '');
             await fse.writeFile(gitignorePath, gitignoreContents);
         }
     }
