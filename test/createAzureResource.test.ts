@@ -127,14 +127,9 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         assert.ok(createdApp, `Function App ${resourceName1} not found`);
         ext.ui = new TestUserInput([resourceName1, applicationSettings.key, applicationSettings.value]);
         await vscode.commands.executeCommand('azureFunctions.appSettings.add');
-        const listapplicationSettings: WebSiteManagementModels.StringDictionary = await webSiteClient.webApps.listApplicationSettings(resourceName1, resourceName1);
-        assert.ok(listapplicationSettings.properties, 'Failed to get application settings');
-        if (listapplicationSettings.properties !== undefined) {
-            if (listapplicationSettings.properties.FUNCTION_EXTENSION_URL !== undefined) {
-                applicationSettingsValue = listapplicationSettings.properties.FUNCTION_EXTENSION_URL;
-            } else {
-                assert.ok(listapplicationSettings.properties.FUNCTION_EXTENSION_URL, `The key "${applicationSettings.key}" by the application setting not found.`);
-            }
+        const listApplicationSettings: WebSiteManagementModels.StringDictionary = await webSiteClient.webApps.listApplicationSettings(resourceName1, resourceName1);
+        if (listApplicationSettings.properties) {
+            applicationSettingsValue = listApplicationSettings.properties[applicationSettings.key];
         }
         assert.equal(applicationSettingsValue, applicationSettings.value, `The application setting for "${applicationSettings.key}=${applicationSettings.value}" not found`);
     });
