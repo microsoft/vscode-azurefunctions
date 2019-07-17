@@ -164,7 +164,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
         await validateProject(projectPath, projectVerification);
         await runWithFuncSetting('advancedCreation', undefined, async () => {
-            ext.ui = new TestUserInput(['$(plus) Create New Function App in Azure', resourceName]);
+            ext.ui = new TestUserInput([/create new function app/i, resourceName]);
             await vscode.commands.executeCommand('azureFunctions.deploy');
         });
         await delay(500);
