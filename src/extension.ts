@@ -84,7 +84,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         context.subscriptions.push(ext.azureAccountTreeItem);
         ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
-        context.subscriptions.push(vscode.window.createTreeView('azFuncTree', { treeDataProvider: ext.tree }));
+        context.subscriptions.push(vscode.window.createTreeView('azFuncTree', { treeDataProvider: ext.tree, showCollapseAll: true }));
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
