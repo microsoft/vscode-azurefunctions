@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime, ScmType } from '../../constants';
+import { ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -102,7 +102,7 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
                     ext.outputChannel.appendLine(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
-                await appservice.deploy(client, deployFsPath, context);
+                await appservice.deploy(client, deployFsPath, context, showOutputChannelCommandId);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     ext.outputChannel.appendLine(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));

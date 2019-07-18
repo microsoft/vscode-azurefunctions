@@ -94,3 +94,5 @@ export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
 export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
+
+export const showOutputChannelCommandId: string = 'azureFunctions.showOutputChannel';

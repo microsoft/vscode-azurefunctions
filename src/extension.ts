@@ -45,7 +45,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
-import { func } from './constants';
+import { func, showOutputChannelCommandId } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -140,6 +140,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
         registerCommand('azureFunctions.createSlot', createSlot);
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (_actionContext: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
+        registerCommand(showOutputChannelCommandId, () => { ext.outputChannel.show(); });
         registerFuncHostTaskEvents();
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
