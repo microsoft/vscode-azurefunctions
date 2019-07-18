@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
-import { isFuncHostTask, stopFuncHost } from '../funcCoreTools/funcHostTask';
+import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
@@ -20,7 +20,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new UserCancelledError();
     }
 
-    await stopFuncHost(result.workspace);
+    await waitForPrevFuncTaskToStop(result.workspace);
 
     // tslint:disable-next-line: no-unsafe-any
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
@@ -42,31 +42,54 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
     const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
 
-    const pid: string = await startFuncTask(funcTask, timeoutInSeconds, timeoutError);
+    const pid: string = await startFuncTask(result.workspace, funcTask, timeoutInSeconds, timeoutError);
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
 }
 
-async function startFuncTask(funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
-    const waitForStartPromise: Promise<string> = new Promise((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
-        const listener: vscode.Disposable = vscode.tasks.onDidStartTaskProcess((e: vscode.TaskProcessStartEvent) => {
-            if (e.execution.task === funcTask) {
-                resolve(e.processId.toString());
-                listener.dispose();
-            }
-        });
+async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    const timeoutInSeconds: number = 30;
+    const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+    while (Date.now() < maxTime) {
+        if (!runningFuncTaskMap.has(workspaceFolder)) {
+            return;
+        }
+        await delay(1000);
+    }
+    throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
+}
 
-        const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
-            if (e.exitCode !== 0) {
-                // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
-                reject(new Error(localize('taskFailed', 'Failed to start debugging. Task "{0}" failed with exit code "{1}".', e.execution.task.name, e.exitCode)));
-                errorListener.dispose();
-            }
-        });
-
-        setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
+async function startFuncTask(workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+    let taskError: Error | undefined;
+    const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
+        if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
+            // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
+            taskError = new Error(localize('taskFailed', 'Failed to start debugging. Task "{0}" failed with exit code "{1}".', e.execution.task.name, e.exitCode));
+            errorListener.dispose();
+        }
     });
-    await vscode.tasks.executeTask(funcTask);
-    return await waitForStartPromise;
+
+    try {
+        await vscode.tasks.executeTask(funcTask);
+
+        const maxTime: number = Date.now() + timeoutInSeconds * 1000;
+        while (Date.now() < maxTime) {
+            if (taskError !== undefined) {
+                throw taskError;
+            }
+
+            const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
+            // Ensure func task runs for at least 1 second in case it fails on startup and thus `taskError` will be thrown instead
+            if (taskInfo && Date.now() > taskInfo.startTime + 1000) {
+                return taskInfo.processId.toString();
+            }
+
+            await delay(500);
+        }
+
+        throw timeoutError;
+    } finally {
+        errorListener.dispose();
+    }
 }
 
 /**
