@@ -5,10 +5,11 @@
 
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureAccountTreeItemBase, IActionContext, ISubscriptionContext, TestAzureAccount } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext, TestAzureAccount } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { hostFileName } from '../constants';
 import { localize } from '../localize';
+import { treeUtils } from '../utils/treeUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
@@ -22,7 +23,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
     public constructor(testAccount?: TestAzureAccount) {
         super(undefined, testAccount);
-        if (getWorkspaceSetting(enableProjectTreeSetting)) {
+        if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
             this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
         }
     }
@@ -39,7 +40,18 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache, context);
 
-        if (getWorkspaceSetting(enableProjectTreeSetting)) {
+        if (children.length > 0 && children[0] instanceof GenericTreeItem) {
+            const ti: GenericTreeItem = new GenericTreeItem(this, {
+                label: localize('createNewProject', 'Create New Local Project...'),
+                commandId: 'azureFunctions.createNewProject',
+                contextValue: 'createNewProject',
+                iconPath: treeUtils.getThemedIconPath('CreateNewProject')
+            });
+            ti.commandArgs = [];
+            children.push(ti);
+        }
+
+        if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
             Disposable.from(...this._projectDisposables).dispose();
             this._projectDisposables = [];
 
