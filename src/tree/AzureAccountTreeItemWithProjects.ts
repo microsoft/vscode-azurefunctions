@@ -40,17 +40,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache, context);
 
-        if (children.length > 0 && children[0] instanceof GenericTreeItem) {
-            const ti: GenericTreeItem = new GenericTreeItem(this, {
-                label: localize('createNewProject', 'Create New Project...'),
-                commandId: 'azureFunctions.createNewProject',
-                contextValue: 'createNewProject',
-                iconPath: treeUtils.getThemedIconPath('CreateNewProject')
-            });
-            ti.commandArgs = [];
-            children.push(ti);
-        }
-
+        let hasLocalProject: boolean = false;
         if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
             Disposable.from(...this._projectDisposables).dispose();
             this._projectDisposables = [];
@@ -60,6 +50,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
             for (const folder of folders) {
                 const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
                 if (projectPath) {
+                    hasLocalProject = true;
                     const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
                     this._projectDisposables.push(treeItem);
                     children.push(treeItem);
@@ -69,6 +60,18 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                 this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, '*', hostFileName)));
             }
         }
+
+        if (!hasLocalProject && children.length > 0 && children[0] instanceof GenericTreeItem) {
+            const ti: GenericTreeItem = new GenericTreeItem(this, {
+                label: localize('createNewProject', 'Create New Project...'),
+                commandId: 'azureFunctions.createNewProject',
+                contextValue: 'createNewProject',
+                iconPath: treeUtils.getThemedIconPath('CreateNewProject')
+            });
+            ti.commandArgs = [];
+            children.unshift(ti);
+        }
+
         return children;
     }
 
