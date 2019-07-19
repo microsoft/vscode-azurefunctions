@@ -22,7 +22,7 @@ import { copyFunctionUrl } from './commands/copyFunctionUrl';
 import { createChildNode } from './commands/createChildNode';
 import { createFunction } from './commands/createFunction/createFunction';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
-import { createFunctionApp } from './commands/createFunctionApp';
+import { createFunctionApp, createFunctionAppAdvanced } from './commands/createFunctionApp';
 import { createNewProject } from './commands/createNewProject/createNewProject';
 import { createSlot } from './commands/createSlot';
 import { deleteNode } from './commands/deleteNode';
@@ -106,6 +106,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.createNewProject', createNewProject);
         registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
         registerCommand('azureFunctions.createFunctionApp', createFunctionApp);
+        registerCommand('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
         registerCommand('azureFunctions.startFunctionApp', startFunctionApp);
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);

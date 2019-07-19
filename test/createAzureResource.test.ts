@@ -81,13 +81,11 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const resourceGroupName: string = getRandomHexString();
         const storageAccountName: string = getRandomHexString().toLowerCase();
         resourceGroupsToDelete.push(resourceGroupName);
-        await runWithFuncSetting('advancedCreation', 'true', async () => {
-            const testInputs: string[] = [resourceName3, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
-            ext.ui = new TestUserInput(testInputs);
-            await vscode.commands.executeCommand('azureFunctions.createFunctionApp');
-            const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName3);
-            assert.ok(createdApp, 'Create windows Function App with new rg/sa failed.');
-        });
+        const testInputs: string[] = [resourceName3, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', resourceGroupName, '$(plus) Create new storage account', storageAccountName, 'East US'];
+        ext.ui = new TestUserInput(testInputs);
+        await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
+        const createdApp: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, resourceName3);
+        assert.ok(createdApp, 'Create windows Function App with new rg/sa failed.');
     });
 
     test('stopFunctionApp', async () => {
@@ -132,27 +130,23 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const resourceGroupName: string = getRandomHexString();
         resourceGroupsToDelete.push(resourceGroupName);
         const appAndStorageName1: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
-        await runWithFuncSetting('advancedCreation', undefined, async () => {
-            await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-                const testInputs1: string[] = [appAndStorageName1];
-                ext.ui = new TestUserInput(testInputs1);
-                const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-                const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
-                assert.ok(createdApp1, 'Function app with new rg/sa failed.');
-                assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
-            });
+        await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
+            const testInputs1: string[] = [appAndStorageName1];
+            ext.ui = new TestUserInput(testInputs1);
+            const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
+            const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
+            assert.ok(createdApp1, 'Function app with new rg/sa failed.');
+            assert.equal(apiResult1, createdApp1.id, 'Function app with new rg/sa failed.');
         });
 
         // Create another function app, but use the existing resource group and storage account through advanced creation
-        await runWithFuncSetting('advancedCreation', 'true', async () => {
-            const functionAppName2: string = getRandomHexString();
-            const testInputs2: string[] = [functionAppName2, 'Windows', 'Consumption Plan', 'JavaScript', appAndStorageName1];
-            ext.ui = new TestUserInput(testInputs2);
-            const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
-            const createdApp2: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, functionAppName2);
-            assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
-            assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
-        });
+        const functionAppName2: string = getRandomHexString();
+        const testInputs2: string[] = [functionAppName2, 'Windows', 'Consumption Plan', 'JavaScript', appAndStorageName1];
+        ext.ui = new TestUserInput(testInputs2);
+        const apiResult2: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced', testAccount.getSubscriptionId(), resourceGroupName);
+        const createdApp2: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, functionAppName2);
+        assert.ok(createdApp2, 'Function app with existing rg/sa failed.');
+        assert.equal(apiResult2, createdApp2.id, 'Function app with existing rg/sa failed.');
 
         // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });
@@ -163,10 +157,8 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         ext.ui = new TestUserInput(createProjectInputs);
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
         await validateProject(projectPath, projectVerification);
-        await runWithFuncSetting('advancedCreation', undefined, async () => {
-            ext.ui = new TestUserInput([/create new function app/i, resourceName]);
-            await vscode.commands.executeCommand('azureFunctions.deploy');
-        });
+        ext.ui = new TestUserInput([/create new .*\.\.\.$/i, resourceName]); // match basic create and not advanced create
+        await vscode.commands.executeCommand('azureFunctions.deploy');
         await delay(500);
         // Verify the deployment result through copyFunctionUrl
         await vscode.env.clipboard.writeText(''); // Clear the clipboard

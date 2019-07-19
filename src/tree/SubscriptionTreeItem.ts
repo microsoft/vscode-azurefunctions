@@ -4,21 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { MessageItem } from 'vscode';
 import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import { extensionPrefix, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
-import { ext } from '../extensionVariables';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { isLocalTreeItem } from './localProject/LocalTreeItem';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 
+export interface ICreateFuntionAppContext extends ICreateChildImplContext {
+    newResourceGroupName?: string;
+}
+
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App in Azure');
+    public supportsAdvancedCreation: boolean = true;
 
     private _nextLink: string | undefined;
 
@@ -66,7 +69,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateChildImplContext & { newResourceGroupName?: string }): Promise<AzureTreeItem> {
+    public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
         const runtime: ProjectRuntime = await getDefaultRuntime(context);
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
@@ -88,10 +91,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
-        const advancedCreationKey: string = 'advancedCreation';
-        const advancedCreation: boolean = !!getWorkspaceSetting(advancedCreationKey);
-        context.telemetry.properties.advancedCreation = String(advancedCreation);
-        if (!advancedCreation) {
+        if (!context.advancedCreation) {
             wizardContext.useConsumptionPlan = true;
             wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
             wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
@@ -127,32 +127,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
         context.telemetry.properties.os = wizardContext.newSiteOS;
         context.telemetry.properties.runtime = wizardContext.newSiteRuntime;
-        if (!advancedCreation) {
+        if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
-                throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Modify the setting "{0}" to manually enter resource names.', `${extensionPrefix}.${advancedCreationKey}`));
+                throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
             }
             wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
             wizardContext.newStorageAccountName = newName;
         }
 
-        try {
-            await wizard.execute();
-        } catch (error) {
-            if (!parseError(error).isUserCancelledError && !advancedCreation) {
-                const message: string = localize('tryAdvancedCreate', 'Modify the setting "{0}.{1}" if you want to change the default values when creating a Function App in Azure.', extensionPrefix, advancedCreationKey);
-                const btn: MessageItem = { title: localize('turnOn', 'Turn on advanced creation') };
-                // tslint:disable-next-line: no-floating-promises
-                ext.ui.showWarningMessage(message, btn).then(async result => {
-                    if (result === btn) {
-                        await updateGlobalSetting(advancedCreationKey, true);
-                    }
-                });
-            }
-
-            throw error;
-        }
-
+        await wizard.execute();
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
         return new ProductionSlotTreeItem(this, new SiteClient(site, this.root));
     }
