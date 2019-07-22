@@ -136,6 +136,8 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 
 * [Python 3.6.x](https://www.python.org/downloads/)
 
+> **NOTE**: [Python 3.6.8](https://www.python.org/downloads/release/python-368/) is the last release of Python 3.6 with installable binaries for Windows.
+
 ### PowerShell
 
 * [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
