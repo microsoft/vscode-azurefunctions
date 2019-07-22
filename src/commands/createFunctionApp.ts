@@ -7,9 +7,9 @@ import { AzureParentTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
-import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
-export async function createFunctionApp(context: IActionContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
+export async function createFunctionApp(context: IActionContext & Partial<ICreateFuntionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
     let node: AzureParentTreeItem | undefined;
     if (typeof subscription === 'string') {
         node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`, context);
@@ -22,8 +22,13 @@ export async function createFunctionApp(context: IActionContext, subscription?: 
         node = subscription;
     }
 
-    const funcAppNode: ProductionSlotTreeItem = await node.createChild(Object.assign(context, { newResourceGroupName }));
+    context.newResourceGroupName = newResourceGroupName;
+    const funcAppNode: ProductionSlotTreeItem = await node.createChild(context);
     funcAppNode.showCreatedOutput();
 
     return funcAppNode.fullId;
+}
+
+export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
+    return await createFunctionApp({ ...context, advancedCreation: true }, subscription, newResourceGroupName);
 }

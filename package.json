@@ -36,6 +36,7 @@
         "onCommand:azureFunctions.initProjectForVSCode",
         "onCommand:azureFunctions.createFunction",
         "onCommand:azureFunctions.createFunctionApp",
+        "onCommand:azureFunctions.createFunctionAppAdvanced",
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
@@ -127,6 +128,11 @@
             {
                 "command": "azureFunctions.createFunctionApp",
                 "title": "%azFunc.createFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.createFunctionAppAdvanced",
+                "title": "%azFunc.createFunctionAppAdvanced%",
                 "category": "Azure Functions"
             },
             {
@@ -373,6 +379,11 @@
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.createFunctionAppAdvanced",
+                    "when": "view == azFuncTree && viewItem == azureextensionui.azureSubscription",
+                    "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
@@ -871,11 +882,6 @@
                         "description": "%azFunc.enableSlotsDescription%",
                         "default": false
                     },
-                    "azureFunctions.advancedCreation": {
-                        "type": "boolean",
-                        "description": "%azFunc.advancedCreationDescription%",
-                        "default": false
-                    },
                     "azureFunctions.enableProjectTree": {
                         "type": "boolean",
                         "description": "%azFunc.enableProjectTree%",
@@ -947,7 +953,7 @@
         "request-promise": "^4.2.4",
         "semver": "^5.7.0",
         "vscode-azureappservice": "^0.42.2",
-        "vscode-azureextensionui": "^0.25.3",
+        "vscode-azureextensionui": "^0.25.4",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.0",
         "websocket": "^1.0.25",
