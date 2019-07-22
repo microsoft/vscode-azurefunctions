@@ -157,7 +157,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         ext.ui = new TestUserInput(createProjectInputs);
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
         await validateProject(projectPath, projectVerification);
-        ext.ui = new TestUserInput([/create new .*\.\.\.$/i, resourceName]); // match basic create and not advanced create
+        ext.ui = new TestUserInput([/create new function app/i, resourceName]); // basic create should always be first in the quick pick
         await vscode.commands.executeCommand('azureFunctions.deploy');
         await delay(500);
         // Verify the deployment result through copyFunctionUrl
