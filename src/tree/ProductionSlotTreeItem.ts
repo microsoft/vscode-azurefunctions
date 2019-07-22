@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzureTreeItem } from 'vscode-azureextensionui';
+import { WebSiteManagementModels } from 'azure-arm-website';
+import { SiteClient } from 'vscode-azureappservice';
+import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
@@ -17,8 +18,8 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    public constructor(parent: SubscriptionTreeItem, client: SiteClient) {
-        super(parent, client);
+    public constructor(parent: SubscriptionTreeItem, client: SiteClient, site: WebSiteManagementModels.Site) {
+        super(parent, client, site);
         this._slotsTreeItem = new SlotsTreeItem(this);
     }
 
@@ -26,15 +27,15 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
         return this.root.client.fullName;
     }
 
-    public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
-        const children: AzureTreeItem<ISiteTreeRoot>[] = await super.loadMoreChildrenImpl();
+    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
+        const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
         if (getWorkspaceSetting('enableSlots')) {
             children.push(this._slotsTreeItem);
         }
         return children;
     }
 
-    public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzureTreeItem<ISiteTreeRoot> | undefined {
+    public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzExtTreeItem | undefined {
         for (const expectedContextValue of expectedContextValues) {
             switch (expectedContextValue) {
                 case SlotsTreeItem.contextValue:

@@ -10,25 +10,27 @@ import { SiteClient } from 'vscode-azureappservice';
 import { appendExtensionUserAgent, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { FunctionTreeItem } from '../tree/FunctionTreeItem';
+import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
+import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 
-export async function executeFunction(context: IActionContext, node?: FunctionTreeItem): Promise<void> {
+export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItem>(/^azFuncFunctionTimer(ReadOnly|)$/i, context);
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Timer;/i, context);
     }
 
     const name: string = node.name;
-    const client: SiteClient = node.root.client;
+    const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? node.parent.parent.root.client : undefined;
+    const hostUrl: string = node.parent.parent.hostUrl;
     await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
-        const adminKey: string = await client.getFunctionsAdminToken();
+        const adminKey: string | undefined = client && await client.getFunctionsAdminToken();
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
         await <Thenable<string>>request({
             method: 'POST',
-            url: `${client.defaultHostUrl}/admin/functions/${name}`,
+            url: `${hostUrl}/admin/functions/${name}`,
             headers: {
                 'Content-Type': 'application/json',
                 'User-Agent': appendExtensionUserAgent(),
-                Authorization: `Bearer ${adminKey}`
+                Authorization: adminKey ? `Bearer ${adminKey}` : undefined
             },
             body: JSON.stringify({ input: '' })
         }).promise();

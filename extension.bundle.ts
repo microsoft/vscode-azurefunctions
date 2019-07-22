@@ -30,8 +30,6 @@ export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/ScriptTemplateRetriever';
 export * from './src/templates/TemplateProvider';
 export * from './src/tree/AzureAccountTreeItemWithProjects';
-export * from './src/tree/FunctionTreeItem';
-export * from './src/tree/SubscriptionTreeItem';
 export * from './src/utils/fs';
 export * from './src/utils/delay';
 export * from './src/utils/cpUtils';

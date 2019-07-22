@@ -25,6 +25,6 @@ export async function addBinding(context: IActionContext, data: Uri | LocalBindi
         await wizard.prompt();
         await wizard.execute();
     } else {
-        await createChildNode(context, LocalBindingsTreeItem.contextValue, data);
+        await createChildNode(context, /Local;ReadWrite;Bindings;/i, data);
     }
 }

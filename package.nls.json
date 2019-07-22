@@ -14,6 +14,7 @@
     "azFunc.deleteFunctionApp": "Delete Function App...",
     "azFunc.copyFunctionUrl": "Copy Function Url",
     "azFunc.executeFunction": "Execute Function Now",
+    "azFunc.viewProperties": "View Properties",
     "azFunc.deleteFunction": "Delete Function...",
     "azFunc.showExplorerDescription": "Show or hide the Azure Functions Explorer",
     "azFunc.templateFilterDescription": "Specify the templates to display when creating a new function. The supported values are 'Verified', 'Core', and 'All'. The 'Verified' category is a subset of 'Core' that has been verified to work with the latest VS Code extension.",
@@ -70,6 +71,5 @@
     "azFunc.swapSlot": "Swap Slot...",
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azFunc.addBinding": "Add binding...",
-    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
-    "azFunc.enableProjectTree": "Enable preview support for a tree view of the local project."
+    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage..."
 }
