@@ -5,23 +5,17 @@
 
 import * as vscode from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
-import { localize } from '../localize';
+import { delay } from '../utils/delay';
 
 // The name of the task before we started providing it in FuncTaskProvider.ts
 export const oldFuncHostNameRegEx: RegExp = /run\s*functions\s*host/i;
 
-const isFuncHostRunningMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, boolean> = new Map();
-export function isFuncHostRunning(folder: vscode.WorkspaceFolder): boolean {
-    return !!isFuncHostRunningMap.get(folder);
+export interface IRunningFuncTask {
+    startTime: number;
+    processId: number;
 }
 
-const stopFuncHostPromiseMap: Map<vscode.WorkspaceFolder, Promise<void>> = new Map();
-export async function stopFuncHost(folder: vscode.WorkspaceFolder): Promise<void> {
-    const promise: Promise<void> | undefined = stopFuncHostPromiseMap.get(folder);
-    if (promise) {
-        await promise;
-    }
-}
+export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map();
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
@@ -30,19 +24,19 @@ export function isFuncHostTask(task: vscode.Task): boolean {
 }
 
 export function registerFuncHostTaskEvents(): void {
-    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTask, async (context: IActionContext, e: vscode.TaskStartEvent) => {
+    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            isFuncHostRunningMap.set(e.execution.task.scope, true);
+            runningFuncTaskMap.set(e.execution.task.scope, { startTime: Date.now(), processId: e.processId });
         }
     });
 
-    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTask, async (context: IActionContext, e: vscode.TaskEndEvent) => {
+    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            isFuncHostRunningMap.set(e.execution.task.scope, false);
+            runningFuncTaskMap.delete(e.execution.task.scope);
         }
     });
 
@@ -58,23 +52,18 @@ async function stopFuncTaskIfRunning(context: IActionContext, debugSession: vsco
             return te.task.scope === debugSession.workspaceFolder && isFuncHostTask(te.task);
         });
 
-        if (funcExecution && isFuncHostRunning(debugSession.workspaceFolder)) {
+        if (funcExecution) {
             context.telemetry.suppressIfSuccessful = false; // only track telemetry if it's actually the func task
-            const stopFuncHostPromise: Promise<void> = new Promise((resolve: () => void, reject: (e: Error) => void): void => {
-                const listener: vscode.Disposable = vscode.tasks.onDidEndTask((e: vscode.TaskEndEvent) => {
-                    if (e.execution === funcExecution) {
-                        resolve();
-                        listener.dispose();
-                    }
-                });
 
-                const timeoutInSeconds: number = 30;
-                const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
-                setTimeout(() => { reject(timeoutError); }, timeoutInSeconds * 1000);
-            });
-            stopFuncHostPromiseMap.set(debugSession.workspaceFolder, stopFuncHostPromise);
-            funcExecution.terminate();
-            await stopFuncHostPromise;
+            const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(debugSession.workspaceFolder);
+            if (runningFuncTask !== undefined) {
+                // Wait at least 10 seconds after the func task started before calling `terminate` since that will remove task output and we want the user to see any startup errors
+                await delay(Math.max(0, runningFuncTask.startTime + 10 * 1000 - Date.now()));
+
+                if (runningFuncTaskMap.get(debugSession.workspaceFolder) === runningFuncTask) {
+                    funcExecution.terminate();
+                }
+            }
         }
     }
 }
