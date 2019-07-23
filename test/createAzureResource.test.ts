@@ -172,7 +172,8 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         await delay(500);
         // Verify the deployment result through copyFunctionUrl
         await vscode.env.clipboard.writeText(''); // Clear the clipboard
-        await testUserInput.runWithInputs([resourceName, functionName], async () => {
+        const subscriptionRegExp: RegExp = /^((?!Local Project).)*$/i; // match any item except local project
+        await testUserInput.runWithInputs([subscriptionRegExp, resourceName, functionName], async () => {
             await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
         });
         const functionUrl: string = await vscode.env.clipboard.readText();
