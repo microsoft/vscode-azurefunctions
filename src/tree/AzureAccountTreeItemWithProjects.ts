@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext, TestAzureAccount } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { hostFileName } from '../constants';
 import { localize } from '../localize';
@@ -21,7 +21,7 @@ const enableProjectTreeSetting: string = 'enableProjectTree';
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     private _projectDisposables: Disposable[] = [];
 
-    public constructor(testAccount?: TestAzureAccount) {
+    public constructor(testAccount?: {}) {
         super(undefined, testAccount);
         if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
             this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));

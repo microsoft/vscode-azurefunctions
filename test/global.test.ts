@@ -8,11 +8,12 @@ import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestOutputChannel } from 'vscode-azureextensiondev';
-import { ext, getRandomHexString, getTemplateProvider, parseError, TemplateProvider, TemplateSource, TestUserInput } from '../extension.bundle';
+import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
+import { ext, getRandomHexString, getTemplateProvider, parseError, TemplateProvider, TemplateSource } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
+export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
 let templatesMap: Map<TemplateSource, TemplateProvider>;
 
@@ -25,7 +26,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     await ext.templateProviderTask; // make sure default templates are loaded before setting up templates from other sources
     ext.outputChannel = new TestOutputChannel();
-    ext.ui = new TestUserInput([]);
+    ext.ui = testUserInput;
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');

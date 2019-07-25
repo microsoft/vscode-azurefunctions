@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { TestUserInput } from 'vscode-azureextensionui';
-import { ext, ProjectLanguage, ProjectRuntime, verifyRuntimeIsCompatible } from '../extension.bundle';
+import { ProjectLanguage, ProjectRuntime, verifyRuntimeIsCompatible } from '../extension.bundle';
+import { testUserInput } from './global.test';
 
 // tslint:disable-next-line: max-func-body-length
 suite('verifyRuntimeIsCompatible', () => {
@@ -39,8 +39,9 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~2'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~1');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION); // Verify this exists, but don't actually verify the value since I don't want to update the test every time the default node version changes
     });
@@ -49,8 +50,9 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '2.0.0'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~1');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
     });
@@ -85,8 +87,9 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~1'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
     });
@@ -95,8 +98,9 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '1.0.0'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
     });
@@ -118,8 +122,9 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.equal(props.FUNCTIONS_WORKER_RUNTIME, 'node');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
@@ -130,8 +135,9 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~1',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        ext.ui = new TestUserInput(['Update remote runtime']);
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
+            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.equal(props.FUNCTIONS_WORKER_RUNTIME, 'node');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);

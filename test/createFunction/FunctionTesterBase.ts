@@ -7,8 +7,8 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunction, ext, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TemplateProvider, TestUserInput } from '../../extension.bundle';
-import { runForAllTemplateSources, testFolderPath } from '../global.test';
+import { createFunction, ext, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting, TemplateProvider } from '../../extension.bundle';
+import { runForAllTemplateSources, testFolderPath, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase implements Disposable {
@@ -78,15 +78,15 @@ export abstract class FunctionTesterBase implements Disposable {
         inputs.unshift(funcName); // Specify the function name
         inputs.unshift(templateName); // Select the function template
 
-        ext.ui = new TestUserInput(inputs);
-        await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
-            await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
-                    await createFunction({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, testFolder);
+        await testUserInput.runWithInputs(inputs, async () => {
+            await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
+                await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
+                    await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
+                        await createFunction({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, testFolder);
+                    });
                 });
             });
         });
-        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
 
         await this.validateFunction(testFolder, funcName, expectedContents);
     }
