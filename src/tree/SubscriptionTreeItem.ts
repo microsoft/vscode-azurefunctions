@@ -93,10 +93,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         if (!context.advancedCreation) {
             wizardContext.useConsumptionPlan = true;
-            wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
             wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
-            // Pick a region that works for both windows and linux. Pricing seems to be same in all regions as of this writing anyways.
-            await LocationListStep.setLocation(wizardContext, 'westus');
+            if (wizardContext.newSiteRuntime) {
+                wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
+                SiteOSStep.setLocationsTask(wizardContext);
+            }
+            promptSteps.push(new LocationListStep());
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
         } else {

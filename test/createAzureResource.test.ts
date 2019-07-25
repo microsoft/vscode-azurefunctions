@@ -131,7 +131,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         resourceGroupsToDelete.push(resourceGroupName);
         const appAndStorageName1: string = getRandomHexString().toLowerCase(); // storage accounts cannot contain upper case chars
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            const testInputs1: string[] = [appAndStorageName1];
+            const testInputs1: string[] = [appAndStorageName1, 'West US'];
             ext.ui = new TestUserInput(testInputs1);
             const apiResult1: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionId(), resourceGroupName);
             const createdApp1: WebSiteManagementModels.Site = await webSiteClient.webApps.get(resourceGroupName, appAndStorageName1);
@@ -157,7 +157,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         ext.ui = new TestUserInput(createProjectInputs);
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
         await validateProject(projectPath, projectVerification);
-        ext.ui = new TestUserInput([/create new function app/i, resourceName]); // basic create should always be first in the quick pick
+        ext.ui = new TestUserInput([/create new function app/i, resourceName, 'West US']); // basic create should always be first in the quick pick
         await vscode.commands.executeCommand('azureFunctions.deploy');
         await delay(500);
         // Verify the deployment result through copyFunctionUrl
