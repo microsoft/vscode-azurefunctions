@@ -5,8 +5,8 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
-import { runForAllTemplateSources, testUserInput } from '../global.test';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getDotnetScriptValidateOptions, validateProject } from '../validateProject';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -60,9 +60,7 @@ suite('Create Function C# Script ~1', async () => {
     test('createNewProjectAndFunction API', async () => {
         await runForAllTemplateSources(async (source) => {
             const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
-            await testUserInput.runWithInputs([DialogResponses.skipForNow.title], async () => {
-                await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
-            });
+            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
             await tester.validateFunction(projectPath, iotFunctionName, iotExpectedContents);
             await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, ProjectRuntime.v1));
         });

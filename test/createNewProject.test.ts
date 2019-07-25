@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { createNewProject, DialogResponses, Platform, ProjectLanguage } from '../extension.bundle';
+import { createNewProject, Platform, ProjectLanguage } from '../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath, testUserInput } from './global.test';
 import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
@@ -128,7 +128,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
-        await testUserInput.runWithInputs([DialogResponses.skipForNow.title], async () => {
+        await testUserInput.runWithInputs([/skip for now/i], async () => {
             await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
         });
         await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
@@ -147,9 +147,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         const iotPath: string = 'messages/events';
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
-        await testUserInput.runWithInputs([DialogResponses.skipForNow.title], async () => {
-            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        });
+        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
 
