@@ -28,7 +28,19 @@ export function updateLaunchVersion(folder: WorkspaceFolder, version: string): v
 }
 
 export function isDebugConfigEqual(c1: DebugConfiguration, c2: DebugConfiguration): boolean {
-    return c1.name === c2.name && c1.request === c2.request && c1.type === c2.type;
+    return c1.name === c2.name && c1.request === c2.request && isTypeEqual(c1.type, c2.type);
+}
+
+function isTypeEqual(type1: string, type2: string): boolean {
+    return type1 === type2 || (isNodeType(type1) && isNodeType(type2));
+}
+
+/**
+ * Special case node debug type because it can be either "node" or "node2"
+ * https://github.com/microsoft/vscode-azurefunctions/issues/1259
+ */
+function isNodeType(t: string): boolean {
+    return /^node2?$/i.test(t);
 }
 
 function getLaunchConfig(folder: WorkspaceFolder): WorkspaceConfiguration {
