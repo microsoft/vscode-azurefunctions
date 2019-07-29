@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestInput } from 'vscode-azureextensionui';
-import { createNewProject, DialogResponses, ext, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
-import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath } from './global.test';
+import { TestInput } from 'vscode-azureextensiondev';
+import { createNewProject, Platform, ProjectLanguage } from '../extension.bundle';
+import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath, testUserInput } from './global.test';
 import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -129,8 +128,9 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
-        ext.ui = new TestUserInput([/skip for now/i]);
-        await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
+        await testUserInput.runWithInputs([/skip for now/i], async () => {
+            await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
+        });
         await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
     });
 
@@ -147,7 +147,6 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         const iotPath: string = 'messages/events';
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
-        ext.ui = new TestUserInput([DialogResponses.skipForNow.title]);
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
@@ -170,8 +169,8 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
             inputs.push(/skip for now/i);
         }
 
-        ext.ui = new TestUserInput(inputs);
-        await createNewProject({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
-        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
+        await testUserInput.runWithInputs(inputs, async () => {
+            await createNewProject({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
+        });
     }
 });

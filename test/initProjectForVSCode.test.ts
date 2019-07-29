@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
-import { TestInput } from 'vscode-azureextensionui';
-import { DialogResponses, ext, initProjectForVSCode, Platform, ProjectLanguage, TestUserInput } from '../extension.bundle';
-import { testFolderPath } from './global.test';
+import { TestInput } from 'vscode-azureextensiondev';
+import { DialogResponses, initProjectForVSCode, Platform, ProjectLanguage } from '../extension.bundle';
+import { testFolderPath, testUserInput } from './global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -375,8 +374,8 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         await fse.ensureFile(path.join(projectPath, '.gitignore'));
         await fse.ensureDir(path.join(projectPath, '.git'));
 
-        ext.ui = new TestUserInput(inputs);
-        await initProjectForVSCode({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, projectPath);
-        assert.equal(inputs.length, 0, `Not all inputs were used: ${inputs}`);
+        await testUserInput.runWithInputs(inputs, async () => {
+            await initProjectForVSCode({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, projectPath);
+        });
     }
 });
