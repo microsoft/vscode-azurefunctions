@@ -45,6 +45,7 @@ import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
+import { viewProperties } from './commands/viewProperties';
 import { func, showOutputChannelCommandId } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
@@ -117,7 +118,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.executeFunction', executeFunction);
         registerCommand('azureFunctions.startStreamingLogs', startStreamingLogs);
         registerCommand('azureFunctions.stopStreamingLogs', stopStreamingLogs);
-        registerCommand('azureFunctions.deleteFunction', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, /^azFuncFunction(Http|Timer|)$/i, node));
+        registerCommand('azureFunctions.deleteFunction', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, /Remote;ReadWrite;Function;/i, node));
         registerCommand('azureFunctions.appSettings.add', async (actionContext: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(actionContext, AppSettingsTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
         registerCommand('azureFunctions.appSettings.upload', uploadAppSettings);
@@ -141,6 +142,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
         registerCommand('azureFunctions.createSlot', createSlot);
         registerCommand('azureFunctions.toggleAppSettingVisibility', async (_actionContext: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
+        registerCommand('azureFunctions.viewProperties', viewProperties);
         registerCommand(showOutputChannelCommandId, () => { ext.outputChannel.show(); });
         registerFuncHostTaskEvents();
 

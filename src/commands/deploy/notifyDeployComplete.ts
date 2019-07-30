@@ -8,8 +8,8 @@ import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActio
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
-import { FunctionsTreeItem } from '../../tree/FunctionsTreeItem';
-import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
+import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
+import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
@@ -41,10 +41,10 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
 async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
     try {
         const children: AzExtTreeItem[] = await node.getCachedChildren(context);
-        const functionsNode: FunctionsTreeItem = <FunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof FunctionsTreeItem);
+        const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
         await node.treeDataProvider.refresh(functionsNode);
         const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
-        const anonFunctions: FunctionTreeItem[] = <FunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
+        const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
         if (anonFunctions.length > 0) {
             ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
             for (const func of anonFunctions) {
@@ -52,7 +52,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
             }
         }
 
-        if (functions.find((f: AzureTreeItem) => f instanceof FunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
+        if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
             ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
         }
     } catch (error) {

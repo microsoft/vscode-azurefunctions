@@ -64,7 +64,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const templateId: string = 'HTTP trigger';
         const authLevel: string = 'Function';
         const testInputs: string[] = [projectPath, ProjectLanguage.JavaScript, templateId, functionName, authLevel];
-        await testCreateProjectAndDeploy(testInputs, getJavaScriptValidateOptions(true), resourceName1, functionName, `Hello ${resourceName1}`);
+        await testCreateProjectAndDeploy(testInputs, getJavaScriptValidateOptions(true), resourceName1, functionName, `Hello ${resourceName1}`, ProjectLanguage.JavaScript);
     });
 
     test('Create CSharp project and deploy', async () => {
@@ -74,7 +74,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         const accessRights: string = 'Function';
         const resourceName2: string = getRandomHexString().toLowerCase();
         const testInputs: string[] = [projectPath, ProjectLanguage.CSharp, templateId, functionName, nameSpace, accessRights];
-        await testCreateProjectAndDeploy(testInputs, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'), resourceName2, functionName, `Hello, ${resourceName2}`);
+        await testCreateProjectAndDeploy(testInputs, getCSharpValidateOptions('testOutput', 'netcoreapp2.1'), resourceName2, functionName, `Hello, ${resourceName2}`, ProjectLanguage.CSharp);
     });
 
     test('createFunctionApp (Advanced)', async () => {
@@ -159,7 +159,7 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
         // NOTE: We currently don't support 'delete' in our API, so no need to test that
     });
 
-    async function testCreateProjectAndDeploy(createProjectInputs: string[], projectVerification: IValidateProjectOptions, resourceName: string, functionName: string, expectResult: string): Promise<void> {
+    async function testCreateProjectAndDeploy(createProjectInputs: string[], projectVerification: IValidateProjectOptions, resourceName: string, functionName: string, expectResult: string, projectLanguage: ProjectLanguage): Promise<void> {
         await fse.emptyDir(projectPath);
         resourceGroupsToDelete.push(resourceName);
         await testUserInput.runWithInputs(createProjectInputs, async () => {
@@ -170,9 +170,14 @@ suite('Create Azure Resources', async function (this: ISuiteCallbackContext): Pr
             await vscode.commands.executeCommand('azureFunctions.deploy');
         });
         await delay(500);
+
         // Verify the deployment result through copyFunctionUrl
+        const inputs: (string | RegExp)[] = [resourceName, functionName];
+        if (projectLanguage !== ProjectLanguage.CSharp) { // CSharp doesn't support local project tree view
+            inputs.unshift(/^((?!Local Project).)*$/i); // match any item except local project
+        }
         await vscode.env.clipboard.writeText(''); // Clear the clipboard
-        await testUserInput.runWithInputs([resourceName, functionName], async () => {
+        await testUserInput.runWithInputs(inputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
         });
         const functionUrl: string = await vscode.env.clipboard.readText();

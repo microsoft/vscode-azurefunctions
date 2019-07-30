@@ -6,57 +6,30 @@
 import { AzureWizard, ICreateChildImplContext } from 'vscode-azureextensionui';
 import { createBindingWizard } from '../../commands/addBinding/createBindingWizard';
 import { IBindingWizardContext } from '../../commands/addBinding/IBindingWizardContext';
-import { ParsedFunctionJson } from '../../funcConfig/function';
-import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
-import { treeUtils } from '../../utils/treeUtils';
-import { LocalBindingTreeItem } from './LocalBindingTreeItem';
+import { BindingsTreeItem } from '../BindingsTreeItem';
+import { BindingTreeItem } from '../BindingTreeItem';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
-import { LocalParentTreeItem } from './LocalTreeItem';
 
-export class LocalBindingsTreeItem extends LocalParentTreeItem {
-    public static contextValue: string = 'azFuncLocalBindings';
-    public readonly contextValue: string = LocalBindingsTreeItem.contextValue;
-    public readonly label: string = localize('bindings', 'Bindings');
-    public readonly childTypeLabel: string = localize('binding', 'binding');
-    public functionJsonPath: string;
+export class LocalBindingsTreeItem extends BindingsTreeItem {
+    public readonly parent: LocalFunctionTreeItem;
 
-    private readonly _config: ParsedFunctionJson;
-
-    public constructor(parent: LocalFunctionTreeItem, config: ParsedFunctionJson, functionJsonPath: string) {
+    public constructor(parent: LocalFunctionTreeItem) {
         super(parent);
-        this._config = config;
-        this.functionJsonPath = functionJsonPath;
     }
 
-    public get id(): string {
-        return 'bindings';
-    }
-
-    public get iconPath(): treeUtils.IThemedIconPath {
-        return treeUtils.getThemedIconPath('BulletList');
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<LocalBindingTreeItem[]> {
-        return this._config.bindings.map(b => new LocalBindingTreeItem(this, b));
-    }
-
-    public async createChildImpl(context: ICreateChildImplContext): Promise<LocalBindingTreeItem> {
+    public async createChildImpl(context: ICreateChildImplContext): Promise<BindingTreeItem> {
         const wizardContext: IBindingWizardContext = Object.assign(context, {
-            functionJsonPath: this.functionJsonPath,
-            workspacePath: this.root.workspacePath,
-            projectPath: this.root.projectPath,
-            workspaceFolder: this.root.workspaceFolder
+            functionJsonPath: this.parent.functionJsonPath,
+            workspacePath: this.parent.parent.parent.workspacePath,
+            projectPath: this.parent.parent.parent.projectPath,
+            workspaceFolder: this.parent.parent.parent.workspaceFolder
         });
 
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
         await wizard.prompt();
         await wizard.execute();
 
-        return new LocalBindingTreeItem(this, nonNullProp(wizardContext, 'binding'));
+        return new BindingTreeItem(this, nonNullProp(wizardContext, 'binding'));
     }
 }

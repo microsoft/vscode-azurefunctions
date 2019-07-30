@@ -8,16 +8,16 @@ import * as appservice from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { FunctionTreeItem } from '../../tree/FunctionTreeItem';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
-export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | FunctionTreeItem): Promise<void> {
+export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
         treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    const client: appservice.SiteClient = treeItem.root.client;
+    const client: appservice.SiteClient = treeItem.client;
     const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
         const logsConfig: WebSiteManagementModels.SiteLogsConfig = await client.getLogsConfig();
         if (!isApplicationLoggingEnabled(logsConfig)) {
@@ -35,7 +35,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
         }
     };
 
-    await appservice.startStreamingLogs(treeItem.root.client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
+    await appservice.startStreamingLogs(client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
 }
 
 function isApplicationLoggingEnabled(config: WebSiteManagementModels.SiteLogsConfig): boolean {

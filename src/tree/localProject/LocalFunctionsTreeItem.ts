@@ -8,23 +8,16 @@ import * as path from 'path';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
-import { localize } from '../../localize';
-import { treeUtils } from '../../utils/treeUtils';
+import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
-import { LocalParentTreeItem } from './LocalTreeItem';
+import { LocalProjectTreeItem } from './LocalProjectTreeItem';
 
-export class LocalFunctionsTreeItem extends LocalParentTreeItem {
-    public static contextValue: string = 'azFuncLocalFunctions';
-    public readonly contextValue: string = LocalFunctionsTreeItem.contextValue;
-    public readonly label: string = localize('functions', 'Functions');
-    public readonly childTypeLabel: string = localize('function', 'function');
+export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
+    public readonly parent: LocalProjectTreeItem;
+    public isReadOnly: boolean = false;
 
-    public get id(): string {
-        return 'functions';
-    }
-
-    public get iconPath(): treeUtils.IThemedIconPath {
-        return treeUtils.getThemedIconPath('BulletList');
+    public constructor(parent: LocalProjectTreeItem) {
+        super(parent);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -32,11 +25,11 @@ export class LocalFunctionsTreeItem extends LocalParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const subpaths: string[] = await fse.readdir(this.root.projectPath);
+        const subpaths: string[] = await fse.readdir(this.parent.projectPath);
 
         const functions: string[] = [];
         await Promise.all(subpaths.map(async s => {
-            if (await fse.pathExists(path.join(this.root.projectPath, s, functionJsonFileName))) {
+            if (await fse.pathExists(path.join(this.parent.projectPath, s, functionJsonFileName))) {
                 functions.push(s);
             }
         }));
@@ -45,9 +38,9 @@ export class LocalFunctionsTreeItem extends LocalParentTreeItem {
             functions,
             'azFuncInvalidLocalFunction',
             async func => {
-                const functionJsonPath: string = path.join(this.root.projectPath, func, functionJsonFileName);
+                const functionJsonPath: string = path.join(this.parent.projectPath, func, functionJsonFileName);
                 const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
-                return new LocalFunctionTreeItem(this, func, config, functionJsonPath);
+                return LocalFunctionTreeItem.create(this, func, config, functionJsonPath);
             },
             (func: string) => func
         );

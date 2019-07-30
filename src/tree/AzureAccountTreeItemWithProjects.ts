@@ -7,25 +7,27 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { hostFileName } from '../constants';
+import { extensionPrefix, hostFileName, projectLanguageSetting, projectRuntimeSetting } from '../constants';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
-import { isLocalTreeItem } from './localProject/LocalTreeItem';
+import { supportsLocalProjectTree } from './localProject/supportsLocalProjectTree';
+import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
-
-const enableProjectTreeSetting: string = 'enableProjectTree';
 
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     private _projectDisposables: Disposable[] = [];
 
     public constructor(testAccount?: {}) {
         super(undefined, testAccount);
-        if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
-            this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
-        }
+        this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
+        this.disposables.push(workspace.onDidChangeConfiguration(async e => {
+            const settings: string[] = [projectLanguageSetting, projectRuntimeSetting];
+            if (settings.some(s => e.affectsConfiguration(`${extensionPrefix}.${s}`))) {
+                await this.refresh();
+            }
+        }));
     }
 
     public dispose(): void {
@@ -41,24 +43,22 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache, context);
 
         let hasLocalProject: boolean = false;
-        if (getWorkspaceSetting<boolean>(enableProjectTreeSetting)) {
-            Disposable.from(...this._projectDisposables).dispose();
-            this._projectDisposables = [];
+        Disposable.from(...this._projectDisposables).dispose();
+        this._projectDisposables = [];
 
-            // tslint:disable-next-line: strict-boolean-expressions
-            const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
-            for (const folder of folders) {
-                const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
-                if (projectPath) {
-                    hasLocalProject = true;
-                    const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
-                    this._projectDisposables.push(treeItem);
-                    children.push(treeItem);
-                }
-
-                this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, hostFileName)));
-                this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, '*', hostFileName)));
+        // tslint:disable-next-line: strict-boolean-expressions
+        const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
+        for (const folder of folders) {
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
+            hasLocalProject = hasLocalProject || !!projectPath;
+            if (projectPath && supportsLocalProjectTree(projectPath)) {
+                const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
+                this._projectDisposables.push(treeItem);
+                children.push(treeItem);
             }
+
+            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, hostFileName)));
+            this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, '*', hostFileName)));
         }
 
         if (!hasLocalProject && children.length > 0 && children[0] instanceof GenericTreeItem) {
@@ -86,13 +86,20 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     }
 
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        if (expectedContextValues.some(isLocalTreeItem)) {
-            this.childTypeLabel = localize('project', 'project');
+        const subscription: string = localize('subscription', 'subscription');
+
+        if (expectedContextValues.some(isProjectCV)) {
+            if (expectedContextValues.some(isLocalProjectCV) && expectedContextValues.some(isRemoteProjectCV)) {
+                this.childTypeLabel = localize('projectOrSubscription', 'project or subscription');
+            } else if (expectedContextValues.some(isLocalProjectCV)) {
+                this.childTypeLabel = localize('project', 'project');
+            } else {
+                this.childTypeLabel = subscription;
+            }
         } else {
-            this.childTypeLabel = localize('subscription', 'subscription');
-            return super.pickTreeItemImpl(expectedContextValues);
+            this.childTypeLabel = subscription;
         }
 
-        return undefined;
+        return super.pickTreeItemImpl(expectedContextValues);
     }
 }

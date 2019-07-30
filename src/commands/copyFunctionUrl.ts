@@ -7,11 +7,11 @@ import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { FunctionTreeItem } from '../tree/FunctionTreeItem';
+import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
-export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItem): Promise<void> {
+export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItem>(/^azFuncFunctionHttp(ReadOnly|)$/i, context);
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Http;/i, context);
     }
 
     if (node.triggerUrl) {

@@ -44,6 +44,7 @@
         "onCommand:azureFunctions.deleteFunctionApp",
         "onCommand:azureFunctions.copyFunctionUrl",
         "onCommand:azureFunctions.executeFunction",
+        "onCommand:azureFunctions.viewProperties",
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.configureDeploymentSource",
@@ -187,6 +188,11 @@
             {
                 "command": "azureFunctions.executeFunction",
                 "title": "%azFunc.executeFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.viewProperties",
+                "title": "%azFunc.viewProperties%",
                 "category": "Azure Functions"
             },
             {
@@ -451,9 +457,14 @@
                     "group": "5@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureFunctions.viewProperties",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "6@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "6@2"
                 },
                 {
                     "command": "azureFunctions.createSlot",
@@ -467,33 +478,43 @@
                 },
                 {
                     "command": "azureFunctions.refresh",
-                    "when": "view == azFuncTree && viewItem == azFuncFunctions",
+                    "when": "view == azFuncTree && viewItem =~ /Functions;/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunctionHttp(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /Function;Http;/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.executeFunction",
-                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunctionTimer(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /Function;Timer;/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.deleteFunction",
-                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;ReadWrite;Function;/i",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azFuncTree && viewItem =~ /^azFuncFunction(Http|Timer|)(ReadOnly|)$/",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
                     "group": "3@2"
+                },
+                {
+                    "command": "azureFunctions.viewProperties",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
+                    "group": "4@1"
+                },
+                {
+                    "command": "azureFunctions.viewProperties",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Binding;/i",
+                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.add",
@@ -582,7 +603,7 @@
                 },
                 {
                     "command": "azureFunctions.addBinding",
-                    "when": "view == azFuncTree && viewItem == azFuncLocalBindings"
+                    "when": "view == azFuncTree && viewItem =~ /Local;ReadWrite;Bindings;/i"
                 }
             ],
             "explorer/context": [
@@ -639,10 +660,6 @@
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
                     "when": "never"
-                },
-                {
-                    "command": "azureFunctions.addBinding",
-                    "when": "config.azureFunctions.enableProjectTree == true"
                 }
             ],
             "editor/context": [
@@ -880,11 +897,6 @@
                     "azureFunctions.enableSlots": {
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",
-                        "default": false
-                    },
-                    "azureFunctions.enableProjectTree": {
-                        "type": "boolean",
-                        "description": "%azFunc.enableProjectTree%",
                         "default": false
                     }
                 }

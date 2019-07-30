@@ -3,46 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { ParsedFunctionJson } from '../../funcConfig/function';
-import { treeUtils } from '../../utils/treeUtils';
-import { FunctionTreeItem } from '../FunctionTreeItem';
+import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { LocalBindingsTreeItem } from './LocalBindingsTreeItem';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
-import { LocalParentTreeItem, LocalTreeItem } from './LocalTreeItem';
 
-export class LocalFunctionTreeItem extends LocalParentTreeItem {
-    public static contextValue: string = 'azFuncLocalFunction';
-    public contextValue: string = LocalFunctionTreeItem.contextValue;
-    private readonly _name: string;
+export class LocalFunctionTreeItem extends FunctionTreeItemBase {
+    public readonly parent: LocalFunctionsTreeItem;
+    public readonly functionJsonPath: string;
+
     private _bindingsNode: LocalBindingsTreeItem;
 
-    public constructor(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string) {
-        super(parent);
-        this._name = name;
-        this._bindingsNode = new LocalBindingsTreeItem(this, config, functionJsonPath);
+    private constructor(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string) {
+        super(parent, config, name);
+        this.functionJsonPath = functionJsonPath;
+        this._bindingsNode = new LocalBindingsTreeItem(this);
     }
 
-    public get id(): string {
-        return this._name;
-    }
-
-    public get label(): string {
-        return this._name;
-    }
-
-    public get iconPath(): string {
-        return treeUtils.getIconPath(FunctionTreeItem.contextValueBase);
+    public static async create(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string): Promise<LocalFunctionTreeItem> {
+        const ti: LocalFunctionTreeItem = new LocalFunctionTreeItem(parent, name, config, functionJsonPath);
+        // initialize
+        await ti.refreshImpl();
+        return ti;
     }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<LocalTreeItem[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._bindingsNode];
     }
 
-    public pickTreeItemImpl(): LocalTreeItem {
+    public pickTreeItemImpl(): AzExtTreeItem {
         return this._bindingsNode;
+    }
+
+    public async getKey(): Promise<string | undefined> {
+        return undefined;
     }
 }

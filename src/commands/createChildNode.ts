@@ -6,7 +6,7 @@
 import { AzExtParentTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
-export async function createChildNode(context: IActionContext, expectedContextValue: string, node?: AzExtParentTreeItem): Promise<void> {
+export async function createChildNode(context: IActionContext, expectedContextValue: string | RegExp, node?: AzExtParentTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AzExtParentTreeItem>(expectedContextValue, context);
     }
