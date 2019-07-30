@@ -7,7 +7,7 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { hostFileName } from '../constants';
+import { extensionPrefix, hostFileName, projectLanguageSetting, projectRuntimeSetting } from '../constants';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
@@ -22,6 +22,12 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     public constructor(testAccount?: {}) {
         super(undefined, testAccount);
         this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
+        this.disposables.push(workspace.onDidChangeConfiguration(async e => {
+            const settings: string[] = [projectLanguageSetting, projectRuntimeSetting];
+            if (settings.some(s => e.affectsConfiguration(`${extensionPrefix}.${s}`))) {
+                await this.refresh();
+            }
+        }));
     }
 
     public dispose(): void {
