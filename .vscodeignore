@@ -17,7 +17,7 @@ src/**
 stats.json
 test-results.xml
 test/**
-testOutput/**
+testWorkspace/**
 tools/**
 tsconfig.json
 tslint.json
