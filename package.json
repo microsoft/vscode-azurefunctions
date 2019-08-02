@@ -898,6 +898,11 @@
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",
                         "default": false
+                    },
+                    "azureFunctions.scmDoBuildDuringDeployment": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "description": "%azFunc.scmDoBuildDuringDeploymentDescription%"
                     }
                 }
             }
@@ -964,7 +969,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.0",
-        "vscode-azureappservice": "^0.42.7",
+        "vscode-azureappservice": "^0.43.0",
         "vscode-azureextensionui": "^0.26.1",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.0",
