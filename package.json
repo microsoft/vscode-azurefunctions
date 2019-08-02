@@ -951,7 +951,7 @@
         "typescript": "^3.3.4000",
         "vsce": "^1.59.0",
         "vscode": "^1.1.33",
-        "vscode-azureextensiondev": "^0.1.11",
+        "vscode-azureextensiondev": "^0.2.0",
         "webpack": "^4.29.6",
         "webpack-cli": "^3.3.0"
     },
@@ -970,7 +970,7 @@
         "request-promise": "^4.2.4",
         "semver": "^5.7.0",
         "vscode-azureappservice": "^0.43.0",
-        "vscode-azureextensionui": "^0.26.1",
+        "vscode-azureextensionui": "^0.26.2",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.0",
         "websocket": "^1.0.25",
