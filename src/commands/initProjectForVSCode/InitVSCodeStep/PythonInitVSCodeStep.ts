@@ -20,7 +20,6 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
 
-        const zipPath: string = this.setDeploySubpath(context, '.');
         this.settings.push({ key: 'scmDoBuildDuringDeployment', value: true });
 
         this._venvName = await getExistingVenv(context.projectPath);
@@ -29,7 +28,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
             await ensureVenvInFuncIgnore(context.projectPath, this._venvName);
         }
 
-        await ensureGitIgnoreContents(context.projectPath, this._venvName, zipPath);
+        await ensureGitIgnoreContents(context.projectPath, this._venvName);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
@@ -91,7 +90,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 }
 
-async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined, zipPath: string): Promise<void> {
+async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined): Promise<void> {
     // .gitignore is created by `func init`
     const gitignorePath: string = path.join(projectPath, gitignoreFileName);
     if (await fse.pathExists(gitignorePath)) {
@@ -111,7 +110,6 @@ async function ensureGitIgnoreContents(projectPath: string, venvName: string | u
 
         ensureInGitIgnore('.python_packages');
         ensureInGitIgnore('__pycache__');
-        ensureInGitIgnore(zipPath);
 
         if (writeFile) {
             await fse.writeFile(gitignorePath, gitignoreContents);
