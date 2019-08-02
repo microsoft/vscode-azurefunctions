@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -15,13 +15,13 @@ import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/Python
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
-    protected preDeployTask: string = packTaskName;
     private _venvName: string | undefined;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
 
-        const zipPath: string = this.setDeploySubpath(context, `${path.basename(context.projectPath)}.zip`);
+        const zipPath: string = this.setDeploySubpath(context, '.');
+        this.settings.push({ key: 'scmDoBuildDuringDeployment', value: true });
 
         this._venvName = await getExistingVenv(context.projectPath);
         if (this._venvName) {
