@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
@@ -101,6 +101,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             promptSteps.push(new LocationListStep());
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+            executeSteps.push(new AppInsightsCreateStep());
         } else {
             promptSteps.push(new ResourceGroupListStep());
             promptSteps.push(new StorageAccountListStep(
@@ -136,6 +137,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }
             wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
             wizardContext.newStorageAccountName = newName;
+            wizardContext.newApplicationInsightsName = newName;
         }
 
         await wizard.execute();
@@ -220,6 +222,13 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
         appSettings.push({
             name: 'WEBSITE_RUN_FROM_PACKAGE',
             value: '1'
+        });
+    }
+
+    if (context.aiInstrumentationKey) {
+        appSettings.push({
+            name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
+            value: context.aiInstrumentationKey
         });
     }
 
