@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { ProgressLocation, window } from 'vscode';
-import { functionsAdminRequest, SiteClient } from 'vscode-azureappservice';
+import { IFunctionKeys, IHostKeys, SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -68,31 +68,17 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     }
 
     public async getKey(): Promise<string | undefined> {
-        let urlPath: string;
         switch (this.config.authLevel) {
             case HttpAuthLevel.admin:
-                urlPath = '/host/systemkeys/_master';
-                break;
+                const hostKeys: IHostKeys = await this.client.listHostKeys();
+                return nonNullProp(hostKeys, 'masterKey');
             case HttpAuthLevel.function:
-                urlPath = `functions/${this.name}/keys/default`;
-                break;
+                const functionKeys: IFunctionKeys = await this.client.listFunctionKeys(this.name);
+                return nonNullProp(functionKeys, 'default');
             case HttpAuthLevel.anonymous:
             default:
                 return undefined;
         }
-
-        const data: string = await functionsAdminRequest(this.client, urlPath);
-        try {
-            // tslint:disable-next-line:no-unsafe-any
-            const result: string = JSON.parse(data).value;
-            if (result) {
-                return result;
-            }
-        } catch {
-            // ignore json parse error and throw better error below
-        }
-
-        throw new Error(localize('keyFail', 'Failed to get key for trigger "{0}".', this.name));
     }
 }
 
