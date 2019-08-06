@@ -25,15 +25,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const subpaths: string[] = await fse.readdir(this.parent.projectPath);
-
-        const functions: string[] = [];
-        await Promise.all(subpaths.map(async s => {
-            if (await fse.pathExists(path.join(this.parent.projectPath, s, functionJsonFileName))) {
-                functions.push(s);
-            }
-        }));
-
+        const functions: string[] = await getFunctionFolders(this.parent.projectPath);
         return await this.createTreeItemsWithErrorHandling(
             functions,
             'azFuncInvalidLocalFunction',
@@ -45,4 +37,15 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
             (func: string) => func
         );
     }
+}
+
+export async function getFunctionFolders(projectPath: string): Promise<string[]> {
+    const subpaths: string[] = await fse.readdir(projectPath);
+    const result: string[] = [];
+    await Promise.all(subpaths.map(async s => {
+        if (await fse.pathExists(path.join(projectPath, s, functionJsonFileName))) {
+            result.push(s);
+        }
+    }));
+    return result;
 }
