@@ -15,7 +15,7 @@ import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '..
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
-    const result: IPreDebugValidateResult = await preDebugValidate(debugConfig);
+    const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
     if (!result.shouldContinue) {
         throw new UserCancelledError();
     }
