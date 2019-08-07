@@ -122,13 +122,13 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getPythonValidateOptions(projectName: string, venvName: string): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Python,
             projectRuntime: ProjectRuntime.v2,
-            preDeployTask: 'func: pack',
-            deploySubpath: `${projectName}.zip`,
+            deploySubpath: '.',
+            scmDoBuildDuringDeployment: true,
             pythonVenv: venvName
         },
         expectedPaths: [
@@ -253,7 +253,7 @@ const commonExpectedPaths: string[] = [
 ];
 
 export interface IValidateProjectOptions {
-    expectedSettings: { [key: string]: string };
+    expectedSettings: { [key: string]: string | boolean };
     expectedPaths: string[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
@@ -290,10 +290,10 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate settings.json
     //
-    const settings: { [key: string]: string } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
+    const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
-        const value: string = options.expectedSettings[key];
+        const value: string | boolean = options.expectedSettings[key];
         assert.equal(settings[`${extensionPrefix}.${key}`], value, `The setting with key "${key}" is not set to value "${value}".`);
     }
 
