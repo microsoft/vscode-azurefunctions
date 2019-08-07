@@ -959,6 +959,7 @@
     "dependencies": {
         "azure-arm-cosmosdb": "^1.1.2",
         "azure-arm-eventhub": "^3.2.0",
+        "azure-arm-appinsights": "^2.1.0",
         "azure-arm-sb": "^2.3.0-preview",
         "azure-arm-storage": "^4.0.0",
         "azure-arm-website": "^5.3.0",
@@ -966,6 +967,7 @@
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
         "ms-rest-azure": "^2.3.1",
+        "opn": "^6.0.0",
         "portfinder": "^1.0.13",
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
