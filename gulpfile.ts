@@ -15,11 +15,13 @@ import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as chmod from 'gulp-chmod';
 import * as decompress from 'gulp-decompress';
-import * as download from 'gulp-download';
 import * as filter from 'gulp-filter';
 import * as os from 'os';
 import * as path from 'path';
+import * as request from 'request';
 import * as requestP from 'request-promise';
+import * as buffer from 'vinyl-buffer';
+import * as source from 'vinyl-source-stream';
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
 
 function test() {
@@ -68,7 +70,9 @@ function installFuncCli() {
     }
 
     const funcFilter = filter('func', { restore: true });
-    return download(downloadLink)
+    return request(downloadLink)
+        .pipe(source('funccli.zip'))
+        .pipe(buffer())
         .pipe(decompress())
         .pipe(funcFilter)
         .pipe(chmod({ execute: true }))
