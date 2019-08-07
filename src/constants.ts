@@ -96,3 +96,5 @@ export const tsConfigFileName: string = 'tsconfig.json';
 export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
 
 export const showOutputChannelCommandId: string = 'azureFunctions.showOutputChannel';
+
+export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';

@@ -30,7 +30,24 @@ export async function getAzureWebJobsStorage(projectPath: string): Promise<strin
     return settings.Values && settings.Values[azureWebJobsStorageKey];
 }
 
-export async function setLocalAppSetting(functionAppPath: string, key: string, value: string, suppressPrompt: boolean = false): Promise<void> {
+export enum MismatchBehavior {
+    /**
+     * Asks the user if they want to overwrite
+     */
+    Prompt,
+
+    /**
+     * Overwrites without prompting
+     */
+    Overwrite,
+
+    /**
+     * Returns without changing anything
+     */
+    DontChange
+}
+
+export async function setLocalAppSetting(functionAppPath: string, key: string, value: string, behavior: MismatchBehavior = MismatchBehavior.Prompt): Promise<void> {
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
     const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
 
@@ -38,9 +55,13 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
     settings.Values = settings.Values || {};
     if (settings.Values[key] === value) {
         return;
-    } else if (settings.Values[key] && !suppressPrompt) {
-        const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-        if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
+    } else if (settings.Values[key]) {
+        if (behavior === MismatchBehavior.Prompt) {
+            const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
+            if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
+                return;
+            }
+        } else if (behavior === MismatchBehavior.DontChange) {
             return;
         }
     }
@@ -71,6 +92,8 @@ export async function getLocalSettingsJson(localSettingsPath: string, allowOverw
 
     return {
         IsEncrypted: false,
-        Values: {}
+        Values: {
+            AzureWebJobsStorage: ''
+        }
     };
 }
