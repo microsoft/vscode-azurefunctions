@@ -13,15 +13,16 @@ import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWeb
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { functionJsonFileName, isWindows, localEmulatorConnectionString, localSettingsFileName, projectLanguageSetting } from "../constants";
+import { functionJsonFileName, isWindows, localEmulatorConnectionString, localSettingsFileName, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { azureWebJobsStorageKey, getAzureWebJobsStorage } from "../funcConfig/local.settings";
+import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { supportsLocalProjectTree } from "../tree/localProject/supportsLocalProjectTree";
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
+import { getFunctionsWorkerRuntime } from "../vsCodeConfig/settings";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -45,13 +46,14 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
                 context.telemetry.properties.projectLanguage = projectLanguage;
 
-                context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                shouldContinue = await validateAzureWebJobsStorage(context, projectLanguage, projectPath);
+                context.telemetry.properties.lastValidateStep = 'workerRuntime';
+                await validateWorkerRuntime(projectLanguage, projectPath);
 
-                if (shouldContinue) {
-                    context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                    shouldContinue = await validateEmulatorIsRunning(projectPath);
-                }
+                context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
+                await validateAzureWebJobsStorage(context, projectLanguage, projectPath);
+
+                context.telemetry.properties.lastValidateStep = 'emulatorRunning';
+                shouldContinue = await validateEmulatorIsRunning(projectPath);
             }
         }
     } catch (error) {
@@ -89,7 +91,18 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
     throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
 }
 
-async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<boolean> {
+/**
+ * Automatically add worker runtime setting since it's required to debug, but often gets deleted since it's stored in "local.settings.json" which isn't tracked in source control
+ */
+async function validateWorkerRuntime(projectLanguage: string | undefined, projectPath: string): Promise<void> {
+    const runtime: string | undefined = getFunctionsWorkerRuntime(projectLanguage);
+    if (runtime) {
+        // Not worth handling mismatched runtimes since it's so unlikely
+        await setLocalAppSetting(projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
+    }
+}
+
+async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<void> {
     if (canValidateAzureWebJobStorageOnDebug(projectLanguage)) {
         const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(projectPath);
         if (!azureWebJobsStorage) {
@@ -110,7 +123,6 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
             }
         }
     }
-    return true;
 }
 
 /**

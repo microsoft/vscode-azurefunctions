@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
@@ -41,7 +41,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
                 // tslint:disable-next-line:no-non-null-assertion
-                localSettingsJson.Values!.FUNCTIONS_WORKER_RUNTIME = functionsWorkerRuntime;
+                localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
             await writeFormattedJson(localSettingsJsonPath, localSettingsJson);

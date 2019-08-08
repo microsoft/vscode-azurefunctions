@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, IStorageAccountWizardContext } from 'vscode-azureextensionui';
 import { localEmulatorConnectionString } from '../../constants';
-import { azureWebJobsStorageKey, setLocalAppSetting } from '../../funcConfig/local.settings';
+import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
 import { getStorageConnectionString } from '../../utils/azure';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
@@ -20,7 +20,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
             value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;
         }
 
-        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, value, true /* suppressPrompt */);
+        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, value, MismatchBehavior.Overwrite);
     }
 
     public shouldExecute(context: IAzureWebJobsStorageWizardContext): boolean {
