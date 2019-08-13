@@ -68,20 +68,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public get description(): string | undefined {
-        const descriptions: string[] = [];
-
-        // getting `isConsumption` is an async operation that's not worth delaying the loading of all function apps just for this description
-        // thus if the cached value is `undefined`, we will assume it's consumption (the default and most common case)
-        const isConsumption: boolean = this._cachedIsConsumption === undefined ? true : this._cachedIsConsumption;
-        if (this.root.client.isLinux && isConsumption) {
-            descriptions.push(localize('preview', 'Preview'));
-        }
-
-        if (this._state && this._state.toLowerCase() !== 'running') {
-            descriptions.push(this._state);
-        }
-
-        return descriptions.join(' - ');
+        return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): string {

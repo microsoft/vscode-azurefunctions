@@ -38,7 +38,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript },
             { label: ProjectLanguage.PHP, description: previewDescription },
             { label: ProjectLanguage.PowerShell, description: previewDescription },
-            { label: ProjectLanguage.Python, description: previewDescription },
+            { label: ProjectLanguage.Python },
             { label: ProjectLanguage.TypeScript }
         ];
 
