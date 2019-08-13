@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, Platform, pythonVenvSetting } from "../../../constants";
+import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, packTaskName, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -15,12 +15,13 @@ import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/Python
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
+    protected preDeployTask: string = packTaskName;
     private _venvName: string | undefined;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
 
-        this.settings.push({ key: 'scmDoBuildDuringDeployment', value: true });
+        const zipPath: string = this.setDeploySubpath(context, `${path.basename(context.projectPath)}.zip`);
 
         this._venvName = await getExistingVenv(context.projectPath);
         if (this._venvName) {
@@ -28,7 +29,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
             await ensureVenvInFuncIgnore(context.projectPath, this._venvName);
         }
 
-        await ensureGitIgnoreContents(context.projectPath, this._venvName);
+        await ensureGitIgnoreContents(context.projectPath, this._venvName, zipPath);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
@@ -90,7 +91,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 }
 
-async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined): Promise<void> {
+async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined, zipPath: string): Promise<void> {
     // .gitignore is created by `func init`
     const gitignorePath: string = path.join(projectPath, gitignoreFileName);
     if (await fse.pathExists(gitignorePath)) {
@@ -110,6 +111,7 @@ async function ensureGitIgnoreContents(projectPath: string, venvName: string | u
 
         ensureInGitIgnore('.python_packages');
         ensureInGitIgnore('__pycache__');
+        ensureInGitIgnore(zipPath);
 
         if (writeFile) {
             await fse.writeFile(gitignorePath, gitignoreContents);

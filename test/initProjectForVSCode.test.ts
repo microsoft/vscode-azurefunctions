@@ -84,7 +84,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
             await fse.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
         }
         await testInitProjectForVSCode(projectPath);
-        await validateProject(projectPath, getPythonValidateOptions(venvName));
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject, venvName));
     });
 
     const fsharpProject: string = 'AutoDetectFSharpProject';
