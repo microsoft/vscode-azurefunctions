@@ -10,7 +10,7 @@ import * as request from 'request-promise';
 import * as vscode from 'vscode';
 import { delay, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
 suite('Create Project and Deploy', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -36,6 +36,11 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         const namespace: string = 'Company.Function';
         const accessRights: string = 'Function';
         await testCreateProjectAndDeploy([namespace, accessRights], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp);
+    });
+
+    test('Powershell', async () => {
+        const authLevel: string = 'Function';
+        await testCreateProjectAndDeploy([authLevel], getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
     });
 
     async function testCreateProjectAndDeploy(functionInputs: (RegExp | string)[], validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage): Promise<void> {
