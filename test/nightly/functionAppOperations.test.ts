@@ -29,7 +29,6 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
 
         appName = getRandomHexString();
         app2Name = getRandomHexString();
-        app3Name = getRandomHexString();
         rgName = getRandomHexString();
         resourceGroupsToDelete.push(rgName);
         saName = getRandomHexString().toLowerCase(); // storage account must have lower case name
