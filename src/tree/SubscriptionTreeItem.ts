@@ -98,7 +98,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
                 SiteOSStep.setLocationsTask(wizardContext);
             }
-            promptSteps.push(new LocationListStep());
+            LocationListStep.addStep(wizardContext, promptSteps);
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
             executeSteps.push(new AppInsightsCreateStep());
