@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ProjectLanguage, ProjectRuntime, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
@@ -32,7 +32,7 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
     const rawAzureFuncRuntime: string = remoteProperties.FUNCTIONS_EXTENSION_VERSION;
     const azureFuncRuntime: ProjectRuntime | undefined = convertStringToRuntime(rawAzureFuncRuntime);
 
-    const azureWorkerRuntime: string | undefined = remoteProperties.FUNCTIONS_WORKER_RUNTIME;
+    const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
     const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
 
     let shouldPrompt: boolean = !!rawAzureFuncRuntime && azureFuncRuntime !== localFuncRuntime;
@@ -50,7 +50,7 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
 
         const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localFuncRuntime);
         if (localFuncRuntime === ProjectRuntime.v2 && localWorkerRuntime) {
-            newAppSettings.FUNCTIONS_WORKER_RUNTIME = localWorkerRuntime;
+            newAppSettings[workerRuntimeKey] = localWorkerRuntime;
         }
 
         for (const key of Object.keys(newAppSettings)) {

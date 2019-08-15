@@ -38,7 +38,7 @@ export async function createNewProject(
 
     if (!openFolder) {
         wizardContext.openBehavior = 'DontOpen';
-    } else {
+    } else if (!wizardContext.openBehavior) {
         wizardContext.openBehavior = getWorkspaceSetting(projectOpenBehaviorSetting);
         context.telemetry.properties.openBehaviorFromSetting = String(!!wizardContext.openBehavior);
     }

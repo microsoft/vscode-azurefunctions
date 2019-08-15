@@ -6,7 +6,7 @@
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, IAppSettingsContext, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, workerRuntimeKey } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
 import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
@@ -211,7 +211,7 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
 
     if (context.runtime) {
         appSettings.push({
-            name: 'FUNCTIONS_WORKER_RUNTIME',
+            name: workerRuntimeKey,
             value: context.runtime
         });
     }

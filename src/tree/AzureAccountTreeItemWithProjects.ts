@@ -10,6 +10,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { extensionPrefix, hostFileName, projectLanguageSetting, projectRuntimeSetting } from '../constants';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
 import { supportsLocalProjectTree } from './localProject/supportsLocalProjectTree';
@@ -50,11 +51,15 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {
             const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
-            hasLocalProject = hasLocalProject || !!projectPath;
-            if (projectPath && supportsLocalProjectTree(projectPath)) {
-                const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
-                this._projectDisposables.push(treeItem);
-                children.push(treeItem);
+            if (projectPath) {
+                hasLocalProject = true;
+
+                const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                if (supportsLocalProjectTree(projectLanguage)) {
+                    const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
+                    this._projectDisposables.push(treeItem);
+                    children.push(treeItem);
+                }
             }
 
             this._projectDisposables.push(createRefreshFileWatcher(this, path.join(folder.uri.fsPath, hostFileName)));

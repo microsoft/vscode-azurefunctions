@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { ProgressLocation, window } from 'vscode';
-import { IFunctionKeys, IHostKeys, SiteClient } from 'vscode-azureappservice';
+import { IFunctionKeys, IHostKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem, DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -34,8 +34,12 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         return ti;
     }
 
+    public get root(): ISiteTreeRoot {
+        return this.parent.parent.root;
+    }
+
     public get client(): SiteClient {
-        return this.parent.parent.root.client;
+        return this.root.client;
     }
 
     public get logStreamLabel(): string {

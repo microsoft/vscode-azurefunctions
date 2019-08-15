@@ -43,11 +43,10 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
         await callWithTelemetryAndErrorHandling('resolveDebugConfiguration', async (context: IActionContext) => {
             context.telemetry.properties.isActivationEvent = 'true';
             context.errorHandling.suppressDisplay = true;
-            context.telemetry.suppressIfSuccessful = true;
 
             this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
             if (debugConfiguration.preLaunchTask === hostStartTaskName) {
-                const preDebugResult: IPreDebugValidateResult = await preDebugValidate(debugConfiguration);
+                const preDebugResult: IPreDebugValidateResult = await preDebugValidate(context, debugConfiguration);
                 if (!preDebugResult.shouldContinue) {
                     // Stop debugging only in this case
                     result = undefined;

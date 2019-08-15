@@ -797,7 +797,7 @@
                             "",
                             "%azFunc.projectLanguage.previewDescription%",
                             "%azFunc.projectLanguage.previewDescription%",
-                            "%azFunc.projectLanguage.previewDescription%",
+                            "",
                             ""
                         ]
                     },
@@ -898,6 +898,11 @@
                         "type": "boolean",
                         "description": "%azFunc.enableSlotsDescription%",
                         "default": false
+                    },
+                    "azureFunctions.scmDoBuildDuringDeployment": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "description": "%azFunc.scmDoBuildDuringDeploymentDescription%"
                     }
                 }
             }
@@ -935,7 +940,6 @@
         "gulp": "^4.0.0",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.1",
-        "gulp-download": "^0.0.1",
         "gulp-filter": "^5.1.0",
         "mocha": "^5.2.0",
         "mocha-junit-reporter": "^1.18.0",
@@ -944,15 +948,18 @@
         "tslint": "^5.14.0",
         "tslint-microsoft-contrib": "^5.2.1",
         "typescript": "^3.3.4000",
+        "vinyl-buffer": "^1.0.1",
+        "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.59.0",
         "vscode": "^1.1.33",
-        "vscode-azureextensiondev": "^0.1.11",
+        "vscode-azureextensiondev": "^0.2.1",
         "webpack": "^4.29.6",
         "webpack-cli": "^3.3.0"
     },
     "dependencies": {
         "azure-arm-cosmosdb": "^1.1.2",
         "azure-arm-eventhub": "^3.2.0",
+        "azure-arm-appinsights": "^2.1.0",
         "azure-arm-sb": "^2.3.0-preview",
         "azure-arm-storage": "^4.0.0",
         "azure-arm-website": "^5.3.0",
@@ -960,6 +967,7 @@
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
         "ms-rest-azure": "^2.3.1",
+        "opn": "^6.0.0",
         "portfinder": "^1.0.13",
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",

@@ -71,5 +71,6 @@
     "azFunc.swapSlot": "Swap Slot...",
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azFunc.addBinding": "Add binding...",
-    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage..."
+    "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
+    "azFunc.scmDoBuildDuringDeploymentDescription": "Set to true to build your project on the server. Currently only applicable for Linux Function Apps."
 }

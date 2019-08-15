@@ -7,6 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem, window } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem } from 'vscode-azureextensionui';
+import { KuduClient } from 'vscode-azurekudu';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
@@ -67,20 +68,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public get description(): string | undefined {
-        const descriptions: string[] = [];
-
-        // getting `isConsumption` is an async operation that's not worth delaying the loading of all function apps just for this description
-        // thus if the cached value is `undefined`, we will assume it's consumption (the default and most common case)
-        const isConsumption: boolean = this._cachedIsConsumption === undefined ? true : this._cachedIsConsumption;
-        if (this.root.client.isLinux && isConsumption) {
-            descriptions.push(localize('preview', 'Preview'));
-        }
-
-        if (this._state && this._state.toLowerCase() !== 'running') {
-            descriptions.push(this._state);
-        }
-
-        return descriptions.join(' - ');
+        return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): string {
@@ -130,7 +118,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             // tslint:disable-next-line: no-any
             let data: any;
             try {
-                data = await this.root.client.kudu.functionModel.getHostSettings();
+                const kuduClient: KuduClient = await this.root.client.getKuduClient();
+                data = await kuduClient.functionModel.getHostSettings();
             } catch {
                 // ignore and use default
             }

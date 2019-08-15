@@ -23,6 +23,8 @@ export namespace ext {
     export let funcCliPath: string = 'func';
     export let templateSource: TemplateSource | undefined;
     export let scriptBindings: IBindingTemplate[];
+    // tslint:disable-next-line: strict-boolean-expressions
+    export let ignoreBundle: boolean = !/^(false|0)?$/i.test(process.env.AZCODE_FUNCTIONS_IGNORE_BUNDLE || '');
 }
 
 export enum TemplateSource {
