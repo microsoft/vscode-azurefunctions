@@ -2,7 +2,26 @@
 
 # Change Log
 
-All notable changes to the "azurefunctions" extension will be documented in this file.
+## 0.18.0 - 2019-08-19
+
+### Added
+- Added Python project support for server-side build. Follow these steps to enable: https://aka.ms/AA5vsfd
+- Added Application Insights support when creating a Function App in Azure
+- Added a local project tree item to the Azure Functions view (does not apply to Java or C#)
+  - Copy local http trigger urls
+  - Execute local timer triggers
+  - View and add bindings
+- Removed "Preview" label from Python projects and Linux Function Apps
+
+### Changed
+- Removed setting "azureFunctions.advancedCreation" in favor of a separate "Advanced" command to create Function Apps
+- Renamed default Python virtual environment from ".env" to ".venv"
+- Basic create mode will now prompt for a location when creating a Function App
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.18.0%22+is%3Aclosed)
+- Fixed copying non-anonymous function urls for Linux consumption apps
+- Reduced occurrence of error "Failed to detect running Functions host" for C# debugging
+- Fixed creation of Linux Dedicated Function Apps
 
 ## 0.17.1 - 2019-05-24
 
