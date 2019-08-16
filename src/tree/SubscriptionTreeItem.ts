@@ -98,7 +98,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
                 SiteOSStep.setLocationsTask(wizardContext);
             }
-            LocationListStep.addStep(wizardContext, promptSteps);
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
             executeSteps.push(new AppInsightsCreateStep());
@@ -121,6 +120,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ));
             promptSteps.push(new AppInsightsListStep());
         }
+        LocationListStep.addStep(wizardContext, promptSteps);
 
         executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, runtime, language)));
 
