@@ -39,7 +39,7 @@ import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
 import { pickFuncProcess } from './commands/pickFuncProcess';
-import { remoteDebugFunctionApp } from './commands/remoteDebugFunctionApp';
+import { remoteDebugJavaFunctionApp } from './commands/remoteDebugJava/remoteDebugJavaFunctionApp';
 import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
@@ -128,7 +128,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
         registerCommand('azureFunctions.appSettings.delete', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, AppSettingTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.toggleSlotSetting', toggleSlotSetting);
-        registerCommand('azureFunctions.debugFunctionAppOnAzure', remoteDebugFunctionApp);
+        registerCommand('azureFunctions.startJavaRemoteDebug', remoteDebugJavaFunctionApp);
         registerCommand('azureFunctions.deleteProxy', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);

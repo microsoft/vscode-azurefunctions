@@ -38,7 +38,7 @@ Install the prerequisites for your desired language:
 * View and manage deployment slots
     > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
 * Debug Java function project in Azure (experimental)
-    > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
+    > **NOTE**: To enable, set `azureFunctions.enableJavaRemoteDebugging` to true.
 
 ### Create New Project
 
