@@ -22,7 +22,7 @@ Install the prerequisites for your desired language:
 * [TypeScript](#node)
 * [C#](#net)
 * [Java](#java)
-* [Python (Preview)](#python)
+* [Python](#python)
 * [PowerShell (Preview)](#powershell)
 
 ## Features

@@ -115,7 +115,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
 
         const projectPath: string = path.join(testFolderPath, pythonProject);
         await testCreateNewProject(projectPath, ProjectLanguage.Python);
-        await validateProject(projectPath, getPythonValidateOptions('.venv'));
+        await validateProject(projectPath, getPythonValidateOptions(pythonProject, '.venv'));
     });
 
     const typeScriptProject: string = 'TypeScriptProject';

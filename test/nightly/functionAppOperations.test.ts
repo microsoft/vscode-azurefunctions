@@ -12,6 +12,7 @@ import { longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
 
+// tslint:disable-next-line: max-func-body-length
 suite('Function App Operations', async function (this: ISuiteCallbackContext): Promise<void> {
     this.timeout(7 * 60 * 1000);
 
@@ -19,6 +20,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     let app2Name: string;
     let rgName: string;
     let saName: string;
+    let aiName: string;
 
     suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -30,10 +32,11 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
         rgName = getRandomHexString();
         resourceGroupsToDelete.push(rgName);
         saName = getRandomHexString().toLowerCase(); // storage account must have lower case name
+        aiName = getRandomHexString();
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: string[] = [appName, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, 'East US'];
+        const testInputs: string[] = [appName, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, 'East US'];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
@@ -41,8 +44,8 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
         assert.ok(createdApp);
     });
 
-    test('Create - Advanced - Existing RG/SA', async () => {
-        const testInputs: string[] = [app2Name, 'Windows', 'Consumption Plan', '.NET', rgName, saName];
+    test('Create - Advanced - Existing RG/SA/AI', async () => {
+        const testInputs: string[] = [app2Name, 'Windows', 'Consumption Plan', '.NET', rgName, saName, aiName];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });

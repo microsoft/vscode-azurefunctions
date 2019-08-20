@@ -46,7 +46,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript, data: ProjectLanguage.JavaScript },
             { label: ProjectLanguage.TypeScript, data: ProjectLanguage.TypeScript },
             { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
-            { label: ProjectLanguage.Python, description: previewDescription, data: ProjectLanguage.Python },
+            { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
             { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
             { label: ProjectLanguage.PowerShell, description: previewDescription, data: ProjectLanguage.PowerShell }
         ];
