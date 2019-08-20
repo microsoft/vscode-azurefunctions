@@ -37,6 +37,8 @@ Install the prerequisites for your desired language:
 * Stream logs from your Azure Function Apps
 * View and manage deployment slots
     > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
+* Debug Node.js function project in Azure (experimental)
+    > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
 * Debug Java function project in Azure (experimental)
     > **NOTE**: To enable, set `azureFunctions.enableJavaRemoteDebugging` to true.
 
