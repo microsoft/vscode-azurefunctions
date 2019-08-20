@@ -38,7 +38,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         await testCreateProjectAndDeploy([namespace, accessRights], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp);
     });
 
-    test('Powershell', async () => {
+    test('PowerShell', async () => {
         const authLevel: string = 'Function';
         await testCreateProjectAndDeploy([authLevel], getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
     });
