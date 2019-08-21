@@ -2,6 +2,13 @@
 
 # Change Log
 
+## 0.18.1 - 2019-08-21
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.18.1%22+is%3Aclosed)
+
+- Fix error "Expected value to be neither null nor undefined" when creating App Insights resource with existing resource group
+- Fix error "r.map is not a function" if `Microsoft.Insights` is not a registered provider for your subscription
+
 ## 0.18.0 - 2019-08-19
 
 ### Added
