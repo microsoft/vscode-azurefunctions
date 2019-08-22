@@ -6,7 +6,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { IAzureQuickPickItem, IAzureUserInput } from 'vscode-azureextensionui';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import * as fsUtils from './fs';
 
 export function isMultiRootWorkspace(): boolean {
@@ -77,4 +79,19 @@ export function getContainingWorkspace(fsPath: string): vscode.WorkspaceFolder |
     return openFolders.find((f: vscode.WorkspaceFolder): boolean => {
         return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || fsUtils.isSubpath(f.uri.fsPath, fsPath);
     });
+}
+
+export async function getDeploymentWorkspace(target?: vscode.Uri | string | SlotTreeItemBase): Promise<string> {
+
+    if (target instanceof vscode.Uri) {
+        return target.fsPath;
+    } else if (typeof target === 'string') {
+        return target;
+    } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length === 1) {
+        // If there is only one workspace and it has 'deploySubPath' set - return that value without prompting
+        return vscode.workspace.workspaceFolders[0].uri.fsPath;
+    }
+
+    const workspaceMessage: string = localize('selectZipDeployFolder', 'Select the folder to zip and deploy');
+    return await selectWorkspaceFolder(ext.ui, workspaceMessage);
 }
