@@ -98,5 +98,5 @@ export async function getDeploymentWorkspace(target?: vscode.Uri | string | Slot
     }
 
     const workspaceMessage: string = localize('selectZipDeployFolder', 'Select the folder to zip and deploy');
-    return await selectWorkspaceFolder(ext.ui, workspaceMessage);
+    return await selectWorkspaceFolder(ext.ui, workspaceMessage, f => getWorkspaceSetting(deploySubpathSetting, f.uri.fsPath));
 }
