@@ -18,7 +18,7 @@ import { TemplateRetriever, TemplateType } from './TemplateRetriever';
 
 export class DotnetTemplateRetriever extends TemplateRetriever {
     public templateType: TemplateType = TemplateType.Dotnet;
-    private _dotnetTemplatesKey: string = 'DotnetTemplates';
+    private readonly _dotnetTemplatesKey: string = 'DotnetTemplates';
     private _rawTemplates: object[];
 
     protected async getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {

@@ -11,7 +11,7 @@ import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
-    private _suppressSkipForNow?: boolean;
+    private readonly _suppressSkipForNow?: boolean;
 
     public constructor(suppressSkipForNow?: boolean) {
         super();

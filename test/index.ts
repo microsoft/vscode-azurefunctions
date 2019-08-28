@@ -59,7 +59,7 @@ for (const envVar of Object.keys(process.env)) {
         options[option] = value;
     }
 }
-console.warn(`Mocha options: ${JSON.stringify(options, null, 2)}`);
+console.warn(`Mocha options: ${JSON.stringify(options, undefined, 2)}`);
 
 testRunner.configure(options);
 

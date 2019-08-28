@@ -13,7 +13,7 @@ export class BindingTreeItem extends AzExtTreeItem {
     public readonly parent: BindingsTreeItem;
     public binding: IFunctionBinding;
 
-    private _name: string;
+    private readonly _name: string;
 
     public constructor(parent: BindingsTreeItem, binding: IFunctionBinding) {
         super(parent);

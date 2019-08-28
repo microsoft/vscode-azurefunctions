@@ -29,7 +29,7 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
-        if (getWorkspaceSetting('enableSlots')) {
+        if (getWorkspaceSetting<boolean>('enableSlots')) {
             children.push(this._slotsTreeItem);
         }
         return children;

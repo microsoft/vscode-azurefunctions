@@ -18,7 +18,7 @@ import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
-    private _bindingsNode: BindingsTreeItem;
+    private readonly _bindingsNode: BindingsTreeItem;
 
     private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string) {
         super(parent, config, name);

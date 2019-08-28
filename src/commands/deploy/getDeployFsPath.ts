@@ -48,7 +48,7 @@ async function appendDeploySubpathSetting(targetPath: string): Promise<string> {
                     const fsPathWithSetting: string = path.join(folder.uri.fsPath, deploySubPath);
                     if (!isPathEqual(fsPathWithSetting, targetPath)) {
                         const settingKey: string = 'showDeploySubpathWarning';
-                        if (getWorkspaceSetting(settingKey)) {
+                        if (getWorkspaceSetting<boolean>(settingKey)) {
                             const selectedFolder: string = path.relative(folder.uri.fsPath, targetPath);
                             const message: string = localize('mismatchDeployPath', 'Deploying "{0}" instead of selected folder "{1}". Use "{2}.{3}" to change this behavior.', deploySubPath, selectedFolder, extensionPrefix, deploySubpathSetting);
                             // don't wait

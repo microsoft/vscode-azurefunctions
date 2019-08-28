@@ -84,6 +84,8 @@
             true,
             "allow-single-concat"
         ],
-        "no-use-before-declare": false
+        "no-use-before-declare": false,
+        "newline-per-chained-call": false,
+        "no-dynamic-delete": false
     }
 }

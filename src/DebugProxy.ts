@@ -14,11 +14,11 @@ export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
     private _wsclient: websocket.client | undefined;
     private _wsconnection: websocket.connection | undefined;
-    private _client: SiteClient;
-    private _port: number;
-    private _publishCredential: WebSiteManagementModels.User;
+    private readonly _client: SiteClient;
+    private readonly _port: number;
+    private readonly _publishCredential: WebSiteManagementModels.User;
     private _keepAlive: boolean;
-    private _outputChannel: OutputChannel;
+    private readonly _outputChannel: OutputChannel;
 
     constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: WebSiteManagementModels.User) {
         super();

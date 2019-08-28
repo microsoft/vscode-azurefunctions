@@ -19,9 +19,9 @@ import { TemplateRetriever, TemplateType } from './TemplateRetriever';
 
 export class ScriptTemplateRetriever extends TemplateRetriever {
     public templateType: TemplateType = TemplateType.Script;
-    private _templatesKey: string = 'FunctionTemplates';
-    private _configKey: string = 'FunctionTemplateConfig';
-    private _resourcesKey: string = 'FunctionTemplateResources';
+    private readonly _templatesKey: string = 'FunctionTemplates';
+    private readonly _configKey: string = 'FunctionTemplateConfig';
+    private readonly _resourcesKey: string = 'FunctionTemplateResources';
     private _rawResources: object;
     private _rawTemplates: object[];
     private _rawConfig: object;

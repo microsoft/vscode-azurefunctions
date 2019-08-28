@@ -29,8 +29,8 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     public readonly workspacePath: string;
     public readonly workspaceFolder: WorkspaceFolder;
 
-    private _disposables: Disposable[] = [];
-    private _localFunctionsTreeItem: LocalFunctionsTreeItem;
+    private readonly _disposables: Disposable[] = [];
+    private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
     public constructor(parent: AzExtParentTreeItem, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder) {
         super(parent);
