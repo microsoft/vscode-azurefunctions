@@ -17,7 +17,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public abstract language: ProjectLanguage;
     public abstract runtime: ProjectRuntime;
 
-    private testedFunctions: string[] = [];
+    private readonly testedFunctions: string[] = [];
 
     /**
      * NOTE: The first entry in the returned array is used for validating contents

@@ -24,6 +24,7 @@ export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
             }
             return semver.valid(localVersion);
         }
+        // tslint:disable-next-line: no-null-keyword
         return null;
     }
 }

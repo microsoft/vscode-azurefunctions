@@ -30,8 +30,8 @@ import { ProjectRuntimeStep } from './ProjectRuntimeStep';
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
 
-    private _templateId?: string;
-    private _triggerSettings?: { [key: string]: string | undefined };
+    private readonly _templateId?: string;
+    private readonly _triggerSettings?: { [key: string]: string | undefined };
 
     public constructor(templateId: string | undefined, triggerSettings: { [key: string]: string | undefined } | undefined) {
         super();

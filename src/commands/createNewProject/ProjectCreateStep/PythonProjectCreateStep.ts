@@ -38,7 +38,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const settingKey: string = 'createPythonVenv';
-        const createPythonVenv: boolean = !!getWorkspaceSetting(settingKey, context.workspacePath);
+        const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>(settingKey, context.workspacePath);
         context.telemetry.properties.createPythonVenv = String(createPythonVenv);
         if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
             progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
