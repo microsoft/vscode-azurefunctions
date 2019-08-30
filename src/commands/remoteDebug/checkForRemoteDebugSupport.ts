@@ -15,5 +15,5 @@ export function checkForRemoteDebugSupport(siteConfig: WebSiteManagementModels.S
         return;
     }
 
-    throw new Error('Azure Remote Debugging is currently only supported for Node.js Function Apps running on Linux App Service plans.');
+    throw new Error('Azure Remote Debugging is currently only supported for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported.');
 }
