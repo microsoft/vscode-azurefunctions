@@ -8,17 +8,17 @@ import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { DebugProxy } from '../DebugProxy';
-import { ext } from '../extensionVariables';
-import { localize } from '../localize';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
-import { openUrl } from '../utils/openUrl';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../localize';
+import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { openUrl } from '../../utils/openUrl';
+import { DebugProxy } from './DebugProxy';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }

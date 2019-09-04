@@ -48,7 +48,8 @@
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.configureDeploymentSource",
-        "onCommand:azureFunctions.debugFunctionAppOnAzure",
+        "onCommand:azureFunctions.startRemoteDebug",
+        "onCommand:azureFunctions.startJavaRemoteDebug",
         "onCommand:azureFunctions.appSettings.add",
         "onCommand:azureFunctions.appSettings.download",
         "onCommand:azureFunctions.appSettings.upload",
@@ -176,8 +177,13 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.debugFunctionAppOnAzure",
-                "title": "%azFunc.debugFunctionAppOnAzure%",
+                "command": "azureFunctions.startRemoteDebug",
+                "title": "%azFunc.startRemoteDebug%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startJavaRemoteDebug",
+                "title": "%azFunc.startJavaRemoteDebug%",
                 "category": "Azure Functions"
             },
             {
@@ -452,9 +458,14 @@
                     "group": "4@2"
                 },
                 {
-                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "command": "azureFunctions.startRemoteDebug",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
+                },
+                {
+                    "command": "azureFunctions.startJavaRemoteDebug",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableJavaRemoteDebugging == true",
+                    "group": "5@2"
                 },
                 {
                     "command": "azureFunctions.viewProperties",
@@ -646,8 +657,12 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFunctions.debugFunctionAppOnAzure",
+                    "command": "azureFunctions.startRemoteDebug",
                     "when": "config.azureFunctions.enableRemoteDebugging == true"
+                },
+                {
+                    "command": "azureFunctions.startJavaRemoteDebug",
+                    "when": "config.azureFunctions.enableJavaRemoteDebugging == true"
                 },
                 {
                     "command": "azureFunctions.createSlot",
@@ -829,6 +844,11 @@
                     "azureFunctions.enableRemoteDebugging": {
                         "type": "boolean",
                         "description": "%azFunc.enableRemoteDebugging%",
+                        "default": false
+                    },
+                    "azureFunctions.enableJavaRemoteDebugging": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableJavaRemoteDebugging%",
                         "default": false
                     },
                     "azureFunctions.showProjectWarning": {
