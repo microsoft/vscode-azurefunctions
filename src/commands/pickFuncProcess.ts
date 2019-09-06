@@ -6,7 +6,7 @@
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, funcHostStartCommand, isWindows } from '../constants';
+import { extensionPrefix, hostStartTaskName, isWindows } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
@@ -30,7 +30,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
     });
 
     if (!funcTask) {
-        throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || funcHostStartCommand));
+        throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
     const settingKey: string = 'pickProcessTimeout';

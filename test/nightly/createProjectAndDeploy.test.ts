@@ -7,9 +7,9 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { delay, getRandomHexString, ProjectLanguage, requestUtils } from '../../extension.bundle';
+import { delay, getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
 suite('Create Project and Deploy', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -27,19 +27,29 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
     });
 
     test('TypeScript', async () => {
-        const authLevel: string = 'Function';
+        const authLevel: string = 'Anonymous';
         await testCreateProjectAndDeploy([authLevel], getTypeScriptValidateOptions(), ProjectLanguage.TypeScript);
     });
 
     test('CSharp', async () => {
         const namespace: string = 'Company.Function';
-        const accessRights: string = 'Function';
+        const accessRights: string = 'Admin';
         await testCreateProjectAndDeploy([namespace, accessRights], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp);
     });
 
     test('PowerShell', async () => {
         const authLevel: string = 'Function';
         await testCreateProjectAndDeploy([authLevel], getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
+    });
+
+    test('Python', async function (this: IHookCallbackContext): Promise<void> {
+        // Disabling on Windows until we can get it to work
+        if (isWindows) {
+            this.skip();
+        }
+
+        const authLevel: string = 'Function';
+        await testCreateProjectAndDeploy([authLevel], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python);
     });
 
     async function testCreateProjectAndDeploy(functionInputs: (RegExp | string)[], validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage): Promise<void> {

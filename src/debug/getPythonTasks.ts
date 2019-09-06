@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ShellExecution, Task, WorkspaceFolder } from 'vscode';
-import { func, funcPackCommand, packCommand } from '../constants';
+import { func, packCommand } from '../constants';
+import { ext } from '../extensionVariables';
 import { venvUtils } from '../utils/venvUtils';
 
 export function getPythonTasks(folder: WorkspaceFolder, projectRoot: string): Task[] {
-    const commandLine: string = venvUtils.convertToVenvCommand(funcPackCommand, folder.uri.fsPath);
+    const commandLine: string = venvUtils.convertToVenvCommand(`${ext.funcCliPath} ${packCommand}`, folder.uri.fsPath);
     const basicPack: Task = new Task(
         {
             type: func,

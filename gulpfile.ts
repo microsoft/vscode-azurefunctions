@@ -22,11 +22,11 @@ import * as request from 'request';
 import * as requestP from 'request-promise';
 import * as buffer from 'vinyl-buffer';
 import * as source from 'vinyl-source-stream';
-import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
+import { gulp_installAzureAccount, gulp_installVSCodeExtension, gulp_webpack } from 'vscode-azureextensiondev';
 
 function test() {
     const env = process.env;
-    env.DEBUGTELEMETRY = '1';
+    env.DEBUGTELEMETRY = 'v';
     env.MOCHA_timeout = String(20 * 1000);
     env.CODE_TESTS_WORKSPACE = path.join(__dirname, 'test/test.code-workspace');
     env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
@@ -80,6 +80,10 @@ function installFuncCli() {
         .pipe(gulp.dest(funcDir));
 }
 
+function gulp_installPythonExtension() {
+    return gulp_installVSCodeExtension('2019.8.30787', 'ms-python', 'python');
+}
+
 exports['webpack-dev'] = () => gulp_webpack('development');
 exports['webpack-prod'] = () => gulp_webpack('production');
-exports.test = gulp.series(gulp_installAzureAccount, getFuncLink, installFuncCli, test);
+exports.test = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli, test);
