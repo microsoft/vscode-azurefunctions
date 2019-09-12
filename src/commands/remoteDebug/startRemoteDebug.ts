@@ -10,7 +10,7 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { checkForRemoteDebugSupport } from './checkForRemoteDebugSupport';
+import { getRemoteDebugLanguage } from './getRemoteDebugLanguage';
 
 export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
@@ -23,7 +23,7 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
         return await siteClient.getSiteConfig();
     });
 
-    checkForRemoteDebugSupport(siteConfig);
+    const language: appservice.RemoteDebugLanguage = getRemoteDebugLanguage(siteConfig);
 
-    await appservice.startRemoteDebug(siteClient, siteConfig);
+    await appservice.startRemoteDebug(siteClient, siteConfig, language);
 }
