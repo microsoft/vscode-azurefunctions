@@ -6,9 +6,8 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
-import * as request from 'request-promise';
 import * as vscode from 'vscode';
-import { delay, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
+import { delay, getRandomHexString, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
 import { resourceGroupsToDelete } from './global.nightly.test';
@@ -77,14 +76,9 @@ async function validateFunctionUrl(appName: string, functionName: string, projec
     });
     const functionUrl: string = await vscode.env.clipboard.readText();
 
-    const options: request.Options = {
-        method: 'GET',
-        url: functionUrl,
-        body: {
-            name: "World"
-        },
-        json: true
-    };
-    const response: string = await <Thenable<string>>request(options).promise();
+    const request: requestUtils.Request = await requestUtils.getDefaultRequest(functionUrl);
+    request.body = { name: "World" };
+    request.json = true;
+    const response: string = await requestUtils.sendRequest(request);
     assert.ok(response.includes('Hello') && response.includes('World'), 'Expected function response to include "Hello" and "World"');
 }
