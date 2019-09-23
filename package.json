@@ -923,6 +923,10 @@
                         "scope": "resource",
                         "type": "boolean",
                         "description": "%azFunc.scmDoBuildDuringDeploymentDescription%"
+                    },
+                    "azureFunctions.enableOutputTimestamps": {
+                        "type": "boolean",
+                        "description": "%azFunc.enableOutputTimestamps%"
                     }
                 }
             }
@@ -972,7 +976,7 @@
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.66.0",
         "vscode": "^1.1.36",
-        "vscode-azureextensiondev": "^0.2.1",
+        "vscode-azureextensiondev": "^0.2.3",
         "webpack": "^4.39.3",
         "webpack-cli": "^3.3.7"
     },
@@ -993,8 +997,8 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.43.4",
-        "vscode-azureextensionui": "^0.27.0",
+        "vscode-azureappservice": "^0.46.0",
+        "vscode-azureextensionui": "^0.28.1",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",

@@ -6,9 +6,9 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
-import { OutputChannel } from 'vscode';
 import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
 import * as websocket from 'websocket';
+import { ext } from '../../extensionVariables';
 
 export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
@@ -18,15 +18,13 @@ export class DebugProxy extends EventEmitter {
     private readonly _port: number;
     private readonly _publishCredential: WebSiteManagementModels.User;
     private _keepAlive: boolean;
-    private readonly _outputChannel: OutputChannel;
 
-    constructor(outputChannel: OutputChannel, client: SiteClient, port: number, publishCredential: WebSiteManagementModels.User) {
+    constructor(client: SiteClient, port: number, publishCredential: WebSiteManagementModels.User) {
         super();
         this._client = client;
         this._port = port;
         this._publishCredential = publishCredential;
         this._keepAlive = true;
-        this._outputChannel = outputChannel;
         this._server = createServer();
     }
 
@@ -39,28 +37,28 @@ export class DebugProxy extends EventEmitter {
 
             this._server.on('connection', (socket: Socket) => {
                 if (this._wsclient) {
-                    this._outputChannel.appendLine(`[Proxy Server] The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
+                    ext.outputChannel.appendLog(`[Proxy Server] The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
                     this.emit('error', new Error(`[Proxy Server]  The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
                     socket.destroy();
                 } else {
-                    this._outputChannel.appendLine(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
+                    ext.outputChannel.appendLog(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
                     socket.pause();
 
                     this._wsclient = new websocket.client();
 
                     this._wsclient.on('connect', (connection: websocket.connection) => {
-                        this._outputChannel.appendLine('[WebSocket] client connected');
+                        ext.outputChannel.appendLog('[WebSocket] client connected');
                         this._wsconnection = connection;
 
                         connection.on('close', () => {
-                            this._outputChannel.appendLine('[WebSocket] client closed');
+                            ext.outputChannel.appendLog('[WebSocket] client closed');
                             this.dispose();
                             socket.destroy();
                             this.emit('end');
                         });
 
                         connection.on('error', (err: Error) => {
-                            this._outputChannel.appendLine(`[WebSocket] ${err}`);
+                            ext.outputChannel.appendLog(`[WebSocket] ${err}`);
                             this.dispose();
                             socket.destroy();
                             this.emit('error', err);
@@ -73,7 +71,7 @@ export class DebugProxy extends EventEmitter {
                     });
 
                     this._wsclient.on('connectFailed', (err: Error) => {
-                        this._outputChannel.appendLine(`[WebSocket] ${err}`);
+                        ext.outputChannel.appendLog(`[WebSocket] ${err}`);
                         this.dispose();
                         socket.destroy();
                         this.emit('error', err);
@@ -94,13 +92,13 @@ export class DebugProxy extends EventEmitter {
                     });
 
                     socket.on('end', () => {
-                        this._outputChannel.appendLine(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
+                        ext.outputChannel.appendLog(`[Proxy Server] client disconnected ${socket.remoteAddress}:${socket.remotePort}`);
                         this.dispose();
                         this.emit('end');
                     });
 
                     socket.on('error', (err: Error) => {
-                        this._outputChannel.appendLine(`[Proxy Server] ${err}`);
+                        ext.outputChannel.appendLog(`[Proxy Server] ${err}`);
                         this.dispose();
                         socket.destroy();
                         this.emit('error', err);
@@ -109,7 +107,7 @@ export class DebugProxy extends EventEmitter {
             });
 
             this._server.on('listening', () => {
-                this._outputChannel.appendLine('[Proxy Server] start listening');
+                ext.outputChannel.appendLog('[Proxy Server] start listening');
                 this.emit('start');
             });
 
@@ -144,7 +142,7 @@ export class DebugProxy extends EventEmitter {
                 await pingFunctionApp(this._client);
                 setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {
-                this._outputChannel.appendLine(`[Proxy Server] ${err}`);
+                ext.outputChannel.appendLog(`[Proxy Server] ${err}`);
                 setTimeout(this.keepAlive, 5 * 1000 /* 5 seconds */);
             }
         }

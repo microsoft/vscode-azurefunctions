@@ -25,7 +25,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();
     const publishCredential: WebSiteManagementModels.User = await client.getWebAppPublishCredential();
-    const debugProxy: DebugProxy = new DebugProxy(ext.outputChannel, client, portNumber, publishCredential);
+    const debugProxy: DebugProxy = new DebugProxy(client, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();
@@ -45,13 +45,13 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
                         await openUrl('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
-                        await updateSiteConfig(ext.outputChannel, client, p, siteConfig);
-                        await updateAppSettings(ext.outputChannel, client, p, appSettings);
+                        await updateSiteConfig(client, p, siteConfig);
+                        await updateAppSettings(client, p, appSettings);
                     }
                 }
 
                 p.report({ message: 'starting debug proxy...' });
-                ext.outputChannel.appendLine('starting debug proxy...');
+                ext.outputChannel.appendLog('starting debug proxy...');
                 // tslint:disable-next-line:no-floating-promises
                 debugProxy.startProxy();
                 debugProxy.on('start', resolve);
@@ -82,31 +82,31 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
 
 }
 
-async function updateSiteConfig(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, siteConfig: WebSiteManagementModels.SiteConfigResource): Promise<void> {
+async function updateSiteConfig(client: SiteClient, p: vscode.Progress<{}>, siteConfig: WebSiteManagementModels.SiteConfigResource): Promise<void> {
     p.report({ message: 'Fetching site configuration...' });
-    outputChannel.appendLine('Fetching site configuration...');
+    ext.outputChannel.appendLog('Fetching site configuration...');
     if (needUpdateSiteConfig(siteConfig)) {
         siteConfig.use32BitWorkerProcess = false;
         siteConfig.webSocketsEnabled = true;
         p.report({ message: 'Updating site configuration to enable remote debugging...' });
-        outputChannel.appendLine('Updating site configuration to enable remote debugging...');
+        ext.outputChannel.appendLog('Updating site configuration to enable remote debugging...');
         await client.updateConfiguration(siteConfig);
         p.report({ message: 'Updating site configuration done...' });
-        outputChannel.appendLine('Updating site configuration done...');
+        ext.outputChannel.appendLog('Updating site configuration done...');
     }
 }
 
-async function updateAppSettings(outputChannel: vscode.OutputChannel, client: SiteClient, p: vscode.Progress<{}>, appSettings: WebSiteManagementModels.StringDictionary): Promise<void> {
+async function updateAppSettings(client: SiteClient, p: vscode.Progress<{}>, appSettings: WebSiteManagementModels.StringDictionary): Promise<void> {
     p.report({ message: 'Fetching application settings...' });
-    outputChannel.appendLine('Fetching application settings...');
+    ext.outputChannel.appendLog('Fetching application settings...');
     if (appSettings.properties && needUpdateAppSettings(appSettings.properties)) {
         appSettings.properties.JAVA_OPTS = JAVA_OPTS;
         appSettings.properties.HTTP_PLATFORM_DEBUG_PORT = HTTP_PLATFORM_DEBUG_PORT;
         p.report({ message: 'Updating application settings to enable remote debugging...' });
-        outputChannel.appendLine('Updating application settings to enable remote debugging...');
+        ext.outputChannel.appendLog('Updating application settings to enable remote debugging...');
         await client.updateApplicationSettings(appSettings);
         p.report({ message: 'Updating application settings done...' });
-        outputChannel.appendLine('Updating application settings done...');
+        ext.outputChannel.appendLog('Updating application settings done...');
     }
 }
 

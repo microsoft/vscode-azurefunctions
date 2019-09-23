@@ -30,7 +30,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
 
     await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
         ext.outputChannel.show(true);
-        ext.outputChannel.appendLine(localize('uploadStart', 'Uploading settings to "{0}"...', client.fullName));
+        ext.outputChannel.appendLog(localize('uploadStart', 'Uploading settings to "{0}"...', client.fullName));
         let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
         if (localSettings.IsEncrypted) {
             await decryptLocalSettings(context, localSettingsUri);

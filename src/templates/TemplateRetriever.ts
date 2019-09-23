@@ -28,7 +28,7 @@ export abstract class TemplateRetriever {
             return await this.getTemplatesFromCache(runtime);
         } catch (error) {
             const errorMessage: string = parseError(error).message;
-            ext.outputChannel.appendLine(errorMessage);
+            ext.outputChannel.appendLog(errorMessage);
             context.telemetry.properties.cacheError = errorMessage;
             return undefined;
         }
@@ -37,15 +37,15 @@ export abstract class TemplateRetriever {
     public async tryGetTemplatesFromCliFeed(context: IActionContext, cliFeedJson: cliFeedJsonResponse, templateVersion: string, runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
         try {
             context.telemetry.properties.templateVersion = templateVersion;
-            ext.outputChannel.appendLine(localize('updatingTemplates', 'Updating {0} templates for runtime "{1}" to version "{2}"...', this.templateType, runtime, templateVersion));
+            ext.outputChannel.appendLog(localize('updatingTemplates', 'Updating {0} templates for runtime "{1}" to version "{2}"...', this.templateType, runtime, templateVersion));
             const templates: IFunctionTemplate[] = await this.getTemplatesFromCliFeed(cliFeedJson, templateVersion, runtime, context);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), templateVersion);
             await this.cacheTemplates(runtime);
-            ext.outputChannel.appendLine(localize('updatedTemplates', 'Successfully updated templates.'));
+            ext.outputChannel.appendLog(localize('updatedTemplates', 'Successfully updated templates.'));
             return templates;
         } catch (error) {
             const errorMessage: string = parseError(error).message;
-            ext.outputChannel.appendLine(errorMessage);
+            ext.outputChannel.appendLog(errorMessage);
             context.telemetry.properties.cliFeedError = errorMessage;
             return undefined;
         }
@@ -57,11 +57,11 @@ export abstract class TemplateRetriever {
             const templates: IFunctionTemplate[] = await this.getTemplatesFromBackup(runtime);
             ext.context.globalState.update(this.getCacheKey(TemplateRetriever.templateVersionKey, runtime), backupTemplateVersion);
             await this.cacheTemplates(runtime);
-            ext.outputChannel.appendLine(localize('usingBackupTemplates', 'Falling back to version "{0}" for {1} templates for runtime "{2}".', backupTemplateVersion, this.templateType, runtime));
+            ext.outputChannel.appendLog(localize('usingBackupTemplates', 'Falling back to version "{0}" for {1} templates for runtime "{2}".', backupTemplateVersion, this.templateType, runtime));
             return templates;
         } catch (error) {
             const errorMessage: string = parseError(error).message;
-            ext.outputChannel.appendLine(errorMessage);
+            ext.outputChannel.appendLog(errorMessage);
             context.telemetry.properties.backupError = errorMessage;
             return undefined;
         }

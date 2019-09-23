@@ -30,7 +30,7 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
 
     await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
-        ext.outputChannel.appendLine(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
+        ext.outputChannel.appendLog(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
         let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
 
         const isEncrypted: boolean | undefined = localSettings.IsEncrypted;

@@ -16,7 +16,7 @@ import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
 export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
-    ext.outputChannel.appendLine(deployComplete);
+    ext.outputChannel.appendLog(deployComplete);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
@@ -46,19 +46,19 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
         const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
         if (anonFunctions.length > 0) {
-            ext.outputChannel.appendLine(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+            ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
             for (const func of anonFunctions) {
                 ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
             }
         }
 
         if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
-            ext.outputChannel.appendLine(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+            ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
         }
     } catch (error) {
         // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
         context.errorHandling.suppressDisplay = true;
-        ext.outputChannel.appendLine(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
+        ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
         throw error;
     }
 }
