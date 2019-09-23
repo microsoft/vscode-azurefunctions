@@ -77,5 +77,5 @@ export async function confirmOverwriteSettings(sourceSettings: { [key: string]: 
 }
 
 function logKey(key: string): void {
-    ext.outputChannel.appendLog(`- ${key}`);
+    ext.outputChannel.appendLine(`- ${key}`);
 }
