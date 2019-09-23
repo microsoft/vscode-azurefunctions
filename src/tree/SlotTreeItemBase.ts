@@ -212,7 +212,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         const functionApp: string = localize('createdNewApp', 'Created new function app "{0}": {1}', this.root.client.fullName, `https://${this.root.client.defaultHostName}`);
         const createdNewSlotTree: string = this.root.client.isSlot ? slot : functionApp;
 
-        ext.outputChannel.appendLine(createdNewSlotTree);
+        ext.outputChannel.appendLog(createdNewSlotTree);
         ext.outputChannel.appendLine('');
         const viewOutput: MessageItem = {
             title: localize('viewOutput', 'View Output')

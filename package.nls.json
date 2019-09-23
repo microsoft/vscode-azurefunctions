@@ -74,5 +74,6 @@
     "azFunc.toggleAppSettingVisibility": "Toggle App Setting Visibility.",
     "azFunc.addBinding": "Add binding...",
     "azFunc.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
-    "azFunc.scmDoBuildDuringDeploymentDescription": "Set to true to build your project on the server. Currently only applicable for Linux Function Apps."
+    "azFunc.scmDoBuildDuringDeploymentDescription": "Set to true to build your project on the server. Currently only applicable for Linux Function Apps.",
+    "azFunc.enableOutputTimestamps": "Prepends each line displayed in the Azure App Service output channel with a timestamp"
 }

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExtensionContext, OutputChannel } from "vscode";
-import { AzExtTreeDataProvider, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
+import { ExtensionContext } from "vscode";
+import { AzExtTreeDataProvider, IAzExtOutputChannel, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
 import { IBindingTemplate } from "./templates/IBindingTemplate";
 import { TemplateProvider } from "./templates/TemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
@@ -16,7 +16,7 @@ export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
     export let azureAccountTreeItem: AzureAccountTreeItemWithProjects;
-    export let outputChannel: OutputChannel;
+    export let outputChannel: IAzExtOutputChannel;
     export let ui: IAzureUserInput;
     export let templateProviderTask: Promise<TemplateProvider>;
     export let reporter: ITelemetryReporter;

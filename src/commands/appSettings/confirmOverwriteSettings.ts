@@ -52,30 +52,30 @@ export async function confirmOverwriteSettings(sourceSettings: { [key: string]: 
     }
 
     if (addedKeys.length > 0) {
-        ext.outputChannel.appendLine(localize('addedKeys', 'Added the following settings:'));
+        ext.outputChannel.appendLog(localize('addedKeys', 'Added the following settings:'));
         addedKeys.forEach(logKey);
     }
 
     if (updatedKeys.length > 0) {
-        ext.outputChannel.appendLine(localize('updatedKeys', 'Updated the following settings:'));
+        ext.outputChannel.appendLog(localize('updatedKeys', 'Updated the following settings:'));
         updatedKeys.forEach(logKey);
     }
 
     if (matchingKeys.length > 0) {
-        ext.outputChannel.appendLine(localize('matchingKeys', 'Ignored the following settings that were already the same:'));
+        ext.outputChannel.appendLog(localize('matchingKeys', 'Ignored the following settings that were already the same:'));
         matchingKeys.forEach(logKey);
     }
 
     if (userIgnoredKeys.length > 0) {
-        ext.outputChannel.appendLine(localize('userIgnoredKeys', 'Ignored the following settings based on user input:'));
+        ext.outputChannel.appendLog(localize('userIgnoredKeys', 'Ignored the following settings based on user input:'));
         userIgnoredKeys.forEach(logKey);
     }
 
     if (Object.keys(destinationSettings).length > Object.keys(sourceSettings).length) {
-        ext.outputChannel.appendLine(localize('noDeleteKey', 'WARNING: This operation will not delete any settings in "{0}". You must manually delete settings if desired.', destinationName));
+        ext.outputChannel.appendLog(localize('noDeleteKey', 'WARNING: This operation will not delete any settings in "{0}". You must manually delete settings if desired.', destinationName));
     }
 }
 
 function logKey(key: string): void {
-    ext.outputChannel.appendLine(`- ${key}`);
+    ext.outputChannel.appendLog(`- ${key}`);
 }
