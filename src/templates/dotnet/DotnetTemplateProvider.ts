@@ -8,7 +8,6 @@ import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
-import { localize } from '../localize';
 import { downloadFile } from '../utils/fs';
 import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath } from './executeDotnetTemplateCommand';
@@ -59,42 +58,4 @@ export class DotnetTemplateRetriever extends TemplateRetriever {
         this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(runtime, undefined, 'list'));
         return parseDotnetTemplates(this._rawTemplates, runtime);
     }
-}
-
-export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
-    let verifiedTemplateIds: string[] = [
-        'EventHubTrigger',
-        'HttpTrigger',
-        'BlobTrigger',
-        'QueueTrigger',
-        'TimerTrigger',
-        'ServiceBusTopicTrigger',
-        'ServiceBusQueueTrigger',
-        'CosmosDBTrigger'
-    ];
-
-    if (runtime === ProjectRuntime.v1) {
-        verifiedTemplateIds = verifiedTemplateIds.concat([
-            'EventGridTrigger',
-            'GenericWebHook',
-            'GitHubWebHook',
-            'HttpTriggerWithParameters'
-        ]);
-    } else {
-        verifiedTemplateIds = verifiedTemplateIds.concat([
-            'DurableFunctionsOrchestration'
-        ]);
-    }
-
-    return verifiedTemplateIds.map((id: string) => {
-        id = `Azure.Function.CSharp.${id}`;
-        switch (runtime) {
-            case ProjectRuntime.v1:
-                return `${id}.1.x`;
-            case ProjectRuntime.v2:
-                return `${id}.2.x`;
-            default:
-                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
-        }
-    });
 }

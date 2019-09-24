@@ -7,7 +7,6 @@ import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -80,85 +79,4 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
     }
-}
-
-/**
- * Unlike templates.json and bindings.json, Resources.json has a capital letter
- */
-export async function getResourcesPath(templatesPath: string, vscodeLang: string = vscode.env.language): Promise<string> {
-    const folder: string = path.join(templatesPath, 'resources');
-
-    try {
-        // Example: "en-US"
-        const parts: string[] = vscodeLang.split('-');
-        // Example: "en" for "english"
-        const language: string = parts[0];
-        // Example: "US" for "United States" (locale is optional)
-        let locale: string | undefined = parts[1];
-
-        const files: string[] = await fse.readdir(folder);
-        let matchingFile: string | undefined;
-        if (!locale) {
-            const regExp: RegExp = new RegExp(`resources\\.${language}\\.json`, 'i');
-            matchingFile = files.find(f => regExp.test(f));
-        }
-
-        if (!matchingFile) {
-            // tslint:disable-next-line: strict-boolean-expressions
-            locale = locale || '[a-z]*';
-            const regExp: RegExp = new RegExp(`resources\\.${language}(-${locale})?\\.json`, 'i');
-            matchingFile = files.find(f => regExp.test(f));
-        }
-
-        if (matchingFile) {
-            return path.join(folder, matchingFile);
-        }
-    } catch {
-        // ignore and fall back to english
-    }
-
-    return path.join(folder, 'Resources.json');
-}
-
-export function getScriptVerifiedTemplateIds(runtime: string): string[] {
-    let verifiedTemplateIds: string[] = [
-        'BlobTrigger-JavaScript',
-        'HttpTrigger-JavaScript',
-        'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript'
-    ];
-
-    if (runtime === ProjectRuntime.v1) {
-        verifiedTemplateIds = verifiedTemplateIds.concat([
-            'GenericWebHook-JavaScript',
-            'GitHubWebHook-JavaScript',
-            'HttpTriggerWithParameters-JavaScript',
-            'ManualTrigger-JavaScript'
-        ]);
-    } else {
-        // For JavaScript, only include triggers that require extensions in v2. v1 doesn't have the same support for 'func extensions install'
-        verifiedTemplateIds = verifiedTemplateIds.concat([
-            'CosmosDBTrigger-JavaScript',
-            'DurableFunctionsActivity-JavaScript',
-            'DurableFunctionsHttpStart-JavaScript',
-            'DurableFunctionsOrchestrator-JavaScript',
-            'EventGridTrigger-JavaScript',
-            'EventHubTrigger-JavaScript',
-            'ServiceBusQueueTrigger-JavaScript',
-            'ServiceBusTopicTrigger-JavaScript'
-        ]);
-
-        const javaScriptTemplateIds: string[] = verifiedTemplateIds;
-
-        // Python is only supported in v2 - same functions as JavaScript except Durable
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'Python')));
-
-        // TypeScript is only supported in v2 - same functions as JavaScript
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
-
-        // PowerShell is only supported in v2 - same functions as JavaScript except Durable
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'PowerShell')));
-    }
-
-    return verifiedTemplateIds;
 }
