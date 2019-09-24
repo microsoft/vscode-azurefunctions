@@ -5,12 +5,12 @@
 
 import * as cp from 'child_process';
 import * as os from 'os';
-import * as vscode from 'vscode';
+import { IAzExtOutputChannel } from 'vscode-azureextensionui';
 import { isWindows } from '../constants';
 import { localize } from '../localize';
 
 export namespace cpUtils {
-    export async function executeCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
+    export async function executeCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<string> {
         const result: ICommandResult = await tryExecuteCommand(outputChannel, workingDirectory, command, ...args);
         if (result.code !== 0) {
             // We want to make sure the full error message is displayed to the user, not just the error code.
@@ -24,13 +24,13 @@ export namespace cpUtils {
             }
         } else {
             if (outputChannel) {
-                outputChannel.appendLine(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', command, result.formattedArgs));
+                outputChannel.appendLog(localize('finishedRunningCommand', 'Finished running command: "{0} {1}".', command, result.formattedArgs));
             }
         }
         return result.cmdOutput;
     }
 
-    export async function tryExecuteCommand(outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<ICommandResult> {
+    export async function tryExecuteCommand(outputChannel: IAzExtOutputChannel | undefined, workingDirectory: string | undefined, command: string, ...args: string[]): Promise<ICommandResult> {
         return await new Promise((resolve: (res: ICommandResult) => void, reject: (e: Error) => void): void => {
             let cmdOutput: string = '';
             let cmdOutputIncludingStderr: string = '';
@@ -44,7 +44,7 @@ export namespace cpUtils {
             const childProc: cp.ChildProcess = cp.spawn(command, args, options);
 
             if (outputChannel) {
-                outputChannel.appendLine(localize('runningCommand', 'Running command: "{0} {1}"...', command, formattedArgs));
+                outputChannel.appendLog(localize('runningCommand', 'Running command: "{0} {1}"...', command, formattedArgs));
             }
 
             childProc.stdout.on('data', (data: string | Buffer) => {

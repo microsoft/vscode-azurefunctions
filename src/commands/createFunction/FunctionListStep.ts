@@ -30,8 +30,8 @@ import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCr
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
 
-    private _triggerSettings: { [key: string]: string | undefined };
-    private _isProjectWizard: boolean;
+    private readonly _triggerSettings: { [key: string]: string | undefined };
+    private readonly _isProjectWizard: boolean;
 
     private constructor(triggerSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
         super();

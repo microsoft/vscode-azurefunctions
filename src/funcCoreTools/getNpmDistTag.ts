@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import request = require('request-promise');
 import * as semver from 'semver';
 import { ProjectRuntime } from '../constants';
 import { localize } from '../localize';
+import { requestUtils } from '../utils/requestUtils';
 
 const npmRegistryUri: string = 'https://aka.ms/AA2qmnu';
 
@@ -18,7 +17,9 @@ interface IPackageMetadata {
 }
 
 export async function getNpmDistTag(runtime: ProjectRuntime): Promise<INpmDistTag> {
-    const packageMetadata: IPackageMetadata = <IPackageMetadata>JSON.parse(await <Thenable<string>>request(npmRegistryUri));
+    const request: requestUtils.Request = await requestUtils.getDefaultRequest(npmRegistryUri);
+    const response: string = await requestUtils.sendRequest(request);
+    const packageMetadata: IPackageMetadata = <IPackageMetadata>JSON.parse(response);
     let majorVersion: string;
     switch (runtime) {
         case ProjectRuntime.v1:

@@ -91,11 +91,11 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             this._deletingProxy = true;
             try {
                 ext.outputChannel.show(true);
-                ext.outputChannel.appendLine(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
+                ext.outputChannel.appendLog(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
                 this._etag = await putFile(this.root.client, data, this._proxiesJsonPath, this._etag);
-                ext.outputChannel.appendLine(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
+                ext.outputChannel.appendLog(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;
             }

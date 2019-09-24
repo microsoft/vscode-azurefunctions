@@ -18,7 +18,7 @@ import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
-    private _bindingsNode: BindingsTreeItem;
+    private readonly _bindingsNode: BindingsTreeItem;
 
     private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string) {
         super(parent, config, name);
@@ -64,10 +64,10 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this.name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
-            ext.outputChannel.appendLine(deleting);
+            ext.outputChannel.appendLog(deleting);
             await this.client.deleteFunction(this.name);
             window.showInformationMessage(deleteSucceeded);
-            ext.outputChannel.appendLine(deleteSucceeded);
+            ext.outputChannel.appendLog(deleteSucceeded);
         });
     }
 

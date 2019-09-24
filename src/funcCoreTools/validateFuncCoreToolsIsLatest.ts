@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import request = require('request-promise');
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
@@ -12,6 +10,7 @@ import { PackageManager, ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { openUrl } from '../utils/openUrl';
+import { requestUtils } from '../utils/requestUtils';
 import { convertStringToRuntime, getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
@@ -104,7 +103,8 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
     try {
         if (packageManager === PackageManager.brew) {
             const brewRegistryUri: string = 'https://aka.ms/AA1t7go';
-            const brewInfo: string = await <Thenable<string>>request(brewRegistryUri);
+            const request: requestUtils.Request = await requestUtils.getDefaultRequest(brewRegistryUri);
+            const brewInfo: string = await requestUtils.sendRequest(request);
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
             if (matches && matches.length > 1) {
                 return matches[1];

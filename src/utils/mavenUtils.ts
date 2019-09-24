@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext, TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';
 import { openUrl } from './openUrl';
@@ -48,7 +49,7 @@ export namespace mavenUtils {
     }
 
     export async function executeMvnCommand(telemetryProperties: TelemetryProperties | undefined, outputChannel: vscode.OutputChannel | undefined, workingDirectory: string | undefined, ...args: string[]): Promise<string> {
-        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(outputChannel, workingDirectory, mvnCommand, ...args);
+        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(ext.outputChannel, workingDirectory, mvnCommand, ...args);
         if (result.code !== 0) {
             const mvnErrorRegexp: RegExp = new RegExp(/^\[ERROR\](.*)$/, 'gm');
             const linesWithErrors: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(mvnErrorRegexp);

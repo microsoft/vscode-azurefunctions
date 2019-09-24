@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, AzureTreeItem, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createTelemetryReporter, IActionContext, registerCommand, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { addBinding } from './commands/addBinding/addBinding';
@@ -39,14 +39,15 @@ import { startStreamingLogs } from './commands/logstream/startStreamingLogs';
 import { stopStreamingLogs } from './commands/logstream/stopStreamingLogs';
 import { openInPortal } from './commands/openInPortal';
 import { pickFuncProcess } from './commands/pickFuncProcess';
-import { remoteDebugFunctionApp } from './commands/remoteDebugFunctionApp';
+import { startRemoteDebug } from './commands/remoteDebug/startRemoteDebug';
+import { remoteDebugJavaFunctionApp } from './commands/remoteDebugJava/remoteDebugJavaFunctionApp';
 import { renameAppSetting } from './commands/renameAppSetting';
 import { restartFunctionApp } from './commands/restartFunctionApp';
 import { startFunctionApp } from './commands/startFunctionApp';
 import { stopFunctionApp } from './commands/stopFunctionApp';
 import { swapSlot } from './commands/swapSlot';
 import { viewProperties } from './commands/viewProperties';
-import { func, showOutputChannelCommandId } from './constants';
+import { extensionPrefix, func, showOutputChannelCommandId } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -66,7 +67,7 @@ import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigO
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
-    ext.outputChannel = vscode.window.createOutputChannel('Azure Functions');
+    ext.outputChannel = createAzExtOutputChannel('Azure Functions', extensionPrefix);
     context.subscriptions.push(ext.outputChannel);
     ext.ui = new AzureUserInput(context.globalState);
 
@@ -128,7 +129,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
         registerCommand('azureFunctions.appSettings.delete', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, AppSettingTreeItem.contextValue, node));
         registerCommand('azureFunctions.appSettings.toggleSlotSetting', toggleSlotSetting);
-        registerCommand('azureFunctions.debugFunctionAppOnAzure', remoteDebugFunctionApp);
+        registerCommand('azureFunctions.startRemoteDebug', startRemoteDebug);
+        registerCommand('azureFunctions.startJavaRemoteDebug', remoteDebugJavaFunctionApp);
         registerCommand('azureFunctions.deleteProxy', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, ProxyTreeItem.contextValue, node));
         registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
         registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);

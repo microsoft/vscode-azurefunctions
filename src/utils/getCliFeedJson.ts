@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable-next-line:no-require-imports
-import request = require('request-promise');
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
+import { requestUtils } from './requestUtils';
 
 const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
 const v1DefaultNodeVersion: string = '6.5.0';
@@ -38,11 +37,9 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
         context.telemetry.properties.isActivationEvent = 'true';
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
-        const funcJsonOptions: request.OptionsWithUri = {
-            method: 'GET',
-            uri: funcCliFeedUrl
-        };
-        return <cliFeedJsonResponse>JSON.parse(await <Thenable<string>>request(funcJsonOptions).promise());
+        const request: requestUtils.Request = await requestUtils.getDefaultRequest(funcCliFeedUrl);
+        const response: string = await requestUtils.sendRequest(request);
+        return <cliFeedJsonResponse>JSON.parse(response);
     });
 }
 

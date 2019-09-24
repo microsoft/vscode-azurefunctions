@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import { ext } from '../extensionVariables';
 import { cpUtils } from './cpUtils';
 
 export namespace gitUtils {
@@ -17,8 +17,8 @@ export namespace gitUtils {
         }
     }
 
-    export async function gitInit(outputChannel: vscode.OutputChannel, workingDirectory: string): Promise<void> {
-        await cpUtils.executeCommand(outputChannel, workingDirectory, gitCommand, 'init');
+    export async function gitInit(workingDirectory: string): Promise<void> {
+        await cpUtils.executeCommand(ext.outputChannel, workingDirectory, gitCommand, 'init');
     }
 
     export async function isInsideRepo(workingDirectory: string): Promise<boolean> {

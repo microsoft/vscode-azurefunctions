@@ -55,7 +55,7 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
 
         for (const key of Object.keys(newAppSettings)) {
             const value: string = newAppSettings[key];
-            ext.outputChannel.appendLine(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
+            ext.outputChannel.appendLog(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
             remoteProperties[key] = value;
         }
 
