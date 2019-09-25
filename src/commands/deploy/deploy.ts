@@ -24,9 +24,7 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
     addLocalFuncTelemetry(context);
 
     let node: SlotTreeItemBase | undefined;
-
-    const workspaceFsPath: string = await workspaceUtil.getDeploymentWorkspace(target);
-    let deployFsPath: string = await appservice.getDeployFsPath(workspaceFsPath, extensionPrefix);
+    let deployFsPath: string = await appservice.getDeployFsPath(target, extensionPrefix);
 
     if (target instanceof SlotTreeItemBase) {
         node = target;
