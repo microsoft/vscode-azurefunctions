@@ -7,7 +7,8 @@ import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { extInstallCommand, func, funcExtInstallCommand, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { extInstallCommand, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { ext } from '../extensionVariables';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { getFuncTaskCommand, IFuncTaskCommand } from './getFuncTaskCommand';
@@ -133,6 +134,6 @@ function getExtensionInstallTask(folder: WorkspaceFolder, projectRoot: string): 
         folder,
         extInstallCommand,
         func,
-        new ShellExecution(funcExtInstallCommand, { cwd: projectRoot })
+        new ShellExecution(`${ext.funcCliPath} ${extInstallCommand}`, { cwd: projectRoot })
     );
 }

@@ -5,6 +5,7 @@
 
 import { ExtensionContext } from "vscode";
 import { AzExtTreeDataProvider, IAzExtOutputChannel, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
+import { func } from "./constants";
 import { IBindingTemplate } from "./templates/IBindingTemplate";
 import { TemplateProvider } from "./templates/TemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
@@ -20,7 +21,7 @@ export namespace ext {
     export let ui: IAzureUserInput;
     export let templateProviderTask: Promise<TemplateProvider>;
     export let reporter: ITelemetryReporter;
-    export let funcCliPath: string = 'func';
+    export let funcCliPath: string = func;
     export let templateSource: TemplateSource | undefined;
     export let scriptBindings: IBindingTemplate[];
     // tslint:disable-next-line: strict-boolean-expressions
