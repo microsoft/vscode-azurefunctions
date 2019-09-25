@@ -28,7 +28,7 @@ export class BindingsTreeItem extends AzExtParentTreeItem {
     }
 
     public get iconPath(): treeUtils.IThemedIconPath {
-        return treeUtils.getThemedIconPath('BulletList');
+        return treeUtils.getThemedIconPath('list-unordered');
     }
 
     public hasMoreChildrenImpl(): boolean {

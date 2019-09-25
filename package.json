@@ -291,8 +291,8 @@
                 "title": "%azFunc.viewDeploymentLogs%",
                 "category": "Azure Functions",
                 "icon": {
-                    "light": "resources/light/Log_16x.svg",
-                    "dark": "resources/dark/Log_16x.svg"
+                    "light": "resources/light/go-to-file.svg",
+                    "dark": "resources/dark/go-to-file.svg"
                 }
             },
             {
