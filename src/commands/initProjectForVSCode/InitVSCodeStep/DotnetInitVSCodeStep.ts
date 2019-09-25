@@ -86,17 +86,28 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     }
 
     protected getTasks(): TaskDefinition[] {
+        const commonArgs: string[] = ['/property:GenerateFullPaths=true', '/consoleloggerparameters:NoSummary'];
+        const releaseArgs: string[] = ['--configuration', 'Release'];
+
         return [
             {
                 label: 'clean',
-                command: 'dotnet clean',
-                type: 'shell',
+                command: 'dotnet',
+                args: [
+                    'clean',
+                    ...commonArgs
+                ],
+                type: 'process',
                 problemMatcher: '$msCompile'
             },
             {
                 label: 'build',
-                command: 'dotnet build',
-                type: 'shell',
+                command: 'dotnet',
+                args: [
+                    'build',
+                    ...commonArgs
+                ],
+                type: 'process',
                 dependsOn: 'clean',
                 group: {
                     kind: 'build',
@@ -106,14 +117,24 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             },
             {
                 label: 'clean release',
-                command: 'dotnet clean --configuration Release',
-                type: 'shell',
+                command: 'dotnet',
+                args: [
+                    'clean',
+                    ...releaseArgs,
+                    ...commonArgs
+                ],
+                type: 'process',
                 problemMatcher: '$msCompile'
             },
             {
                 label: dotnetPublishTaskLabel,
-                command: 'dotnet publish --configuration Release',
-                type: 'shell',
+                command: 'dotnet',
+                args: [
+                    'publish',
+                    ...releaseArgs,
+                    ...commonArgs
+                ],
+                type: 'process',
                 dependsOn: 'clean release',
                 problemMatcher: '$msCompile'
             },
