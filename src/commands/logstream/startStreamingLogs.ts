@@ -23,6 +23,9 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
     const client: appservice.SiteClient = treeItem.client;
 
     if (client.isLinux) {
+        // https://github.com/microsoft/vscode-azurefunctions/issues/1472
+        await appservice.pingFunctionApp(treeItem.client);
+
         await openLiveMetricsStream(treeItem);
     } else {
         const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
