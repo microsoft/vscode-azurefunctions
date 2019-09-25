@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isString } from 'util';
-import { ProjectLanguage } from '../constants';
-import { ext } from '../extensionVariables';
-import { IFunctionBinding, ParsedFunctionJson } from '../funcConfig/function';
-import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from './IBindingTemplate';
-import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { ProjectLanguage } from '../../constants';
+import { IFunctionBinding, ParsedFunctionJson } from '../../funcConfig/function';
+import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
+import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
+import { ITemplates } from '../ITemplates';
 
 /**
  * Describes a script template before it has been parsed
@@ -217,16 +217,17 @@ export interface IScriptFunctionTemplate extends IFunctionTemplate {
  * Parses templates contained in the templateApiZip of the functions cli feed. This contains all 'script' templates, including JavaScript, C#Script, Python, etc.
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
-export function parseScriptTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): IFunctionTemplate[] {
-    ext.scriptBindings = parseScriptBindings(<IConfig>rawConfig, <IResources>rawResources);
+export function parseScriptTemplates(rawResources: object, rawTemplates: object[], rawConfig: object): ITemplates {
+    const bindingTemplates: IBindingTemplate[] = parseScriptBindings(<IConfig>rawConfig, <IResources>rawResources);
 
-    const templates: IFunctionTemplate[] = [];
+    const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
-            templates.push(parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, ext.scriptBindings));
+            functionTemplates.push(parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, bindingTemplates));
         } catch (error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }
-    return templates;
+
+    return { functionTemplates, bindingTemplates };
 }

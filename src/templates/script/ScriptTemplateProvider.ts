@@ -8,27 +8,28 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ProjectRuntime } from '../constants';
-import { ext } from '../extensionVariables';
-import { downloadFile } from '../utils/fs';
-import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
-import { IFunctionTemplate } from './IFunctionTemplate';
+import { ext } from '../../extensionVariables';
+import { downloadFile } from '../../utils/fs';
+import { cliFeedJsonResponse } from '../../utils/getCliFeedJson';
+import { ITemplates } from '../ITemplates';
+import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
+import { getScriptResourcesPath } from './getScriptResourcesPath';
 import { parseScriptTemplates } from './parseScriptTemplates';
-import { TemplateRetriever, TemplateType } from './TemplateRetriever';
 
-export class ScriptTemplateRetriever extends TemplateRetriever {
+export class ScriptTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
-    private readonly _templatesKey: string = 'FunctionTemplates';
-    private readonly _configKey: string = 'FunctionTemplateConfig';
-    private readonly _resourcesKey: string = 'FunctionTemplateResources';
-    private _rawResources: object;
-    private _rawTemplates: object[];
-    private _rawConfig: object;
+    protected readonly _templatesKey: string = 'FunctionTemplates';
+    protected readonly _configKey: string = 'FunctionTemplateConfig';
+    protected readonly _resourcesKey: string = 'FunctionTemplateResources';
 
-    protected async getTemplatesFromCache(runtime: ProjectRuntime): Promise<IFunctionTemplate[] | undefined> {
-        const cachedResources: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._resourcesKey, runtime));
-        const cachedTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._templatesKey, runtime));
-        const cachedConfig: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._configKey, runtime));
+    protected _rawResources: object;
+    protected _rawTemplates: object[];
+    protected _rawConfig: object;
+
+    public async getCachedTemplates(): Promise<ITemplates | undefined> {
+        const cachedResources: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._resourcesKey));
+        const cachedTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._templatesKey));
+        const cachedConfig: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._configKey));
         if (cachedResources && cachedTemplates && cachedConfig) {
             return parseScriptTemplates(cachedResources, cachedTemplates, cachedConfig);
         } else {
@@ -36,7 +37,7 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
         }
     }
 
-    protected async getTemplatesFromCliFeed(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _runtime: ProjectRuntime, _context: IActionContext): Promise<IFunctionTemplate[]> {
+    public async getLatestTemplates(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _context: IActionContext): Promise<ITemplates> {
         const templatesPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
         try {
             const filePath: string = path.join(templatesPath, `templates-${templateVersion}.zip`);
@@ -61,19 +62,19 @@ export class ScriptTemplateRetriever extends TemplateRetriever {
         }
     }
 
-    protected async getTemplatesFromBackup(runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
-        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', runtime));
+    public async getBackupTemplates(): Promise<ITemplates> {
+        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', this.runtime));
         return await this.parseTemplates(backupTemplatesPath);
     }
 
-    protected async cacheTemplates(runtime: ProjectRuntime): Promise<void> {
-        ext.context.globalState.update(this.getCacheKey(this._templatesKey, runtime), this._rawTemplates);
-        ext.context.globalState.update(this.getCacheKey(this._configKey, runtime), this._rawConfig);
-        ext.context.globalState.update(this.getCacheKey(this._resourcesKey, runtime), this._rawResources);
+    public async cacheTemplates(): Promise<void> {
+        ext.context.globalState.update(this.getCacheKey(this._templatesKey), this._rawTemplates);
+        ext.context.globalState.update(this.getCacheKey(this._configKey), this._rawConfig);
+        ext.context.globalState.update(this.getCacheKey(this._resourcesKey), this._rawResources);
     }
 
-    private async parseTemplates(templatesPath: string): Promise<IFunctionTemplate[]> {
-        this._rawResources = <object>await fse.readJSON(await getResourcesPath(templatesPath));
+    protected async parseTemplates(templatesPath: string): Promise<ITemplates> {
+        this._rawResources = <object>await fse.readJSON(await getScriptResourcesPath(templatesPath));
         this._rawTemplates = <object[]>await fse.readJSON(path.join(templatesPath, 'templates', 'templates.json'));
         this._rawConfig = <object>await fse.readJSON(path.join(templatesPath, 'bindings', 'bindings.json'));
 

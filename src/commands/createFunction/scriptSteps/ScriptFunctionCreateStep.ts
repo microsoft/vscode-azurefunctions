@@ -8,7 +8,7 @@ import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
-import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
+import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';

@@ -19,14 +19,18 @@ export namespace mavenUtils {
             await cpUtils.executeCommand(undefined, undefined, mvnCommand, '--version');
         } catch (error) {
             const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
-            // don't wait
-            vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
-                if (result === DialogResponses.learnMore) {
-                    await openUrl('https://aka.ms/azurefunction_maven');
-                }
-            });
-            context.errorHandling.suppressDisplay = true; // Swallow errors in case show two error message
-            throw new Error(localize('azFunc.mvnNotFound', 'Failed to find "maven" on path.'));
+
+            if (!context.errorHandling.suppressDisplay) {
+                // don't wait
+                vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
+                    if (result === DialogResponses.learnMore) {
+                        await openUrl('https://aka.ms/azurefunction_maven');
+                    }
+                });
+                context.errorHandling.suppressDisplay = true;
+            }
+
+            throw new Error(message);
         }
     }
 

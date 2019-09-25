@@ -6,16 +6,16 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ext, getResourcesPath } from '../extension.bundle';
+import { ext, getScriptResourcesPath } from '../extension.bundle';
 import { testFolderPath } from './global.test';
 
 async function verifyLanguage(vscodeLanguage: string, fileName: string, templatesPath?: string): Promise<void> {
     templatesPath = templatesPath || ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', '~2'));
-    const actual: string = await getResourcesPath(templatesPath, vscodeLanguage);
+    const actual: string = await getScriptResourcesPath(templatesPath, vscodeLanguage);
     assert.equal(actual, path.join(templatesPath, 'resources', fileName));
 }
 
-suite('getResourcesPath', async () => {
+suite('getScriptResourcesPath', async () => {
     let extraTemplatesPath: string;
     suiteSetup(async () => {
         extraTemplatesPath = path.join(testFolderPath, 'extraTemplates');

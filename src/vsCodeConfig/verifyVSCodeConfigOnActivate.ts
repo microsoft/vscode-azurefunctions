@@ -5,13 +5,13 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage, projectLanguageSetting, projectRuntimeSetting } from '../constants';
+import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { getWorkspaceSetting, updateGlobalSetting } from './settings';
+import { convertStringToRuntime, getWorkspaceSetting, updateGlobalSetting } from './settings';
 import { verifyJavaDeployConfigIsValid } from './verifyJavaDeployConfigIsValid';
 import { verifyJSDebugConfigIsValid } from './verifyJSDebugConfigIsValid';
 import { verifyPythonVenv } from './verifyPythonVenv';
@@ -29,7 +29,17 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
             if (projectPath) {
                 context.telemetry.suppressIfSuccessful = false;
 
-                if (isInitializedProject(projectPath)) {
+                const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                const runtime: ProjectRuntime | undefined = convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, projectPath));
+                if (language !== undefined && runtime !== undefined) {
+                    // Don't wait
+                    // tslint:disable-next-line: no-floating-promises
+                    callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
+                        templatesContext.telemetry.properties.isActivationEvent = 'true';
+                        templatesContext.errorHandling.suppressDisplay = true;
+                        await ext.templateProvider.getFunctionTemplates(templatesContext, language, runtime);
+                    });
+
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);
                     context.telemetry.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
@@ -74,10 +84,4 @@ async function promptToInitializeProject(workspacePath: string, context: IAction
     } else {
         context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
-}
-
-function isInitializedProject(projectPath: string): boolean {
-    const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-    const runtime: string | undefined = getWorkspaceSetting(projectRuntimeSetting, projectPath);
-    return !!language && !!runtime;
 }

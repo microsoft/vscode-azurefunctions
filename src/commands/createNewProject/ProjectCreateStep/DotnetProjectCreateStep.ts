@@ -9,7 +9,7 @@ import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, ProjectRuntime } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
-import { executeDotnetTemplateCommand } from '../../../templates/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';

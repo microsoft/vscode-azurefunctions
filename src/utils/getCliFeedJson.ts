@@ -37,10 +37,14 @@ export async function tryGetCliFeedJson(): Promise<cliFeedJsonResponse | undefin
         context.telemetry.properties.isActivationEvent = 'true';
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
-        const request: requestUtils.Request = await requestUtils.getDefaultRequest(funcCliFeedUrl);
-        const response: string = await requestUtils.sendRequest(request);
-        return <cliFeedJsonResponse>JSON.parse(response);
+        return getCliFeedJson();
     });
+}
+
+export async function getCliFeedJson(): Promise<cliFeedJsonResponse> {
+    const request: requestUtils.Request = await requestUtils.getDefaultRequest(funcCliFeedUrl);
+    const response: string = await requestUtils.sendRequest(request);
+    return <cliFeedJsonResponse>JSON.parse(response);
 }
 
 export function getFeedRuntime(runtime: ProjectRuntime): string {
@@ -56,7 +60,7 @@ export function getFeedRuntime(runtime: ProjectRuntime): string {
             throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
     }
 
-    return ext.templateSource === TemplateSource.StagingCliFeed ? `${result}-prerelease` : result;
+    return ext.templateProvider.templateSource === TemplateSource.Staging ? `${result}-prerelease` : result;
 }
 
 /**

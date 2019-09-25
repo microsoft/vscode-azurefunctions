@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { ext, getRandomHexString, getTemplateProvider, parseError, TemplateProvider, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, ext, getRandomHexString, IActionContext, parseError, ProjectLanguage, ProjectRuntime, TemplateSource } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -25,7 +25,9 @@ export let testWorkspacePath: string;
 export let longRunningTestsEnabled: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
-let templatesMap: Map<TemplateSource, TemplateProvider>;
+export const testActionContext: IActionContext = { telemetry: { properties: {}, measurements: {} }, errorHandling: {} };
+
+let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
 
 // Runs before all tests
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
@@ -35,23 +37,20 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     testWorkspacePath = await initTestWorkspacePath();
 
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
-    await ext.templateProviderTask; // make sure default templates are loaded before setting up templates from other sources
     ext.outputChannel = new TestOutputChannel();
     ext.ui = testUserInput;
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
 
-    templatesMap = new Map();
-    try {
-        for (const key of Object.keys(TemplateSource)) {
-            const source: TemplateSource = <TemplateSource>TemplateSource[key];
-            ext.templateSource = source;
-            templatesMap.set(source, await getTemplateProvider());
-        }
-    } finally {
-        ext.templateSource = undefined;
+    await preLoadTemplates(ext.templateProvider);
+    templateProviderMap = new Map();
+    for (const key of Object.keys(TemplateSource)) {
+        const source: TemplateSource = <TemplateSource>TemplateSource[key];
+        templateProviderMap.set(source, new CentralTemplateProvider(source));
     }
+
+    await runForAllTemplateSources(async (_source, provider) => await preLoadTemplates(provider));
 
     // tslint:disable-next-line:strict-boolean-expressions
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
@@ -71,31 +70,44 @@ suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
     }
 });
 
-export async function runForAllTemplateSources(callback: (source: TemplateSource, templates: TemplateProvider) => Promise<void>): Promise<void> {
-    for (const source of templatesMap.keys()) {
-        await runForTemplateSource(source, (templates: TemplateProvider) => callback(source, templates));
+/**
+ * Pre-load templates so that the first related unit test doesn't time out
+ */
+async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void> {
+    console.log(`Loading templates for source "${provider.templateSource}"`);
+    const runtimes: ProjectRuntime[] = [ProjectRuntime.v1, ProjectRuntime.v2];
+    const languages: ProjectLanguage[] = [ProjectLanguage.JavaScript, ProjectLanguage.CSharp];
+
+    for (const runtime of runtimes) {
+        for (const language of languages) {
+            await provider.getFunctionTemplates(testActionContext, language, runtime);
+        }
     }
 }
 
-export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templates: TemplateProvider) => Promise<void>): Promise<void> {
-    const oldProvider: Promise<TemplateProvider> = ext.templateProviderTask;
+export async function runForAllTemplateSources(callback: (source: TemplateSource, templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
+    for (const source of templateProviderMap.keys()) {
+        await runForTemplateSource(source, (templateProvider: CentralTemplateProvider) => callback(source, templateProvider));
+    }
+}
+
+export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
+    const oldProvider: CentralTemplateProvider = ext.templateProvider;
     try {
-        let templates: TemplateProvider | undefined;
+        let templateProvider: CentralTemplateProvider | undefined;
         if (source === undefined) {
-            templates = await ext.templateProviderTask;
+            templateProvider = ext.templateProvider;
         } else {
-            templates = templatesMap.get(source);
-            if (!templates) {
+            templateProvider = templateProviderMap.get(source);
+            if (!templateProvider) {
                 throw new Error(`Unrecognized source ${source}`);
             }
-            ext.templateSource = source;
-            ext.templateProviderTask = Promise.resolve(templates);
+            ext.templateProvider = templateProvider;
         }
 
-        await callback(templates);
+        await callback(templateProvider);
     } finally {
-        ext.templateSource = undefined;
-        ext.templateProviderTask = oldProvider;
+        ext.templateProvider = oldProvider;
     }
 }
 

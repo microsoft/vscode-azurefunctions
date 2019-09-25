@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { localize } from "../../../localize";
-import { IScriptFunctionTemplate } from '../../../templates/parseScriptTemplates';
+import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';

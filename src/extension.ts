@@ -58,7 +58,7 @@ import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { installOrUpdateFuncCoreTools } from './funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from './funcCoreTools/uninstallFuncCoreTools';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { getTemplateProvider } from './templates/TemplateProvider';
+import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
@@ -97,7 +97,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             await verifyVSCodeConfigOnActivate(actionContext, event.added);
         });
 
-        ext.templateProviderTask = getTemplateProvider();
+        ext.templateProvider = new CentralTemplateProvider();
 
         registerCommand('azureFunctions.selectSubscriptions', () => vscode.commands.executeCommand('azure-account.selectSubscriptions'));
         registerCommand('azureFunctions.refresh', async (_actionContext: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(node));
