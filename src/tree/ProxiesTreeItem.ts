@@ -44,7 +44,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): treeUtils.IThemedIconPath {
-        return treeUtils.getThemedIconPath('BulletList');
+        return treeUtils.getThemedIconPath('list-unordered');
     }
 
     public get readOnly(): boolean {

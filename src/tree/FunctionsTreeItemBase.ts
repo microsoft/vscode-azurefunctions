@@ -37,6 +37,6 @@ export abstract class FunctionsTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get iconPath(): treeUtils.IThemedIconPath {
-        return treeUtils.getThemedIconPath('BulletList');
+        return treeUtils.getThemedIconPath('list-unordered');
     }
 }
