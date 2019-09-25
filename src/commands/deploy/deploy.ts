@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
+import { extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -16,7 +16,6 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import { getDeployFsPath } from './getDeployFsPath';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
@@ -25,7 +24,8 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
     addLocalFuncTelemetry(context);
 
     let node: SlotTreeItemBase | undefined;
-    let deployFsPath: string = await getDeployFsPath(target);
+    let deployFsPath: string = await appservice.getDeployFsPath(target, extensionPrefix);
+
     if (target instanceof SlotTreeItemBase) {
         node = target;
     }
