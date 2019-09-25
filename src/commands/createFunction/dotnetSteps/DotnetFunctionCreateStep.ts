@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../../../constants';
-import { executeDotnetTemplateCommand } from '../../../templates/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
 import { dotnetUtils } from '../../../utils/dotnetUtils';

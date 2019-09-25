@@ -10,7 +10,6 @@ import { ext } from '../../extensionVariables';
 import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { TemplateProvider } from '../../templates/TemplateProvider';
 import { nonNullProp } from '../../utils/nonNull';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
@@ -44,8 +43,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         if (options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-            const templateProvider: TemplateProvider = await ext.templateProviderTask;
-            const templates: IFunctionTemplate[] = await templateProvider.getTemplates(language, runtime, context.projectPath, TemplateFilter.All, context.telemetry.properties);
+            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, language, runtime, TemplateFilter.All);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
@@ -143,12 +141,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-
-        const provider: TemplateProvider = await ext.templateProviderTask;
-        let templates: IFunctionTemplate[] = await provider.getTemplates(language, runtime, context.projectPath, templateFilter, context.telemetry.properties);
-        templates = templates.sort((a, b) => sortTemplates(a, b, templateFilter));
-
-        const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates.map(t => { return { label: t.name, data: t }; });
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, language, runtime, templateFilter);
+        const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
+            .sort((a, b) => sortTemplates(a, b, templateFilter))
+            .map(t => { return { label: t.name, data: t }; });
 
         if (this._isProjectWizard) {
             picks.unshift({

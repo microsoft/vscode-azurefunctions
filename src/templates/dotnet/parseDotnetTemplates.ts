@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectLanguage, ProjectRuntime } from '../constants';
-import { IBindingSetting, ValueType } from './IBindingTemplate';
-import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ext } from '../../extensionVariables';
+import { IBindingSetting, ValueType } from '../IBindingTemplate';
+import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 
 /**
  * Describes a dotnet template before it has been parsed
@@ -70,7 +72,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
  * Parses templates used by the .NET CLI
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
-export function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRuntime): IFunctionTemplate[] {
+export async function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
     const templates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
@@ -83,5 +85,46 @@ export function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRun
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }
+
+    await copyCSharpSettingsFromJS(templates, runtime);
+
     return templates;
+}
+
+/**
+ * The dotnet templates do not provide the validation and resourceType information that we desire
+ * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
+ */
+async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], runtime: ProjectRuntime): Promise<void> {
+    // Use separate telemetry event since we don't want to overwrite C# telemetry with JS telemetry
+    await callWithTelemetryAndErrorHandling('copyCSharpSettingsFromJS', async (jsContext: IActionContext) => {
+        jsContext.errorHandling.suppressDisplay = true;
+        jsContext.telemetry.properties.isActivationEvent = 'true';
+
+        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, ProjectLanguage.JavaScript, runtime);
+        for (const csharpTemplate of csharpTemplates) {
+            const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
+            if (jsTemplate) {
+                for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
+                    const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
+                    if (jsSetting) {
+                        cSharpSetting.resourceType = jsSetting.resourceType;
+                        cSharpSetting.validateSetting = jsSetting.validateSetting;
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Converts ids like "Azure.Function.CSharp.QueueTrigger.2.x" or "QueueTrigger-JavaScript" to "queuetrigger"
+ */
+function normalizeId(id: string): string {
+    const match: RegExpMatchArray | null = id.match(/[a-z]+Trigger/i);
+    return normalizeName(match ? match[0] : id);
+}
+
+function normalizeName(name: string): string {
+    return name.toLowerCase().replace(/\s/g, '');
 }

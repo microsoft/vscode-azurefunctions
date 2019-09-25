@@ -6,7 +6,6 @@
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
-import { removeLanguageFromId } from "../../../templates/TemplateProvider";
 import { mavenUtils } from "../../../utils/mavenUtils";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaFunctionFilePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -51,4 +50,8 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
 
         return getJavaFunctionFilePath(context.projectPath, packageName, functionName);
     }
+}
+
+function removeLanguageFromId(id: string): string {
+    return id.split('-')[0];
 }

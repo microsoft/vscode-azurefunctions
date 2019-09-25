@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { ProjectRuntime } from '../constants';
-import { ext } from "../extensionVariables";
-import { cpUtils } from "../utils/cpUtils";
+import { ProjectRuntime } from '../../constants';
+import { ext } from "../../extensionVariables";
+import { cpUtils } from "../../utils/cpUtils";
 
 export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
@@ -26,7 +26,7 @@ export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, work
 
 export function getDotnetTemplatesPath(): string {
     // tslint:disable-next-line:strict-boolean-expressions
-    return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateSource || '');
+    return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
 }
 
 export function getDotnetItemTemplatePath(runtime: ProjectRuntime): string {

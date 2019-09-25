@@ -3,208 +3,185 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext, parseError, TelemetryProperties } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateVersionSetting } from '../constants';
+import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
-import { dotnetUtils } from '../utils/dotnetUtils';
-import { cliFeedJsonResponse, getFeedRuntime, tryGetCliFeedJson } from '../utils/getCliFeedJson';
-import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
-import { DotnetTemplateRetriever, getDotnetVerifiedTemplateIds } from './DotnetTemplateRetriever';
-import { IBindingSetting } from './IBindingTemplate';
+import { cliFeedJsonResponse, getCliFeedJson, getFeedRuntime } from '../utils/getCliFeedJson';
+import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
+import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
+import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
-import { parseJavaTemplates } from './parseJavaTemplates';
-import { getScriptVerifiedTemplateIds, ScriptTemplateRetriever } from './ScriptTemplateRetriever';
-import { TemplateRetriever } from './TemplateRetriever';
+import { ITemplates } from './ITemplates';
+import { JavaTemplateProvider } from './java/JavaTemplateProvider';
+import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
+import { TemplateProviderBase } from './TemplateProviderBase';
 
-export class TemplateProvider {
-    private readonly _templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
-    // if there are no templates, then there is likely no internet or a problem with the clifeed url
-    private readonly _noInternetErrMsg: string = localize('retryInternet', 'There was an error in retrieving the templates.  Recheck your internet connection and try again.');
-    private _javaTemplates: IFunctionTemplate[] | undefined;
+export class CentralTemplateProvider {
+    public readonly templateSource: TemplateSource | undefined;
+    private readonly _templatesTaskMap: { [key: string]: Promise<ITemplates> | undefined } = {};
 
-    constructor(templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined }) {
-        this._templatesMap = templatesMap;
-        this.copyCSharpSettingsFromJS();
+    public constructor(templateSource?: TemplateSource) {
+        this.templateSource = templateSource;
     }
 
-    public async getTemplates(language: string, runtime: string, functionAppPath: string, templateFilter?: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
-        const templates: IFunctionTemplate[] | undefined = this._templatesMap[runtime];
-        if (!templates) {
-            throw new Error(this._noInternetErrMsg);
+    public async getFunctionTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, language, runtime);
+        const functionTemplates: IFunctionTemplate[] = templates.functionTemplates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
+        switch (templateFilter) {
+            case TemplateFilter.All:
+                return functionTemplates;
+            case TemplateFilter.Core:
+                return functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
+            case TemplateFilter.Verified:
+            default:
+                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(runtime).concat(getDotnetVerifiedTemplateIds(runtime));
+                return functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
         }
+    }
 
-        if (language === ProjectLanguage.Java) {
-            if (!this._javaTemplates) {
-                this._javaTemplates = await parseJavaTemplates(templates, functionAppPath, telemetryProperties);
-            }
-            return this._javaTemplates;
+    public async getBindingTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime): Promise<IBindingTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, language, runtime);
+        if (!templates.bindingTemplates) {
+            throw new Error(localize('bindingTemplatesError', 'Binding templates are not supported for language "{0}" and runtime "{1}"', language, runtime));
         } else {
-            let filterTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
-            switch (templateFilter) {
-                case TemplateFilter.All:
-                    break;
-                case TemplateFilter.Core:
-                    filterTemplates = filterTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
-                    break;
-                case TemplateFilter.Verified:
-                default:
-                    const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(runtime).concat(getDotnetVerifiedTemplateIds(runtime));
-                    filterTemplates = filterTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
-            }
-
-            return filterTemplates;
+            return templates.bindingTemplates;
         }
     }
 
     /**
-     * The dotnet templates do not provide the validation and resourceType information that we desire
-     * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
+     * Ensures we only have one task going at a time for refreshing templates
      */
-    private copyCSharpSettingsFromJS(): void {
-        for (const key of Object.keys(this._templatesMap)) {
-            const templates: IFunctionTemplate[] | undefined = this._templatesMap[key];
-            if (templates) {
-                const jsTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.JavaScript.toLowerCase());
-                const csharpTemplates: IFunctionTemplate[] = templates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === ProjectLanguage.CSharp.toLowerCase());
-                for (const csharpTemplate of csharpTemplates) {
-                    const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
-                    if (jsTemplate) {
-                        for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
-                            const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
-                            if (jsSetting) {
-                                cSharpSetting.resourceType = jsSetting.resourceType;
-                                cSharpSetting.validateSetting = jsSetting.validateSetting;
-                            }
-                        }
-                    }
-                }
-            }
+    private async getTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime): Promise<ITemplates> {
+        let provider: TemplateProviderBase;
+        switch (language) {
+            case ProjectLanguage.CSharp:
+            case ProjectLanguage.FSharp:
+                provider = new DotnetTemplateProvider(runtime);
+                break;
+            case ProjectLanguage.Java:
+                provider = new JavaTemplateProvider(runtime);
+                break;
+            default:
+                provider = new ScriptTemplateProvider(runtime);
+                break;
         }
-    }
-}
 
-/**
- * Converts ids like "Azure.Function.CSharp.QueueTrigger.2.x" or "QueueTrigger-JavaScript" to "queuetrigger"
- */
-function normalizeId(id: string): string {
-    const match: RegExpMatchArray | null = id.match(/[a-z]+Trigger/i);
-    return normalizeName(match ? match[0] : id);
-}
-
-function normalizeName(name: string): string {
-    return name.toLowerCase().replace(/\s/g, '');
-}
-
-export async function getTemplateProvider(): Promise<TemplateProvider> {
-    const templatesMap: { [runtime: string]: IFunctionTemplate[] | undefined } = {};
-    const cliFeedJson: cliFeedJsonResponse | undefined = await tryGetCliFeedJson();
-
-    const templateRetrievers: TemplateRetriever[] = [new ScriptTemplateRetriever()];
-    if (await dotnetUtils.isDotnetInstalled()) {
-        templateRetrievers.push(new DotnetTemplateRetriever());
-    }
-
-    for (const templateRetriever of templateRetrievers) {
-        for (const key of Object.keys(ProjectRuntime)) {
-            const runtime: ProjectRuntime = <ProjectRuntime>ProjectRuntime[key];
-
-            await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionTemplates', async (context: IActionContext) => {
-                context.errorHandling.suppressDisplay = true;
-                context.telemetry.properties.isActivationEvent = 'true';
-                context.telemetry.properties.runtime = runtime;
-                context.telemetry.properties.templateType = templateRetriever.templateType;
-                const templateVersion: string | undefined = await tryGetTemplateVersionSetting(context, cliFeedJson, runtime);
-                let templates: IFunctionTemplate[] | undefined;
-
-                // 1. Use the cached templates if they match templateVersion
-                // tslint:disable-next-line:strict-boolean-expressions
-                if (!ext.templateSource && ext.context.globalState.get(templateRetriever.getCacheKey(TemplateRetriever.templateVersionKey, runtime)) === templateVersion) {
-                    templates = await templateRetriever.tryGetTemplatesFromCache(context, runtime);
-                    context.telemetry.properties.templateSource = 'matchingCache';
-                }
-
-                // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
-                // tslint:disable-next-line:strict-boolean-expressions
-                if ((!ext.templateSource || ext.templateSource === TemplateSource.CliFeed || ext.templateSource === TemplateSource.StagingCliFeed) && !templates && cliFeedJson && templateVersion) {
-                    templates = await templateRetriever.tryGetTemplatesFromCliFeed(context, cliFeedJson, templateVersion, runtime);
-                    context.telemetry.properties.templateSource = 'cliFeed';
-                }
-
-                // 3. Use the cached templates, even if they don't match templateVersion
-                // tslint:disable-next-line:strict-boolean-expressions
-                if (!ext.templateSource && !templates) {
-                    templates = await templateRetriever.tryGetTemplatesFromCache(context, runtime);
-                    context.telemetry.properties.templateSource = 'mismatchCache';
-                }
-
-                // 4. Use backup templates shipped with the extension
-                // tslint:disable-next-line:strict-boolean-expressions
-                if ((!ext.templateSource || ext.templateSource === TemplateSource.Backup) && !templates) {
-                    templates = await templateRetriever.tryGetTemplatesFromBackup(context, runtime);
-                    context.telemetry.properties.templateSource = 'backupFromExtension';
-                }
-
-                if (templates) {
-                    // tslint:disable-next-line:strict-boolean-expressions
-                    templatesMap[runtime] = (templatesMap[runtime] || []).concat(templates);
-                } else {
-                    // Failed to get templates for this runtime
-                    context.telemetry.properties.templateSource = 'None';
-                }
-            });
-        }
-    }
-
-    return new TemplateProvider(templatesMap);
-}
-
-export function removeLanguageFromId(id: string): string {
-    return id.split('-')[0];
-}
-
-async function tryGetTemplateVersionSetting(context: IActionContext, cliFeedJson: cliFeedJsonResponse | undefined, runtime: ProjectRuntime): Promise<string | undefined> {
-    const feedRuntime: string = getFeedRuntime(runtime);
-    const userTemplateVersion: string | undefined = getWorkspaceSetting(templateVersionSetting);
-    try {
-        if (userTemplateVersion) {
-            context.telemetry.properties.userTemplateVersion = userTemplateVersion;
-        }
-        let templateVersion: string;
-        if (cliFeedJson) {
-            templateVersion = userTemplateVersion ? userTemplateVersion : cliFeedJson.tags[feedRuntime].release;
-            // tslint:disable-next-line:strict-boolean-expressions
-            if (!cliFeedJson.releases[templateVersion]) {
-                const invalidVersion: string = localize('invalidTemplateVersion', 'Failed to retrieve Azure Functions templates for version "{0}".', templateVersion);
-                const selectVersion: vscode.MessageItem = { title: localize('selectVersion', 'Select version') };
-                const useLatest: vscode.MessageItem = { title: localize('useLatest', 'Use latest') };
-                const warningInput: vscode.MessageItem = await ext.ui.showWarningMessage(invalidVersion, selectVersion, useLatest);
-                if (warningInput === selectVersion) {
-                    const releaseQuickPicks: vscode.QuickPickItem[] = [];
-                    for (const rel of Object.keys(cliFeedJson.releases)) {
-                        releaseQuickPicks.push({
-                            label: rel,
-                            description: ''
-                        });
-                    }
-                    const input: vscode.QuickPickItem | undefined = await ext.ui.showQuickPick(releaseQuickPicks, { placeHolder: invalidVersion });
-                    templateVersion = input.label;
-                    await updateGlobalSetting(templateVersionSetting, input.label);
-                } else {
-                    templateVersion = cliFeedJson.tags[feedRuntime].release;
-                    // reset user setting so that it always gets latest
-                    await updateGlobalSetting(templateVersionSetting, '');
-                }
-            }
+        const key: string = provider.templateType + provider.runtime;
+        let templatesTask: Promise<ITemplates> | undefined = this._templatesTaskMap[key];
+        if (templatesTask) {
+            return await templatesTask;
         } else {
-            return undefined;
+            templatesTask = this.refreshTemplates(context, provider);
+            this._templatesTaskMap[key] = templatesTask;
+            try {
+                return await templatesTask;
+            } catch (error) {
+                // If an error occurs, we want to start from scratch next time we try to get templates so remove this task from the map
+                delete this._templatesTaskMap[key];
+                throw error;
+            }
+        }
+    }
+
+    private async refreshTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
+        context.telemetry.properties.runtime = provider.runtime;
+        context.telemetry.properties.templateType = provider.templateType;
+
+        let result: ITemplates | undefined;
+        let latestTemplatesError: unknown;
+        try {
+            const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
+            const feedRuntime: string = getFeedRuntime(provider.runtime);
+            const templateVersion: string = cliFeedJson.tags[feedRuntime].release;
+            context.telemetry.properties.templateVersion = templateVersion;
+            const cachedTemplateVersion: string | undefined = ext.context.globalState.get(provider.getCacheKey(TemplateProviderBase.templateVersionKey));
+            context.telemetry.properties.cachedTemplateVersion = cachedTemplateVersion;
+
+            // 1. Use the cached templates if they match templateVersion
+            if (cachedTemplateVersion === templateVersion) {
+                result = await this.tryGetCachedTemplates(context, provider);
+            }
+
+            // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
+            if (!result) {
+                result = await this.getLatestTemplates(context, provider, cliFeedJson, templateVersion);
+            }
+        } catch (error) {
+            // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
+            latestTemplatesError = error;
+            const errorMessage: string = parseError(error).message;
+            ext.outputChannel.appendLog(localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage));
+            context.telemetry.properties.latestTemplatesError = errorMessage;
         }
 
-        return templateVersion;
-    } catch (error) {
-        // if cliJson does not have the template version being searched for, it will throw an error
-        context.telemetry.properties.userTemplateVersion = parseError(error).message;
+        // 3. Use the cached templates, even if they don't match templateVersion
+        if (!result) {
+            result = await this.tryGetCachedTemplates(context, provider);
+        }
+
+        // 4. Use backup templates shipped with the extension
+        if (!result) {
+            result = await this.tryGetBackupTemplates(context, provider);
+        }
+
+        if (result) {
+            return result;
+        } else if (latestTemplatesError !== undefined) {
+            throw latestTemplatesError;
+        } else {
+            // This should only happen for dev/test scenarios where we explicitly set templateSource
+            throw new Error(localize('templateSourceError', 'Internal error: Failed to get templates for source "{0}".', this.templateSource));
+        }
+    }
+
+    private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, cliFeedJson: cliFeedJsonResponse, templateVersion: string): Promise<ITemplates | undefined> {
+        // tslint:disable-next-line:strict-boolean-expressions
+        if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
+            context.telemetry.properties.templateSource = 'latest';
+            const result: ITemplates = await provider.getLatestTemplates(cliFeedJson, templateVersion, context);
+            ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), templateVersion);
+            await provider.cacheTemplates();
+            return result;
+        }
+
+        return undefined;
+    }
+
+    private async tryGetCachedTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates | undefined> {
+        // tslint:disable-next-line:strict-boolean-expressions
+        if (!this.templateSource) {
+            try {
+                context.telemetry.properties.templateSource = 'cache';
+                return await provider.getCachedTemplates();
+            } catch (error) {
+                const errorMessage: string = parseError(error).message;
+                ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
+                context.telemetry.properties.cachedTemplatesError = errorMessage;
+            }
+        }
+
+        return undefined;
+    }
+
+    private async tryGetBackupTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates | undefined> {
+        // tslint:disable-next-line:strict-boolean-expressions
+        if (!this.templateSource || this.templateSource === TemplateSource.Backup) {
+            try {
+                context.telemetry.properties.templateSource = 'backup';
+                const backupTemplateVersion: string = provider.getBackupVersion();
+                const result: ITemplates = await provider.getBackupTemplates();
+                ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), backupTemplateVersion);
+                await provider.cacheTemplates();
+                return result;
+            } catch (error) {
+                const errorMessage: string = parseError(error).message;
+                ext.outputChannel.appendLog(localize('backupTemplatesError', 'Failed to get backup templates: {0}', errorMessage));
+                context.telemetry.properties.backupTemplatesError = errorMessage;
+            }
+        }
+
         return undefined;
     }
 }

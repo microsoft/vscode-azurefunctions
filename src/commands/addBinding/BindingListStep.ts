@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
+import { ProjectLanguage, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IBindingTemplate } from '../../templates/IBindingTemplate';
@@ -17,7 +18,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
     public async prompt(context: IBindingWizardContext): Promise<void> {
         const direction: string = nonNullProp(context, 'bindingDirection');
         const placeHolder: string = localize('selectBinding', 'Select binding with direction "{0}"', direction);
-        context.bindingTemplate = (await ext.ui.showQuickPick(this.getPicks(direction), { placeHolder })).data;
+        context.bindingTemplate = (await ext.ui.showQuickPick(this.getPicks(context, direction), { placeHolder })).data;
     }
 
     public shouldPrompt(context: IBindingWizardContext): boolean {
@@ -35,13 +36,13 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
         }
     }
 
-    private async getPicks(direction: string): Promise<IAzureQuickPickItem<IBindingTemplate>[]> {
-        // wait for template provider task to signal that bindings have been defined
-        await ext.templateProviderTask;
-
-        const bindings: IBindingTemplate[] = ext.scriptBindings
+    private async getPicks(context: IBindingWizardContext, direction: string): Promise<IAzureQuickPickItem<IBindingTemplate>[]> {
+        const language: ProjectLanguage = nonNullProp(context, 'language');
+        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        const templates: IBindingTemplate[] = await ext.templateProvider.getBindingTemplates(context, language, runtime);
+        return templates
             .filter(b => b.direction.toLowerCase() === direction.toLowerCase())
-            .sort((a, b) => a.displayName.localeCompare(b.displayName));
-        return bindings.map(b => { return { label: b.displayName, data: b }; });
+            .sort((a, b) => a.displayName.localeCompare(b.displayName))
+            .map(b => { return { label: b.displayName, data: b }; });
     }
 }

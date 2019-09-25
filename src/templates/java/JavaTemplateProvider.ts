@@ -3,72 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseError, TelemetryProperties } from 'vscode-azureextensionui';
-import { ProjectLanguage } from '../constants';
-import { mavenUtils } from "../utils/mavenUtils";
-import { IBindingTemplate } from './IBindingTemplate';
-import { IFunctionTemplate } from './IFunctionTemplate';
-import { IConfig, IRawTemplate, IResources, parseScriptBindings, parseScriptTemplate as parseJavaTemplate } from './parseScriptTemplates';
-import { removeLanguageFromId } from "./TemplateProvider";
+import { IActionContext } from 'vscode-azureextensionui';
+import { localize } from '../../localize';
+import { cliFeedJsonResponse } from '../../utils/getCliFeedJson';
+import { mavenUtils } from '../../utils/mavenUtils';
+import { ITemplates } from '../ITemplates';
+import { parseScriptTemplates } from '../script/parseScriptTemplates';
+import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
+import { TemplateType } from '../TemplateProviderBase';
 
 /**
  * Describes templates output before it has been parsed
  */
 interface IRawJavaTemplates {
-    templates: IRawTemplate[];
+    templates: object[];
 }
 
-const backupJavaTemplateNames: string[] = [
-    'HttpTrigger',
-    'BlobTrigger',
-    'QueueTrigger',
-    'TimerTrigger'
-];
-
 /**
- * Parses templates contained in the output of 'mvn azure-functions:list'.
- * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
+ * Java templates largely follow the same formatting as script templates, but they come from maven
  */
-export async function parseJavaTemplates(allTemplates: IFunctionTemplate[], functionAppPath: string, telemetryProperties?: TelemetryProperties): Promise<IFunctionTemplate[]> {
-    let embeddedTemplates: IRawJavaTemplates = { templates: [] };
-    let embeddedConfig: IConfig | undefined;
-    let embeddedResources: object = {};
-    try {
-        // Try to get the templates information by calling 'mvn azure-functions:list'.
-        const commandResult: string = await mavenUtils.executeMvnCommand(telemetryProperties, undefined, functionAppPath, 'azure-functions:list');
+export class JavaTemplateProvider extends ScriptTemplateProvider {
+    public templateType: TemplateType = TemplateType.Java;
+    protected readonly _templatesKey: string = 'JavaFunctionTemplates';
+    protected readonly _configKey: string = 'JavaFunctionTemplateConfig';
+    protected readonly _resourcesKey: string = 'JavaFunctionTemplateResources';
+
+    public async getLatestTemplates(_cliFeedJson: cliFeedJsonResponse, _templateVersion: string, context: IActionContext): Promise<ITemplates> {
+        await mavenUtils.validateMavenInstalled(context);
+
+        const commandResult: string = await mavenUtils.executeMvnCommand(context.telemetry.properties, undefined, undefined, 'azure-functions:list');
         const regExp: RegExp = />> templates begin <<([\S\s]+)^.+INFO.+ >> templates end <<$[\S\s]+>> bindings begin <<([\S\s]+)^.+INFO.+ >> bindings end <<$[\S\s]+>> resources begin <<([\S\s]+)^.+INFO.+ >> resources end <<$/gm;
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {
-            embeddedTemplates = <IRawJavaTemplates>JSON.parse(regExpResult[1]);
-            embeddedConfig = <IConfig>JSON.parse(regExpResult[2]);
-            embeddedResources = <object[]>JSON.parse(regExpResult[3]);
+            this._rawTemplates = (<IRawJavaTemplates>JSON.parse(regExpResult[1])).templates;
+            this._rawConfig = <object>JSON.parse(regExpResult[2]);
+            this._rawResources = <object[]>JSON.parse(regExpResult[3]);
+            return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
+        } else {
+            throw new Error(localize('oldFunctionPlugin', 'You must update the Azure Functions maven plugin for this functionality.'));
         }
-    } catch (error) {
-        // Swallow the exception if the plugin do not support list templates information.
-        if (telemetryProperties) {
-            telemetryProperties.parseJavaTemplateErrors = parseError(error).message;
-        }
-    }
-
-    const templates: IFunctionTemplate[] = [];
-    if (embeddedConfig) {
-        const bindings: IBindingTemplate[] = parseScriptBindings(embeddedConfig, <IResources>embeddedResources);
-        for (const template of embeddedTemplates.templates) {
-            try {
-                templates.push(parseJavaTemplate(template, <IResources>embeddedResources, bindings));
-            } catch (error) {
-                // Ignore errors so that a single poorly formed template does not affect other templates
-            }
-        }
-    }
-
-    if (templates.length > 0) {
-        return templates;
-    } else {
-        // If the templates.length is 0, this means that the user is using an older version of Maven function plugin,
-        // which do not have the functionality to provide the template information.
-        // For this kind of scenario, we will fallback to leverage the JavaScript templates.
-        const javaScriptTemplates: IFunctionTemplate[] = allTemplates.filter((t: IFunctionTemplate) => t.language === ProjectLanguage.JavaScript);
-        return javaScriptTemplates.filter((t: IFunctionTemplate) => backupJavaTemplateNames.find((vt: string) => vt === removeLanguageFromId(t.id)));
     }
 }

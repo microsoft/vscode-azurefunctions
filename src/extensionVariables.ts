@@ -6,8 +6,7 @@
 import { ExtensionContext } from "vscode";
 import { AzExtTreeDataProvider, IAzExtOutputChannel, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
 import { func } from "./constants";
-import { IBindingTemplate } from "./templates/IBindingTemplate";
-import { TemplateProvider } from "./templates/TemplateProvider";
+import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
 
 /**
@@ -19,17 +18,15 @@ export namespace ext {
     export let azureAccountTreeItem: AzureAccountTreeItemWithProjects;
     export let outputChannel: IAzExtOutputChannel;
     export let ui: IAzureUserInput;
-    export let templateProviderTask: Promise<TemplateProvider>;
+    export let templateProvider: CentralTemplateProvider;
     export let reporter: ITelemetryReporter;
     export let funcCliPath: string = func;
-    export let templateSource: TemplateSource | undefined;
-    export let scriptBindings: IBindingTemplate[];
     // tslint:disable-next-line: strict-boolean-expressions
     export let ignoreBundle: boolean = !/^(false|0)?$/i.test(process.env.AZCODE_FUNCTIONS_IGNORE_BUNDLE || '');
 }
 
 export enum TemplateSource {
     Backup = 'Backup',
-    CliFeed = 'CliFeed',
-    StagingCliFeed = 'StagingCliFeed'
+    Latest = 'Latest',
+    Staging = 'Staging'
 }
