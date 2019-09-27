@@ -7,12 +7,12 @@ import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
-import { cliFeedJsonResponse, getCliFeedJson, getFeedRuntime } from '../utils/getCliFeedJson';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
+import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
@@ -26,8 +26,8 @@ export class CentralTemplateProvider {
         this.templateSource = templateSource;
     }
 
-    public async getFunctionTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, language, runtime);
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, runtime);
         const functionTemplates: IFunctionTemplate[] = templates.functionTemplates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
         switch (templateFilter) {
             case TemplateFilter.All:
@@ -36,13 +36,13 @@ export class CentralTemplateProvider {
                 return functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
-                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(runtime).concat(getDotnetVerifiedTemplateIds(runtime));
+                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(runtime).concat(getDotnetVerifiedTemplateIds(runtime)).concat(getJavaVerifiedTemplateIds());
                 return functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
         }
     }
 
-    public async getBindingTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime): Promise<IBindingTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, language, runtime);
+    public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<IBindingTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, runtime);
         if (!templates.bindingTemplates) {
             throw new Error(localize('bindingTemplatesError', 'Binding templates are not supported for language "{0}" and runtime "{1}"', language, runtime));
         } else {
@@ -53,18 +53,18 @@ export class CentralTemplateProvider {
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
-    private async getTemplates(context: IActionContext, language: ProjectLanguage, runtime: ProjectRuntime): Promise<ITemplates> {
+    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<ITemplates> {
         let provider: TemplateProviderBase;
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                provider = new DotnetTemplateProvider(runtime);
+                provider = new DotnetTemplateProvider(runtime, projectPath);
                 break;
             case ProjectLanguage.Java:
-                provider = new JavaTemplateProvider(runtime);
+                provider = new JavaTemplateProvider(runtime, projectPath);
                 break;
             default:
-                provider = new ScriptTemplateProvider(runtime);
+                provider = new ScriptTemplateProvider(runtime, projectPath);
                 break;
         }
 
@@ -92,21 +92,20 @@ export class CentralTemplateProvider {
         let result: ITemplates | undefined;
         let latestTemplatesError: unknown;
         try {
-            const cliFeedJson: cliFeedJsonResponse = await getCliFeedJson();
-            const feedRuntime: string = getFeedRuntime(provider.runtime);
-            const templateVersion: string = cliFeedJson.tags[feedRuntime].release;
-            context.telemetry.properties.templateVersion = templateVersion;
-            const cachedTemplateVersion: string | undefined = ext.context.globalState.get(provider.getCacheKey(TemplateProviderBase.templateVersionKey));
+            const latestTemplateVersion: string = await provider.getLatestTemplateVersion();
+            context.telemetry.properties.latestTemplateVersion = latestTemplateVersion;
+
+            const cachedTemplateVersion: string | undefined = await provider.getCachedTemplateVersion();
             context.telemetry.properties.cachedTemplateVersion = cachedTemplateVersion;
 
-            // 1. Use the cached templates if they match templateVersion
-            if (cachedTemplateVersion === templateVersion) {
+            // 1. Use the cached templates if they match latestTemplateVersion
+            if (cachedTemplateVersion === latestTemplateVersion) {
                 result = await this.tryGetCachedTemplates(context, provider);
             }
 
-            // 2. Download templates from the cli-feed if the cache doesn't match templateVersion
+            // 2. Refresh templates if the cache doesn't match latestTemplateVersion
             if (!result) {
-                result = await this.getLatestTemplates(context, provider, cliFeedJson, templateVersion);
+                result = await this.getLatestTemplates(context, provider, latestTemplateVersion);
             }
         } catch (error) {
             // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
@@ -116,7 +115,7 @@ export class CentralTemplateProvider {
             context.telemetry.properties.latestTemplatesError = errorMessage;
         }
 
-        // 3. Use the cached templates, even if they don't match templateVersion
+        // 3. Use the cached templates, even if they don't match latestTemplateVersion
         if (!result) {
             result = await this.tryGetCachedTemplates(context, provider);
         }
@@ -136,12 +135,12 @@ export class CentralTemplateProvider {
         }
     }
 
-    private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, cliFeedJson: cliFeedJsonResponse, templateVersion: string): Promise<ITemplates | undefined> {
+    private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, latestTemplateVersion: string): Promise<ITemplates | undefined> {
         // tslint:disable-next-line:strict-boolean-expressions
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
-            const result: ITemplates = await provider.getLatestTemplates(cliFeedJson, templateVersion, context);
-            ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), templateVersion);
+            const result: ITemplates = await provider.getLatestTemplates(context);
+            ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), latestTemplateVersion);
             await provider.cacheTemplates();
             return result;
         }
@@ -170,7 +169,8 @@ export class CentralTemplateProvider {
         if (!this.templateSource || this.templateSource === TemplateSource.Backup) {
             try {
                 context.telemetry.properties.templateSource = 'backup';
-                const backupTemplateVersion: string = provider.getBackupVersion();
+                const backupTemplateVersion: string = provider.getBackupTemplateVersion();
+                context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates();
                 ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), backupTemplateVersion);
                 await provider.cacheTemplates();

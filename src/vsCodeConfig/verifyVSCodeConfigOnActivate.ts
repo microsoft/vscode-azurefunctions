@@ -37,7 +37,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
-                        await ext.templateProvider.getFunctionTemplates(templatesContext, language, runtime);
+                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, runtime);
                     });
 
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);

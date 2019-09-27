@@ -6,8 +6,8 @@
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { cliFeedJsonResponse } from '../utils/getCliFeedJson';
 import { ITemplates } from './ITemplates';
 
 const v2BackupTemplatesVersion: string = '2.18.1';
@@ -23,9 +23,11 @@ export abstract class TemplateProviderBase {
     public static templateVersionKey: string = 'templateVersion';
     public abstract templateType: TemplateType;
     public readonly runtime: ProjectRuntime;
+    public readonly projectPath: string | undefined;
 
-    public constructor(runtime: ProjectRuntime) {
+    public constructor(runtime: ProjectRuntime, projectPath: string | undefined) {
         this.runtime = runtime;
+        this.projectPath = projectPath;
     }
 
     /**
@@ -48,12 +50,17 @@ export abstract class TemplateProviderBase {
         return key;
     }
 
+    public abstract getLatestTemplateVersion(): Promise<string>;
+    public abstract getLatestTemplates(context: IActionContext): Promise<ITemplates>;
     public abstract getCachedTemplates(): Promise<ITemplates | undefined>;
-    public abstract getLatestTemplates(cliFeedJson: cliFeedJsonResponse, templateVersion: string, context: IActionContext): Promise<ITemplates>;
     public abstract getBackupTemplates(): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
 
-    public getBackupVersion(): string {
+    public async getCachedTemplateVersion(): Promise<string | undefined> {
+        return ext.context.globalState.get(this.getCacheKey(TemplateProviderBase.templateVersionKey));
+    }
+
+    public getBackupTemplateVersion(): string {
         switch (this.runtime) {
             case ProjectRuntime.v1:
                 return v1BackupTemplatesVersion;

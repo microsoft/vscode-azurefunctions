@@ -9,7 +9,7 @@ import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, Azur
 import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, workerRuntimeKey } from '../constants';
 import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
 import { localize } from "../localize";
-import { getCliFeedAppSettings } from '../utils/getCliFeedJson';
+import { cliFeedUtils } from '../utils/cliFeedUtils';
 import { nonNullProp } from '../utils/nonNull';
 import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -176,7 +176,7 @@ async function getDefaultRuntime(context: IActionContext): Promise<ProjectRuntim
 async function createFunctionAppSettings(context: IAppSettingsContext, projectRuntime: ProjectRuntime, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
     const appSettings: WebSiteManagementModels.NameValuePair[] = [];
 
-    const cliFeedAppSettings: { [key: string]: string } = await getCliFeedAppSettings(projectRuntime);
+    const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(projectRuntime);
     for (const key of Object.keys(cliFeedAppSettings)) {
         appSettings.push({
             name: key,

@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { createNewProject, Platform, ProjectLanguage } from '../extension.bundle';
-import { longRunningTestsEnabled, runForAllTemplateSources, testFolderPath, testUserInput } from './global.test';
+import { createTestActionContext, longRunningTestsEnabled, runForAllTemplateSources, testFolderPath, testUserInput } from './global.test';
 import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -170,7 +170,7 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         }
 
         await testUserInput.runWithInputs(inputs, async () => {
-            await createNewProject({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, undefined, hiddenLanguage ? language : undefined, undefined, false);
+            await createNewProject(createTestActionContext(), undefined, hiddenLanguage ? language : undefined, undefined, false);
         });
     }
 });
