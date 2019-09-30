@@ -10,7 +10,7 @@ import { ProjectLanguage, ProjectRuntime, workerRuntimeKey } from '../../constan
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { getCliFeedAppSettings } from '../../utils/getCliFeedJson';
+import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { convertStringToRuntime, getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
 
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, runtime: ProjectRuntime, language: ProjectLanguage): Promise<void> {
@@ -48,7 +48,7 @@ export async function verifyRuntimeIsCompatible(localFuncRuntime: ProjectRuntime
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, updateRemoteRuntime);
 
-        const newAppSettings: { [key: string]: string } = await getCliFeedAppSettings(localFuncRuntime);
+        const newAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(localFuncRuntime);
         if (localFuncRuntime === ProjectRuntime.v2 && localWorkerRuntime) {
             newAppSettings[workerRuntimeKey] = localWorkerRuntime;
         }

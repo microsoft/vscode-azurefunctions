@@ -39,7 +39,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
     private async getPicks(context: IBindingWizardContext, direction: string): Promise<IAzureQuickPickItem<IBindingTemplate>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        const templates: IBindingTemplate[] = await ext.templateProvider.getBindingTemplates(context, language, runtime);
+        const templates: IBindingTemplate[] = await ext.templateProvider.getBindingTemplates(context, context.projectPath, language, runtime);
         return templates
             .filter(b => b.direction.toLowerCase() === direction.toLowerCase())
             .sort((a, b) => a.displayName.localeCompare(b.displayName))

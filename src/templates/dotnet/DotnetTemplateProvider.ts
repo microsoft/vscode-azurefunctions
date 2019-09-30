@@ -7,9 +7,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
+import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { downloadFile } from '../../utils/fs';
-import { cliFeedJsonResponse } from '../../utils/getCliFeedJson';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
@@ -36,14 +36,20 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         }
     }
 
-    public async getLatestTemplates(cliFeedJson: cliFeedJsonResponse, templateVersion: string, context: IActionContext): Promise<ITemplates> {
+    public async getLatestTemplateVersion(): Promise<string> {
+        return await cliFeedUtils.getLatestVersion(this.runtime);
+    }
+
+    public async getLatestTemplates(context: IActionContext): Promise<ITemplates> {
         await dotnetUtils.validateDotnetInstalled(context);
 
+        const release: cliFeedUtils.IRelease = await cliFeedUtils.getLatestRelease(this.runtime);
+
         const projectFilePath: string = getDotnetProjectTemplatePath(this.runtime);
-        await downloadFile(cliFeedJson.releases[templateVersion].projectTemplates, projectFilePath);
+        await downloadFile(release.projectTemplates, projectFilePath);
 
         const itemFilePath: string = getDotnetItemTemplatePath(this.runtime);
-        await downloadFile(cliFeedJson.releases[templateVersion].itemTemplates, itemFilePath);
+        await downloadFile(release.itemTemplates, itemFilePath);
 
         return { functionTemplates: await this.parseTemplates() };
     }

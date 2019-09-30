@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
 import { createFunction, ext, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
-import { runForAllTemplateSources, testActionContext, testFolderPath, testUserInput } from '../global.test';
+import { createTestActionContext, runForAllTemplateSources, testFolderPath, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase implements Disposable {
@@ -32,7 +32,7 @@ export abstract class FunctionTesterBase implements Disposable {
     }
 
     public async dispose(): Promise<void> {
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(testActionContext, this.language, this.runtime, TemplateFilter.Verified);
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.runtime, TemplateFilter.Verified);
         assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
     }
 

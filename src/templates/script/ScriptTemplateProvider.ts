@@ -5,12 +5,11 @@
 
 import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
-import * as os from 'os';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
-import { downloadFile } from '../../utils/fs';
-import { cliFeedJsonResponse } from '../../utils/getCliFeedJson';
+import { cliFeedUtils } from '../../utils/cliFeedUtils';
+import { downloadFile, getRandomHexString } from '../../utils/fs';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesPath } from './getScriptResourcesPath';
@@ -21,6 +20,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     protected readonly _templatesKey: string = 'FunctionTemplates';
     protected readonly _configKey: string = 'FunctionTemplateConfig';
     protected readonly _resourcesKey: string = 'FunctionTemplateResources';
+    protected readonly _backupSubpath: string = 'backupScriptTemplates';
 
     protected _rawResources: object;
     protected _rawTemplates: object[];
@@ -37,11 +37,17 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         }
     }
 
-    public async getLatestTemplates(cliFeedJson: cliFeedJsonResponse, templateVersion: string, _context: IActionContext): Promise<ITemplates> {
-        const templatesPath: string = path.join(os.tmpdir(), 'vscode-azurefunctions-templates');
+    public async getLatestTemplateVersion(): Promise<string> {
+        return await cliFeedUtils.getLatestVersion(this.runtime);
+    }
+
+    public async getLatestTemplates(_context: IActionContext): Promise<ITemplates> {
+        const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getLatestRelease(this.runtime);
+
+        const templatesPath: string = path.join(ext.context.globalStoragePath, 'scriptTemplates');
         try {
-            const filePath: string = path.join(templatesPath, `templates-${templateVersion}.zip`);
-            await downloadFile(cliFeedJson.releases[templateVersion].templateApiZip, filePath);
+            const filePath: string = path.join(templatesPath, `${getRandomHexString()}.zip`);
+            await downloadFile(templateRelease.templateApiZip, filePath);
 
             await new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
                 // tslint:disable-next-line:no-unsafe-any
@@ -63,7 +69,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
-        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', 'backupScriptTemplates', this.runtime));
+        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', this._backupSubpath, this.runtime));
         return await this.parseTemplates(backupTemplatesPath);
     }
 

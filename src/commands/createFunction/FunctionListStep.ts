@@ -43,7 +43,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         if (options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, language, runtime, TemplateFilter.All);
+            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, runtime, TemplateFilter.All);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
@@ -141,7 +141,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, language, runtime, templateFilter);
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, runtime, templateFilter);
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });

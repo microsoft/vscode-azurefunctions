@@ -25,7 +25,9 @@ export let testWorkspacePath: string;
 export let longRunningTestsEnabled: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
-export const testActionContext: IActionContext = { telemetry: { properties: {}, measurements: {} }, errorHandling: {} };
+export function createTestActionContext(): IActionContext {
+    return { telemetry: { properties: {}, measurements: {} }, errorHandling: {} };
+}
 
 let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
 
@@ -80,7 +82,7 @@ async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void
 
     for (const runtime of runtimes) {
         for (const language of languages) {
-            await provider.getFunctionTemplates(testActionContext, language, runtime);
+            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, runtime);
         }
     }
 }
