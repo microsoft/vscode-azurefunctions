@@ -14,8 +14,8 @@ import { SlotTreeItemBase } from './SlotTreeItemBase';
 export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncProxies';
     public readonly contextValue: string = ProxiesTreeItem.contextValue;
-    public readonly label: string = localize('azFunc.Proxies', 'Proxies');
-    public readonly childTypeLabel: string = localize('azFunc.Proxy', 'Proxy');
+    public readonly label: string = localize('Proxies', 'Proxies');
+    public readonly childTypeLabel: string = localize('Proxy', 'Proxy');
     public readonly parent: SlotTreeItemBase;
 
     private readonly _proxiesJsonPath: string = 'site/wwwroot/proxies.json';
@@ -83,7 +83,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public async deleteProxy(name: string): Promise<void> {
-        const message: string = localize('azFunc.ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
+        const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));

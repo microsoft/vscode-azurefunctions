@@ -17,7 +17,7 @@ export namespace mavenUtils {
         try {
             await cpUtils.executeCommand(undefined, undefined, mvnCommand, '--version');
         } catch (error) {
-            const message: string = localize('azFunc.mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
+            const message: string = localize('mvnNotFound', 'Failed to find "maven", please ensure that the maven bin directory is in your system path.');
 
             if (!context.errorHandling.suppressDisplay) {
                 // don't wait
@@ -68,7 +68,7 @@ export namespace mavenUtils {
             }
             if (outputChannel) {
                 outputChannel.show();
-                throw new Error(localize('azFunc.commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', mvnCommand));
+                throw new Error(localize('commandErrorWithOutput', 'Failed to run "{0}" command. Check output window for more details.', mvnCommand));
             }
         } else {
             if (outputChannel) {

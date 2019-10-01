@@ -10,8 +10,8 @@ import { IProjectTreeItem } from './IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from './projectContextValues';
 
 export abstract class FunctionsTreeItemBase extends AzExtParentTreeItem {
-    public readonly label: string = localize('azFunc.Functions', 'Functions');
-    public readonly childTypeLabel: string = localize('azFunc.Function', 'Function');
+    public readonly label: string = localize('Functions', 'Functions');
+    public readonly childTypeLabel: string = localize('Function', 'Function');
     public parent: AzExtParentTreeItem & IProjectTreeItem;
 
     public abstract isReadOnly: boolean;

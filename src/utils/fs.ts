@@ -55,7 +55,7 @@ export async function confirmEditJsonFile(fsPath: string, editJson: (existingDat
 
 export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
-        const result: MessageItem | undefined = await ext.ui.showWarningMessage(localize('azFunc.fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+        const result: MessageItem | undefined = await ext.ui.showWarningMessage(localize('fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
         if (result === DialogResponses.yes) {
             return true;
         } else {
