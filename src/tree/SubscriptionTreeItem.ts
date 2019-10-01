@@ -20,7 +20,7 @@ export interface ICreateFuntionAppContext extends ICreateChildImplContext {
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
-    public readonly childTypeLabel: string = localize('azFunc.FunctionApp', 'Function App in Azure');
+    public readonly childTypeLabel: string = localize('FunctionApp', 'Function App in Azure');
     public supportsAdvancedCreation: boolean = true;
 
     private _nextLink: string | undefined;

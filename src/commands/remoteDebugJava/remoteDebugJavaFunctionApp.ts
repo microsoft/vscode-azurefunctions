@@ -39,7 +39,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
                 const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
                 const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
-                    const confirmMsg: string = localize('azFunc.confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
+                    const confirmMsg: string = localize('confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
                     if (result === DialogResponses.learnMore) {
                         await openUrl('https://aka.ms/azfunc-remotedebug');

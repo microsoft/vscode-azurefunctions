@@ -15,7 +15,7 @@ function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
 
     if (matches === null || matches.length < 3) {
-        throw new Error(localize('azFunc.InvalidResourceId', 'Invalid Azure Resource Id'));
+        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
     }
 
     return matches;

@@ -72,7 +72,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 if (semver.gt(newestVersion, localVersion)) {
                     context.telemetry.properties.outOfDateFunc = 'true';
                     const message: string = localize(
-                        'azFunc.outdatedFunctionRuntime',
+                        'outdatedFunctionRuntime',
                         'Update your Azure Functions Core Tools ({0}) to the latest ({1}) for the best experience.',
                         localVersion,
                         newestVersion

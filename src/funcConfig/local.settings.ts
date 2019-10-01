@@ -57,7 +57,7 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
         return;
     } else if (settings.Values[key]) {
         if (behavior === MismatchBehavior.Prompt) {
-            const message: string = localize('azFunc.SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
+            const message: string = localize('SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
             if (await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
                 return;
             }

@@ -64,7 +64,7 @@ export async function selectWorkspaceItem(ui: IAzureUserInput, placeHolder: stri
             return { label: path.basename(fsPath), description: fsPath, data: fsPath };
         }));
 
-        folderPicks.push({ label: localize('azFunc.browse', '$(file-directory) Browse...'), description: '', data: undefined });
+        folderPicks.push({ label: localize('browse', '$(file-directory) Browse...'), description: '', data: undefined });
         folder = await ui.showQuickPick(folderPicks, { placeHolder });
     }
 
