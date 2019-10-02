@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
+import { getRotatingAuthLevel, getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
 suite('Create Project and Deploy', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -22,35 +23,29 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
     });
 
     test('JavaScript', async () => {
-        const authLevel: string = 'Function';
-        await testCreateProjectAndDeploy([authLevel], getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript);
+        await testCreateProjectAndDeploy([], getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript);
     });
 
     test('JavaScript - Linux Dedicated', async () => {
-        const authLevel: string = 'Anonymous';
-        await testCreateProjectAndDeploy([authLevel], getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript, 'JavaScript');
+        await testCreateProjectAndDeploy([], getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript, 'JavaScript');
     });
 
     test('TypeScript', async () => {
-        const authLevel: string = 'Anonymous';
-        await testCreateProjectAndDeploy([authLevel], getTypeScriptValidateOptions(), ProjectLanguage.TypeScript);
+        await testCreateProjectAndDeploy([], getTypeScriptValidateOptions(), ProjectLanguage.TypeScript);
     });
 
     test('CSharp', async () => {
         const namespace: string = 'Company.Function';
-        const accessRights: string = 'Anonymous';
-        await testCreateProjectAndDeploy([namespace, accessRights], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp);
+        await testCreateProjectAndDeploy([namespace], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp);
     });
 
     test('CSharp - Linux Dedicated', async () => {
         const namespace: string = 'Company.Function';
-        const accessRights: string = 'Admin';
-        await testCreateProjectAndDeploy([namespace, accessRights], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp, '.NET');
+        await testCreateProjectAndDeploy([namespace], getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp, '.NET');
     });
 
     test('PowerShell', async () => {
-        const authLevel: string = 'Function';
-        await testCreateProjectAndDeploy([authLevel], getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
+        await testCreateProjectAndDeploy([], getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
     });
 
     test('Python', async function (this: IHookCallbackContext): Promise<void> {
@@ -59,8 +54,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        const authLevel: string = 'Function';
-        await testCreateProjectAndDeploy([authLevel], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python);
+        await testCreateProjectAndDeploy([], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python);
     });
 
     test('Python - Linux Dedicated', async function (this: IHookCallbackContext): Promise<void> {
@@ -69,15 +63,15 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        const authLevel: string = 'Anonymous';
-        await testCreateProjectAndDeploy([authLevel], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python, 'Python');
+        await testCreateProjectAndDeploy([], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python, 'Python');
     });
 });
 
-async function testCreateProjectAndDeploy(functionInputs: (RegExp | string)[], validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, linuxDedicatedRuntime?: string): Promise<void> {
+async function testCreateProjectAndDeploy(languageSpecificInputs: (RegExp | string)[], validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, linuxDedicatedRuntime?: string): Promise<void> {
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
     await fse.emptyDir(testWorkspacePath);
-    await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...functionInputs], async () => {
+
+    await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...languageSpecificInputs, getRotatingAuthLevel()], async () => {
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
     });
     // tslint:disable-next-line: strict-boolean-expressions
@@ -92,7 +86,7 @@ async function testCreateProjectAndDeploy(functionInputs: (RegExp | string)[], v
 async function deployBasic(): Promise<string> {
     const appName: string = 'funcBasic' + getRandomHexString();
     resourceGroupsToDelete.push(appName);
-    await testUserInput.runWithInputs([/create new function app/i, appName, 'West US'], async () => {
+    await testUserInput.runWithInputs([/create new function app/i, appName, getRotatingLocation()], async () => {
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
     return appName;
@@ -106,7 +100,7 @@ async function deployLinuxDedicated(runtime: string): Promise<string> {
     const aiName: string = getRandomHexString();
 
     resourceGroupsToDelete.push(rgName);
-    const testInputs: (string | RegExp)[] = [/advanced/i, appName, 'Linux', 'App Service Plan', /create.*plan/i, planName, 'B1', runtime, /create.*group/i, rgName, /create.*storage/i, saName, /create.*insights/i, aiName, 'West US'];
+    const testInputs: (string | RegExp)[] = [/advanced/i, appName, 'Linux', 'App Service Plan', /create.*plan/i, planName, 'B1', runtime, /create.*group/i, rgName, /create.*storage/i, saName, /create.*insights/i, aiName, getRotatingLocation()];
     await testUserInput.runWithInputs(testInputs, async () => {
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
