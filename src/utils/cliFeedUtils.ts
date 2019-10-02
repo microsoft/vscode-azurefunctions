@@ -56,8 +56,7 @@ export namespace cliFeedUtils {
         return cliFeed.tags[tag].release;
     }
 
-    export async function getLatestRelease(runtime: ProjectRuntime): Promise<IRelease> {
-        const templateVersion: string = await getLatestVersion(runtime);
+    export async function getRelease(templateVersion: string): Promise<IRelease> {
         const cliFeed: ICliFeed = await getCliFeed();
         return cliFeed.releases[templateVersion];
     }

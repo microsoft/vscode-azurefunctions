@@ -8,6 +8,8 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { IBindingTemplate } from './IBindingTemplate';
+import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 
 const v2BackupTemplatesVersion: string = '2.18.1';
@@ -15,6 +17,7 @@ const v1BackupTemplatesVersion: string = '1.8.0';
 
 export enum TemplateType {
     Script = 'Script',
+    ScriptBundle = 'ScriptBundle',
     Dotnet = '.NET',
     Java = 'Java'
 }
@@ -51,10 +54,17 @@ export abstract class TemplateProviderBase {
     }
 
     public abstract getLatestTemplateVersion(): Promise<string>;
-    public abstract getLatestTemplates(context: IActionContext): Promise<ITemplates>;
+    public abstract getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates>;
     public abstract getCachedTemplates(): Promise<ITemplates | undefined>;
     public abstract getBackupTemplates(): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
+
+    /**
+     * Unless this is overidden, all templates will be included
+     */
+    public includeTemplate(_template: IFunctionTemplate | IBindingTemplate): boolean {
+        return true;
+    }
 
     public async getCachedTemplateVersion(): Promise<string | undefined> {
         return ext.context.globalState.get(this.getCacheKey(TemplateProviderBase.templateVersionKey));

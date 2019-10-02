@@ -3,16 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
-import * as path from 'path';
 import * as vscode from 'vscode';
 
-/**
- * Unlike templates.json and bindings.json, Resources.json has a capital letter
- */
-export async function getScriptResourcesPath(templatesPath: string, vscodeLang: string = vscode.env.language): Promise<string> {
-    const folder: string = path.join(templatesPath, 'resources');
+export const english: string = 'en-US';
+const supportedLanguages: string[] = [
+    'cs-CZ',
+    'de-DE',
+    english,
+    'es-ES',
+    'fr-FR',
+    'hu-HU',
+    'it-IT',
+    'ja-JP',
+    'ko-KR',
+    'nl-NL',
+    'pl-PL',
+    'pt-BR',
+    'pt-PT',
+    'qps-ploc',
+    'ru-RU',
+    'sv-SE',
+    'tr-TR',
+    'zh-CN',
+    'zh-TW'
+];
 
+export function getScriptResourcesLanguage(vscodeLang: string = vscode.env.language): string {
     try {
         // Example: "en-US"
         const parts: string[] = vscodeLang.split('-');
@@ -21,26 +37,25 @@ export async function getScriptResourcesPath(templatesPath: string, vscodeLang: 
         // Example: "US" for "United States" (locale is optional)
         let locale: string | undefined = parts[1];
 
-        const files: string[] = await fse.readdir(folder);
-        let matchingFile: string | undefined;
+        let supportedLanguage: string | undefined;
         if (!locale) {
-            const regExp: RegExp = new RegExp(`resources\\.${language}\\.json`, 'i');
-            matchingFile = files.find(f => regExp.test(f));
+            const regExp: RegExp = new RegExp(`^${language}$`, 'i');
+            supportedLanguage = supportedLanguages.find(f => regExp.test(f));
         }
 
-        if (!matchingFile) {
+        if (!supportedLanguage) {
             // tslint:disable-next-line: strict-boolean-expressions
             locale = locale || '[a-z]*';
-            const regExp: RegExp = new RegExp(`resources\\.${language}(-${locale})?\\.json`, 'i');
-            matchingFile = files.find(f => regExp.test(f));
+            const regExp: RegExp = new RegExp(`^${language}(-${locale})?$`, 'i');
+            supportedLanguage = supportedLanguages.find(f => regExp.test(f));
         }
 
-        if (matchingFile) {
-            return path.join(folder, matchingFile);
+        if (supportedLanguage) {
+            return supportedLanguage;
         }
     } catch {
         // ignore and fall back to english
     }
 
-    return path.join(folder, 'Resources.json');
+    return english;
 }

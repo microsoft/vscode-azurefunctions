@@ -25,9 +25,6 @@ interface IRawJavaTemplates {
  */
 export class JavaTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.Java;
-    protected readonly _templatesKey: string = 'JavaFunctionTemplates';
-    protected readonly _configKey: string = 'JavaFunctionTemplateConfig';
-    protected readonly _resourcesKey: string = 'JavaFunctionTemplateResources';
     protected readonly _backupSubpath: string = 'backupJavaTemplates';
 
     public async getLatestTemplateVersion(): Promise<string> {
@@ -50,12 +47,16 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {
             this._rawTemplates = (<IRawJavaTemplates>JSON.parse(regExpResult[1])).templates;
-            this._rawConfig = <object>JSON.parse(regExpResult[2]);
+            this._rawBindings = <object>JSON.parse(regExpResult[2]);
             this._rawResources = <object[]>JSON.parse(regExpResult[3]);
-            return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawConfig);
+            return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
         } else {
             throw new Error(localize('oldFunctionPlugin', 'You must update the Azure Functions maven plugin for this functionality.'));
         }
+    }
+
+    protected async getCacheKeySuffix(): Promise<string> {
+        return 'Java';
     }
 
     private getProjectPath(): string {
