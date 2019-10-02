@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as retry from 'p-retry';
 import { MessageItem, window } from 'vscode';
 import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
@@ -35,30 +36,41 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
         });
     });
 
-    await listHttpTriggerUrls(context, node);
-}
-
-async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
     try {
-        const children: AzExtTreeItem[] = await node.getCachedChildren(context);
-        const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
-        await node.treeDataProvider.refresh(functionsNode);
-        const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
-        const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
-        if (anonFunctions.length > 0) {
-            ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
-            for (const func of anonFunctions) {
-                ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
-            }
-        }
-
-        if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
-            ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
-        }
+        const retries: number = 4;
+        await retry(
+            async (currentAttempt: number) => {
+                context.telemetry.properties.queryTriggersAttempt = currentAttempt.toString();
+                const message: string = currentAttempt === 1 ?
+                    localize('queryingTriggers', 'Querying triggers...') :
+                    localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
+                ext.outputChannel.appendLog(message, { resourceName: node.client.fullName });
+                await listHttpTriggerUrls(context, node);
+            },
+            { retries, minTimeout: 2 * 1000 }
+        );
     } catch (error) {
         // suppress error notification and instead display a warning in the output. We don't want it to seem like the deployment failed.
         context.errorHandling.suppressDisplay = true;
         ext.outputChannel.appendLog(localize('failedToList', 'WARNING: Deployment succeeded, but failed to list http trigger urls.'));
         throw error;
+    }
+}
+
+async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
+    const children: AzExtTreeItem[] = await node.getCachedChildren(context);
+    const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
+    await node.treeDataProvider.refresh(functionsNode);
+    const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
+    const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
+    if (anonFunctions.length > 0) {
+        ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+        for (const func of anonFunctions) {
+            ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
+        }
+    }
+
+    if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
+        ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
     }
 }
