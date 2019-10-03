@@ -25,7 +25,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
 
     public async getLatestTemplateVersion(): Promise<string> {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        return await bundleFeedUtils.getLatestVersionInRange(bundleMetadata);
+        return await bundleFeedUtils.getLatestTemplateVersion(bundleMetadata);
     }
 
     public async getLatestTemplates(_context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {

@@ -34,7 +34,7 @@ export namespace bundleFeedUtils {
         resources: string;
     }
 
-    export async function getLatestVersionInRange(bundleMetadata: IBundleMetadata | undefined): Promise<string> {
+    export async function getLatestTemplateVersion(bundleMetadata: IBundleMetadata | undefined): Promise<string> {
         // tslint:disable-next-line: strict-boolean-expressions
         bundleMetadata = bundleMetadata || {};
 
@@ -42,11 +42,11 @@ export namespace bundleFeedUtils {
         const validVersions: string[] = Object.keys(feed.bundleVersions).filter((v: string) => !!semver.valid(v));
         // For now just get the latest release and ignore user's bundle range from host.json
         // https://github.com/microsoft/vscode-azurefunctions/issues/1203
-        const maxVersion: string | null = semver.maxSatisfying(validVersions, '*');
-        if (!maxVersion) {
+        const bundleVersion: string | null = semver.maxSatisfying(validVersions, '*');
+        if (!bundleVersion) {
             throw new Error(localize('failedToFindBundleVersion', 'Failed to find bundle version satisfying range "{0}".', bundleMetadata.version));
         } else {
-            return maxVersion;
+            return feed.bundleVersions[bundleVersion].templates;
         }
     }
 
