@@ -9,6 +9,7 @@ import { IBundleMetadata } from '../funcConfig/host';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { nugetUtils } from './nugetUtils';
 import { requestUtils } from './requestUtils';
 
 export namespace bundleFeedUtils {
@@ -40,9 +41,7 @@ export namespace bundleFeedUtils {
 
         const feed: IBundleFeed = await getBundleFeed(bundleMetadata);
         const validVersions: string[] = Object.keys(feed.bundleVersions).filter((v: string) => !!semver.valid(v));
-        // For now just get the latest release and ignore user's bundle range from host.json
-        // https://github.com/microsoft/vscode-azurefunctions/issues/1203
-        const bundleVersion: string | null = semver.maxSatisfying(validVersions, '*');
+        const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || feed.defaultVersionRange, validVersions);
         if (!bundleVersion) {
             throw new Error(localize('failedToFindBundleVersion', 'Failed to find bundle version satisfying range "{0}".', bundleMetadata.version));
         } else {
