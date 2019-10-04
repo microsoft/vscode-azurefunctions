@@ -7,12 +7,13 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { AzureTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
+import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { isPathEqual } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -24,13 +25,13 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
     addLocalFuncTelemetry(context);
 
     let node: SlotTreeItemBase | undefined;
-    let deployFsPath: string = await appservice.getDeployFsPath(target, extensionPrefix);
+    const { originalDeployFsPath, effectiveDeployFsPath } = await appservice.getDeployFsPath(target, extensionPrefix);
 
     if (target instanceof SlotTreeItemBase) {
         node = target;
     }
 
-    const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(deployFsPath);
+    const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(effectiveDeployFsPath);
     if (!workspaceFolder) {
         throw new Error(localize('folderOpenWarning', 'Failed to deploy because the path is not part of an open workspace. Open in a workspace and try again.'));
     }
@@ -60,7 +61,7 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
     context.telemetry.properties.isNewFunctionApp = String(isNewFunctionApp);
 
     const client: appservice.SiteClient = node.root.client;
-    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, deployFsPath);
+    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = runtime;
 
@@ -80,16 +81,11 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
         context.telemetry.properties.cancelStep = '';
     }
 
-    await runPreDeployTask(context, deployFsPath, siteConfig.scmType);
-
-    if (siteConfig.scmType === ScmType.LocalGit) {
-        // preDeploy tasks are not required for LocalGit so subpath may not exist
-        deployFsPath = workspaceFolder.uri.fsPath;
-    }
+    await runPreDeployTask(context, effectiveDeployFsPath, siteConfig.scmType);
 
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises
-        validateGlobSettings(context, deployFsPath);
+        validateGlobSettings(context, effectiveDeployFsPath);
     }
 
     await node.runWithTemporaryDescription(
@@ -102,6 +98,15 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
                     ext.outputChannel.appendLog(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
                     await client.stop();
                 }
+                // preDeploy tasks are only required for zipdeploy so subpath may not exist
+                let deployFsPath: string = effectiveDeployFsPath;
+
+                if (!isZipDeploy && !isPathEqual(effectiveDeployFsPath, originalDeployFsPath)) {
+                    deployFsPath = originalDeployFsPath;
+                    const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, originalDeployFsPath)}" for non-zip deploy.`;
+                    ext.outputChannel.appendLog(noSubpathWarning);
+                }
+
                 await appservice.deploy(client, deployFsPath, context, showOutputChannelCommandId);
             } finally {
                 if (language === ProjectLanguage.Java) {
