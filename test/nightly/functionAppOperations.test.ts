@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
+import { getRotatingLocation } from './getRotatingValue';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
 
 // tslint:disable-next-line: max-func-body-length
@@ -36,7 +37,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: string[] = [appName, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, 'East US'];
+        const testInputs: string[] = [appName, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, getRotatingLocation()];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
@@ -59,7 +60,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
         resourceGroupsToDelete.push(apiRgName);
         const apiAppName: string = getRandomHexString();
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            await testUserInput.runWithInputs([apiAppName, 'West US'], async () => {
+            await testUserInput.runWithInputs([apiAppName, getRotatingLocation()], async () => {
                 const actualFuncAppId: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionContext().subscriptionId, apiRgName);
                 const site: Models.Site = await testClient.webApps.get(apiRgName, apiAppName);
                 assert.ok(site);
