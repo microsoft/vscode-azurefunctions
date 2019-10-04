@@ -21,7 +21,9 @@ export async function confirmOverwriteSettings(sourceSettings: { [key: string]: 
         if (destinationSettings[key] === undefined) {
             addedKeys.push(key);
             destinationSettings[key] = sourceSettings[key];
-        } else if (destinationSettings[key] !== sourceSettings[key]) {
+        } else if (destinationSettings[key] === sourceSettings[key]) {
+            matchingKeys.push(key);
+        } else if (sourceSettings[key]) { // ignore empty settings
             if (!suppressPrompt) {
                 const yesToAll: vscode.MessageItem = { title: localize('yesToAll', 'Yes to all') };
                 const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
@@ -46,8 +48,6 @@ export async function confirmOverwriteSettings(sourceSettings: { [key: string]: 
             } else {
                 userIgnoredKeys.push(key);
             }
-        } else {
-            matchingKeys.push(key);
         }
     }
 
