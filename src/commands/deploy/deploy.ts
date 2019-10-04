@@ -13,6 +13,7 @@ import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreTools
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { isPathEqual } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -100,7 +101,7 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
                 // preDeploy tasks are only required for zipdeploy so subpath may not exist
                 let deployFsPath: string = effectiveDeployFsPath;
 
-                if (siteConfig.scmType !== ScmType.None && effectiveDeployFsPath !== originalDeployFsPath) {
+                if (!isZipDeploy && !isPathEqual(effectiveDeployFsPath, originalDeployFsPath)) {
                     deployFsPath = originalDeployFsPath;
                     const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, originalDeployFsPath)}" for non-zip deploy.`;
                     ext.outputChannel.appendLog(noSubpathWarning);

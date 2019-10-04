@@ -18,5 +18,6 @@
     "files.exclude": {
         "tools/JsonCli/src/**": true
     },
-    "typescript.preferences.importModuleSpecifier": "relative"
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "appService.showBuildDuringDeployPrompt": false
 }
