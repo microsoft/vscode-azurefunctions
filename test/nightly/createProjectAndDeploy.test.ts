@@ -49,7 +49,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         }
 
         const authLevel: string = 'Function';
-        await testCreateProjectAndDeploy([authLevel], getPythonValidateOptions('testWorkspace', '.venv'), ProjectLanguage.Python);
+        await testCreateProjectAndDeploy([authLevel], getPythonValidateOptions('.venv'), ProjectLanguage.Python);
     });
 
     async function testCreateProjectAndDeploy(functionInputs: (RegExp | string)[], validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage): Promise<void> {
