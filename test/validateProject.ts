@@ -122,13 +122,13 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getPythonValidateOptions(projectName: string, venvName: string): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Python,
             projectRuntime: ProjectRuntime.v2,
-            preDeployTask: 'func: pack',
-            deploySubpath: `${projectName}.zip`,
+            deploySubpath: '.',
+            scmDoBuildDuringDeployment: true,
             pythonVenv: venvName
         },
         expectedPaths: [
