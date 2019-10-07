@@ -8,6 +8,7 @@ import { ProjectLanguage, ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
+import { ITemplates } from '../ITemplates';
 
 /**
  * Describes a dotnet template before it has been parsed
@@ -72,23 +73,26 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
  * Parses templates used by the .NET CLI
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
-export async function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRuntime): Promise<IFunctionTemplate[]> {
-    const templates: IFunctionTemplate[] = [];
+export async function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRuntime): Promise<ITemplates> {
+    const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
             if (/^Azure\.Function\.(F|C)Sharp\./i.test(template.id) &&
                 ((runtime === ProjectRuntime.v1 && template.id.includes('1')) || (runtime === ProjectRuntime.v2 && template.id.includes('2')))) {
-                templates.push(template);
+                functionTemplates.push(template);
             }
         } catch (error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }
 
-    await copyCSharpSettingsFromJS(templates, runtime);
+    await copyCSharpSettingsFromJS(functionTemplates, runtime);
 
-    return templates;
+    return {
+        functionTemplates,
+        bindingTemplates: [] // CSharp does not support binding templates
+    };
 }
 
 /**

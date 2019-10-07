@@ -15,6 +15,7 @@ import { ITemplates } from './ITemplates';
 import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
 import { TemplateProviderBase } from './TemplateProviderBase';
 
@@ -43,37 +44,43 @@ export class CentralTemplateProvider {
 
     public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<IBindingTemplate[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, runtime);
-        if (!templates.bindingTemplates) {
-            throw new Error(localize('bindingTemplatesError', 'Binding templates are not supported for language "{0}" and runtime "{1}"', language, runtime));
-        } else {
-            return templates.bindingTemplates;
-        }
+        return templates.bindingTemplates;
     }
 
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
     private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<ITemplates> {
-        let provider: TemplateProviderBase;
+        const providers: TemplateProviderBase[] = [];
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                provider = new DotnetTemplateProvider(runtime, projectPath);
+                providers.push(new DotnetTemplateProvider(runtime, projectPath));
                 break;
             case ProjectLanguage.Java:
-                provider = new JavaTemplateProvider(runtime, projectPath);
+                providers.push(new JavaTemplateProvider(runtime, projectPath));
                 break;
             default:
-                provider = new ScriptTemplateProvider(runtime, projectPath);
+                providers.push(new ScriptTemplateProvider(runtime, projectPath));
+                if (runtime !== ProjectRuntime.v1) {
+                    providers.push(new ScriptBundleTemplateProvider(runtime, projectPath));
+                }
                 break;
         }
 
-        const key: string = provider.templateType + provider.runtime;
+        let key: string = runtime;
+        for (const provider of providers) {
+            key += provider.templateType;
+        }
+
+        context.telemetry.properties.runtime = runtime;
+        context.telemetry.properties.language = language;
+
         let templatesTask: Promise<ITemplates> | undefined = this._templatesTaskMap[key];
         if (templatesTask) {
             return await templatesTask;
         } else {
-            templatesTask = this.refreshTemplates(context, provider);
+            templatesTask = this.refreshTemplates(context, providers);
             this._templatesTaskMap[key] = templatesTask;
             try {
                 return await templatesTask;
@@ -85,10 +92,18 @@ export class CentralTemplateProvider {
         }
     }
 
-    private async refreshTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
-        context.telemetry.properties.runtime = provider.runtime;
-        context.telemetry.properties.templateType = provider.templateType;
+    private async refreshTemplates(context: IActionContext, providers: TemplateProviderBase[]): Promise<ITemplates> {
+        return (await Promise.all(providers.map(async provider => {
+            return await this.refreshTemplatesForProvider(context, provider);
+        }))).reduce((t1: ITemplates, t2: ITemplates) => {
+            return {
+                functionTemplates: t1.functionTemplates.concat(t2.functionTemplates),
+                bindingTemplates: t1.bindingTemplates.concat(t2.bindingTemplates)
+            };
+        });
+    }
 
+    private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
         let result: ITemplates | undefined;
         let latestTemplatesError: unknown;
         try {
@@ -126,8 +141,14 @@ export class CentralTemplateProvider {
         }
 
         if (result) {
-            return result;
+            return {
+                functionTemplates: result.functionTemplates.filter(f => provider.includeTemplate(f)),
+                bindingTemplates: result.bindingTemplates.filter(b => provider.includeTemplate(b))
+            };
         } else if (latestTemplatesError !== undefined) {
+            if (!context.errorHandling.suppressDisplay) {
+                ext.outputChannel.show();
+            }
             throw latestTemplatesError;
         } else {
             // This should only happen for dev/test scenarios where we explicitly set templateSource
@@ -139,7 +160,7 @@ export class CentralTemplateProvider {
         // tslint:disable-next-line:strict-boolean-expressions
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
-            const result: ITemplates = await provider.getLatestTemplates(context);
+            const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
             ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), latestTemplateVersion);
             await provider.cacheTemplates();
             return result;

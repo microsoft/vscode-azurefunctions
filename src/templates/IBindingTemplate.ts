@@ -11,6 +11,8 @@ export interface IBindingTemplate {
     type: string;
     direction: string;
     displayName: string;
+    isHttpTrigger: boolean;
+    isTimerTrigger: boolean;
     settings: IBindingSetting[];
 }
 

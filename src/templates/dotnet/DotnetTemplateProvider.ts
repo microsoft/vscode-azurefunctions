@@ -10,7 +10,6 @@ import { ext } from '../../extensionVariables';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { downloadFile } from '../../utils/fs';
-import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath } from './executeDotnetTemplateCommand';
@@ -30,7 +29,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
         const cachedDotnetTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._dotnetTemplatesKey));
         if (cachedDotnetTemplates) {
-            return { functionTemplates: await parseDotnetTemplates(cachedDotnetTemplates, this.runtime) };
+            return await parseDotnetTemplates(cachedDotnetTemplates, this.runtime);
         } else {
             return undefined;
         }
@@ -40,10 +39,10 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         return await cliFeedUtils.getLatestVersion(this.runtime);
     }
 
-    public async getLatestTemplates(context: IActionContext): Promise<ITemplates> {
+    public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         await dotnetUtils.validateDotnetInstalled(context);
 
-        const release: cliFeedUtils.IRelease = await cliFeedUtils.getLatestRelease(this.runtime);
+        const release: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(latestTemplateVersion);
 
         const projectFilePath: string = getDotnetProjectTemplatePath(this.runtime);
         await downloadFile(release.projectTemplates, projectFilePath);
@@ -51,19 +50,19 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const itemFilePath: string = getDotnetItemTemplatePath(this.runtime);
         await downloadFile(release.itemTemplates, itemFilePath);
 
-        return { functionTemplates: await this.parseTemplates() };
+        return await this.parseTemplates();
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
         await fse.copy(ext.context.asAbsolutePath(path.join('resources', 'backupDotnetTemplates')), getDotnetTemplatesPath(), { overwrite: true, recursive: false });
-        return { functionTemplates: await this.parseTemplates() };
+        return await this.parseTemplates();
     }
 
     public async cacheTemplates(): Promise<void> {
         ext.context.globalState.update(this.getCacheKey(this._dotnetTemplatesKey), this._rawTemplates);
     }
 
-    private async parseTemplates(): Promise<IFunctionTemplate[]> {
+    private async parseTemplates(): Promise<ITemplates> {
         this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(this.runtime, undefined, 'list'));
         return parseDotnetTemplates(this._rawTemplates, this.runtime);
     }

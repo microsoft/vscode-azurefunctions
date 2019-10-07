@@ -148,6 +148,8 @@ export function parseScriptBindings(config: IConfig, resources: IResources): IBi
         return {
             direction: rawBinding.direction,
             displayName: getResourceValue(resources, rawBinding.displayName),
+            isHttpTrigger: !!rawBinding.type && /^http/i.test(rawBinding.type),
+            isTimerTrigger: !!rawBinding.type && /^timer/i.test(rawBinding.type),
             settings,
             type: rawBinding.type
         };

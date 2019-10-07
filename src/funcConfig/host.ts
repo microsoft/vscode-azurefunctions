@@ -10,15 +10,17 @@ export interface IHostJsonV2 {
     managedDependency?: {
         enabled?: boolean;
     };
-    extensionBundle?: {
-        id?: string;
-        version?: string;
-    };
+    extensionBundle?: IBundleMetadata;
     extensions?: {
         http?: {
             routePrefix?: string;
         };
     };
+}
+
+export interface IBundleMetadata {
+    id?: string;
+    version?: string;
 }
 
 export interface IHostJsonV1 {
@@ -29,6 +31,7 @@ export interface IHostJsonV1 {
 
 export interface IParsedHostJson {
     readonly routePrefix: string;
+    readonly bundle?: IBundleMetadata;
 }
 
 const defaultRoutePrefix: string = 'api';
@@ -36,9 +39,7 @@ const defaultRoutePrefix: string = 'api';
 class ParsedHostJsonV2 implements IParsedHostJson {
     public data: IHostJsonV2;
 
-    // tslint:disable-next-line:no-any
-    public constructor(data: any) {
-        // tslint:disable-next-line:no-unsafe-any
+    public constructor(data: unknown) {
         if (typeof data === 'object' && data !== null) {
             this.data = <IHostJsonV2>data;
         } else {
@@ -54,14 +55,16 @@ class ParsedHostJsonV2 implements IParsedHostJson {
             return defaultRoutePrefix;
         }
     }
+
+    public get bundle(): IBundleMetadata | undefined {
+        return this.data.extensionBundle;
+    }
 }
 
 class ParsedHostJsonV1 implements IParsedHostJson {
     public data: IHostJsonV1;
 
-    // tslint:disable-next-line:no-any
-    public constructor(data: any) {
-        // tslint:disable-next-line:no-unsafe-any
+    public constructor(data: unknown) {
         if (typeof data === 'object' && data !== null) {
             this.data = <IHostJsonV1>data;
         } else {
@@ -79,7 +82,6 @@ class ParsedHostJsonV1 implements IParsedHostJson {
     }
 }
 
-// tslint:disable-next-line:no-any
-export function parseHostJson(data: any, runtime: ProjectRuntime | undefined): IParsedHostJson {
+export function parseHostJson(data: unknown, runtime: ProjectRuntime | undefined): IParsedHostJson {
     return runtime === ProjectRuntime.v1 ? new ParsedHostJsonV1(data) : new ParsedHostJsonV2(data);
 }
