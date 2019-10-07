@@ -6,7 +6,6 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
-import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -29,7 +28,8 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
-        if (getWorkspaceSetting<boolean>('enableSlots')) {
+        // Slots are not yet supported for Linux Consumption
+        if (!this.root.client.isLinux || !await this.getIsConsumption()) {
             children.push(this._slotsTreeItem);
         }
         return children;
