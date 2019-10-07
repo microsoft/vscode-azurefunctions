@@ -87,7 +87,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
 }
 
 export function getFunctionNameFromId(id: string): string {
-    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(?:[^\/]+)\/resourceGroups\/(?:[^\/]+)\/providers\/Microsoft.Web\/sites\/(?:[^\/]+)\/functions\/([^\/]+)/);
+    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/[^\/]+\/resourceGroups\/[^\/]+\/providers\/Microsoft.Web\/sites\/[^\/]+(?:\/slots\/[^\/]+)?\/functions\/([^\/]+)/);
 
     if (matches === null || matches.length < 2) {
         throw new Error(localize('invalidFuncId', 'Invalid Functions Id'));
