@@ -33,23 +33,16 @@ protobuf==3.7.1
 six==1.12.0
 `;
 
+const requirementsFileName: string = 'requirements.txt';
+const defaultRequirements: string = 'azure-functions';
+
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const settingKey: string = 'createPythonVenv';
-        const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>(settingKey, context.workspacePath);
-        context.telemetry.properties.createPythonVenv = String(createPythonVenv);
-        if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
-            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
-            const defaultVenvName: string = '.venv';
-            await createVirtualEnviornment(defaultVenvName, context.projectPath);
-            progress.report({ message: this.creatingMessage });
-        }
-
         await super.executeCore(context, progress);
 
-        const requirementsPath: string = path.join(context.projectPath, 'requirements.txt');
+        const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
         if (await confirmOverwriteFile(requirementsPath)) {
             let isOldFuncCli: boolean;
             try {
@@ -59,7 +52,17 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
                 isOldFuncCli = false;
             }
 
-            await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : '');
+            await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
+        }
+
+        const settingKey: string = 'createPythonVenv';
+        const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>(settingKey, context.workspacePath);
+        context.telemetry.properties.createPythonVenv = String(createPythonVenv);
+        if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
+            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
+            const defaultVenvName: string = '.venv';
+            await createVirtualEnviornment(defaultVenvName, context.projectPath);
+            progress.report({ message: this.creatingMessage });
         }
     }
 }
@@ -139,12 +142,11 @@ export async function createVirtualEnviornment(venvName: string, projectPath: st
     const pythonAlias: string = await getPythonAlias();
     await cpUtils.executeCommand(ext.outputChannel, projectPath, pythonAlias, '-m', 'venv', venvName);
 
-    const packageName: string = 'azure-functions';
     try {
-        // Install "azure-functions" package into virtual env so that user gets intellisense
-        await venvUtils.runCommandInVenv(`pip install ${packageName}`, venvName, projectPath);
+        // Attempt to install packages so that users get Intellisense right away
+        await venvUtils.runCommandInVenv(`pip install -r ${requirementsFileName}`, venvName, projectPath);
     } catch {
-        ext.outputChannel.appendLog(localize('noPipAzureFunctions', 'WARNING: You may not have IntelliSense for the package "{0}", but this should not affect debugging or deploying your project.', packageName));
+        ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
     }
 }
 
