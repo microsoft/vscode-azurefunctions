@@ -36,7 +36,6 @@ Install the prerequisites for your desired language:
 * JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
 * Stream logs from your Azure Function Apps
 * View and manage deployment slots
-    > **NOTE**: To enable, set `azureFunctions.enableSlots` to true.
 * Debug Node.js function project in Azure (experimental)
     > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
 * Debug Java function project in Azure (experimental)

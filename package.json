@@ -564,7 +564,7 @@
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view == azFuncTree && viewItem == applicationSettingItem && config.azureFunctions.enableSlots == true",
+                    "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "1@4"
                 },
                 {
@@ -663,14 +663,6 @@
                 {
                     "command": "azureFunctions.startJavaRemoteDebug",
                     "when": "config.azureFunctions.enableJavaRemoteDebugging == true"
-                },
-                {
-                    "command": "azureFunctions.createSlot",
-                    "when": "config.azureFunctions.enableSlots == true"
-                },
-                {
-                    "command": "azureFunctions.swapSlot",
-                    "when": "config.azureFunctions.enableSlots == true"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
@@ -914,11 +906,6 @@
                         "description": "%azureFunctions.createPythonVenv%",
                         "default": true
                     },
-                    "azureFunctions.enableSlots": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.enableSlots%",
-                        "default": false
-                    },
                     "azureFunctions.scmDoBuildDuringDeployment": {
                         "scope": "resource",
                         "type": "boolean",
@@ -1000,8 +987,8 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.47.0",
-        "vscode-azureextensionui": "^0.28.1",
+        "vscode-azureappservice": "^0.48.0",
+        "vscode-azureextensionui": "^0.28.2",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",

@@ -15,7 +15,6 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncSlots';
     public readonly contextValue: string = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
-    public readonly description: string = localize('preview', 'Preview');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
     public readonly parent: ProductionSlotTreeItem;
 
