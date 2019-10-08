@@ -122,7 +122,7 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getPythonValidateOptions(venvName: string): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string = '.venv'): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Python,

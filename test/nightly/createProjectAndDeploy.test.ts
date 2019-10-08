@@ -45,7 +45,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        await testCreateProjectAndDeploy(getPythonValidateOptions('testWorkspace'), ProjectLanguage.Python);
+        await testCreateProjectAndDeploy(getPythonValidateOptions(), ProjectLanguage.Python);
     });
 });
 
