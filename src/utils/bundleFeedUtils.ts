@@ -14,6 +14,7 @@ import { requestUtils } from './requestUtils';
 
 export namespace bundleFeedUtils {
     export const defaultBundleId: string = 'Microsoft.Azure.Functions.ExtensionBundle';
+    export const defaultVersionRange: string = '[1.*, 2.0.0)';
 
     interface IBundleFeed {
         defaultVersionRange: string;
@@ -56,6 +57,11 @@ export namespace bundleFeedUtils {
 
     export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return !template.isHttpTrigger && !template.isTimerTrigger;
+    }
+
+    export async function getLatestVersionRange(): Promise<string> {
+        const feed: IBundleFeed = await getBundleFeed(undefined);
+        return feed.defaultVersionRange;
     }
 
     // We access the feed pretty frequently, so cache it and periodically refresh it
