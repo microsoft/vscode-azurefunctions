@@ -4,16 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext, parseError } from 'vscode-azureextensionui';
-import { extInstallCommand, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../../constants';
+import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
-import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { writeFormattedJson } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
+import { shouldUseExtensionBundle, verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
@@ -54,8 +51,8 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(context);
-        if (await this.shouldUseExtensionBundle(context, template)) {
-            await this.verifyExtensionBundle(context);
+        if (await shouldUseExtensionBundle(context, template)) {
+            await verifyExtensionBundle(context);
         }
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
@@ -70,54 +67,8 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         runPostFunctionCreateSteps(cachedFunc);
     }
 
-    public async verifyExtensionBundle(context: T): Promise<void> {
-        const hostFilePath: string = path.join(context.projectPath, hostFileName);
-        try {
-            const hostJson: IHostJsonV2 = <IHostJsonV2>await fse.readJSON(hostFilePath);
-            if (!hostJson.extensionBundle) {
-                // https://github.com/Microsoft/vscode-azurefunctions/issues/1202
-                hostJson.extensionBundle = {
-                    id: 'Microsoft.Azure.Functions.ExtensionBundle',
-                    version: '[1.*, 2.0.0)'
-                };
-                await writeFormattedJson(hostFilePath, hostJson);
-            }
-        } catch (error) {
-            throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
-        }
-    }
-
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
-    }
-
-    private async shouldUseExtensionBundle(context: T, template: IFunctionTemplate): Promise<boolean> {
-        // v1 doesn't support bundles
-        // http and timer triggers don't need a bundle
-        // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
-        if (context.runtime === ProjectRuntime.v1 ||
-            template.isHttpTrigger || template.isTimerTrigger ||
-            context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
-            return false;
-        }
-
-        // Old projects setup to use "func extensions install" shouldn't use a bundle because it could lead to duplicate or conflicting binaries
-        try {
-            const filesToCheck: string[] = [tasksFileName, settingsFileName];
-            for (const file of filesToCheck) {
-                const filePath: string = path.join(context.workspacePath, vscodeFolderName, file);
-                if (await fse.pathExists(filePath)) {
-                    const contents: string = (await fse.readFile(filePath)).toString();
-                    if (contents.includes(extInstallCommand)) {
-                        return false;
-                    }
-                }
-            }
-        } catch {
-            // ignore and use bundles (the default for new projects)
-        }
-
-        return true;
     }
 }
 
