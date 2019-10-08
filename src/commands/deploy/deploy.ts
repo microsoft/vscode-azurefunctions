@@ -12,6 +12,7 @@ import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { isPathEqual } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
@@ -21,7 +22,15 @@ import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export async function deploy(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+    await deploy(context, target, functionAppId, ProductionSlotTreeItem.contextValue)
+}
+
+export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
+    await deploy(context, target, functionAppId, SlotTreeItem.contextValue)
+}
+
+async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
     addLocalFuncTelemetry(context);
 
     let node: SlotTreeItemBase | undefined;
@@ -42,7 +51,7 @@ export async function deploy(context: IActionContext, target?: vscode.Uri | stri
             // event is fired from azure-extensionui if node was created during deployment
             const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
             try {
-                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(expectedContextValue, context);
             } finally {
                 disposable.dispose();
             }

@@ -26,7 +26,7 @@ import { createFunctionApp, createFunctionAppAdvanced } from './commands/createF
 import { createNewProject } from './commands/createNewProject/createNewProject';
 import { createSlot } from './commands/createSlot';
 import { deleteNode } from './commands/deleteNode';
-import { deploy } from './commands/deploy/deploy';
+import { deployProductionSlot, deploySlot } from './commands/deploy/deploy';
 import { connectToGitHub } from './commands/deployments/connectToGitHub';
 import { disconnectRepo } from './commands/deployments/disconnectRepo';
 import { redeployDeployment } from './commands/deployments/redeployDeployment';
@@ -62,6 +62,7 @@ import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { ProductionSlotTreeItem } from './tree/ProductionSlotTreeItem';
 import { ProxyTreeItem } from './tree/ProxyTreeItem';
+import { SlotTreeItem } from './tree/SlotTreeItem';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
@@ -113,7 +114,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
         registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
         registerCommand('azureFunctions.deleteFunctionApp', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, ProductionSlotTreeItem.contextValue, node));
-        registerCommand('azureFunctions.deploy', deploy);
+        registerCommand('azureFunctions.deleteSlot', async (actionContext: IActionContext, node?: AzExtTreeItem) => await deleteNode(actionContext, SlotTreeItem.contextValue, node));
+        registerCommand('azureFunctions.deploy', deployProductionSlot);
+        registerCommand('azureFunctions.deploySlot', deploySlot);
         registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
         registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);
         registerCommand('azureFunctions.executeFunction', executeFunction);
