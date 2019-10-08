@@ -9,6 +9,7 @@ import { IFunctionBinding, IFunctionJson } from "../../funcConfig/function";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { confirmEditJsonFile } from '../../utils/fs';
 import { nonNullProp } from "../../utils/nonNull";
+import { verifyExtensionBundle } from "../../utils/verifyExtensionBundle";
 import { getBindingSetting } from "../createFunction/IFunctionWizardContext";
 import { IBindingWizardContext } from "./IBindingWizardContext";
 
@@ -36,6 +37,8 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
             return functionJson;
         });
         context.binding = binding;
+
+        await verifyExtensionBundle(context, bindingTemplate);
 
         window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
     }

@@ -6,36 +6,49 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { parseError } from 'vscode-azureextensionui';
+import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
 import { extInstallCommand, hostFileName, ProjectLanguage, ProjectRuntime, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
 import { IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
+import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { bundleFeedUtils } from './bundleFeedUtils';
 import { writeFormattedJson } from './fs';
 
-export async function verifyExtensionBundle(context: IFunctionWizardContext): Promise<void> {
-    const hostFilePath: string = path.join(context.projectPath, hostFileName);
-    try {
-        const hostJson: IHostJsonV2 = <IHostJsonV2>await fse.readJSON(hostFilePath);
+export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<void> {
+    if (await shouldUseExtensionBundle(context, template)) {
+        const hostFilePath: string = path.join(context.projectPath, hostFileName);
+        let hostJson: IHostJsonV2;
+        try {
+            hostJson = <IHostJsonV2>await fse.readJSON(hostFilePath);
+        } catch (error) {
+            throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
+        }
+
         if (!hostJson.extensionBundle) {
-            // https://github.com/Microsoft/vscode-azurefunctions/issues/1202
+            let versionRange: string;
+            try {
+                versionRange = await bundleFeedUtils.getLatestVersionRange();
+            } catch {
+                versionRange = bundleFeedUtils.defaultVersionRange;
+            }
+
             hostJson.extensionBundle = {
-                id: 'Microsoft.Azure.Functions.ExtensionBundle',
-                version: '[1.*, 2.0.0)'
+                id: bundleFeedUtils.defaultBundleId,
+                version: versionRange
             };
             await writeFormattedJson(hostFilePath, hostJson);
         }
-    } catch (error) {
-        throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
     }
 }
 
-export async function shouldUseExtensionBundle(context: IFunctionWizardContext, template: IFunctionTemplate): Promise<boolean> {
+async function shouldUseExtensionBundle(context: IFunctionWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<boolean> {
     // v1 doesn't support bundles
     // http and timer triggers don't need a bundle
     // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
     if (context.runtime === ProjectRuntime.v1 ||
-        template.isHttpTrigger || template.isTimerTrigger ||
+        !bundleFeedUtils.isBundleTemplate(template) ||
         context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
         return false;
     }

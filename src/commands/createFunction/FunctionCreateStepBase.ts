@@ -10,7 +10,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
-import { shouldUseExtensionBundle, verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
+import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
@@ -51,9 +51,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(context);
-        if (await shouldUseExtensionBundle(context, template)) {
-            await verifyExtensionBundle(context);
-        }
+        await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
 
