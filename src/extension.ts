@@ -65,6 +65,7 @@ import { ProxyTreeItem } from './tree/ProxyTreeItem';
 import { SlotTreeItem } from './tree/SlotTreeItem';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
+// tslint:disable-next-line: max-func-body-length
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);

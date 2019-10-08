@@ -23,11 +23,11 @@ import { runPreDeployTask } from './runPreDeployTask';
 import { verifyAppSettings } from './verifyAppSettings';
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, ProductionSlotTreeItem.contextValue)
+    await deploy(context, target, functionAppId, ProductionSlotTreeItem.contextValue);
 }
 
 export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, SlotTreeItem.contextValue)
+    await deploy(context, target, functionAppId, SlotTreeItem.contextValue);
 }
 
 async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
