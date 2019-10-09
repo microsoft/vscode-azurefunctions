@@ -123,7 +123,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
         name: getVariableValue(resources, variables, rawSetting.name),
         resourceType: rawSetting.resource,
         valueType: rawSetting.value,
-        description: rawSetting.help ? getResourceValue(resources, rawSetting.help) : undefined,
+        description: rawSetting.help ? replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) : undefined,
         defaultValue: rawSetting.defaultValue ? getVariableValue(resources, variables, rawSetting.defaultValue) : undefined,
         label: getVariableValue(resources, variables, rawSetting.label),
         enums: enums,
@@ -132,7 +132,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
             if (rawSetting.validators) {
                 for (const validator of rawSetting.validators) {
                     if (!value || value.match(validator.expression) === null) {
-                        return getVariableValue(resources, variables, validator.errorText);
+                        return replaceHtmlLinkWithMarkdown(getVariableValue(resources, variables, validator.errorText));
                     }
                 }
             }
@@ -140,6 +140,15 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
             return undefined;
         }
     };
+}
+
+function replaceHtmlLinkWithMarkdown(text: string): string {
+    const match: RegExpMatchArray | null = text.match(/<a[^>]*href=['"]([^'"]*)['"][^>]*>([^<]*)<\/a>/i);
+    if (match) {
+        return text.replace(match[0], `[${match[2]}](${match[1]})`);
+    } else {
+        return text;
+    }
 }
 
 export function parseScriptBindings(config: IConfig, resources: IResources): IBindingTemplate[] {
