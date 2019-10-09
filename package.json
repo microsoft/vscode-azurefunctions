@@ -42,11 +42,13 @@
         "onCommand:azureFunctions.stopFunctionApp",
         "onCommand:azureFunctions.restartFunctionApp",
         "onCommand:azureFunctions.deleteFunctionApp",
+        "onCommand:azureFunctions.deleteSlot",
         "onCommand:azureFunctions.copyFunctionUrl",
         "onCommand:azureFunctions.executeFunction",
         "onCommand:azureFunctions.viewProperties",
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deploy",
+        "onCommand:azureFunctions.deploySlot",
         "onCommand:azureFunctions.configureDeploymentSource",
         "onCommand:azureFunctions.startRemoteDebug",
         "onCommand:azureFunctions.startJavaRemoteDebug",
@@ -163,6 +165,11 @@
                 "category": "Azure Functions"
             },
             {
+                "command": "azureFunctions.deleteSlot",
+                "title": "%azureFunctions.deleteSlot%",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
@@ -170,6 +177,11 @@
                     "light": "resources/light/Deploy.svg",
                     "dark": "resources/dark/Deploy.svg"
                 }
+            },
+            {
+                "command": "azureFunctions.deploySlot",
+                "title": "%azureFunctions.deploySlot%",
+                "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.configureDeploymentSource",
@@ -434,12 +446,22 @@
                 },
                 {
                     "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
+                    "group": "2@5"
+                },
+                {
+                    "command": "azureFunctions.deleteSlot",
+                    "when": "view == azFuncTree && viewItem == azFuncSlot",
                     "group": "2@5"
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
+                    "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.deploySlot",
+                    "when": "view == azFuncTree && viewItem == azFuncSlot",
                     "group": "3@1"
                 },
                 {
