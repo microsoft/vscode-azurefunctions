@@ -37,7 +37,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: string[] = [appName, 'Windows', 'Consumption Plan', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, getRotatingLocation()];
+        const testInputs: string[] = [appName, 'Windows', 'Consumption', '.NET', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, getRotatingLocation()];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
@@ -46,7 +46,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: string[] = [app2Name, 'Windows', 'Consumption Plan', '.NET', rgName, saName, aiName];
+        const testInputs: string[] = [app2Name, 'Windows', 'Consumption', '.NET', rgName, saName, aiName];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
