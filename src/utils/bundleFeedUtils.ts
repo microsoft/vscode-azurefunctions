@@ -9,8 +9,8 @@ import { IBundleMetadata } from '../funcConfig/host';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { feedUtils } from './feedUtils';
 import { nugetUtils } from './nugetUtils';
-import { requestUtils } from './requestUtils';
 
 export namespace bundleFeedUtils {
     export const defaultBundleId: string = 'Microsoft.Azure.Functions.ExtensionBundle';
@@ -64,11 +64,6 @@ export namespace bundleFeedUtils {
         return feed.defaultVersionRange;
     }
 
-    // We access the feed pretty frequently, so cache it and periodically refresh it
-    let cachedBundleFeed: IBundleFeed | undefined;
-    let cachedUrl: string | undefined;
-    let nextRefreshTime: number = Date.now();
-
     async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
         const bundleId: string = bundleMetadata && bundleMetadata.id || defaultBundleId;
 
@@ -81,14 +76,6 @@ export namespace bundleFeedUtils {
             url = `https://functionscdn${suffix}.azureedge.net/public/ExtensionBundles/${bundleId}/index-v2.json`;
         }
 
-        if (!cachedBundleFeed || cachedUrl !== url || Date.now() > nextRefreshTime) {
-            const request: requestUtils.Request = await requestUtils.getDefaultRequest(url);
-            const response: string = await requestUtils.sendRequest(request);
-            cachedBundleFeed = <IBundleFeed>JSON.parse(response);
-            cachedUrl = url;
-            nextRefreshTime = Date.now() + 10 * 60 * 1000;
-        }
-
-        return cachedBundleFeed;
+        return feedUtils.getJsonFeed(url);
     }
 }

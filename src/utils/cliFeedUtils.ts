@@ -6,7 +6,7 @@
 import { ProjectRuntime } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { localize } from '../localize';
-import { requestUtils } from './requestUtils';
+import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
     const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
@@ -85,18 +85,7 @@ export namespace cliFeedUtils {
         };
     }
 
-    // We access the cli feed pretty frequently, so cache it and periodically refresh it
-    let cachedCliFeed: ICliFeed | undefined;
-    let nextRefreshTime: number = Date.now();
-
     async function getCliFeed(): Promise<ICliFeed> {
-        if (!cachedCliFeed || Date.now() > nextRefreshTime) {
-            const request: requestUtils.Request = await requestUtils.getDefaultRequest(funcCliFeedUrl);
-            const response: string = await requestUtils.sendRequest(request);
-            cachedCliFeed = <ICliFeed>JSON.parse(response);
-            nextRefreshTime = Date.now() + 10 * 60 * 1000;
-        }
-
-        return cachedCliFeed;
+        return feedUtils.getJsonFeed(funcCliFeedUrl);
     }
 }
