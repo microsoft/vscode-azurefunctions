@@ -28,7 +28,11 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
             await ensureVenvInFuncIgnore(context.projectPath, this._venvName);
         }
 
-        await ensureGitIgnoreContents(context.projectPath, this._venvName);
+        const gitignoreLines: string[] = ['.python_packages', '__pycache__'];
+        if (this._venvName) {
+            gitignoreLines.push(this._venvName);
+        }
+        await ensureGitIgnoreContents(context.projectPath, gitignoreLines);
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
@@ -90,26 +94,19 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 }
 
-async function ensureGitIgnoreContents(projectPath: string, venvName: string | undefined): Promise<void> {
+export async function ensureGitIgnoreContents(projectPath: string, lines: string[]): Promise<void> {
     // .gitignore is created by `func init`
     const gitignorePath: string = path.join(projectPath, gitignoreFileName);
     if (await fse.pathExists(gitignorePath)) {
         let writeFile: boolean = false;
         let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
 
-        function ensureInGitIgnore(newLine: string): void {
-            if (!gitignoreContents.includes(newLine)) {
-                gitignoreContents = gitignoreContents.concat(`${os.EOL}${newLine}`);
+        for (const line of lines) {
+            if (!gitignoreContents.includes(line)) {
+                gitignoreContents = gitignoreContents.concat(`${os.EOL}${line}`);
                 writeFile = true;
             }
         }
-
-        if (venvName) {
-            ensureInGitIgnore(venvName);
-        }
-
-        ensureInGitIgnore('.python_packages');
-        ensureInGitIgnore('__pycache__');
 
         if (writeFile) {
             await fse.writeFile(gitignorePath, gitignoreContents);

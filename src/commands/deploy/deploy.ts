@@ -20,6 +20,7 @@ import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
+import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
@@ -77,6 +78,8 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
+
+    await validateRemoteBuild(context, client, workspaceFolder.uri.fsPath, language);
 
     await verifyAppSettings(context, node, runtime, language);
 
