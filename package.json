@@ -937,6 +937,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.enableOutputTimestamps%",
                         "default": true
+                    },
+                    "azureFunctions.stopFuncTaskPostDebug": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.stopFuncTaskPostDebug%",
+                        "default": true
                     }
                 }
             }

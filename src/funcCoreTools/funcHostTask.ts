@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
 import { delay } from '../utils/delay';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 // The name of the task before we started providing it in FuncTaskProvider.ts
 export const oldFuncHostNameRegEx: RegExp = /run\s*functions\s*host/i;
@@ -47,21 +48,23 @@ async function stopFuncTaskIfRunning(context: IActionContext, debugSession: vsco
     context.errorHandling.suppressDisplay = true;
     context.telemetry.suppressIfSuccessful = true;
 
-    if (debugSession.workspaceFolder) {
-        const funcExecution: vscode.TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: vscode.TaskExecution) => {
-            return te.task.scope === debugSession.workspaceFolder && isFuncHostTask(te.task);
-        });
+    if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug')) {
+        if (debugSession.workspaceFolder) {
+            const funcExecution: vscode.TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: vscode.TaskExecution) => {
+                return te.task.scope === debugSession.workspaceFolder && isFuncHostTask(te.task);
+            });
 
-        if (funcExecution) {
-            context.telemetry.suppressIfSuccessful = false; // only track telemetry if it's actually the func task
+            if (funcExecution) {
+                context.telemetry.suppressIfSuccessful = false; // only track telemetry if it's actually the func task
 
-            const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(debugSession.workspaceFolder);
-            if (runningFuncTask !== undefined) {
-                // Wait at least 10 seconds after the func task started before calling `terminate` since that will remove task output and we want the user to see any startup errors
-                await delay(Math.max(0, runningFuncTask.startTime + 10 * 1000 - Date.now()));
+                const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(debugSession.workspaceFolder);
+                if (runningFuncTask !== undefined) {
+                    // Wait at least 10 seconds after the func task started before calling `terminate` since that will remove task output and we want the user to see any startup errors
+                    await delay(Math.max(0, runningFuncTask.startTime + 10 * 1000 - Date.now()));
 
-                if (runningFuncTaskMap.get(debugSession.workspaceFolder) === runningFuncTask) {
-                    funcExecution.terminate();
+                    if (runningFuncTaskMap.get(debugSession.workspaceFolder) === runningFuncTask) {
+                        funcExecution.terminate();
+                    }
                 }
             }
         }
