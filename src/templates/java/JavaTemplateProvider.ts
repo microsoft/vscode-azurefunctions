@@ -55,6 +55,13 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         }
     }
 
+    /**
+     * Unlike script where templates come from multiple sources (bundle vs non-bundle), java always gets templates from the same source (maven)
+     */
+    public includeTemplate(): boolean {
+        return true;
+    }
+
     protected async getCacheKeySuffix(): Promise<string> {
         return 'Java';
     }
