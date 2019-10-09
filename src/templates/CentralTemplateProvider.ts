@@ -105,7 +105,7 @@ export class CentralTemplateProvider {
 
     private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
         let result: ITemplates | undefined;
-        let latestTemplatesError: unknown;
+        let latestErrorMessage: string | undefined;
         try {
             const latestTemplateVersion: string = await provider.getLatestTemplateVersion();
             context.telemetry.properties.latestTemplateVersion = latestTemplateVersion;
@@ -123,10 +123,10 @@ export class CentralTemplateProvider {
                 result = await this.getLatestTemplates(context, provider, latestTemplateVersion);
             }
         } catch (error) {
-            // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
-            latestTemplatesError = error;
             const errorMessage: string = parseError(error).message;
-            ext.outputChannel.appendLog(localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage));
+            // This error should be the most actionable to the user, so save it and throw later if cache/backup doesn't work
+            latestErrorMessage = localize('latestTemplatesError', 'Failed to get latest templates: {0}', errorMessage);
+            ext.outputChannel.appendLog(latestErrorMessage);
             context.telemetry.properties.latestTemplatesError = errorMessage;
         }
 
@@ -145,11 +145,12 @@ export class CentralTemplateProvider {
                 functionTemplates: result.functionTemplates.filter(f => provider.includeTemplate(f)),
                 bindingTemplates: result.bindingTemplates.filter(b => provider.includeTemplate(b))
             };
-        } else if (latestTemplatesError !== undefined) {
+        } else if (latestErrorMessage) {
             if (!context.errorHandling.suppressDisplay) {
+                // Show output so that users see cache/backup errors as well
                 ext.outputChannel.show();
             }
-            throw latestTemplatesError;
+            throw new Error(latestErrorMessage);
         } else {
             // This should only happen for dev/test scenarios where we explicitly set templateSource
             throw new Error(localize('templateSourceError', 'Internal error: Failed to get templates for source "{0}".', this.templateSource));
