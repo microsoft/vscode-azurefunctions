@@ -67,6 +67,7 @@
     "azureFunctions.startJavaRemoteDebug": "Attach Debugger",
     "azureFunctions.startRemoteDebug": "Start Remote Debugging",
     "azureFunctions.startStreamingLogs": "Start Streaming Logs",
+    "azureFunctions.stopFuncTaskPostDebug": "Automatically stop the task running the Azure Functions host when a debug sessions ends.",
     "azureFunctions.stopFunctionApp": "Stop",
     "azureFunctions.stopStreamingLogs": "Stop Streaming Logs",
     "azureFunctions.swapSlot": "Swap Slot...",
