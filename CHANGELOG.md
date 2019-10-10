@@ -2,6 +2,23 @@
 
 # Change Log
 
+## 0.19.0 - 2019-10-14
+
+### Added
+- Added support for deployment slots (feature flag no longer required)
+  - Deploy
+  - Stream logs
+  - Start/stop/restart
+  - Create/delete/swap
+- Default new Python projects to remote build. See here for more info: https://aka.ms/AA5vsfd
+- Function templates respect extension bundle specified in host.json
+- Add option to use a Premium (preview) hosting plan when creating a Function App in Azure
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.19.0%22+is%3Aclosed)
+- Fixed subfolders of a symbolically linked folder not included during deploy
+- Fixed bundle dependency not added during "Add Binding"
+- Reduced false positive deploy failures when listing triggers or logs
+
 ## 0.18.1 - 2019-08-21
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.18.1%22+is%3Aclosed)
@@ -12,7 +29,7 @@
 ## 0.18.0 - 2019-08-19
 
 ### Added
-- Added Python project support for server-side build. Follow these steps to enable: https://aka.ms/AA5vsfd
+- Added Python project support for remote build. Follow these steps to enable: https://aka.ms/AA5vsfd
 - Added Application Insights support when creating a Function App in Azure
 - Added a local project tree item to the Azure Functions view (does not apply to Java or C#)
   - Copy local http trigger urls
