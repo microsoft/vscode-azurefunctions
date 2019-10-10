@@ -33,7 +33,7 @@ let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
 
 // Runs before all tests
 suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-    this.timeout(120 * 1000);
+    this.timeout(4 * 60 * 1000);
 
     await fse.ensureDir(testFolderPath);
     testWorkspacePath = await initTestWorkspacePath();
