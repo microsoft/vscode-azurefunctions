@@ -23,8 +23,12 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
     const client: appservice.SiteClient = treeItem.client;
 
     if (client.isLinux) {
-        // https://github.com/microsoft/vscode-azurefunctions/issues/1472
-        await appservice.pingFunctionApp(treeItem.client);
+        try {
+            // https://github.com/microsoft/vscode-azurefunctions/issues/1472
+            await appservice.pingFunctionApp(treeItem.client);
+        } catch {
+            // ignore and open portal anyways
+        }
 
         await openLiveMetricsStream(treeItem);
     } else {
