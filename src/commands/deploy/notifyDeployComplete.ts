@@ -17,7 +17,6 @@ import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
 export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
-    ext.outputChannel.appendLog(deployComplete);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
