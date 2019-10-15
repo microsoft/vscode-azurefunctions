@@ -2,6 +2,12 @@
 
 # Change Log
 
+## 0.19.1 - 2019-10-15
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.19.1%22+is%3Aclosed)
+
+- Fix error "Expected value to be neither null nor undefined" when adding a binding
+
 ## 0.19.0 - 2019-10-14
 
 ### Added
