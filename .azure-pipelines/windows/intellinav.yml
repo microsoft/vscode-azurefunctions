@@ -1,7 +1,0 @@
-steps:
-- task: RichCodeNavIndexer@0
-  inputs:
-    serviceConnection: 'azuretools-dev' # name of the IntelliNav service connection
-    languages: 'typescript' # languages in your repo, separated by commas
-    githubServiceConnection: 'GitHub connection' # if your repo is on GitHub, this is the name of the GitHub service connection (GitHub organization by default)
-  continueOnError: true
