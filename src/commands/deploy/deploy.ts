@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { AzureTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -18,6 +18,7 @@ import { isPathEqual } from '../../utils/fs';
 import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { getDeployNode, IDeployNode } from './getDeployNode';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { validateRemoteBuild } from './validateRemoteBuild';
@@ -34,43 +35,14 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
 async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
     addLocalFuncTelemetry(context);
 
-    let node: SlotTreeItemBase | undefined;
     const { originalDeployFsPath, effectiveDeployFsPath } = await appservice.getDeployFsPath(target, extensionPrefix);
-
-    if (target instanceof SlotTreeItemBase) {
-        node = target;
-    }
-
     const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(effectiveDeployFsPath);
     if (!workspaceFolder) {
         throw new Error(localize('folderOpenWarning', 'Failed to deploy because the path is not part of an open workspace. Open in a workspace and try again.'));
     }
 
-    const newNodes: SlotTreeItemBase[] = [];
-    if (!node) {
-        if (!functionAppId || typeof functionAppId !== 'string') {
-            // event is fired from azure-extensionui if node was created during deployment
-            const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
-            try {
-                node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(expectedContextValue, context);
-            } finally {
-                disposable.dispose();
-            }
-        } else {
-            const functionAppNode: AzureTreeItem | undefined = await ext.tree.findTreeItem(functionAppId, context);
-            if (functionAppNode) {
-                node = <SlotTreeItemBase>functionAppNode;
-            } else {
-                throw new Error(localize('noMatchingFunctionApp', 'Failed to find a Function App matching id "{0}".', functionAppId));
-            }
-        }
-    }
+    const { node, isNewFunctionApp }: IDeployNode = await getDeployNode(context, target, functionAppId, expectedContextValue);
 
-    // if the node selected for deployment is the same newly created nodes, stifle the confirmDeployment dialog
-    const isNewFunctionApp: boolean = newNodes.some((newNode: AzureTreeItem) => !!node && newNode.fullId === node.fullId);
-    context.telemetry.properties.isNewFunctionApp = String(isNewFunctionApp);
-
-    const client: appservice.SiteClient = node.root.client;
     const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = runtime;
@@ -79,14 +51,14 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
     }
 
-    await validateRemoteBuild(context, client, workspaceFolder.uri.fsPath, language);
+    await validateRemoteBuild(context, node.root.client, workspaceFolder.uri.fsPath, language);
 
     await verifyAppSettings(context, node, runtime, language);
 
-    const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
+    const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (!isNewFunctionApp && isZipDeploy) {
-        const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', client.fullName);
+        const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', node.root.client.fullName);
         context.telemetry.properties.cancelStep = 'confirmDestructiveDeployment';
         const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
         await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
@@ -107,8 +79,8 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
                 // Stop function app here to avoid *.jar file in use on server side.
                 // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
                 if (language === ProjectLanguage.Java) {
-                    ext.outputChannel.appendLog(localize('stopFunctionApp', 'Stopping Function App: {0} ...', client.fullName));
-                    await client.stop();
+                    ext.outputChannel.appendLog(localize('stopFunctionApp', 'Stopping Function App: {0} ...', node.root.client.fullName));
+                    await node.root.client.stop();
                 }
                 // preDeploy tasks are only required for zipdeploy so subpath may not exist
                 let deployFsPath: string = effectiveDeployFsPath;
@@ -119,11 +91,11 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
                     ext.outputChannel.appendLog(noSubpathWarning);
                 }
 
-                await appservice.deploy(client, deployFsPath, context, showOutputChannelCommandId);
+                await appservice.deploy(node.root.client, deployFsPath, context, showOutputChannelCommandId);
             } finally {
                 if (language === ProjectLanguage.Java) {
-                    ext.outputChannel.appendLog(localize('startFunctionApp', 'Starting Function App: {0} ...', client.fullName));
-                    await client.start();
+                    ext.outputChannel.appendLog(localize('startFunctionApp', 'Starting Function App: {0} ...', node.root.client.fullName));
+                    await node.root.client.start();
                 }
             }
         }
