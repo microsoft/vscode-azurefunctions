@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as url from 'url';
-import { AzExtParentTreeItem } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ProjectRuntime } from '../constants';
 import { ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
@@ -64,7 +64,7 @@ export abstract class FunctionTreeItemBase extends AzExtParentTreeItem {
         return descriptions.join(' - ');
     }
 
-    public get iconPath(): string {
+    public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('azFuncFunction');
     }
 

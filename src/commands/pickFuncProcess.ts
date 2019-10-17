@@ -6,8 +6,9 @@
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, hostStartTaskName, isWindows } from '../constants';
+import { hostStartTaskName, isWindows } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
+import { ext } from '../extensionVariables';
 import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
@@ -40,7 +41,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
     }
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
-    const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${extensionPrefix}.${settingKey}`));
+    const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
 
     const pid: string = await startFuncTask(result.workspace, funcTask, timeoutInSeconds, timeoutError);
     return isWindows ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);

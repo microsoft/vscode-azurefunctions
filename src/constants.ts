@@ -5,7 +5,6 @@
 
 export const isWindows: boolean = /^win/.test(process.platform);
 
-export const extensionPrefix: string = 'azureFunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
 export const projectRuntimeSetting: string = 'projectRuntime';
 export const templateFilterSetting: string = 'templateFilter';
@@ -91,7 +90,5 @@ export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
 export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
-
-export const showOutputChannelCommandId: string = 'azureFunctions.showOutputChannel';
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';

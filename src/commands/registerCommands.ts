@@ -6,7 +6,6 @@
 import { commands } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem } from 'vscode-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
-import { showOutputChannelCommandId } from '../constants';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -39,6 +38,7 @@ import { executeFunction } from './executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
+import { openFile } from './openFile';
 import { openInPortal } from './openInPortal';
 import { pickFuncProcess } from './pickFuncProcess';
 import { startRemoteDebug } from './remoteDebug/startRemoteDebug';
@@ -80,6 +80,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommand('azureFunctions.loadMore', async (context: IActionContext, node: AzureTreeItem) => await ext.tree.loadMore(node, context));
+    registerCommand('azureFunctions.openFile', openFile);
     registerCommand('azureFunctions.openInPortal', openInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerCommand('azureFunctions.redeploy', redeployDeployment);
@@ -99,5 +100,5 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
     registerCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties);
-    registerCommand(showOutputChannelCommandId, () => { ext.outputChannel.show(); });
+    registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
 }

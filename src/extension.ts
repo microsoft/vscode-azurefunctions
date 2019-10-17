@@ -12,7 +12,7 @@ import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandlin
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
-import { extensionPrefix, func } from './constants';
+import { func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -28,7 +28,7 @@ import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigO
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.reporter = createTelemetryReporter(context);
-    ext.outputChannel = createAzExtOutputChannel('Azure Functions', extensionPrefix);
+    ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
     ext.ui = new AzureUserInput(context.globalState);
 
