@@ -14,10 +14,8 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
     protected packageJsonScripts: { [key: string]: string } = {
         build: 'tsc',
         watch: 'tsc -w',
-        prestart: 'npm run build && func extensions install',
-        'start:host': 'func start',
-        start: 'npm run start:host & npm run watch',
-        'build:production': 'npm run prestart && npm prune --production',
+        prestart: 'npm run build',
+        start: 'func start',
         test: 'echo \"No tests yet...\"'
     };
 
