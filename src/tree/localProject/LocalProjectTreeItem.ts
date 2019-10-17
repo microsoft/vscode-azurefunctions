@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable, WorkspaceFolder } from 'vscode';
-import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { convertStringToRuntime, getWorkspaceSetting } from '../../../extension.bundle';
 import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectRuntime, projectRuntimeSetting } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
@@ -45,7 +45,7 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
     }
 
-    public get iconPath(): treeUtils.IThemedIconPath {
+    public get iconPath(): TreeItemIconPath {
         return treeUtils.getThemedIconPath('CreateNewProject');
     }
 

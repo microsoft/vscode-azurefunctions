@@ -6,7 +6,7 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { extensionPrefix, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage, ProjectRuntime } from '../extension.bundle';
+import { ext, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage, ProjectRuntime } from '../extension.bundle';
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
@@ -294,7 +294,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
         const value: string | boolean = options.expectedSettings[key];
-        assert.equal(settings[`${extensionPrefix}.${key}`], value, `The setting with key "${key}" is not set to value "${value}".`);
+        assert.equal(settings[`${ext.prefix}.${key}`], value, `The setting with key "${key}" is not set to value "${value}".`);
     }
 
     //

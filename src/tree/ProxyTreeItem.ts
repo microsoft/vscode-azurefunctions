@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISiteTreeRoot } from 'vscode-azureappservice';
-import { AzureTreeItem } from 'vscode-azureextensionui';
+import { AzureTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { treeUtils } from '../utils/treeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
@@ -27,7 +27,7 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
         return this.parent.readOnly ? ProxyTreeItem.readOnlyContextValue : ProxyTreeItem.contextValue;
     }
 
-    public get iconPath(): string {
+    public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath(ProxyTreeItem.contextValue);
     }
 

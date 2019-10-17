@@ -7,8 +7,9 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extensionPrefix, extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, Platform, pythonVenvSetting } from "../../../constants";
+import { extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, Platform, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
+import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
@@ -62,7 +63,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
                 });
             }
 
-            const venvSettingReference: string = `\${config:${extensionPrefix}.${pythonVenvSetting}}`;
+            const venvSettingReference: string = `\${config:${ext.prefix}.${pythonVenvSetting}}`;
 
             function getPipInstallCommand(platform: NodeJS.Platform): string {
                 return venvUtils.convertToVenvPythonCommand('pip install -r requirements.txt', venvSettingReference, platform);

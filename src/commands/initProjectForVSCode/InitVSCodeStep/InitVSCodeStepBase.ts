@@ -7,7 +7,8 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, WorkspaceFolder } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, func, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, func, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -209,7 +210,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
                 settingsJsonPath,
                 (data: {}): {} => {
                     for (const setting of settings) {
-                        const key: string = `${setting.prefix || extensionPrefix}.${setting.key}`;
+                        const key: string = `${setting.prefix || ext.prefix}.${setting.key}`;
                         data[key] = setting.value;
                     }
                     return data;

@@ -6,7 +6,8 @@
 import * as vscode from 'vscode';
 import { handleFailedPreDeployTask, IPreDeployTaskResult, tryRunPreDeployTask } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { extensionPrefix, packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
+import { packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
 import { openUrl } from '../../utils/openUrl';
@@ -21,7 +22,7 @@ export async function runPreDeployTask(context: IActionContext, deployFsPath: st
         }
     }
 
-    let result: IPreDeployTaskResult = await tryRunPreDeployTask(context, deployFsPath, scmType, extensionPrefix);
+    let result: IPreDeployTaskResult = await tryRunPreDeployTask(context, deployFsPath, scmType);
 
     // https://github.com/Microsoft/vscode-azurefunctions/issues/826
     if (result.taskName === packTaskName && result.exitCode === 4) {
@@ -29,7 +30,7 @@ export async function runPreDeployTask(context: IActionContext, deployFsPath: st
     }
 
     if (result.failedToFindTask) {
-        throw new Error(localize('noPreDeployTaskError', 'Failed to find preDeploy task "{0}". Modify the setting "{1}.{2}" or add that task to {3}.', result.taskName, extensionPrefix, preDeployTaskSetting, tasksFileName));
+        throw new Error(localize('noPreDeployTaskError', 'Failed to find preDeploy task "{0}". Modify the setting "{1}.{2}" or add that task to {3}.', result.taskName, ext.prefix, preDeployTaskSetting, tasksFileName));
     } else if (result.exitCode !== undefined && result.exitCode !== 0) {
         await handleFailedPreDeployTask(context, result);
     }
@@ -42,7 +43,7 @@ async function promptToBuildNativeDeps(context: IActionContext, deployFsPath: st
         context.telemetry.properties.preDeployTaskResponse = 'packNativeDeps';
         const flag: string = '--build-native-deps';
         await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${flag}`, deployFsPath);
-        return await tryRunPreDeployTask(context, deployFsPath, scmType, extensionPrefix);
+        return await tryRunPreDeployTask(context, deployFsPath, scmType);
     } else if (result === DialogResponses.learnMore) {
         context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';
         await openUrl('https://aka.ms/func-python-publish');

@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { deploySubpathSetting, extensionPrefix, ProjectLanguage, ProjectRuntime, ScmType, showOutputChannelCommandId } from '../../constants';
+import { deploySubpathSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
@@ -35,7 +35,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
 async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
     addLocalFuncTelemetry(context);
 
-    const { originalDeployFsPath, effectiveDeployFsPath } = await appservice.getDeployFsPath(target, extensionPrefix);
+    const { originalDeployFsPath, effectiveDeployFsPath } = await appservice.getDeployFsPath(target, ext.prefix);
     const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(effectiveDeployFsPath);
     if (!workspaceFolder) {
         throw new Error(localize('folderOpenWarning', 'Failed to deploy because the path is not part of an open workspace. Open in a workspace and try again.'));
@@ -91,7 +91,7 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
                     ext.outputChannel.appendLog(noSubpathWarning);
                 }
 
-                await appservice.deploy(node.root.client, deployFsPath, context, showOutputChannelCommandId);
+                await appservice.deploy(node.root.client, deployFsPath, context);
             } finally {
                 if (language === ProjectLanguage.Java) {
                     ext.outputChannel.appendLog(localize('startFunctionApp', 'Starting Function App: {0} ...', node.root.client.fullName));

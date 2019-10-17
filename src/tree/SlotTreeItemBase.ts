@@ -5,8 +5,8 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem, window } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem } from 'vscode-azureextensionui';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
+import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { KuduClient } from 'vscode-azurekudu';
 import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
@@ -34,6 +34,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _state?: string;
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
+    private readonly _logFilesTreeItem: LogFilesTreeItem;
+    private readonly _siteFilesTreeItem: SiteFilesTreeItem;
     private _cachedRuntime: ProjectRuntime | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
@@ -43,7 +45,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this.site = site;
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this, 'azureFunctions.toggleAppSettingVisibility');
+        this.appSettingsTreeItem = new AppSettingsTreeItem(this);
+        this._siteFilesTreeItem = new SiteFilesTreeItem(this, true);
+        this._logFilesTreeItem = new LogFilesTreeItem(this);
     }
 
     // overrides ISubscriptionContext with an object that also has SiteClient
@@ -71,7 +75,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
-    public get iconPath(): string {
+    public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath(this.contextValue);
     }
 
@@ -156,7 +160,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
         const sourceControl: WebSiteManagementModels.SiteSourceControl = await this.root.client.getSourceControl();
-        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, sourceControl, 'azureFunctions.connectToGitHub');
+        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, sourceControl);
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(this);
@@ -166,7 +170,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             this._proxiesTreeItem = await ProxiesTreeItem.createProxiesTreeItem(this);
         }
 
-        return [this._functionsTreeItem, this.appSettingsTreeItem, this._proxiesTreeItem, this.deploymentsNode];
+        return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._proxiesTreeItem];
     }
 
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
@@ -196,6 +200,10 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         }
 
         return undefined;
+    }
+
+    public compareChildrenImpl(): number {
+        return 0; // already sorted
     }
 
     public async isReadOnly(): Promise<boolean> {

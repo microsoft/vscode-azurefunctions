@@ -637,6 +637,21 @@
                 {
                     "command": "azureFunctions.addBinding",
                     "when": "view == azFuncTree && viewItem =~ /Local;ReadWrite;Bindings;/i"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azFuncTree && viewItem == siteFiles",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azFuncTree && viewItem == logFiles",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azFuncTree && viewItem == folder",
+                    "group": "1@1"
                 }
             ],
             "explorer/context": [
@@ -1014,7 +1029,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.49.0",
+        "vscode-azureappservice": "^0.50.0",
         "vscode-azureextensionui": "^0.28.2",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
@@ -43,7 +43,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this._readOnly ? localize('readOnly', 'Read only') : '';
     }
 
-    public get iconPath(): treeUtils.IThemedIconPath {
+    public get iconPath(): TreeItemIconPath {
         return treeUtils.getThemedIconPath('list-unordered');
     }
 

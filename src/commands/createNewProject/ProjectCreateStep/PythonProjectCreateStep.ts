@@ -8,7 +8,6 @@ import * as path from 'path';
 import * as semver from 'semver';
 import { Progress, QuickPickItem } from 'vscode';
 import { IAzureQuickPickOptions, parseError } from 'vscode-azureextensionui';
-import { extensionPrefix } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from "../../../localize";
@@ -59,7 +58,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
         const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>(settingKey, context.workspacePath);
         context.telemetry.properties.createPythonVenv = String(createPythonVenv);
         if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
-            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', extensionPrefix, settingKey) });
+            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', ext.prefix, settingKey) });
             const defaultVenvName: string = '.venv';
             await createVirtualEnviornment(defaultVenvName, context.projectPath);
             progress.report({ message: this.creatingMessage });
