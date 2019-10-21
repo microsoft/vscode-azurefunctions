@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, parseError } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter } from '../constants';
+import { ProjectLanguage, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
@@ -27,8 +28,8 @@ export class CentralTemplateProvider {
         this.templateSource = templateSource;
     }
 
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, runtime);
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
         const functionTemplates: IFunctionTemplate[] = templates.functionTemplates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
         switch (templateFilter) {
             case TemplateFilter.All:
@@ -37,44 +38,44 @@ export class CentralTemplateProvider {
                 return functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
-                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(runtime).concat(getDotnetVerifiedTemplateIds(runtime)).concat(getJavaVerifiedTemplateIds());
+                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
                 return functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
         }
     }
 
-    public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<IBindingTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, runtime);
+    public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<IBindingTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
         return templates.bindingTemplates;
     }
 
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
-    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, runtime: ProjectRuntime): Promise<ITemplates> {
+    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<ITemplates> {
         const providers: TemplateProviderBase[] = [];
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                providers.push(new DotnetTemplateProvider(runtime, projectPath));
+                providers.push(new DotnetTemplateProvider(version, projectPath));
                 break;
             case ProjectLanguage.Java:
-                providers.push(new JavaTemplateProvider(runtime, projectPath));
+                providers.push(new JavaTemplateProvider(version, projectPath));
                 break;
             default:
-                providers.push(new ScriptTemplateProvider(runtime, projectPath));
-                if (runtime !== ProjectRuntime.v1) {
-                    providers.push(new ScriptBundleTemplateProvider(runtime, projectPath));
+                providers.push(new ScriptTemplateProvider(version, projectPath));
+                if (version !== FuncVersion.v1) {
+                    providers.push(new ScriptBundleTemplateProvider(version, projectPath));
                 }
                 break;
         }
 
-        let key: string = runtime;
+        let key: string = version;
         for (const provider of providers) {
             key += provider.templateType;
         }
 
-        context.telemetry.properties.runtime = runtime;
-        context.telemetry.properties.language = language;
+        context.telemetry.properties.projectRuntime = version;
+        context.telemetry.properties.projectLanguage = language;
 
         let templatesTask: Promise<ITemplates> | undefined = this._templatesTaskMap[key];
         if (templatesTask) {

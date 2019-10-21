@@ -5,13 +5,14 @@
 
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 
+const v3BackupTemplatesVersion: string = '3.0.1';
 const v2BackupTemplatesVersion: string = '2.18.1';
 const v1BackupTemplatesVersion: string = '1.8.0';
 
@@ -25,21 +26,21 @@ export enum TemplateType {
 export abstract class TemplateProviderBase {
     public static templateVersionKey: string = 'templateVersion';
     public abstract templateType: TemplateType;
-    public readonly runtime: ProjectRuntime;
+    public readonly version: FuncVersion;
     public readonly projectPath: string | undefined;
 
-    public constructor(runtime: ProjectRuntime, projectPath: string | undefined) {
-        this.runtime = runtime;
+    public constructor(version: FuncVersion, projectPath: string | undefined) {
+        this.version = version;
         this.projectPath = projectPath;
     }
 
     /**
-     * Adds runtime, templateType, and language information to a key to ensure there are no collisions in the cache
-     * For backwards compatability, the original runtime, templateType, and language will not have this information
+     * Adds version, templateType, and language information to a key to ensure there are no collisions in the cache
+     * For backwards compatability, the original version, templateType, and language will not have this information
      */
     public getCacheKey(key: string): string {
-        if (this.runtime !== ProjectRuntime.v1) {
-            key = `${key}.${this.runtime}`;
+        if (this.version !== FuncVersion.v1) {
+            key = `${key}.${this.version}`;
         }
 
         if (this.templateType !== TemplateType.Script) {
@@ -71,13 +72,15 @@ export abstract class TemplateProviderBase {
     }
 
     public getBackupTemplateVersion(): string {
-        switch (this.runtime) {
-            case ProjectRuntime.v1:
+        switch (this.version) {
+            case FuncVersion.v1:
                 return v1BackupTemplatesVersion;
-            case ProjectRuntime.v2:
+            case FuncVersion.v2:
                 return v2BackupTemplatesVersion;
+            case FuncVersion.v3:
+                return v3BackupTemplatesVersion;
             default:
-                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', this.runtime));
+                throw new RangeError(localize('invalidVersion', 'Invalid version "{0}".', this.version));
         }
     }
 }

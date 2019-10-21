@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { promptForProjectRuntime } from '../../vsCodeConfig/settings';
+import { promptForFuncVersion } from '../../FuncVersion';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
-export class ProjectRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
+export class FuncVersionStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public async prompt(context: IProjectWizardContext): Promise<void> {
-        context.runtime = await promptForProjectRuntime();
+        context.version = await promptForFuncVersion();
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {
-        return context.runtime === undefined;
+        return context.version === undefined;
     }
 }

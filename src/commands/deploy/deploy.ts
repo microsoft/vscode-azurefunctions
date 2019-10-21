@@ -7,9 +7,10 @@ import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { deploySubpathSetting, ProjectLanguage, ProjectRuntime, ScmType } from '../../constants';
+import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -43,9 +44,9 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
 
     const { node, isNewFunctionApp }: IDeployNode = await getDeployNode(context, target, functionAppId, expectedContextValue);
 
-    const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, effectiveDeployFsPath);
+    const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
-    context.telemetry.properties.projectRuntime = runtime;
+    context.telemetry.properties.projectRuntime = version;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
@@ -53,7 +54,7 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
 
     await validateRemoteBuild(context, node.root.client, workspaceFolder.uri.fsPath, language);
 
-    await verifyAppSettings(context, node, runtime, language);
+    await verifyAppSettings(context, node, version, language);
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;

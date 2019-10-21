@@ -7,8 +7,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, WorkspaceFolder } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { deploySubpathSetting, func, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -28,8 +29,8 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     public async execute(context: IProjectWizardContext): Promise<void> {
         await this.executeCore(context);
 
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        context.telemetry.properties.projectRuntime = runtime;
+        const version: FuncVersion = nonNullProp(context, 'version');
+        context.telemetry.properties.projectRuntime = version;
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
         context.telemetry.properties.projectLanguage = language;
@@ -39,8 +40,8 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath);
-        await this.writeLaunchJson(context.workspaceFolder, vscodePath, runtime);
-        await this.writeSettingsJson(context.workspaceFolder, vscodePath, language, runtime);
+        await this.writeLaunchJson(context.workspaceFolder, vscodePath, version);
+        await this.writeSettingsJson(context.workspaceFolder, vscodePath, language, version);
         await this.writeExtensionsJson(vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
@@ -58,7 +59,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
     protected abstract executeCore(context: IProjectWizardContext): Promise<void>;
     protected abstract getTasks(): TaskDefinition[];
-    protected getDebugConfiguration?(runtime: ProjectRuntime): DebugConfiguration;
+    protected getDebugConfiguration?(version: FuncVersion): DebugConfiguration;
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
     protected setDeploySubpath(context: IProjectWizardContext, deploySubpath: string): string {
@@ -144,9 +145,9 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return existingTasks;
     }
 
-    private async writeLaunchJson(folder: WorkspaceFolder | undefined, vscodePath: string, runtime: ProjectRuntime): Promise<void> {
+    private async writeLaunchJson(folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
         if (this.getDebugConfiguration) {
-            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(runtime);
+            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
 
             // Use VS Code api to update config if folder is open and it's not a multi-root workspace (https://github.com/Microsoft/vscode-azurefunctions/issues/1235)
@@ -188,10 +189,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return existingConfigs;
     }
 
-    private async writeSettingsJson(folder: WorkspaceFolder | undefined, vscodePath: string, language: string, runtime: ProjectRuntime): Promise<void> {
+    private async writeSettingsJson(folder: WorkspaceFolder | undefined, vscodePath: string, language: string, version: FuncVersion): Promise<void> {
         const settings: ISettingToAdd[] = this.settings.concat(
             { key: projectLanguageSetting, value: language },
-            { key: projectRuntimeSetting, value: runtime },
+            { key: funcVersionSetting, value: version },
             // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
             { prefix: 'debug', key: 'internalConsoleOptions', value: 'neverOpen' }
         );

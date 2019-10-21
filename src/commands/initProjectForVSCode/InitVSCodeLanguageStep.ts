@@ -5,13 +5,13 @@
 
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { tryGetLocalRuntimeVersion } from '../../funcCoreTools/tryGetLocalRuntimeVersion';
+import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
+import { FuncVersionStep } from '../createNewProject/FuncVersionStep';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
-import { ProjectRuntimeStep } from '../createNewProject/ProjectRuntimeStep';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaInitVSCodeStep } from './InitVSCodeStep/JavaInitVSCodeStep';
@@ -56,8 +56,8 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
 
         await addInitVSCodeStep(context, executeSteps);
-        if (language !== ProjectLanguage.CSharp && language !== ProjectLanguage.FSharp) { // runtime will be detected from proj file
-            promptSteps.push(new ProjectRuntimeStep());
+        if (language !== ProjectLanguage.CSharp && language !== ProjectLanguage.FSharp) { // version will be detected from proj file
+            promptSteps.push(new FuncVersionStep());
         }
 
         return { promptSteps, executeSteps };
@@ -77,14 +77,12 @@ export async function addInitVSCodeStep(context: IProjectWizardContext, executeS
             executeSteps.push(new DotnetInitVSCodeStep());
             break;
         case ProjectLanguage.Python:
-            context.runtime = ProjectRuntime.v2; // only supports v2
             executeSteps.push(new PythonInitVSCodeStep());
             break;
         case ProjectLanguage.PowerShell:
             executeSteps.push(new PowerShellInitVSCodeStep());
             break;
         case ProjectLanguage.Java:
-            context.runtime = ProjectRuntime.v2; // only supports v2
             executeSteps.push(new JavaInitVSCodeStep());
             break;
         case ProjectLanguage.CSharpScript:
@@ -96,7 +94,7 @@ export async function addInitVSCodeStep(context: IProjectWizardContext, executeS
             break;
     }
 
-    if (context.runtime === undefined) {
-        context.runtime = await tryGetLocalRuntimeVersion();
+    if (context.version === undefined) {
+        context.version = await tryGetLocalFuncVersion();
     }
 }

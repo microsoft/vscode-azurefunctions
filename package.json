@@ -803,13 +803,13 @@
                         "enum": [
                             "~1",
                             "~2",
-                            "beta"
+                            "~3"
                         ],
                         "description": "%azureFunctions.projectRuntime%",
                         "enumDescriptions": [
                             "%azureFunctions.projectRuntime.v1%",
                             "%azureFunctions.projectRuntime.v2%",
-                            "%azureFunctions.projectRuntime.beta%"
+                            "%azureFunctions.projectRuntime.v3%"
                         ]
                     },
                     "azureFunctions.projectLanguage": {

@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ProjectRuntime } from '../../../constants';
+import { FuncVersion } from '../../../FuncVersion';
 import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
@@ -45,8 +45,8 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             }
         }
 
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        await executeDotnetTemplateCommand(runtime, context.projectPath, 'create', '--identity', template.id, ...args);
+        const version: FuncVersion = nonNullProp(context, 'version');
+        await executeDotnetTemplateCommand(version, context.projectPath, 'create', '--identity', template.id, ...args);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

@@ -7,9 +7,10 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectRuntime, proxiesFileName, workerRuntimeKey } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, proxiesFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { FuncVersion } from '../../../FuncVersion';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
@@ -22,10 +23,10 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected supportsManagedDependencies: boolean = false;
 
     public async executeCore(context: IProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        const version: FuncVersion = nonNullProp(context, 'version');
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: IHostJsonV2 | IHostJsonV1 = this.getHostContent(runtime);
+            const hostJson: IHostJsonV2 | IHostJsonV1 = this.getHostContent(version);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -72,8 +73,10 @@ local.settings.json`));
         }
     }
 
-    private getHostContent(runtime: ProjectRuntime): IHostJsonV2 | IHostJsonV1 {
-        if (runtime === ProjectRuntime.v2) {
+    private getHostContent(version: FuncVersion): IHostJsonV2 | IHostJsonV1 {
+        if (version === FuncVersion.v1) {
+            return {};
+        } else {
             if (this.supportsManagedDependencies) {
                 return {
                     version: '2.0',
@@ -85,8 +88,5 @@ local.settings.json`));
 
             return { version: '2.0' };
         }
-
-        // runtime === ProjectRuntime.v1
-        return {};
     }
 }

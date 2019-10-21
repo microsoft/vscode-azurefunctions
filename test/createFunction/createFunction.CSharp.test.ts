@@ -6,14 +6,14 @@
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharp;
-    public runtime: ProjectRuntime = ProjectRuntime.v2;
+    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [functionName + '.cs'];
@@ -135,7 +135,7 @@ suite('Create Function C# ~2', async function (this: ISuiteCallbackContext): Pro
             const connection: string = 'IoTHub_Setting';
             const projectPath: string = path.join(csTester.baseTestFolder, source);
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v2, async () => {
+                await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
                     // Intentionally testing weird casing
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
                 });

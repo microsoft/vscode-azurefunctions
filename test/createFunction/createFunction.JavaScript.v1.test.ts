@@ -6,14 +6,14 @@
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JSFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
-    public runtime: ProjectRuntime = ProjectRuntime.v1;
+    public version: FuncVersion = FuncVersion.v1;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -101,7 +101,7 @@ suite('Create Function JavaScript ~1', async function (this: ISuiteCallbackConte
             const projectPath: string = path.join(jsTester.baseTestFolder, source);
             // Intentionally testing weird casing for authLevel
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.JavaScript, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
+                await runWithFuncSetting(funcVersionSetting, FuncVersion.v1, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                 });
             });

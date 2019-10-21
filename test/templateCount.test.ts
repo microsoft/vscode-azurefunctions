@@ -9,7 +9,7 @@ import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, IFunctionTemplate, ProjectLanguage, ProjectRuntime, TemplateFilter, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
 import { createTestActionContext, longRunningTestsEnabled, runForTemplateSource, testUserInput, testWorkspacePath } from './global.test';
 
 addSuite(undefined);
@@ -19,74 +19,52 @@ addSuite(TemplateSource.Backup);
 
 function addSuite(source: TemplateSource | undefined): void {
     suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, async () => {
-        test('JavaScript v1', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const jsTemplatesv1: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.JavaScript, ProjectRuntime.v1, TemplateFilter.Verified);
-                assert.equal(jsTemplatesv1.length, 8);
-            });
-        });
+        const cases: [ProjectLanguage, FuncVersion, number][] = [
+            [ProjectLanguage.JavaScript, FuncVersion.v1, 8],
+            [ProjectLanguage.JavaScript, FuncVersion.v2, 12],
+            [ProjectLanguage.JavaScript, FuncVersion.v3, 12],
+            [ProjectLanguage.CSharp, FuncVersion.v1, 12],
+            [ProjectLanguage.CSharp, FuncVersion.v2, 9],
+            // https://github.com/microsoft/vscode-azurefunctions/issues/1602
+            // [ProjectLanguage.CSharp, FuncVersion.v3, 9]
+            [ProjectLanguage.Python, FuncVersion.v2, 9],
+            [ProjectLanguage.Python, FuncVersion.v3, 9],
+            [ProjectLanguage.TypeScript, FuncVersion.v2, 12],
+            [ProjectLanguage.TypeScript, FuncVersion.v3, 12],
+            [ProjectLanguage.PowerShell, FuncVersion.v2, 9],
+            [ProjectLanguage.PowerShell, FuncVersion.v3, 9],
+            [ProjectLanguage.Java, FuncVersion.v2, 4]
+            // https://github.com/microsoft/vscode-azurefunctions/issues/1605
+            // [ProjectLanguage.Java, FuncVersion.v3, 4]
+        ];
 
-        test('JavaScript v2', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const jsTemplatesv2: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.JavaScript, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(jsTemplatesv2.length, 12);
-            });
-        });
+        for (const [language, version, expectedCount] of cases) {
+            test(`${language} ${version}`, async function (this: IHookCallbackContext): Promise<void> {
+                if (language === ProjectLanguage.Java) {
+                    await javaPreTest(this);
+                }
 
-        test('Java v2', async function (this: IHookCallbackContext): Promise<void> {
-            if (!longRunningTestsEnabled) {
-                this.skip();
-            }
-            this.timeout(120 * 1000);
-
-            // Java templates require you to have a project open, so create one here
-            if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // No need to create for every template source
-                const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
-                await fse.emptyDir(testWorkspacePath);
-                await testUserInput.runWithInputs(inputs, async () => {
-                    await vscode.commands.executeCommand('azureFunctions.createNewProject');
+                await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
+                    const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified);
+                    assert.equal(templates.length, expectedCount);
                 });
-            }
-
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const javaTemplates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, ProjectLanguage.Java, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(javaTemplates.length, 4);
             });
-        });
-
-        test('C# v1', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const cSharpTemplates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.CSharp, ProjectRuntime.v1, TemplateFilter.Verified);
-                assert.equal(cSharpTemplates.length, 12);
-            });
-        });
-
-        test('C# v2', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const cSharpTemplatesv2: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.CSharp, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(cSharpTemplatesv2.length, 9);
-            });
-        });
-
-        test('Python v2', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const pythonTemplates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.Python, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(pythonTemplates.length, 9);
-            });
-        });
-
-        test('TypeScript v2', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const tsTemplates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.TypeScript, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(tsTemplates.length, 12);
-            });
-        });
-
-        test('PowerShell v2', async () => {
-            await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                const powershellTemplates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), undefined, ProjectLanguage.PowerShell, ProjectRuntime.v2, TemplateFilter.Verified);
-                assert.equal(powershellTemplates.length, 9);
-            });
-        });
+        }
     });
+}
+
+async function javaPreTest(testContext: IHookCallbackContext): Promise<void> {
+    if (!longRunningTestsEnabled) {
+        testContext.skip();
+    }
+    testContext.timeout(120 * 1000);
+
+    // Java templates require you to have a project open, so create one here
+    if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // No need to create for every template source
+        const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
+        await fse.emptyDir(testWorkspacePath);
+        await testUserInput.runWithInputs(inputs, async () => {
+            await vscode.commands.executeCommand('azureFunctions.createNewProject');
+        });
+    }
 }

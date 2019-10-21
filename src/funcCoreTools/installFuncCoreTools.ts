@@ -3,31 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { funcPackageName, isWindows, PackageManager, ProjectRuntime } from '../constants';
+import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
-import { promptForProjectRuntime } from "../vsCodeConfig/settings";
+import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
 export async function installFuncCoreTools(packageManagers: PackageManager[]): Promise<void> {
-    let runtime: ProjectRuntime;
-    if (!isWindows) {
-        runtime = ProjectRuntime.v2;
-    } else {
-        runtime = await promptForProjectRuntime(localize('windowsVersion', 'Select the version of the runtime to install'));
-    }
+    const version: FuncVersion = await promptForFuncVersion(localize('selectVersion', 'Select the version of the runtime to install'));
 
     ext.outputChannel.show();
     // Use the first package manager
     switch (packageManagers[0]) {
         case PackageManager.npm:
-            const distTag: INpmDistTag = await getNpmDistTag(runtime);
+            const distTag: INpmDistTag = await getNpmDistTag(version);
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
             break;
         case PackageManager.brew:
+            const brewPackageName: string = getBrewPackageName(version);
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'tap', 'azure/functions');
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'install', funcPackageName);
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'install', brewPackageName);
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManagers[0]));

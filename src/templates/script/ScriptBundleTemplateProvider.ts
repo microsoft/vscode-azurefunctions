@@ -74,6 +74,6 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
             }
         }
 
-        return parseHostJson(data, this.runtime).bundle;
+        return parseHostJson(data, this.version).bundle;
     }
 }

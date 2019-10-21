@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime, TemplateFilter, templateFilterSetting } from '../../constants';
+import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
 import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
@@ -42,13 +43,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     public static async create(context: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
         if (options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
-            const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, runtime, TemplateFilter.All);
+            const version: FuncVersion = nonNullProp(context, 'version');
+            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
             } else {
-                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", runtime "{1}", and id "{2}".', context.language, context.runtime, options.templateId));
+                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", version "{1}", and id "{2}".', context.language, context.version, options.templateId));
             }
         }
 
@@ -140,8 +141,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, runtime, templateFilter);
+        const version: FuncVersion = nonNullProp(context, 'version');
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, templateFilter);
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });

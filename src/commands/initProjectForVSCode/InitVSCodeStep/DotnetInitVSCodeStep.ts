@@ -7,8 +7,9 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, ProjectRuntime } from '../../../constants';
+import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
@@ -21,10 +22,10 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
     private _debugSubpath: string;
 
-    protected getDebugConfiguration(runtime: ProjectRuntime): DebugConfiguration {
+    protected getDebugConfiguration(version: FuncVersion): DebugConfiguration {
         return {
             name: localize('attachToNetFunc', "Attach to .NET Functions"),
-            type: runtime === ProjectRuntime.v1 ? 'clr' : 'coreclr',
+            type: version === FuncVersion.v1 ? 'clr' : 'coreclr',
             request: 'attach',
             processId: '\${command:azureFunctions.pickProcess}'
         };
@@ -40,7 +41,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     }
 
     /**
-     * Detects the runtime based on the targetFramework from the proj file
+     * Detects the version based on the targetFramework from the proj file
      * Also performs a few validations and sets a few properties based on that targetFramework
      */
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
@@ -53,36 +54,37 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         }
 
         const projFilePath: string = path.join(projectPath, projFileName);
-        const targetFramework: string | undefined = await tryGetTargetFramework(projFilePath);
-        if (!targetFramework) {
-            throw new Error(localize('unrecognizedTargetFramework', 'Unrecognized target framework in project file "{0}".', projFileName));
-        } else {
-            context.telemetry.properties.dotnetTargetFramework = targetFramework;
-            if (/net(standard|core)/i.test(targetFramework)) {
-                context.runtime = ProjectRuntime.v2;
-            } else {
-                context.runtime = ProjectRuntime.v1;
-                const settingKey: string = 'show64BitWarning';
-                if (getWorkspaceSetting<boolean>(settingKey)) {
-                    const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
-                    try {
-                        const result: MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                        if (result === DialogResponses.learnMore) {
-                            await openUrl('https://aka.ms/azFunc64bit');
-                        } else if (result === DialogResponses.dontWarnAgain) {
-                            await updateGlobalSetting(settingKey, false);
-                        }
-                    } catch (err) {
-                        // swallow cancellations (aka if they clicked the 'x' button to dismiss the warning) and proceed to create project
-                        if (!parseError(err).isUserCancelledError) {
-                            throw err;
-                        }
+
+        const versionInProjFile: string = await getFuncVersion(projFilePath);
+        context.telemetry.properties.versionInProjFile = versionInProjFile;
+        context.version = tryParseFuncVersion(versionInProjFile);
+        if (context.version === undefined) {
+            throw new Error(localize('unrecognizedFuncVersion', 'Unrecognized version "{0}".', versionInProjFile));
+        }
+
+        if (context.version === FuncVersion.v1) {
+            const settingKey: string = 'show64BitWarning';
+            if (getWorkspaceSetting<boolean>(settingKey)) {
+                const message: string = localize('64BitWarning', 'In order to debug .NET Framework functions in VS Code, you must install a 64-bit version of the Azure Functions Core Tools.');
+                try {
+                    const result: MessageItem = await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                    if (result === DialogResponses.learnMore) {
+                        await openUrl('https://aka.ms/azFunc64bit');
+                    } else if (result === DialogResponses.dontWarnAgain) {
+                        await updateGlobalSetting(settingKey, false);
+                    }
+                } catch (err) {
+                    // swallow cancellations (aka if they clicked the 'x' button to dismiss the warning) and proceed to create project
+                    if (!parseError(err).isUserCancelledError) {
+                        throw err;
                     }
                 }
             }
-            this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
-            this._debugSubpath = `bin/Debug/${targetFramework}`;
         }
+
+        const targetFramework: string = await getTargetFramework(projFilePath);
+        this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
+        this._debugSubpath = `bin/Debug/${targetFramework}`;
     }
 
     protected getTasks(): TaskDefinition[] {
@@ -160,10 +162,23 @@ export async function tryGetFsprojFile(projectPath: string): Promise<string | un
     return await tryGetProjFile(projectPath, /\.fsproj$/i);
 }
 
-export async function tryGetTargetFramework(projFilePath: string): Promise<string | undefined> {
+async function getFuncVersion(projFilePath: string): Promise<string> {
+    return await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+}
+
+export async function getTargetFramework(projFilePath: string): Promise<string> {
+    return await getPropertyInProjFile(projFilePath, 'TargetFramework');
+}
+
+export async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
     const projContents: string = (await fse.readFile(projFilePath)).toString();
-    const matches: RegExpMatchArray | null = projContents.match(/<TargetFramework>(.*)<\/TargetFramework>/);
-    return matches === null ? undefined : matches[1];
+    const regExp: RegExp = new RegExp(`<${prop}>(.*)<\/${prop}>`);
+    const matches: RegExpMatchArray | null = projContents.match(regExp);
+    if (!matches) {
+        throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFilePath));
+    } else {
+        return matches[1];
+    }
 }
 
 /**

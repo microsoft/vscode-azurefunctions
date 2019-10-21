@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
@@ -73,13 +74,14 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
  * Parses templates used by the .NET CLI
  * This basically converts the 'raw' templates in the externally defined JSON format to a common and understood format (IFunctionTemplate) used by this extension
  */
-export async function parseDotnetTemplates(rawTemplates: object[], runtime: ProjectRuntime): Promise<ITemplates> {
+export async function parseDotnetTemplates(rawTemplates: object[], version: FuncVersion): Promise<ITemplates> {
     const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
-            if (/^Azure\.Function\.(F|C)Sharp\./i.test(template.id) &&
-                ((runtime === ProjectRuntime.v1 && template.id.includes('1')) || (runtime === ProjectRuntime.v2 && template.id.includes('2')))) {
+            const majorVersion: string = getMajorVersion(version);
+            const regExp: RegExp = new RegExp(`^Azure\.Function\.(F|C)Sharp\.[^\.]*\.${majorVersion}\.`, 'i');
+            if (regExp.test(template.id)) {
                 functionTemplates.push(template);
             }
         } catch (error) {
@@ -87,7 +89,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], runtime: Proj
         }
     }
 
-    await copyCSharpSettingsFromJS(functionTemplates, runtime);
+    await copyCSharpSettingsFromJS(functionTemplates, version);
 
     return {
         functionTemplates,
@@ -99,13 +101,13 @@ export async function parseDotnetTemplates(rawTemplates: object[], runtime: Proj
  * The dotnet templates do not provide the validation and resourceType information that we desire
  * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
  */
-async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], runtime: ProjectRuntime): Promise<void> {
+async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], version: FuncVersion): Promise<void> {
     // Use separate telemetry event since we don't want to overwrite C# telemetry with JS telemetry
     await callWithTelemetryAndErrorHandling('copyCSharpSettingsFromJS', async (jsContext: IActionContext) => {
         jsContext.errorHandling.suppressDisplay = true;
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
-        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, runtime);
+        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version);
         for (const csharpTemplate of csharpTemplates) {
             const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
             if (jsTemplate) {

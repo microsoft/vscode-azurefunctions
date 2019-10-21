@@ -8,7 +8,7 @@ import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { DialogResponses, initProjectForVSCode, Platform, ProjectLanguage } from '../extension.bundle';
-import { testFolderPath, testUserInput } from './global.test';
+import { createTestActionContext, testFolderPath, testUserInput } from './global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
@@ -56,7 +56,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, csharpProject);
         const csProjPath: string = path.join(projectPath, 'test.csproj');
         await fse.ensureFile(csProjPath);
-        await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
+        await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>');
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getCSharpValidateOptions('test', 'netstandard2.0'));
     });
@@ -66,7 +66,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, csharpProjectWithExtensions);
         const csProjPath: string = path.join(projectPath, 'test.csproj');
         await fse.ensureFile(csProjPath);
-        await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
+        await fse.writeFile(csProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>');
         await fse.ensureFile(path.join(projectPath, 'extensions.csproj'));
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getCSharpValidateOptions('test', 'netstandard2.0'));
@@ -92,7 +92,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         const projectPath: string = path.join(testFolderPath, fsharpProject);
         const fsProjPath: string = path.join(projectPath, 'test.fsproj');
         await fse.ensureFile(fsProjPath);
-        await fse.writeFile(fsProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework>');
+        await fse.writeFile(fsProjPath, '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>');
         await testInitProjectForVSCode(projectPath);
         await validateProject(projectPath, getFSharpValidateOptions('test', 'netstandard2.0'));
     });
@@ -375,7 +375,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         await fse.ensureDir(path.join(projectPath, '.git'));
 
         await testUserInput.runWithInputs(inputs, async () => {
-            await initProjectForVSCode({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, projectPath);
+            await initProjectForVSCode(createTestActionContext(), projectPath);
         });
     }
 });

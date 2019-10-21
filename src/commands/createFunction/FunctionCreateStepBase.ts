@@ -45,7 +45,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
 
         context.telemetry.properties.projectLanguage = context.language;
-        context.telemetry.properties.projectRuntime = context.runtime;
+        context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.templateId = template.id;
 
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });

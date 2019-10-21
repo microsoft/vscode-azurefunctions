@@ -6,7 +6,7 @@
 export const isWindows: boolean = /^win/.test(process.platform);
 
 export const projectLanguageSetting: string = 'projectLanguage';
-export const projectRuntimeSetting: string = 'projectRuntime';
+export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
 export const templateVersionSetting: string = 'templateVersion';
@@ -27,11 +27,6 @@ export enum ProjectLanguage {
     PowerShell = 'PowerShell',
     Python = 'Python',
     TypeScript = 'TypeScript'
-}
-
-export enum ProjectRuntime {
-    v1 = '~1',
-    v2 = '~2'
 }
 
 export enum TemplateFilter {

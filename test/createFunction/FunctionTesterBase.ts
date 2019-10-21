@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunction, ext, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
+import { createFunction, ext, FuncVersion, funcVersionSetting, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
 import { createTestActionContext, runForAllTemplateSources, testFolderPath, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
@@ -15,7 +15,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public baseTestFolder: string;
 
     public abstract language: ProjectLanguage;
-    public abstract runtime: ProjectRuntime;
+    public abstract version: FuncVersion;
 
     private readonly testedFunctions: string[] = [];
 
@@ -25,14 +25,14 @@ export abstract class FunctionTesterBase implements Disposable {
     public abstract getExpectedPaths(functionName: string): string[];
 
     public async initAsync(): Promise<void> {
-        this.baseTestFolder = path.join(testFolderPath, `createFunction${this.language}${this.runtime}`);
+        this.baseTestFolder = path.join(testFolderPath, `createFunction${this.language}${this.version}`);
         await runForAllTemplateSources(async (source) => {
             await this.initializeTestFolder(path.join(this.baseTestFolder, source));
         });
     }
 
     public async dispose(): Promise<void> {
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.runtime, TemplateFilter.Verified);
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.version, TemplateFilter.Verified);
         assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
     }
 
@@ -80,7 +80,7 @@ export abstract class FunctionTesterBase implements Disposable {
         await testUserInput.runWithInputs(inputs, async () => {
             await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
                 await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
-                    await runWithFuncSetting(projectRuntimeSetting, this.runtime, async () => {
+                    await runWithFuncSetting(funcVersionSetting, this.version, async () => {
                         await createFunction({ telemetry: { properties: {}, measurements: {} }, errorHandling: {} }, testFolder);
                     });
                 });

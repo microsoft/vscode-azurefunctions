@@ -6,7 +6,7 @@
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -15,7 +15,7 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JavaScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
-    public runtime: ProjectRuntime = ProjectRuntime.v2;
+    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -27,7 +27,7 @@ class JavaScriptFunctionTester extends FunctionTesterBase {
 
 class TypeScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
-    public runtime: ProjectRuntime = ProjectRuntime.v2;
+    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -39,7 +39,7 @@ class TypeScriptFunctionTester extends FunctionTesterBase {
 
 class PythonFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Python;
-    public runtime: ProjectRuntime = ProjectRuntime.v2;
+    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -51,7 +51,7 @@ class PythonFunctionTester extends FunctionTesterBase {
 
 class PowerShellFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.PowerShell;
-    public runtime: ProjectRuntime = ProjectRuntime.v2;
+    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -68,7 +68,7 @@ addSuite(new PowerShellFunctionTester());
 
 function addSuite(tester: FunctionTesterBase): void {
     // tslint:disable-next-line:max-func-body-length no-function-expression
-    suite(`Create Function ${tester.language} ${tester.runtime}`, async function (this: ISuiteCallbackContext): Promise<void> {
+    suite(`Create Function ${tester.language} ${tester.version}`, async function (this: ISuiteCallbackContext): Promise<void> {
         suiteSetup(async () => {
             await tester.initAsync();
         });
@@ -192,7 +192,7 @@ function addSuite(tester: FunctionTesterBase): void {
                 const projectPath: string = path.join(tester.baseTestFolder, source);
                 // Intentionally testing weird casing for authLevel
                 await runWithFuncSetting(projectLanguageSetting, tester.language, async () => {
-                    await runWithFuncSetting(projectRuntimeSetting, tester.runtime, async () => {
+                    await runWithFuncSetting(funcVersionSetting, tester.version, async () => {
                         await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
                     });
                 });

@@ -5,7 +5,8 @@
 
 import { WorkspaceFolder } from "vscode";
 import { IActionContext } from "vscode-azureextensionui";
-import { ProjectLanguage, ProjectRuntime } from "../../constants";
+import { ProjectLanguage } from "../../constants";
+import { FuncVersion } from "../../FuncVersion";
 
 export interface IProjectWizardContext extends IActionContext {
     projectPath: string;
@@ -13,7 +14,7 @@ export interface IProjectWizardContext extends IActionContext {
     workspaceFolder: WorkspaceFolder | undefined;
 
     language?: ProjectLanguage;
-    runtime?: ProjectRuntime;
+    version?: FuncVersion;
     openBehavior?: OpenBehavior;
 }
 

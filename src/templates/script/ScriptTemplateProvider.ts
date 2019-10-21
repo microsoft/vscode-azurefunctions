@@ -7,8 +7,8 @@ import * as extract from 'extract-zip';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ProjectRuntime } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { FuncVersion } from '../../FuncVersion';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { downloadFile, getRandomHexString } from '../../utils/fs';
@@ -43,7 +43,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async getLatestTemplateVersion(): Promise<string> {
-        return await cliFeedUtils.getLatestVersion(this.runtime);
+        return await cliFeedUtils.getLatestVersion(this.version);
     }
 
     public async getLatestTemplates(_context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
@@ -74,7 +74,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
-        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', this._backupSubpath, this.runtime));
+        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', this._backupSubpath, this.version));
         return await this.parseTemplates(backupTemplatesPath);
     }
 
@@ -86,7 +86,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
-        return this.runtime === ProjectRuntime.v1 || !bundleFeedUtils.isBundleTemplate(template);
+        return this.version === FuncVersion.v1 || !bundleFeedUtils.isBundleTemplate(template);
     }
 
     protected async getCacheKeySuffix(): Promise<string> {

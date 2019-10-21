@@ -5,9 +5,9 @@
 
 import * as url from 'url';
 import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
-import { ProjectRuntime } from '../constants';
 import { ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
@@ -102,8 +102,8 @@ export abstract class FunctionTreeItemBase extends AzExtParentTreeItem {
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
     private async refreshDisabledState(): Promise<void> {
-        const runtime: ProjectRuntime = await this.parent.parent.getRuntime();
-        if (runtime === ProjectRuntime.v1) {
+        const version: FuncVersion = await this.parent.parent.getVersion();
+        if (version === FuncVersion.v1) {
             this._disabled = this.config.disabled;
         } else {
             const appSettings: ApplicationSettings = await this.parent.parent.getApplicationSettings();

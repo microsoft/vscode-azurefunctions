@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DebugConfiguration } from "vscode";
-import { ProjectRuntime } from "../../../constants";
+import { FuncVersion } from "../../../FuncVersion";
 import { localize } from "../../../localize";
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class DotnetScriptInitVSCodeStep extends ScriptInitVSCodeStep {
-    protected getDebugConfiguration(runtime: ProjectRuntime): DebugConfiguration {
+    protected getDebugConfiguration(version: FuncVersion): DebugConfiguration {
         return {
             name: localize('attachToNetFunc', "Attach to .NET Script Functions"),
-            type: runtime === ProjectRuntime.v1 ? 'clr' : 'coreclr',
+            type: version === FuncVersion.v1 ? 'clr' : 'coreclr',
             request: 'attach',
             processId: '\${command:azureFunctions.pickProcess}'
         };
