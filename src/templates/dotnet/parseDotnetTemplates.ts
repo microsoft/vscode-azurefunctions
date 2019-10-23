@@ -80,7 +80,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
         try {
             const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
             const majorVersion: string = getMajorVersion(version);
-            const regExp: RegExp = new RegExp(`^Azure\.Function\.(F|C)Sharp\.[^\.]*\.${majorVersion}\.`, 'i');
+            const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.[^.]*\\.${majorVersion}\\.`, 'i');
             if (regExp.test(template.id)) {
                 functionTemplates.push(template);
             }

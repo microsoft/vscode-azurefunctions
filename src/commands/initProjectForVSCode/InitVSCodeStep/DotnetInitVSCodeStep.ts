@@ -172,7 +172,7 @@ export async function getTargetFramework(projFilePath: string): Promise<string> 
 
 export async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
     const projContents: string = (await fse.readFile(projFilePath)).toString();
-    const regExp: RegExp = new RegExp(`<${prop}>(.*)<\/${prop}>`);
+    const regExp: RegExp = new RegExp(`<${prop}>(.*)<\\/${prop}>`);
     const matches: RegExpMatchArray | null = projContents.match(regExp);
     if (!matches) {
         throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFilePath));
