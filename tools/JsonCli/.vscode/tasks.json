@@ -12,15 +12,33 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "publish2",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "publish",
                 "--configuration",
                 "Release",
+                "--framework",
+                "netcoreapp2.0",
                 "--output",
-                "${workspaceFolder}/../../resources/dotnetJsonCli/",
+                "${workspaceFolder}/../../resources/dotnetJsonCli/netcoreapp2.0/",
+                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish3",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "--framework",
+                "netcoreapp3.0",
+                "--output",
+                "${workspaceFolder}/../../resources/dotnetJsonCli/netcoreapp3.0/",
                 "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
             ],
             "problemMatcher": "$msCompile"
