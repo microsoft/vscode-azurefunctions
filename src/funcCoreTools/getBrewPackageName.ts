@@ -8,7 +8,7 @@ import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
 
 export function getBrewPackageName(version: FuncVersion): string {
     let result: string = funcPackageName;
-    if (version !== FuncVersion.v2) {
+    if (version !== FuncVersion.v2) { // v2 was the original version supported for brew and doesn't have the version in the name
         const majorVersion: string = getMajorVersion(version);
         result += '-v' + majorVersion;
     }
