@@ -12,7 +12,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish2",
+            "label": "publish (2.0)",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -28,7 +28,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish3",
+            "label": "publish (3.0)",
             "command": "dotnet",
             "type": "process",
             "args": [
