@@ -5,8 +5,9 @@
 
 import * as semver from 'semver';
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand, ProjectRuntime } from '../../../constants';
+import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { FuncVersion } from '../../../FuncVersion';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -29,7 +30,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
     }
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
-        if (context.runtime === ProjectRuntime.v2) {
+        if (context.version === FuncVersion.v2) { // no need to check v1 or v3+
             try {
                 const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
                 // Starting after this version, projects can use extension bundle instead of running "func extensions install"

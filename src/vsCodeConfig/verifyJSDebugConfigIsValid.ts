@@ -7,9 +7,10 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage, ProjectRuntime, tasksFileName, vscodeFolderName } from '../constants';
+import { ProjectLanguage, tasksFileName, vscodeFolderName } from '../constants';
 import { oldFuncHostNameRegEx } from "../funcCoreTools/funcHostTask";
-import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
+import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { promptToReinitializeProject } from './promptToReinitializeProject';
 import { ITask, ITasksJson } from './tasks';
@@ -19,8 +20,8 @@ import { ITask, ITasksJson } from './tasks';
  * See https://aka.ms/AA1vrxa for more info
  */
 export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguage | undefined, workspacePath: string, context: IActionContext): Promise<void> {
-    const localProjectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
-    if (localProjectRuntime === ProjectRuntime.v2) {
+    const version: FuncVersion | undefined = await tryGetLocalFuncVersion();
+    if (version === FuncVersion.v2) { // no need to check v1 or v3+
         const tasksJsonPath: string = path.join(workspacePath, vscodeFolderName, tasksFileName);
         const rawTasksData: string = (await fse.readFile(tasksJsonPath)).toString();
 

@@ -5,7 +5,8 @@
 
 import { Uri, WorkspaceFolder } from "vscode";
 import { AzureWizard, IActionContext } from "vscode-azureextensionui";
-import { ProjectLanguage, ProjectRuntime } from "../../constants";
+import { ProjectLanguage } from "../../constants";
+import { FuncVersion } from "../../FuncVersion";
 import { LocalBindingsTreeItem } from "../../tree/localProject/LocalBindingsTreeItem";
 import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
@@ -21,9 +22,9 @@ export async function addBinding(context: IActionContext, data: Uri | LocalBindi
         const workspaceFolder: WorkspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
         const workspacePath: string = workspaceFolder.uri.fsPath;
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
-        const [language, runtime]: [ProjectLanguage, ProjectRuntime] = await verifyInitForVSCode(context, projectPath);
+        const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, projectPath);
 
-        const wizardContext: IBindingWizardContext = Object.assign(context, { functionJsonPath: data.fsPath, workspacePath, projectPath, workspaceFolder, language, runtime });
+        const wizardContext: IBindingWizardContext = Object.assign(context, { functionJsonPath: data.fsPath, workspacePath, projectPath, workspaceFolder, language, version });
         const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
         await wizard.prompt();
         await wizard.execute();

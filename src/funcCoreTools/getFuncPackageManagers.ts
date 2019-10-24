@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { funcPackageName, PackageManager, Platform } from '../constants';
+import { FuncVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
+import { getBrewPackageName } from './getBrewPackageName';
 
 export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<PackageManager[]> {
     const result: PackageManager[] = [];
@@ -13,13 +15,8 @@ export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<
             // https://github.com/Microsoft/vscode-azurefunctions/issues/311
             break;
         case Platform.MacOS:
-            try {
-                isFuncInstalled ?
-                    await cpUtils.executeCommand(undefined, undefined, 'brew', 'ls', funcPackageName) :
-                    await cpUtils.executeCommand(undefined, undefined, 'brew', '--version');
+            if (await hasBrew(isFuncInstalled)) {
                 result.push(PackageManager.brew);
-            } catch (error) {
-                // an error indicates no brew
             }
         // fall through to check npm on both mac and windows
         default:
@@ -33,4 +30,22 @@ export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<
             }
     }
     return result;
+}
+
+async function hasBrew(isFuncInstalled: boolean): Promise<boolean> {
+    for (const version of Object.values(FuncVersion)) {
+        if (version !== FuncVersion.v1) {
+            const brewPackageName: string = getBrewPackageName(version);
+            try {
+                isFuncInstalled ?
+                    await cpUtils.executeCommand(undefined, undefined, 'brew', 'ls', brewPackageName) :
+                    await cpUtils.executeCommand(undefined, undefined, 'brew', '--version');
+                return true;
+            } catch (error) {
+                // an error indicates no brew
+            }
+        }
+    }
+
+    return false;
 }

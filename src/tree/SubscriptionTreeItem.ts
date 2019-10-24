@@ -6,12 +6,13 @@
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, IAppSettingsContext, setLocationsTask, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting, workerRuntimeKey } from '../constants';
-import { tryGetLocalRuntimeVersion } from '../funcCoreTools/tryGetLocalRuntimeVersion';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, workerRuntimeKey } from '../constants';
+import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
+import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 import { cliFeedUtils } from '../utils/cliFeedUtils';
 import { nonNullProp } from '../utils/nonNull';
-import { convertStringToRuntime, getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
@@ -70,7 +71,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
-        const runtime: ProjectRuntime = await getDefaultRuntime(context);
+        const version: FuncVersion = await getDefaultFuncVersion(context);
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
         const wizardContext: IAppServiceWizardContext = Object.assign(context, this.root, {
@@ -122,7 +123,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
         LocationListStep.addStep(wizardContext, promptSteps);
 
-        executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, runtime, language)));
+        executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, version, language)));
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
@@ -151,32 +152,31 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 }
 
-async function getDefaultRuntime(context: IActionContext): Promise<ProjectRuntime> {
-    // Try to get VS Code setting for runtime (aka if they have a project open)
-    let runtime: string | undefined = convertStringToRuntime(getWorkspaceSettingFromAnyFolder(projectRuntimeSetting));
+async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersion> {
+    // Try to get VS Code setting for version (aka if they have a project open)
+    let version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSettingFromAnyFolder(funcVersionSetting));
     context.telemetry.properties.runtimeSource = 'VSCodeSetting';
 
-    if (!runtime) {
-        // Try to get the runtime that matches their local func cli version
-        runtime = await tryGetLocalRuntimeVersion();
+    if (version === undefined) {
+        // Try to get the version that matches their local func cli
+        version = await tryGetLocalFuncVersion();
         context.telemetry.properties.runtimeSource = 'LocalFuncCli';
     }
 
-    if (!runtime) {
-        // Default to v2 if all else fails
-        runtime = ProjectRuntime.v2;
+    if (version === undefined) {
+        version = latestGAVersion;
         context.telemetry.properties.runtimeSource = 'Backup';
     }
 
-    context.telemetry.properties.projectRuntime = runtime;
+    context.telemetry.properties.projectRuntime = version;
 
-    return <ProjectRuntime>runtime;
+    return version;
 }
 
-async function createFunctionAppSettings(context: IAppSettingsContext, projectRuntime: ProjectRuntime, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
+async function createFunctionAppSettings(context: IAppSettingsContext, version: FuncVersion, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
     const appSettings: WebSiteManagementModels.NameValuePair[] = [];
 
-    const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(projectRuntime);
+    const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(version);
     for (const key of Object.keys(cliFeedAppSettings)) {
         appSettings.push({
             name: key,
@@ -190,7 +190,7 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
     });
 
     // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
-    if (projectRuntime === ProjectRuntime.v1) {
+    if (version === FuncVersion.v1) {
         appSettings.push({
             name: 'AzureWebJobsDashboard',
             value: context.storageConnectionString
@@ -219,7 +219,7 @@ async function createFunctionAppSettings(context: IAppSettingsContext, projectRu
     // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
     // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
     // It also doesn't apply for Linux Consumption, which has its own custom deploy logic in the the vscode-azureappservice package
-    if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && projectRuntime === ProjectRuntime.v1)) {
+    if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && version === FuncVersion.v1)) {
         appSettings.push({
             name: 'WEBSITE_RUN_FROM_PACKAGE',
             value: '1'

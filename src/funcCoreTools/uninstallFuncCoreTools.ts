@@ -6,9 +6,13 @@
 import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { nonNullValue } from '../utils/nonNull';
+import { getBrewPackageName } from './getBrewPackageName';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
+import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 
 export async function uninstallFuncCoreTools(_context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
     ext.outputChannel.show();
@@ -30,7 +34,9 @@ export async function uninstallFuncCoreTools(_context: IActionContext, packageMa
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'uninstall', '-g', funcPackageName);
             break;
         case PackageManager.brew:
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'uninstall', funcPackageName);
+            const version: FuncVersion = nonNullValue(await tryGetLocalFuncVersion(), 'localFuncVersion');
+            const brewPackageName: string = getBrewPackageName(version);
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'uninstall', brewPackageName);
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManagers[0]));

@@ -26,6 +26,7 @@ export * from './src/constants';
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
 export * from './src/funcConfig/function';
+export * from './src/FuncVersion';
 export * from './src/templates/CentralTemplateProvider';
 export * from './src/templates/IFunctionTemplate';
 export * from './src/templates/script/getScriptResourcesLanguage';

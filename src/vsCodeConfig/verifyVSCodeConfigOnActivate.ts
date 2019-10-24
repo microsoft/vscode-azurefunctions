@@ -8,10 +8,11 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { convertStringToRuntime, getWorkspaceSetting, updateGlobalSetting } from './settings';
+import { getWorkspaceSetting, updateGlobalSetting } from './settings';
 import { verifyJavaDeployConfigIsValid } from './verifyJavaDeployConfigIsValid';
 import { verifyJSDebugConfigIsValid } from './verifyJSDebugConfigIsValid';
 import { verifyPythonVenv } from './verifyPythonVenv';
@@ -30,14 +31,14 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                 context.telemetry.suppressIfSuccessful = false;
 
                 const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                const runtime: ProjectRuntime | undefined = convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, projectPath));
-                if (language !== undefined && runtime !== undefined) {
+                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
+                if (language !== undefined && version !== undefined) {
                     // Don't wait
                     // tslint:disable-next-line: no-floating-promises
                     callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
-                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, runtime);
+                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version);
                     });
 
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);

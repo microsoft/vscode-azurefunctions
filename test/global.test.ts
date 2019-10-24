@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, ext, getRandomHexString, IActionContext, parseError, ProjectLanguage, ProjectRuntime, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, ext, FuncVersion, getRandomHexString, IActionContext, parseError, ProjectLanguage, TemplateSource } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -47,8 +47,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
 
     await preLoadTemplates(ext.templateProvider);
     templateProviderMap = new Map();
-    for (const key of Object.keys(TemplateSource)) {
-        const source: TemplateSource = <TemplateSource>TemplateSource[key];
+    for (const source of Object.values(TemplateSource)) {
         templateProviderMap.set(source, new CentralTemplateProvider(source));
     }
 
@@ -77,12 +76,11 @@ suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
  */
 async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void> {
     console.log(`Loading templates for source "${provider.templateSource}"`);
-    const runtimes: ProjectRuntime[] = [ProjectRuntime.v1, ProjectRuntime.v2];
     const languages: ProjectLanguage[] = [ProjectLanguage.JavaScript, ProjectLanguage.CSharp];
 
-    for (const runtime of runtimes) {
+    for (const version of Object.values(FuncVersion)) {
         for (const language of languages) {
-            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, runtime);
+            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, version);
         }
     }
 }

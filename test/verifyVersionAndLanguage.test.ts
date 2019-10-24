@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { ProjectLanguage, ProjectRuntime, verifyRuntimeIsCompatible } from '../extension.bundle';
+import { FuncVersion, ProjectLanguage, verifyVersionAndLanguage } from '../extension.bundle';
 import { testUserInput } from './global.test';
 
 // tslint:disable-next-line: max-func-body-length
-suite('verifyRuntimeIsCompatible', () => {
+suite('verifyVersionAndLanguage', () => {
     test('Local: ~1, Remote: none', async () => {
         const props: { [name: string]: string } = {};
-        await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v1, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {});
     });
 
@@ -19,7 +19,7 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~1'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v1, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '~1'
         });
@@ -29,7 +29,7 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '1.0.0'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v1, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '1.0.0'
         });
@@ -39,8 +39,8 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~2'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v1, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~1');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION); // Verify this exists, but don't actually verify the value since I don't want to update the test every time the default node version changes
@@ -50,8 +50,8 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '2.0.0'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v1, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v1, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~1');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
@@ -59,7 +59,7 @@ suite('verifyRuntimeIsCompatible', () => {
 
     test('Local: ~2, Remote: none', async () => {
         const props: { [name: string]: string } = {};
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {});
     });
 
@@ -67,7 +67,7 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~2'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '~2'
         });
@@ -77,7 +77,7 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '2.0.0'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '2.0.0'
         });
@@ -87,8 +87,8 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~1'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
@@ -98,8 +98,8 @@ suite('verifyRuntimeIsCompatible', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '1.0.0'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.ok(props.WEBSITE_NODE_DEFAULT_VERSION);
@@ -110,7 +110,7 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'node'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'node'
@@ -122,8 +122,8 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.equal(props.FUNCTIONS_WORKER_RUNTIME, 'node');
@@ -135,8 +135,8 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~1',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        await testUserInput.runWithInputs(['Update remote runtime'], async () => {
-            await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.JavaScript, props);
+        await testUserInput.runWithInputs(['Update remote settings'], async () => {
+            await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
         assert.equal(props.FUNCTIONS_EXTENSION_VERSION, '~2');
         assert.equal(props.FUNCTIONS_WORKER_RUNTIME, 'node');
@@ -148,7 +148,7 @@ suite('verifyRuntimeIsCompatible', () => {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        await verifyRuntimeIsCompatible(ProjectRuntime.v2, ProjectLanguage.Bash, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.Bash, props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'

@@ -58,8 +58,7 @@ async function detectScriptLanguages(projectPath: string): Promise<ProjectLangua
     }
 
     const detectedLangs: ProjectLanguage[] = [];
-    for (const key of Object.keys(ProjectLanguage)) {
-        const language: ProjectLanguage = <ProjectLanguage>ProjectLanguage[key];
+    for (const language of Object.values(ProjectLanguage)) {
         const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
         if (functionFileName) {
             for (const subDir of subDirs) {

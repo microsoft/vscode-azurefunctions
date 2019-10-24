@@ -8,12 +8,11 @@ import { MessageItem, window } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { KuduClient } from 'vscode-azurekudu';
-import { ProjectRuntime } from '../constants';
 import { ext } from '../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
+import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
-import { convertStringToRuntime } from '../vsCodeConfig/settings';
 import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
@@ -36,7 +35,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
     private readonly _logFilesTreeItem: LogFilesTreeItem;
     private readonly _siteFilesTreeItem: SiteFilesTreeItem;
-    private _cachedRuntime: ProjectRuntime | undefined;
+    private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
@@ -87,7 +86,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
     public async refreshImpl(): Promise<void> {
-        this._cachedRuntime = undefined;
+        this._cachedVersion = undefined;
         this._cachedHostJson = undefined;
         this._cachedIsConsumption = undefined;
 
@@ -98,19 +97,19 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         }
     }
 
-    public async getRuntime(): Promise<ProjectRuntime> {
-        let result: ProjectRuntime | undefined = this._cachedRuntime;
+    public async getVersion(): Promise<FuncVersion> {
+        let result: FuncVersion | undefined = this._cachedVersion;
         if (result === undefined) {
-            let runtime: ProjectRuntime | undefined;
+            let version: FuncVersion | undefined;
             try {
                 const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-                runtime = convertStringToRuntime(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
+                version = tryParseFuncVersion(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
             } catch {
                 // ignore and use default
             }
             // tslint:disable-next-line: strict-boolean-expressions
-            result = runtime || ProjectRuntime.v2;
-            this._cachedRuntime = result;
+            result = version || latestGAVersion;
+            this._cachedVersion = result;
         }
 
         return result;
@@ -127,8 +126,8 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             } catch {
                 // ignore and use default
             }
-            const runtime: ProjectRuntime = await this.getRuntime();
-            result = parseHostJson(data, runtime);
+            const version: FuncVersion = await this.getVersion();
+            result = parseHostJson(data, version);
             this._cachedHostJson = result;
         }
 

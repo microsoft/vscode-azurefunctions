@@ -5,27 +5,28 @@
 
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
-import { convertStringToRuntime, getWorkspaceSetting } from './settings';
+import { getWorkspaceSetting } from './settings';
 
 /**
  * Simpler function than `verifyVSCodeConfigOnActivate` to be used right before an operation that requires the project to be initialized for VS Code
  */
-export async function verifyInitForVSCode(context: IActionContext, fsPath: string, language?: string, runtime?: string): Promise<[ProjectLanguage, ProjectRuntime]> {
+export async function verifyInitForVSCode(context: IActionContext, fsPath: string, language?: string, version?: string): Promise<[ProjectLanguage, FuncVersion]> {
     language = language || getWorkspaceSetting(projectLanguageSetting, fsPath);
-    runtime = convertStringToRuntime(runtime || getWorkspaceSetting(projectRuntimeSetting, fsPath));
+    version = tryParseFuncVersion(version || getWorkspaceSetting(funcVersionSetting, fsPath));
 
-    if (!language || !runtime) {
+    if (!language || !version) {
         const message: string = localize('initFolder', 'Initialize project for use with VS Code?');
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         await initProjectForVSCode(context, fsPath);
         language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
-        runtime = nonNullOrEmptyValue(convertStringToRuntime(getWorkspaceSetting(projectRuntimeSetting, fsPath)), projectRuntimeSetting);
+        version = nonNullOrEmptyValue(tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath)), funcVersionSetting);
     }
 
-    return [<ProjectLanguage>language, <ProjectRuntime>runtime];
+    return [<ProjectLanguage>language, <FuncVersion>version];
 }

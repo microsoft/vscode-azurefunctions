@@ -7,13 +7,14 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
-import { convertStringToRuntime, getWorkspaceSetting } from '../../../extension.bundle';
-import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectRuntime, projectRuntimeSetting } from '../../constants';
+import { functionJsonFileName, funcVersionSetting, hostFileName, localSettingsFileName } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
+import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { nonNullValue } from '../../utils/nonNull';
 import { treeUtils } from '../../utils/treeUtils';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
@@ -88,15 +89,15 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     }
 
     public async getHostJson(): Promise<IParsedHostJson> {
-        const runtime: ProjectRuntime = await this.getRuntime();
+        const version: FuncVersion = await this.getVersion();
         // tslint:disable-next-line: no-any
         const data: any = await fse.readJSON(path.join(this.projectPath, hostFileName));
-        return parseHostJson(data, runtime);
+        return parseHostJson(data, version);
     }
 
-    public async getRuntime(): Promise<ProjectRuntime> {
-        const rawSetting: string | undefined = getWorkspaceSetting(projectRuntimeSetting, this.workspacePath);
-        return nonNullValue(convertStringToRuntime(rawSetting), 'runtime');
+    public async getVersion(): Promise<FuncVersion> {
+        const rawSetting: string | undefined = getWorkspaceSetting(funcVersionSetting, this.workspacePath);
+        return nonNullValue(tryParseFuncVersion(rawSetting), 'version');
     }
 
     public async getApplicationSettings(): Promise<ApplicationSettings> {

@@ -21,22 +21,22 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     private _rawTemplates: object[];
 
     public async getCachedTemplates(): Promise<ITemplates | undefined> {
-        const projectFilePath: string = getDotnetProjectTemplatePath(this.runtime);
-        const itemFilePath: string = getDotnetItemTemplatePath(this.runtime);
+        const projectFilePath: string = getDotnetProjectTemplatePath(this.version);
+        const itemFilePath: string = getDotnetItemTemplatePath(this.version);
         if (!await fse.pathExists(projectFilePath) || !await fse.pathExists(itemFilePath)) {
             return undefined;
         }
 
         const cachedDotnetTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._dotnetTemplatesKey));
         if (cachedDotnetTemplates) {
-            return await parseDotnetTemplates(cachedDotnetTemplates, this.runtime);
+            return await parseDotnetTemplates(cachedDotnetTemplates, this.version);
         } else {
             return undefined;
         }
     }
 
     public async getLatestTemplateVersion(): Promise<string> {
-        return await cliFeedUtils.getLatestVersion(this.runtime);
+        return await cliFeedUtils.getLatestVersion(this.version);
     }
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
@@ -44,10 +44,10 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
         const release: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(latestTemplateVersion);
 
-        const projectFilePath: string = getDotnetProjectTemplatePath(this.runtime);
+        const projectFilePath: string = getDotnetProjectTemplatePath(this.version);
         await downloadFile(release.projectTemplates, projectFilePath);
 
-        const itemFilePath: string = getDotnetItemTemplatePath(this.runtime);
+        const itemFilePath: string = getDotnetItemTemplatePath(this.version);
         await downloadFile(release.itemTemplates, itemFilePath);
 
         return await this.parseTemplates();
@@ -63,7 +63,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     private async parseTemplates(): Promise<ITemplates> {
-        this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(this.runtime, undefined, 'list'));
-        return parseDotnetTemplates(this._rawTemplates, this.runtime);
+        this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(this.version, undefined, 'list'));
+        return parseDotnetTemplates(this._rawTemplates, this.version);
     }
 }

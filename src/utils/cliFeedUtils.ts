@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectRuntime } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
-import { localize } from '../localize';
+import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
     const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
     const v1DefaultNodeVersion: string = '6.5.0';
-    const v2DefaultNodeVersion: string = '8.11.1';
+    const defaultNodeVersion: string = '~10';
 
     interface ICliFeed {
         tags: {
@@ -36,22 +35,16 @@ export namespace cliFeedUtils {
         hidden: boolean;
     }
 
-    export async function getLatestVersion(runtime: ProjectRuntime): Promise<string> {
+    export async function getLatestVersion(version: FuncVersion): Promise<string> {
         const cliFeed: ICliFeed = await getCliFeed();
 
-        let tag: string;
-        switch (runtime) {
-            case ProjectRuntime.v2:
-                tag = 'v2';
-                break;
-            case ProjectRuntime.v1:
-                tag = 'v1';
-                break;
-            default:
-                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
+        const majorVersion: string = getMajorVersion(version);
+        let tag: string = 'v' + majorVersion;
+        if (isPreviewVersion(version)) {
+            tag = tag + '-preview';
+        } else if (ext.templateProvider.templateSource === TemplateSource.Staging) {
+            tag = tag + '-prerelease';
         }
-
-        tag = ext.templateProvider.templateSource === TemplateSource.Staging ? `${tag}-prerelease` : tag;
 
         return cliFeed.tags[tag].release;
     }
@@ -62,21 +55,21 @@ export namespace cliFeedUtils {
     }
 
     /**
-     * Returns the app settings that should be used when creating or deploying to a Function App, based on runtime
+     * Returns the app settings that should be used when creating or deploying to a Function App, based on version
      */
-    export async function getAppSettings(projectRuntime: ProjectRuntime): Promise<{ [key: string]: string }> {
+    export async function getAppSettings(version: FuncVersion): Promise<{ [key: string]: string }> {
         let funcVersion: string;
         let nodeVersion: string;
 
         try {
             const cliFeed: ICliFeed = await getCliFeed();
-            const release: string = await getLatestVersion(projectRuntime);
+            const release: string = await getLatestVersion(version);
             funcVersion = cliFeed.releases[release].FUNCTIONS_EXTENSION_VERSION;
             nodeVersion = cliFeed.releases[release].nodeVersion;
         } catch {
             // ignore and use defaults
-            funcVersion = projectRuntime;
-            nodeVersion = projectRuntime === ProjectRuntime.v1 ? v1DefaultNodeVersion : v2DefaultNodeVersion;
+            funcVersion = version;
+            nodeVersion = version === FuncVersion.v1 ? v1DefaultNodeVersion : defaultNodeVersion;
         }
 
         return {

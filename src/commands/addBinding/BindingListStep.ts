@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IBindingTemplate } from '../../templates/IBindingTemplate';
 import { nonNullProp } from '../../utils/nonNull';
@@ -38,8 +39,8 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
 
     private async getPicks(context: IBindingWizardContext, direction: string): Promise<IAzureQuickPickItem<IBindingTemplate>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
-        const templates: IBindingTemplate[] = await ext.templateProvider.getBindingTemplates(context, context.projectPath, language, runtime);
+        const version: FuncVersion = nonNullProp(context, 'version');
+        const templates: IBindingTemplate[] = await ext.templateProvider.getBindingTemplates(context, context.projectPath, language, version);
         return templates
             .filter(b => b.direction.toLowerCase() === direction.toLowerCase())
             .sort((a, b) => a.displayName.localeCompare(b.displayName))

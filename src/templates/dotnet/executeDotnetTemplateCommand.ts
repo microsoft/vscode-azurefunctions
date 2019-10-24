@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { ProjectRuntime } from '../../constants';
 import { ext } from "../../extensionVariables";
+import { FuncVersion } from '../../FuncVersion';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
+export async function executeDotnetTemplateCommand(version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
@@ -16,9 +16,9 @@ export async function executeDotnetTemplateCommand(runtime: ProjectRuntime, work
         'dotnet',
         cpUtils.wrapArgInQuotes(jsonDllPath),
         '--require',
-        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(runtime)),
+        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(version)),
         '--require',
-        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(runtime)),
+        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(version)),
         '--operation',
         operation,
         ...args);
@@ -29,10 +29,10 @@ export function getDotnetTemplatesPath(): string {
     return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
 }
 
-export function getDotnetItemTemplatePath(runtime: ProjectRuntime): string {
-    return path.join(getDotnetTemplatesPath(), `itemTemplates-${runtime}.nupkg`);
+export function getDotnetItemTemplatePath(version: FuncVersion): string {
+    return path.join(getDotnetTemplatesPath(), `itemTemplates-${version}.nupkg`);
 }
 
-export function getDotnetProjectTemplatePath(runtime: ProjectRuntime): string {
-    return path.join(getDotnetTemplatesPath(), `projectTemplates-${runtime}.nupkg`);
+export function getDotnetProjectTemplatePath(version: FuncVersion): string {
+    return path.join(getDotnetTemplatesPath(), `projectTemplates-${version}.nupkg`);
 }

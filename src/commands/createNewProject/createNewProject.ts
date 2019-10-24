@@ -5,10 +5,11 @@
 
 import { window } from 'vscode';
 import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectRuntimeSetting } from '../../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { convertStringToRuntime, getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
 import { FolderListStep } from './FolderListStep';
 import { NewProjectLanguageStep } from './NewProjectLanguageStep';
@@ -19,7 +20,7 @@ export async function createNewProject(
     context: IActionContext,
     projectPath?: string,
     language?: ProjectLanguage,
-    runtime?: string,
+    version?: string,
     openFolder: boolean = true,
     templateId?: string,
     functionName?: string,
@@ -28,9 +29,9 @@ export async function createNewProject(
 
     // tslint:disable-next-line: strict-boolean-expressions
     language = language || getGlobalSetting(projectLanguageSetting);
-    runtime = runtime || getGlobalSetting(projectRuntimeSetting);
+    version = version || getGlobalSetting(funcVersionSetting);
 
-    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, { functionName, language, runtime: convertStringToRuntime(runtime) });
+    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, { functionName, language, version: tryParseFuncVersion(version) });
 
     if (projectPath) {
         FolderListStep.setProjectPath(wizardContext, projectPath);

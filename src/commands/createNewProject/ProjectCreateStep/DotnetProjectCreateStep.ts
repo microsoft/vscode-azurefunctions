@@ -6,8 +6,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage, ProjectRuntime } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
@@ -27,7 +28,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
     }
 
     public async executeCore(context: IProjectWizardContext): Promise<void> {
-        const runtime: ProjectRuntime = nonNullProp(context, 'runtime');
+        const version: FuncVersion = nonNullProp(context, 'version');
         const language: ProjectLanguage = nonNullProp(context, 'language');
 
         const projectName: string = path.basename(context.projectPath);
@@ -35,9 +36,10 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         await this.confirmOverwriteExisting(context.projectPath, projName);
 
         const templateLanguage: string = language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${runtime === ProjectRuntime.v1 ? '1' : '2'}.x`;
-        const functionsVersion: string = runtime === ProjectRuntime.v1 ? 'v1' : 'v2';
-        await executeDotnetTemplateCommand(runtime, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        const majorVersion: string = getMajorVersion(version);
+        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${majorVersion}.x`;
+        const functionsVersion: string = 'v' + majorVersion;
+        await executeDotnetTemplateCommand(version, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
     }
 
     private async confirmOverwriteExisting(projectPath: string, projName: string): Promise<void> {

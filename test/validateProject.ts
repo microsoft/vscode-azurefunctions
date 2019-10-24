@@ -6,12 +6,12 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ext, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage, ProjectRuntime } from '../extension.bundle';
+import { ext, FuncVersion, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage } from '../extension.bundle';
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         projectLanguage: ProjectLanguage.JavaScript,
-        projectRuntime: ProjectRuntime.v2,
+        projectRuntime: FuncVersion.v2,
         deploySubpath: '.'
     };
     const expectedPaths: string[] = [];
@@ -39,7 +39,7 @@ export function getTypeScriptValidateOptions(): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.TypeScript,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             deploySubpath: '.',
             preDeployTask: 'npm prune'
         },
@@ -65,7 +65,7 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.CSharp,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             preDeployTask: 'publish',
             deploySubpath: `bin/Release/${targetFramework}/publish`
         },
@@ -95,7 +95,7 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.FSharp,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             preDeployTask: 'publish',
             deploySubpath: `bin/Release/${targetFramework}/publish`
         },
@@ -126,7 +126,7 @@ export function getPythonValidateOptions(venvName: string = '.venv'): IValidateP
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Python,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             deploySubpath: '.',
             scmDoBuildDuringDeployment: true,
             pythonVenv: venvName
@@ -151,7 +151,7 @@ export function getJavaValidateOptions(appName: string): IValidateProjectOptions
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.Java,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             preDeployTask: 'package',
             deploySubpath: `target/azure-functions/${appName}/`
         },
@@ -175,11 +175,11 @@ export function getJavaValidateOptions(appName: string): IValidateProjectOptions
     };
 }
 
-export function getDotnetScriptValidateOptions(language: ProjectLanguage, runtime: ProjectRuntime = ProjectRuntime.v2): IValidateProjectOptions {
+export function getDotnetScriptValidateOptions(language: ProjectLanguage, version: FuncVersion = FuncVersion.v2): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: language,
-            projectRuntime: runtime,
+            projectRuntime: version,
             deploySubpath: '.'
         },
         expectedPaths: [
@@ -200,7 +200,7 @@ export function getPowerShellValidateOptions(): IValidateProjectOptions {
     return {
         expectedSettings: {
             projectLanguage: ProjectLanguage.PowerShell,
-            projectRuntime: ProjectRuntime.v2,
+            projectRuntime: FuncVersion.v2,
             deploySubpath: '.'
         },
         expectedPaths: [
@@ -223,7 +223,7 @@ export function getScriptValidateOptions(language: string): IValidateProjectOpti
     return {
         expectedSettings: {
             projectLanguage: language,
-            projectRuntime: ProjectRuntime.v2
+            projectRuntime: FuncVersion.v2
         },
         expectedPaths: [
         ],

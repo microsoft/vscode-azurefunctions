@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectLanguage, ProjectRuntime } from "../../constants";
+import { ProjectLanguage } from "../../constants";
 import { IFunctionBinding } from "../../funcConfig/function";
+import { FuncVersion } from "../../FuncVersion";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { IFunctionWizardContext } from "../createFunction/IFunctionWizardContext";
 
 export interface IBindingWizardContext extends IFunctionWizardContext {
     functionJsonPath: string;
     language: ProjectLanguage;
-    runtime: ProjectRuntime;
+    version: FuncVersion;
     bindingDirection?: string;
     bindingTemplate?: IBindingTemplate;
     binding?: IFunctionBinding;

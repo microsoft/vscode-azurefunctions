@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
-import { ProjectRuntime } from '../constants';
+import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { requestUtils } from '../utils/requestUtils';
 
@@ -16,26 +16,16 @@ interface IPackageMetadata {
     versions: { [version: string]: {} };
 }
 
-export async function getNpmDistTag(runtime: ProjectRuntime): Promise<INpmDistTag> {
+export async function getNpmDistTag(version: FuncVersion): Promise<INpmDistTag> {
     const request: requestUtils.Request = await requestUtils.getDefaultRequest(npmRegistryUri);
     const response: string = await requestUtils.sendRequest(request);
     const packageMetadata: IPackageMetadata = <IPackageMetadata>JSON.parse(response);
-    let majorVersion: string;
-    switch (runtime) {
-        case ProjectRuntime.v1:
-            majorVersion = '1';
-            break;
-        case ProjectRuntime.v2:
-            majorVersion = '2';
-            break;
-        default:
-            throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
-    }
+    const majorVersion: string = getMajorVersion(version);
 
     const validVersions: string[] = Object.keys(packageMetadata.versions).filter((v: string) => !!semver.valid(v));
     const maxVersion: string | null = semver.maxSatisfying(validVersions, majorVersion);
     if (!maxVersion) {
-        throw new Error(localize('noDistTag', 'Failed to retrieve NPM tag for runtime "{0}".', runtime));
+        throw new Error(localize('noDistTag', 'Failed to retrieve NPM tag for version "{0}".', version));
     }
     return { tag: majorVersion, value: maxVersion };
 }

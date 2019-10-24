@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectRuntime } from "../constants";
+import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
@@ -82,6 +82,6 @@ class ParsedHostJsonV1 implements IParsedHostJson {
     }
 }
 
-export function parseHostJson(data: unknown, runtime: ProjectRuntime | undefined): IParsedHostJson {
-    return runtime === ProjectRuntime.v1 ? new ParsedHostJsonV1(data) : new ParsedHostJsonV2(data);
+export function parseHostJson(data: unknown, version: FuncVersion | undefined): IParsedHostJson {
+    return version === FuncVersion.v1 ? new ParsedHostJsonV1(data) : new ParsedHostJsonV2(data);
 }

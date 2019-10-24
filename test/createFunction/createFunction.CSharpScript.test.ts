@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ProjectLanguage, projectLanguageSetting, ProjectRuntime, projectRuntimeSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getDotnetScriptValidateOptions, validateProject } from '../validateProject';
@@ -13,7 +13,7 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharpScript;
-    public runtime: ProjectRuntime = ProjectRuntime.v1;
+    public version: FuncVersion = FuncVersion.v1;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -49,7 +49,7 @@ suite('Create Function C# Script ~1', async () => {
             // Intentionally testing IoTHub trigger since a partner team plans to use that
             const projectPath: string = path.join(tester.baseTestFolder, source);
             await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharpScript, async () => {
-                await runWithFuncSetting(projectRuntimeSetting, ProjectRuntime.v1, async () => {
+                await runWithFuncSetting(funcVersionSetting, FuncVersion.v1, async () => {
                     await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, iotTemplateId, iotFunctionName, iotTriggerSettings);
                 });
             });
@@ -62,7 +62,7 @@ suite('Create Function C# Script ~1', async () => {
             const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
             await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
             await tester.validateFunction(projectPath, iotFunctionName, iotExpectedContents);
-            await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, ProjectRuntime.v1));
+            await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, FuncVersion.v1));
         });
     });
 });

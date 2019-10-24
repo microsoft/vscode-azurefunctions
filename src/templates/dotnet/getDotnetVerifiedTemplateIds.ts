@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProjectRuntime } from '../../constants';
-import { localize } from '../../localize';
+import { FuncVersion, getMajorVersion } from "../../FuncVersion";
 
-export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
+export function getDotnetVerifiedTemplateIds(version: string): string[] {
     let verifiedTemplateIds: string[] = [
         'EventHubTrigger',
         'HttpTrigger',
@@ -18,7 +17,7 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
         'CosmosDBTrigger'
     ];
 
-    if (runtime === ProjectRuntime.v1) {
+    if (version === FuncVersion.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'EventGridTrigger',
             'GenericWebHook',
@@ -31,15 +30,8 @@ export function getDotnetVerifiedTemplateIds(runtime: string): string[] {
         ]);
     }
 
+    const majorVersion: string = getMajorVersion(version);
     return verifiedTemplateIds.map((id: string) => {
-        id = `Azure.Function.CSharp.${id}`;
-        switch (runtime) {
-            case ProjectRuntime.v1:
-                return `${id}.1.x`;
-            case ProjectRuntime.v2:
-                return `${id}.2.x`;
-            default:
-                throw new RangeError(localize('invalidRuntime', 'Invalid runtime "{0}".', runtime));
-        }
+        return `Azure.Function.CSharp.${id}.${majorVersion}.x`;
     });
 }

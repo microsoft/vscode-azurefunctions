@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { PackageManager, ProjectRuntime } from '../constants';
+import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { promptForProjectRuntime } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
-import { tryGetLocalRuntimeVersion } from './tryGetLocalRuntimeVersion';
+import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 import { funcToolsInstalled } from './validateFuncCoreToolsInstalled';
 
@@ -31,12 +31,11 @@ export async function installOrUpdateFuncCoreTools(): Promise<void> {
             packageManager = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
         }
 
-        let projectRuntime: ProjectRuntime | undefined = await tryGetLocalRuntimeVersion();
-        // tslint:disable-next-line:strict-boolean-expressions
-        if (!projectRuntime) {
-            projectRuntime = await promptForProjectRuntime(localize('selectLocalRuntime', 'Failed to detect local runtime automatically. Select your runtime to update'));
+        let version: FuncVersion | undefined = await tryGetLocalFuncVersion();
+        if (version === undefined) {
+            version = await promptForFuncVersion(localize('selectLocalVersion', 'Failed to detect local version automatically. Select your version to update'));
         }
-        await updateFuncCoreTools(packageManager, projectRuntime);
+        await updateFuncCoreTools(packageManager, version);
     } else {
         await installFuncCoreTools(packageManagers);
     }

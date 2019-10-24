@@ -6,12 +6,13 @@
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
-import { PackageManager, ProjectRuntime } from '../constants';
+import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { openUrl } from '../utils/openUrl';
 import { requestUtils } from '../utils/requestUtils';
-import { convertStringToRuntime, getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 import { getNpmDistTag } from "./getNpmDistTag";
@@ -59,12 +60,12 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 }
                 context.telemetry.properties.localVersion = localVersion;
 
-                const projectRuntime: ProjectRuntime | undefined = convertStringToRuntime(localVersion);
-                if (projectRuntime === undefined) {
+                const versionFromSetting: FuncVersion | undefined = tryParseFuncVersion(localVersion);
+                if (versionFromSetting === undefined) {
                     return;
                 }
 
-                const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(packageManager, projectRuntime, context);
+                const newestVersion: string | undefined = await getNewestFunctionRuntimeVersion(packageManager, versionFromSetting, context);
                 if (!newestVersion) {
                     return;
                 }
@@ -87,7 +88,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                         if (result === DialogResponses.learnMore) {
                             await openUrl('https://aka.ms/azFuncOutdated');
                         } else if (result === update) {
-                            await updateFuncCoreTools(packageManager, projectRuntime);
+                            await updateFuncCoreTools(packageManager, versionFromSetting);
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(showCoreToolsWarningKey, false);
                         }
@@ -99,7 +100,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
     });
 }
 
-async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, projectRuntime: ProjectRuntime, context: IActionContext): Promise<string | undefined> {
+async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, versionFromSetting: FuncVersion, context: IActionContext): Promise<string | undefined> {
     try {
         if (packageManager === PackageManager.brew) {
             const brewRegistryUri: string = 'https://aka.ms/AA1t7go';
@@ -110,7 +111,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
                 return matches[1];
             }
         } else {
-            return (await getNpmDistTag(projectRuntime)).value;
+            return (await getNpmDistTag(versionFromSetting)).value;
         }
     } catch (error) {
         context.telemetry.properties.latestRuntimeError = parseError(error).message;

@@ -5,10 +5,11 @@
 
 import { commands, MessageItem, Uri, window, workspace, WorkspaceFolder } from 'vscode';
 import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { ProjectLanguage, ProjectRuntime } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -23,7 +24,7 @@ export async function createFunction(
     functionName?: string,
     triggerSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
-    runtime?: ProjectRuntime): Promise<void> {
+    version?: FuncVersion): Promise<void> {
     addLocalFuncTelemetry(context);
 
     let workspaceFolder: WorkspaceFolder | undefined;
@@ -39,9 +40,9 @@ export async function createFunction(
         return;
     }
 
-    [language, runtime] = await verifyInitForVSCode(context, projectPath, language, runtime);
+    [language, version] = await verifyInitForVSCode(context, projectPath, language, version);
 
-    const wizardContext: IFunctionWizardContext = Object.assign(context, { projectPath, workspacePath, workspaceFolder, runtime, language, functionName });
+    const wizardContext: IFunctionWizardContext = Object.assign(context, { projectPath, workspacePath, workspaceFolder, version, language, functionName });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [await FunctionListStep.create(wizardContext, { templateId, triggerSettings, isProjectWizard: false })]
     });
