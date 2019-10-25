@@ -6,10 +6,12 @@
 import * as path from 'path';
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from '../../FuncVersion';
+import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
 export async function executeDotnetTemplateCommand(version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
-    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', 'Microsoft.TemplateEngine.JsonCli.dll'));
+    const framework: string = await getFramework(workingDirectory);
+    const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
         workingDirectory,
@@ -35,4 +37,37 @@ export function getDotnetItemTemplatePath(version: FuncVersion): string {
 
 export function getDotnetProjectTemplatePath(version: FuncVersion): string {
     return path.join(getDotnetTemplatesPath(), `projectTemplates-${version}.nupkg`);
+}
+
+let cachedFramework: string | undefined;
+async function getFramework(workingDirectory: string | undefined): Promise<string> {
+    if (!cachedFramework) {
+        let versions: string = '';
+        try {
+            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--version');
+        } catch {
+            // ignore
+        }
+
+        try {
+            versions += await cpUtils.executeCommand(undefined, workingDirectory, 'dotnet', '--list-sdks');
+        } catch {
+            // ignore
+        }
+
+        const majorVersions: string[] = ['3', '2'];
+        for (const majorVersion of majorVersions) {
+            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`);
+            if (regExp.test(versions)) {
+                cachedFramework = `netcoreapp${majorVersion}.0`;
+                break;
+            }
+        }
+
+        if (!cachedFramework) {
+            throw new Error(localize('noMatchingFramework', 'You must have version 2.x or 3.x of the .NET Core SDK installed to perform this operation.'));
+        }
+    }
+
+    return cachedFramework;
 }
