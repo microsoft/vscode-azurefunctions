@@ -18,7 +18,7 @@ import { verifyJSDebugConfigIsValid } from './verifyJSDebugConfigIsValid';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
 
-export async function verifyVSCodeConfigOnActivate(context: IActionContext, folders: vscode.WorkspaceFolder[] | undefined): Promise<void> {
+export async function verifyVSCodeConfigOnActivate(context: IActionContext, folders: readonly vscode.WorkspaceFolder[] | undefined): Promise<void> {
     context.telemetry.suppressIfSuccessful = true;
     context.telemetry.properties.isActivationEvent = 'true';
     context.errorHandling.suppressDisplay = true; // Swallow errors when verifying. No point in showing an error if we can't understand the project anyways
