@@ -13,6 +13,7 @@ import { localize } from '../localize';
 import { openUrl } from '../utils/openUrl';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
+import { getBrewPackageName } from './getBrewPackageName';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 import { getNpmDistTag } from "./getNpmDistTag";
@@ -70,7 +71,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                     return;
                 }
 
-                if (semver.gt(newestVersion, localVersion)) {
+                if (semver.major(newestVersion) === semver.major(localVersion) && semver.gt(newestVersion, localVersion)) {
                     context.telemetry.properties.outOfDateFunc = 'true';
                     const message: string = localize(
                         'outdatedFunctionRuntime',
@@ -103,7 +104,8 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
 async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | undefined, versionFromSetting: FuncVersion, context: IActionContext): Promise<string | undefined> {
     try {
         if (packageManager === PackageManager.brew) {
-            const brewRegistryUri: string = 'https://aka.ms/AA1t7go';
+            const packageName: string = getBrewPackageName(versionFromSetting);
+            const brewRegistryUri: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
             const request: requestUtils.Request = await requestUtils.getDefaultRequest(brewRegistryUri);
             const brewInfo: string = await requestUtils.sendRequest(request);
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
