@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureParentTreeItem, IActionContext } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
-import { localize } from '../localize';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
-import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../localize';
+import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 
 export async function createFunctionApp(context: IActionContext & Partial<ICreateFuntionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
     let node: AzureParentTreeItem | undefined;

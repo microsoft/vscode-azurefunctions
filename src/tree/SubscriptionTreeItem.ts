@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, IAppSettingsContext, setLocationsTask, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, workerRuntimeKey } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
-import { cliFeedUtils } from '../utils/cliFeedUtils';
 import { nonNullProp } from '../utils/nonNull';
 import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -171,67 +170,4 @@ async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersi
     context.telemetry.properties.projectRuntime = version;
 
     return version;
-}
-
-async function createFunctionAppSettings(context: IAppSettingsContext, version: FuncVersion, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
-    const appSettings: WebSiteManagementModels.NameValuePair[] = [];
-
-    const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(version);
-    for (const key of Object.keys(cliFeedAppSettings)) {
-        appSettings.push({
-            name: key,
-            value: cliFeedAppSettings[key]
-        });
-    }
-
-    appSettings.push({
-        name: 'AzureWebJobsStorage',
-        value: context.storageConnectionString
-    });
-
-    // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
-    if (version === FuncVersion.v1) {
-        appSettings.push({
-            name: 'AzureWebJobsDashboard',
-            value: context.storageConnectionString
-        });
-    }
-
-    // These settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
-    if (context.os === 'windows') {
-        appSettings.push({
-            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
-            value: context.storageConnectionString
-        });
-        appSettings.push({
-            name: 'WEBSITE_CONTENTSHARE',
-            value: context.fileShareName
-        });
-    }
-
-    if (context.runtime) {
-        appSettings.push({
-            name: workerRuntimeKey,
-            value: context.runtime
-        });
-    }
-
-    // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-    // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
-    // It also doesn't apply for Linux Consumption, which has its own custom deploy logic in the the vscode-azureappservice package
-    if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && version === FuncVersion.v1)) {
-        appSettings.push({
-            name: 'WEBSITE_RUN_FROM_PACKAGE',
-            value: '1'
-        });
-    }
-
-    if (context.aiInstrumentationKey) {
-        appSettings.push({
-            name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
-            value: context.aiInstrumentationKey
-        });
-    }
-
-    return appSettings;
 }
