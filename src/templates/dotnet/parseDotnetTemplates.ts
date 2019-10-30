@@ -78,23 +78,35 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
     const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
-            const template: IFunctionTemplate = parseDotnetTemplate(<IRawTemplate>rawTemplate);
-            const majorVersion: string = getMajorVersion(version);
-            const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.[^.]*\\.${majorVersion}\\.`, 'i');
-            if (regExp.test(template.id)) {
-                functionTemplates.push(template);
-            }
+            functionTemplates.push(parseDotnetTemplate(<IRawTemplate>rawTemplate));
         } catch (error) {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }
 
-    await copyCSharpSettingsFromJS(functionTemplates, version);
+    let filteredTemplates: IFunctionTemplate[] = filterTemplatesByVersion(functionTemplates, version);
+    if (filteredTemplates.length === 0 && version === FuncVersion.v3) {
+        // Fall back to v2 templates since v3 templates still use '2' in the id and it's not clear if/when that'll change
+        // https://github.com/microsoft/vscode-azurefunctions/issues/1602
+        filteredTemplates = filterTemplatesByVersion(functionTemplates, FuncVersion.v2);
+        filteredTemplates = filteredTemplates.map(t => {
+            t.id = t.id.replace('2', '3');
+            return t;
+        });
+    }
+
+    await copyCSharpSettingsFromJS(filteredTemplates, version);
 
     return {
-        functionTemplates,
+        functionTemplates: filteredTemplates,
         bindingTemplates: [] // CSharp does not support binding templates
     };
+}
+
+function filterTemplatesByVersion(templates: IFunctionTemplate[], version: FuncVersion): IFunctionTemplate[] {
+    const majorVersion: string = getMajorVersion(version);
+    const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.[^.]*\\.${majorVersion}\\.`, 'i');
+    return templates.filter(t => regExp.test(t.id));
 }
 
 /**
