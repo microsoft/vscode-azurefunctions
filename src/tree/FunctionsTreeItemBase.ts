@@ -25,7 +25,7 @@ export abstract class FunctionsTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get description(): string {
-        return this.isReadOnly ? localize('readOnly', 'Read only') : '';
+        return this.isReadOnly ? localize('readOnly', 'Read-only') : '';
     }
 
     public get access(): ProjectAccess {

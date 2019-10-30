@@ -40,7 +40,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get description(): string {
-        return this._readOnly ? localize('readOnly', 'Read only') : '';
+        return this._readOnly ? localize('readOnly', 'Read-only') : '';
     }
 
     public get iconPath(): TreeItemIconPath {
