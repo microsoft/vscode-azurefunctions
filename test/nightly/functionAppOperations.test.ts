@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
-import { getRotatingLocation } from './getRotatingValue';
+import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
 
 // tslint:disable-next-line: max-func-body-length
@@ -60,7 +60,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
         resourceGroupsToDelete.push(apiRgName);
         const apiAppName: string = getRandomHexString();
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            await testUserInput.runWithInputs([apiAppName, getRotatingLocation()], async () => {
+            await testUserInput.runWithInputs([apiAppName, getRotatingNodeVersion(), getRotatingLocation()], async () => {
                 const actualFuncAppId: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionContext().subscriptionId, apiRgName);
                 const site: Models.Site = await testClient.webApps.get(apiRgName, apiAppName);
                 assert.ok(site);

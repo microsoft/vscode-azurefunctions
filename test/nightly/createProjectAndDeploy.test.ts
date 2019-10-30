@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
-import { getRotatingAuthLevel, getRotatingLocation } from './getRotatingValue';
+import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
 suite('Create Project and Deploy', async function (this: ISuiteCallbackContext): Promise<void> {
@@ -23,11 +23,11 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
     });
 
     test('JavaScript', async () => {
-        await testCreateProjectAndDeploy(getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript);
+        await testCreateProjectAndDeploy(getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript, [], [getRotatingNodeVersion()]);
     });
 
     test('TypeScript', async () => {
-        await testCreateProjectAndDeploy(getTypeScriptValidateOptions(), ProjectLanguage.TypeScript);
+        await testCreateProjectAndDeploy(getTypeScriptValidateOptions(), ProjectLanguage.TypeScript, [], [getRotatingNodeVersion()]);
     });
 
     test('CSharp', async () => {
@@ -45,15 +45,15 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        await testCreateProjectAndDeploy(getPythonValidateOptions(), ProjectLanguage.Python);
+        await testCreateProjectAndDeploy(getPythonValidateOptions(), ProjectLanguage.Python, [], [getRotatingPythonVersion()]);
     });
 });
 
-async function testCreateProjectAndDeploy(validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, languageSpecificInputs: (RegExp | string)[] = []): Promise<void> {
+async function testCreateProjectAndDeploy(validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, createProjInputs: (RegExp | string)[] = [], deployInputs: (RegExp | string)[] = []): Promise<void> {
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
     await fse.emptyDir(testWorkspacePath);
 
-    await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...languageSpecificInputs, getRotatingAuthLevel()], async () => {
+    await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...createProjInputs, getRotatingAuthLevel()], async () => {
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
     });
     // tslint:disable-next-line: strict-boolean-expressions
@@ -63,7 +63,7 @@ async function testCreateProjectAndDeploy(validateProjectOptions: IValidateProje
 
     const appName: string = 'funcBasic' + getRandomHexString();
     resourceGroupsToDelete.push(appName);
-    await testUserInput.runWithInputs([/create new function app/i, appName, getRotatingLocation()], async () => {
+    await testUserInput.runWithInputs([/create new function app/i, appName, ...deployInputs, getRotatingLocation()], async () => {
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
 
