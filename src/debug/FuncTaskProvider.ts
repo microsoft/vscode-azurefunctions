@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isNullOrUndefined } from 'util';
-import { CancellationToken, ShellExecution, Task, TaskProvider, workspace, WorkspaceFolder } from 'vscode';
+import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDefinition, TaskProvider, TaskScope, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { extInstallCommand, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { buildNativeDeps, extInstallCommand, func, funcWatchProblemMatcher, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { venvUtils } from '../utils/venvUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
-import { getFuncTaskCommand, IFuncTaskCommand } from './getFuncTaskCommand';
-import { getPythonTasks } from './getPythonTasks';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
 import { PowerShellDebugProvider } from './PowerShellDebugProvider';
@@ -45,15 +44,16 @@ export class FuncTaskProvider implements TaskProvider {
                     try {
                         const projectRoot: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
                         if (projectRoot) {
-                            result.push(getExtensionInstallTask(folder, projectRoot));
                             const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                            const hostStartTask: Task | undefined = await this.getHostStartTask(folder, projectRoot, language);
-                            if (hostStartTask) {
-                                result.push(hostStartTask);
+
+                            const commands: string[] = [extInstallCommand, hostStartCommand];
+                            if (language === ProjectLanguage.Python) {
+                                commands.push(packCommand);
+                                commands.push(`${packCommand} ${buildNativeDeps}`);
                             }
 
-                            if (language === ProjectLanguage.Python) {
-                                result.push(...getPythonTasks(folder, projectRoot));
+                            for (const command of commands) {
+                                result.push(await this.createTask(command, folder, projectRoot, language));
                             }
                         }
                     } catch (err) {
@@ -73,20 +73,50 @@ export class FuncTaskProvider implements TaskProvider {
         return result;
     }
 
-    public async resolveTask(_task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
-        await callWithTelemetryAndErrorHandling('resolveTask', async (context: IActionContext) => {
+    public async resolveTask(task: Task, _token?: CancellationToken | undefined): Promise<Task | undefined> {
+        return await callWithTelemetryAndErrorHandling('resolveTask', async (context: IActionContext) => {
             context.telemetry.properties.isActivationEvent = 'true';
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
-        });
 
-        // The resolveTask method returns undefined and is currently not called by VS Code. It is there to optimize task loading in the future.
-        // https://code.visualstudio.com/docs/extensions/example-tasks
-        return undefined;
+            // tslint:disable-next-line: no-unsafe-any
+            const command: string | undefined = task.definition.command;
+            if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
+                const folder: WorkspaceFolder = task.scope;
+                const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
+                return this.createTask(command, folder, undefined, language, task.definition);
+            }
+
+            return undefined;
+        });
     }
 
-    private async getHostStartTask(folder: WorkspaceFolder, projectRoot: string, language: string | undefined): Promise<Task | undefined> {
-        let debugProvider: FuncDebugProviderBase | undefined;
+    private async createTask(command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
+        let commandLine: string = `${ext.funcCliPath} ${command}`;
+        if (language === ProjectLanguage.Python) {
+            commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
+        }
+
+        let problemMatcher: string | undefined;
+        let options: ShellExecutionOptions | undefined;
+        if (/^\s*(host )?start/i.test(command)) {
+            problemMatcher = funcWatchProblemMatcher;
+            options = await this.getHostStartOptions(folder, language);
+        }
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        options = options || {};
+        if (projectRoot) {
+            options.cwd = projectRoot;
+        }
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        definition = definition || { type: func, command };
+        return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
+    }
+
+    private async getHostStartOptions(folder: WorkspaceFolder, language: string | undefined): Promise<ShellExecutionOptions | undefined> {
+        let debugProvider: FuncDebugProviderBase;
         switch (language) {
             case ProjectLanguage.Python:
                 debugProvider = this._pythonDebugProvider;
@@ -102,38 +132,9 @@ export class FuncTaskProvider implements TaskProvider {
                 debugProvider = this._powershellDebugProvider;
                 break;
             default:
+                return undefined;
         }
 
-        const funcCommand: IFuncTaskCommand = getFuncTaskCommand(folder, hostStartCommand, /^\s*(host )?start/i);
-        const shellExecution: ShellExecution = debugProvider ? await debugProvider.getShellExecution(folder, funcCommand.commandLine) : new ShellExecution(funcCommand.commandLine);
-        if (!shellExecution.options) {
-            shellExecution.options = {};
-        }
-
-        shellExecution.options.cwd = projectRoot;
-        return new Task(
-            {
-                type: func,
-                command: funcCommand.taskName
-            },
-            folder,
-            funcCommand.taskName,
-            func,
-            shellExecution,
-            funcWatchProblemMatcher
-        );
+        return await debugProvider.getExecutionOptions(folder);
     }
-}
-
-function getExtensionInstallTask(folder: WorkspaceFolder, projectRoot: string): Task {
-    return new Task(
-        {
-            type: func,
-            command: extInstallCommand
-        },
-        folder,
-        extInstallCommand,
-        func,
-        new ShellExecution(`${ext.funcCliPath} ${extInstallCommand}`, { cwd: projectRoot })
-    );
 }

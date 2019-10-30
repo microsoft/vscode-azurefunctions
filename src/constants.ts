@@ -75,6 +75,7 @@ export const hostStartCommand: string = 'host start';
 export const hostStartTaskName: string = `${func}: ${hostStartCommand}`;
 
 export const packCommand: string = 'pack';
+export const buildNativeDeps: string = '--build-native-deps';
 export const packTaskName: string = `${func}: ${packCommand}`;
 
 export const funcWatchProblemMatcher: string = '$func-watch';

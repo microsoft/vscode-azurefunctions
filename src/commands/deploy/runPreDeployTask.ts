@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { handleFailedPreDeployTask, IPreDeployTaskResult, tryRunPreDeployTask } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
+import { buildNativeDeps, packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../../localize';
@@ -41,8 +41,7 @@ async function promptToBuildNativeDeps(context: IActionContext, deployFsPath: st
     const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
     if (result === DialogResponses.yes) {
         context.telemetry.properties.preDeployTaskResponse = 'packNativeDeps';
-        const flag: string = '--build-native-deps';
-        await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${flag}`, deployFsPath);
+        await updateWorkspaceSetting(preDeployTaskSetting, `${packTaskName} ${buildNativeDeps}`, deployFsPath);
         return await tryRunPreDeployTask(context, deployFsPath, scmType);
     } else if (result === DialogResponses.learnMore) {
         context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';

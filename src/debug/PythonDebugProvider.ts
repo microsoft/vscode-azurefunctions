@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, Extension, extensions, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
+import { DebugConfiguration, Extension, extensions, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
-import { venvUtils } from '../utils/venvUtils';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
 export const defaultPythonDebugPort: number = 9091;
@@ -23,11 +22,9 @@ export class PythonDebugProvider extends FuncDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultPythonDebugPort;
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
-    public async getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution> {
-        commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
+    public async getExecutionOptions(folder: WorkspaceFolder): Promise<ShellExecutionOptions> {
         const port: number = <number>this.getDebugPortOrPipeName(folder);
-        const options: ShellExecutionOptions = { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
-        return new ShellExecution(commandLine, options);
+        return { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
     }
 }
 

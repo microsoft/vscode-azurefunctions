@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, ShellExecution, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
+import { DebugConfiguration, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
@@ -23,9 +23,8 @@ export class PowerShellDebugProvider extends FuncDebugProviderBase {
     protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
     protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
-    public async getShellExecution(folder: WorkspaceFolder, commandLine: string): Promise<ShellExecution> {
+    public async getExecutionOptions(folder: WorkspaceFolder): Promise<ShellExecutionOptions> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
-        const options: ShellExecutionOptions = { env: { PSWorkerCustomPipeName: `${port}` } };
-        return new ShellExecution(commandLine, options);
+        return { env: { PSWorkerCustomPipeName: `${port}` } };
     }
 }
