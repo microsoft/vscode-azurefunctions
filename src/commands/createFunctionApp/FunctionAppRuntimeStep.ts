@@ -3,28 +3,56 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAppServiceWizardContext, WebsiteOS } from 'vscode-azureappservice';
+import { WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardPromptStep, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
+import { FuncVersion } from '../../FuncVersion';
+import { localize } from '../../localize';
+import { IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
-export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
-    public async prompt(wizardContext: IAppServiceWizardContext): Promise<void> {
-        const runtimeItems: IAzureQuickPickItem<string>[] = [
-            { label: 'JavaScript', data: 'node' },
-            { label: '.NET', data: 'dotnet' }
-        ];
-
-        if (wizardContext.newSiteOS === WebsiteOS.linux) {
-            runtimeItems.push({ label: 'Python', data: 'python' });
-        } else {
-            runtimeItems.push({ label: 'Java', data: 'java' });
-            runtimeItems.push({ label: 'PowerShell', data: 'powershell' });
-        }
-
-        wizardContext.newSiteRuntime = (await ext.ui.showQuickPick(runtimeItems, { placeHolder: 'Select a runtime for your new app.' })).data;
+export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
+    public async prompt(context: IFunctionAppWizardContext): Promise<void> {
+        const picks: IAzureQuickPickItem<string>[] = this.getPicks(context);
+        const placeHolder: string = localize('selectRuntime', 'Select a runtime');
+        context.newSiteRuntime = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
-    public shouldPrompt(wizardContext: IAppServiceWizardContext): boolean {
-        return !wizardContext.newSiteRuntime;
+    public shouldPrompt(context: IFunctionAppWizardContext): boolean {
+        if (context.newSiteRuntime) {
+            return false;
+        } else if (context.runtimeFilter) {
+            const picks: IAzureQuickPickItem<string>[] = this.getPicks(context);
+            if (picks.length === 1) {
+                // This needs to be set in `shouldPrompt` instead of `prompt`, otherwise the back button won't work
+                context.newSiteRuntime = picks[0].data;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private getPicks(context: IFunctionAppWizardContext): IAzureQuickPickItem<string>[] {
+        const picks: IAzureQuickPickItem<string>[] = [];
+
+        picks.push({ label: '.NET', data: 'dotnet' });
+
+        if (context.version === FuncVersion.v1) {
+            picks.unshift({ label: 'Node.js', data: 'node' });
+        } else {
+            picks.unshift({ label: 'Node.js 8', data: 'node|8' });
+            picks.unshift({ label: 'Node.js 10', data: 'node|10' });
+
+            if (context.newSiteOS === WebsiteOS.linux) {
+                picks.push({ label: 'Python 3.7', data: 'python|3.7' });
+                picks.push({ label: 'Python 3.6', data: 'python|3.6' });
+            } else {
+                picks.push({ label: 'Java', data: 'java' });
+                picks.push({ label: 'PowerShell', data: 'powershell' });
+            }
+        }
+
+        const runtimeFilter: string | undefined = context.runtimeFilter;
+        return runtimeFilter ? picks.filter(r => r.data.startsWith(runtimeFilter)) : picks;
     }
 }

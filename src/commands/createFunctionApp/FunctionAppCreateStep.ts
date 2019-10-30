@@ -3,170 +3,162 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient } from 'azure-arm-website';
+import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from 'azure-arm-website';
 import { Progress } from 'vscode';
-import { IAppServiceWizardContext } from 'vscode-azureappservice';
+import { WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, createAzureClient } from 'vscode-azureextensionui';
-import { ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { extensionVersionKey, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { FuncVersion } from '../../FuncVersion';
+import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { nonNullProp } from '../../utils/nonNull';
+import { getStorageConnectionString } from '../../utils/azure';
+import { getRandomHexString } from '../../utils/fs';
+import { nonNullOrEmptyValue, nonNullProp } from '../../utils/nonNull';
+import { IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
-export interface IAppSettingsContext {
-    storageConnectionString?: string;
-    fileShareName?: string;
-    os: string;
-    runtime?: string;
-    aiInstrumentationKey?: string;
-}
-
-export class SiteCreateStep extends AzureWizardExecuteStep<IAppServiceWizardContext> {
+export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
-    public async execute(wizardContext: IAppServiceWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        const creatingNewApp: string = wizardContext.newSiteKind === AppKind.functionapp ?
-            localize('creatingNewFunctionApp', 'Creating new function app "{0}"...', wizardContext.newSiteName) :
-            localize('creatingNewWebApp', 'Creating new web app "{0}"...', wizardContext.newSiteName);
-        ext.outputChannel.appendLog(creatingNewApp);
-        progress.report({ message: creatingNewApp });
-        const client: WebSiteManagementClient = createAzureClient(wizardContext, WebSiteManagementClient);
-        wizardContext.site = await client.webApps.createOrUpdate(nonNullValueAndProp(wizardContext.resourceGroup, 'name'), nonNullProp(wizardContext, 'newSiteName'), {
-            name: wizardContext.newSiteName,
-            kind: wizardContext.newSiteKind,
-            location: nonNullValueAndProp(wizardContext.location, 'name'),
-            serverFarmId: wizardContext.plan ? wizardContext.plan.id : undefined,
-            clientAffinityEnabled: wizardContext.newSiteKind === AppKind.app,
-            siteConfig: await this.getNewSiteConfig(wizardContext),
-            reserved: wizardContext.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+    public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
+        context.telemetry.properties.newSiteOS = context.newSiteOS;
+        context.telemetry.properties.newSiteRuntime = context.newSiteRuntime;
+        context.telemetry.properties.planSkuTier = context.plan && context.plan.sku && context.plan.sku.tier;
+
+        const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
+        ext.outputChannel.appendLog(message);
+        progress.report({ message });
+
+        const siteName: string = nonNullProp(context, 'newSiteName');
+        const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
+        const locationName: string = nonNullProp(nonNullProp(context, 'location'), 'name');
+
+        const client: WebSiteManagementClient = createAzureClient(context, WebSiteManagementClient);
+        context.site = await client.webApps.createOrUpdate(rgName, siteName, {
+            name: siteName,
+            kind: context.newSiteKind,
+            location: locationName,
+            serverFarmId: context.plan && context.plan.id,
+            clientAffinityEnabled: false,
+            siteConfig: await this.getNewSiteConfig(context),
+            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
         });
     }
 
-    public shouldExecute(wizardContext: IAppServiceWizardContext): boolean {
-        return !wizardContext.site;
+    public shouldExecute(context: IFunctionAppWizardContext): boolean {
+        return !context.site;
     }
 
-    private async getNewSiteConfig(wizardContext: IAppServiceWizardContext): Promise<SiteConfig> {
-        const newSiteConfig: SiteConfig = {};
-        let storageConnectionString: string | undefined;
-        let fileShareName: string | undefined;
-
-        if (wizardContext.newSiteOS === 'linux') {
-            if (wizardContext.useConsumptionPlan) {
+    private async getNewSiteConfig(context: IFunctionAppWizardContext): Promise<SiteModels.SiteConfig> {
+        const newSiteConfig: SiteModels.SiteConfig = {};
+        if (context.newSiteOS === WebsiteOS.linux) {
+            if (context.useConsumptionPlan) {
                 newSiteConfig.use32BitWorkerProcess = false; // Needs to be explicitly set to false per the platform team
+                newSiteConfig.linuxFxVersion = context.newSiteRuntime;
             } else {
-                newSiteConfig.linuxFxVersion = this.getFunctionAppLinuxFxVersion(nonNullProp(wizardContext, 'newSiteRuntime'));
+                newSiteConfig.linuxFxVersion = this.getDockerLinuxFxVersion(context);
             }
         }
 
-        const storageClient: StorageManagementClient = createAzureClient(wizardContext, StorageManagementClient);
-
-        const storageAccount: StorageAccount = nonNullProp(wizardContext, 'storageAccount');
-        const [, storageResourceGroup] = nonNullValue(nonNullProp(storageAccount, 'id').match(/\/resourceGroups\/([^/]+)\//), 'Invalid storage account id');
-        const keysResult: StorageAccountListKeysResult = await storageClient.storageAccounts.listKeys(storageResourceGroup, nonNullProp(storageAccount, 'name'));
-
-        fileShareName = getNewFileShareName(nonNullProp(wizardContext, 'newSiteName'));
-
-        // https://github.com/Azure/azure-sdk-for-node/issues/4706
-        const endpointSuffix: string = wizardContext.environment.storageEndpointSuffix.replace(/^\./, '');
-
-        storageConnectionString = '';
-        if (keysResult.keys && keysResult.keys[0].value) {
-            storageConnectionString = `DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${keysResult.keys[0].value};EndpointSuffix=${endpointSuffix}`;
-        }
-
-        newSiteConfig.appSettings = await this.createSiteAppSettings(
-            {
-                storageConnectionString,
-                fileShareName,
-                os: nonNullProp(wizardContext, 'newSiteOS'),
-                runtime: wizardContext.newSiteRuntime,
-                // tslint:disable-next-line: strict-boolean-expressions
-                aiInstrumentationKey: wizardContext.appInsightsComponent && wizardContext.appInsightsComponent ? wizardContext.appInsightsComponent.instrumentationKey : undefined
-            });
-
+        newSiteConfig.appSettings = await this.getAppSettings(context);
         return newSiteConfig;
     }
 
-    private async createSiteAppSettings(context: IAppSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> {
-        const appSettings: WebSiteManagementModels.NameValuePair[] = [];
+    private getDockerLinuxFxVersion(context: IFunctionAppWizardContext): string {
+        const runtime: string = nonNullProp(context, 'newSiteRuntime');
+        const funcVersion: string = getMajorVersion(context.version) + '.0';
 
-        const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(version);
-        for (const key of Object.keys(cliFeedAppSettings)) {
-            appSettings.push({
-                name: key,
-                value: cliFeedAppSettings[key]
-            });
+        const runtimeWithoutVersion: string = getRuntimeWithoutVersion(runtime);
+        let middlePart: string = `${runtimeWithoutVersion}:${funcVersion}`;
+        if (runtime.includes(separator)) {
+            middlePart += '-' + runtime.replace(separator, '');
         }
 
-        appSettings.push({
-            name: 'AzureWebJobsStorage',
-            value: context.storageConnectionString
-        });
+        return `DOCKER|mcr.microsoft.com/azure-functions/${middlePart}-appservice`;
+    }
+
+    private async getAppSettings(context: IFunctionAppWizardContext): Promise<SiteModels.NameValuePair[]> {
+        const runtime: string = nonNullProp(context, 'newSiteRuntime');
+        const runtimeWithoutVersion: string = getRuntimeWithoutVersion(runtime);
+
+        const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
+
+        const appSettings: SiteModels.NameValuePair[] = [
+            {
+                name: azureWebJobsStorageKey,
+                value: storageConnectionString
+            },
+            {
+                name: extensionVersionKey,
+                value: '~' + getMajorVersion(context.version)
+            },
+            {
+                name: workerRuntimeKey,
+                value: runtimeWithoutVersion
+            }
+        ];
 
         // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
-        if (version === FuncVersion.v1) {
+        if (context.version === FuncVersion.v1) {
             appSettings.push({
                 name: 'AzureWebJobsDashboard',
-                value: context.storageConnectionString
+                value: storageConnectionString
             });
         }
 
-        // These settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
-        if (context.os === 'windows') {
+        if (context.newSiteOS === WebsiteOS.windows) {
+            if (runtimeWithoutVersion.toLowerCase() === 'node' && context.version !== FuncVersion.v1) {
+                // Linux doesn't need this because it uses linuxFxVersion
+                // v1 doesn't need this because it only supports one version of Node
+                appSettings.push({
+                    name: 'WEBSITE_NODE_DEFAULT_VERSION',
+                    value: '~' + getRuntimeVersion(runtime)
+                });
+            }
+
+            // WEBSITE_CONTENT* settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
             appSettings.push({
                 name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
-                value: context.storageConnectionString
+                value: storageConnectionString
             });
             appSettings.push({
                 name: 'WEBSITE_CONTENTSHARE',
-                value: context.fileShareName
+                value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
+
+            // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+            // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
+            // It also doesn't apply for Linux
+            if (!(context.language === ProjectLanguage.CSharpScript && context.version === FuncVersion.v1)) {
+                appSettings.push({
+                    name: 'WEBSITE_RUN_FROM_PACKAGE',
+                    value: '1'
+                });
+            }
         }
 
-        if (context.runtime) {
-            appSettings.push({
-                name: workerRuntimeKey,
-                value: context.runtime
-            });
-        }
-
-        // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-        // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
-        // It also doesn't apply for Linux Consumption, which has its own custom deploy logic in the the vscode-azureappservice package
-        if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && version === FuncVersion.v1)) {
-            appSettings.push({
-                name: 'WEBSITE_RUN_FROM_PACKAGE',
-                value: '1'
-            });
-        }
-
-        if (context.aiInstrumentationKey) {
+        if (context.appInsightsComponent) {
             appSettings.push({
                 name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
-                value: context.aiInstrumentationKey
+                value: context.appInsightsComponent.instrumentationKey
             });
         }
 
         return appSettings;
     }
+}
 
-    private getFunctionAppLinuxFxVersion(runtime: string): string {
-        let middlePart: string;
-        switch (runtime) {
-            case 'node':
-                middlePart = 'node:2.0-node8';
-                break;
-            case 'python':
-                middlePart = 'python:2.0-python3.6';
-                break;
-            case 'dotnet':
-                middlePart = 'dotnet:2.0';
-                break;
-            default:
-                throw new RangeError(localize('unexpectedRuntime', 'Unexpected runtime "{0}".', runtime));
-        }
+const separator: string = '|';
+function getRuntimeWithoutVersion(runtime: string): string {
+    return runtime.split(separator)[0];
+}
 
-        return `DOCKER|mcr.microsoft.com/azure-functions/${middlePart}-appservice`;
-    }
+function getRuntimeVersion(runtime: string): string {
+    return nonNullOrEmptyValue(runtime.split(separator)[1], 'runtimeVersion');
+}
+
+function getNewFileShareName(siteName: string): string {
+    const randomLetters: number = 6;
+    const maxFileShareNameLength: number = 63;
+    return siteName.toLowerCase().substr(0, maxFileShareNameLength - randomLetters) + getRandomHexString(randomLetters);
 }

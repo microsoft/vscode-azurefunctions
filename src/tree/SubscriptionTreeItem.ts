@@ -4,8 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteHostingPlanStep, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
+import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
+import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -73,9 +76,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
 
-        const wizardContext: IAppServiceWizardContext = Object.assign(context, this.root, {
+        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.root, {
             newSiteKind: AppKind.functionapp,
-            resourceGroupDeferLocationStep: true
+            resourceGroupDeferLocationStep: true,
+            version,
+            language
         });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
@@ -83,7 +88,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new SiteOSStep());
         promptSteps.push(new SiteHostingPlanStep());
-        promptSteps.push(new SiteRuntimeStep());
+        promptSteps.push(new FunctionAppRuntimeStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
@@ -91,10 +96,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
+        if (version === FuncVersion.v1) { // v1 doesn't support linux
+            wizardContext.newSiteOS = WebsiteOS.windows;
+        }
+
         if (!context.advancedCreation) {
             wizardContext.useConsumptionPlan = true;
-            wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
-            if (wizardContext.newSiteRuntime) {
+            wizardContext.runtimeFilter = getFunctionsWorkerRuntime(language);
+            if (wizardContext.runtimeFilter) {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
                 setLocationsTask(wizardContext);
             }
@@ -122,7 +131,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
         LocationListStep.addStep(wizardContext, promptSteps);
 
-        executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, version, language)));
+        executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
