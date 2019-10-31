@@ -30,8 +30,18 @@ export function getDotnetVerifiedTemplateIds(version: string): string[] {
         ]);
     }
 
+    let ids: string[] = convertToFullIds(verifiedTemplateIds, version);
+    if (version === FuncVersion.v3) {
+        // Also include v2 ids since v3 templates still use '2' in the id and it's not clear if/when that'll change
+        // https://github.com/microsoft/vscode-azurefunctions/issues/1602
+        ids = ids.concat(convertToFullIds(verifiedTemplateIds, FuncVersion.v2));
+    }
+    return ids;
+}
+
+function convertToFullIds(ids: string[], version: string): string[] {
     const majorVersion: string = getMajorVersion(version);
-    return verifiedTemplateIds.map((id: string) => {
+    return ids.map((id: string) => {
         return `Azure.Function.CSharp.${id}.${majorVersion}.x`;
     });
 }

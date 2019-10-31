@@ -89,10 +89,6 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
         // Fall back to v2 templates since v3 templates still use '2' in the id and it's not clear if/when that'll change
         // https://github.com/microsoft/vscode-azurefunctions/issues/1602
         filteredTemplates = filterTemplatesByVersion(functionTemplates, FuncVersion.v2);
-        filteredTemplates = filteredTemplates.map(t => {
-            t.id = t.id.replace('2', '3');
-            return t;
-        });
     }
 
     await copyCSharpSettingsFromJS(filteredTemplates, version);
