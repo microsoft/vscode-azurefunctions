@@ -13,11 +13,14 @@ import { runWithFuncSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase implements Disposable {
     public baseTestFolder: string;
-
+    public readonly version: FuncVersion;
     public abstract language: ProjectLanguage;
-    public abstract version: FuncVersion;
 
     private readonly testedFunctions: string[] = [];
+
+    public constructor(version: FuncVersion) {
+        this.version = version;
+    }
 
     /**
      * NOTE: The first entry in the returned array is used for validating contents

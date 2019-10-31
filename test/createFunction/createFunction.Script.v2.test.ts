@@ -15,7 +15,6 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class JavaScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
-    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -27,7 +26,6 @@ class JavaScriptFunctionTester extends FunctionTesterBase {
 
 class TypeScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.TypeScript;
-    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -39,7 +37,6 @@ class TypeScriptFunctionTester extends FunctionTesterBase {
 
 class PythonFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.Python;
-    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -51,7 +48,6 @@ class PythonFunctionTester extends FunctionTesterBase {
 
 class PowerShellFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.PowerShell;
-    public version: FuncVersion = FuncVersion.v2;
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -61,10 +57,15 @@ class PowerShellFunctionTester extends FunctionTesterBase {
     }
 }
 
-addSuite(new JavaScriptFunctionTester());
-addSuite(new TypeScriptFunctionTester());
-addSuite(new PythonFunctionTester());
-addSuite(new PowerShellFunctionTester());
+addSuitesForVersion(FuncVersion.v2);
+addSuitesForVersion(FuncVersion.v3);
+
+function addSuitesForVersion(version: FuncVersion): void {
+    addSuite(new JavaScriptFunctionTester(version));
+    addSuite(new TypeScriptFunctionTester(version));
+    addSuite(new PythonFunctionTester(version));
+    addSuite(new PowerShellFunctionTester(version));
+}
 
 function addSuite(tester: FunctionTesterBase): void {
     // tslint:disable-next-line:max-func-body-length no-function-expression

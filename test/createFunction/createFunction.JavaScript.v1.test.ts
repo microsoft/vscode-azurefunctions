@@ -11,9 +11,12 @@ import { runForAllTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
-class JSFunctionTester extends FunctionTesterBase {
+class JSFunctionTesterV1 extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
-    public version: FuncVersion = FuncVersion.v1;
+
+    public constructor() {
+        super(FuncVersion.v1);
+    }
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -25,7 +28,7 @@ class JSFunctionTester extends FunctionTesterBase {
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
 suite('Create Function JavaScript ~1', async function (this: ISuiteCallbackContext): Promise<void> {
-    const jsTester: JSFunctionTester = new JSFunctionTester();
+    const jsTester: JSFunctionTesterV1 = new JSFunctionTesterV1();
 
     suiteSetup(async () => {
         await jsTester.initAsync();
