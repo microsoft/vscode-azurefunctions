@@ -8,7 +8,6 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzureWizard, IActionContext, parseError } from "vscode-azureextensionui";
-import { getWorkspaceSetting } from "../../extension.bundle";
 import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWebJobsStorageExecuteStep";
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
@@ -22,7 +21,7 @@ import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { supportsLocalProjectTree } from "../tree/localProject/supportsLocalProjectTree";
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
-import { getFunctionsWorkerRuntime } from "../vsCodeConfig/settings";
+import { getFunctionsWorkerRuntime, getWorkspaceSetting } from "../vsCodeConfig/settings";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;

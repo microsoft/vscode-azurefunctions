@@ -55,7 +55,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
-    test('Create - API ', async () => {
+    test('Create - API', async () => {
         const apiRgName: string = getRandomHexString();
         resourceGroupsToDelete.push(apiRgName);
         const apiAppName: string = getRandomHexString();

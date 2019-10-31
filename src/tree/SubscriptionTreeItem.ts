@@ -74,7 +74,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
+        context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+        context.telemetry.properties.projectLanguage = language;
 
         const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.root, {
             newSiteKind: AppKind.functionapp,
@@ -175,8 +177,6 @@ async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersi
         version = latestGAVersion;
         context.telemetry.properties.runtimeSource = 'Backup';
     }
-
-    context.telemetry.properties.projectRuntime = version;
 
     return version;
 }
