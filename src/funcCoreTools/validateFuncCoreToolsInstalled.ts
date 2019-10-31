@@ -5,15 +5,17 @@
 
 import { MessageItem } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { PackageManager } from '../constants';
+import { funcVersionSetting, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(customMessage?: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(message: string, fsPath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
@@ -25,7 +27,6 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
             installed = true;
         } else {
             const items: MessageItem[] = [];
-            const message: string = customMessage ? customMessage : localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
             const packageManagers: PackageManager[] = await getFuncPackageManagers(false /* isFuncInstalled */);
             if (packageManagers.length > 0) {
                 items.push(install);
@@ -39,7 +40,8 @@ export async function validateFuncCoreToolsInstalled(customMessage?: string): Pr
             context.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
-                await installFuncCoreTools(packageManagers);
+                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath));
+                await installFuncCoreTools(packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
                 await openUrl('https://aka.ms/Dqur4e');

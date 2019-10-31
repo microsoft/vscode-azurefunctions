@@ -35,7 +35,8 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
-        shouldContinue = await validateFuncCoreToolsInstalled();
+        const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
+        shouldContinue = await validateFuncCoreToolsInstalled(message, workspace.uri.fsPath);
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';

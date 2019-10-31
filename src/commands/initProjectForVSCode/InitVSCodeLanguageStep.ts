@@ -8,6 +8,7 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'v
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
+import { FuncVersion, getGAVersionsForOS } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { FuncVersionStep } from '../createNewProject/FuncVersionStep';
@@ -96,5 +97,12 @@ export async function addInitVSCodeStep(context: IProjectWizardContext, executeS
 
     if (context.version === undefined) {
         context.version = await tryGetLocalFuncVersion();
+        if (context.version === undefined) {
+            // If only one GA version is supported on this OS, automatically use that
+            const gaVersions: FuncVersion[] = getGAVersionsForOS();
+            if (gaVersions.length === 1) {
+                context.version = gaVersions[0];
+            }
+        }
     }
 }
