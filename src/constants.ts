@@ -88,3 +88,4 @@ export const tsConfigFileName: string = 'tsconfig.json';
 export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
+export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';

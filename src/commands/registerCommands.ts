@@ -23,7 +23,7 @@ import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
 import { createFunction } from './createFunction/createFunction';
-import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp';
+import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
 import { createNewProject } from './createNewProject/createNewProject';
 import { createSlot } from './createSlot';
 import { deleteNode } from './deleteNode';

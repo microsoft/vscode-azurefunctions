@@ -4,13 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, IAppSettingsContext, setLocationsTask, SiteClient, SiteCreateStep, SiteHostingPlanStep, SiteNameStep, SiteOSStep, SiteRuntimeStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteHostingPlanStep, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, workerRuntimeKey } from '../constants';
+import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
+import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
+import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
-import { cliFeedUtils } from '../utils/cliFeedUtils';
 import { nonNullProp } from '../utils/nonNull';
 import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -72,11 +74,15 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
+        context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+        context.telemetry.properties.projectLanguage = language;
 
-        const wizardContext: IAppServiceWizardContext = Object.assign(context, this.root, {
+        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.root, {
             newSiteKind: AppKind.functionapp,
-            resourceGroupDeferLocationStep: true
+            resourceGroupDeferLocationStep: true,
+            version,
+            language
         });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
@@ -84,7 +90,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new SiteOSStep());
         promptSteps.push(new SiteHostingPlanStep());
-        promptSteps.push(new SiteRuntimeStep());
+        promptSteps.push(new FunctionAppRuntimeStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
@@ -92,10 +98,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             replication: StorageAccountReplication.LRS
         };
 
+        if (version === FuncVersion.v1) { // v1 doesn't support linux
+            wizardContext.newSiteOS = WebsiteOS.windows;
+        }
+
         if (!context.advancedCreation) {
             wizardContext.useConsumptionPlan = true;
-            wizardContext.newSiteRuntime = getFunctionsWorkerRuntime(language);
-            if (wizardContext.newSiteRuntime) {
+            wizardContext.runtimeFilter = getFunctionsWorkerRuntime(language);
+            if (wizardContext.runtimeFilter) {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
                 setLocationsTask(wizardContext);
             }
@@ -123,7 +133,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
         LocationListStep.addStep(wizardContext, promptSteps);
 
-        executeSteps.push(new SiteCreateStep(async (appSettingsContext): Promise<WebSiteManagementModels.NameValuePair[]> => await createFunctionAppSettings(appSettingsContext, version, language)));
+        executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
@@ -168,70 +178,5 @@ async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersi
         context.telemetry.properties.runtimeSource = 'Backup';
     }
 
-    context.telemetry.properties.projectRuntime = version;
-
     return version;
-}
-
-async function createFunctionAppSettings(context: IAppSettingsContext, version: FuncVersion, projectLanguage: string | undefined): Promise<WebSiteManagementModels.NameValuePair[]> {
-    const appSettings: WebSiteManagementModels.NameValuePair[] = [];
-
-    const cliFeedAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(version);
-    for (const key of Object.keys(cliFeedAppSettings)) {
-        appSettings.push({
-            name: key,
-            value: cliFeedAppSettings[key]
-        });
-    }
-
-    appSettings.push({
-        name: 'AzureWebJobsStorage',
-        value: context.storageConnectionString
-    });
-
-    // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
-    if (version === FuncVersion.v1) {
-        appSettings.push({
-            name: 'AzureWebJobsDashboard',
-            value: context.storageConnectionString
-        });
-    }
-
-    // These settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
-    if (context.os === 'windows') {
-        appSettings.push({
-            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
-            value: context.storageConnectionString
-        });
-        appSettings.push({
-            name: 'WEBSITE_CONTENTSHARE',
-            value: context.fileShareName
-        });
-    }
-
-    if (context.runtime) {
-        appSettings.push({
-            name: workerRuntimeKey,
-            value: context.runtime
-        });
-    }
-
-    // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-    // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
-    // It also doesn't apply for Linux Consumption, which has its own custom deploy logic in the the vscode-azureappservice package
-    if (context.os !== 'linux' && !(projectLanguage === ProjectLanguage.CSharpScript && version === FuncVersion.v1)) {
-        appSettings.push({
-            name: 'WEBSITE_RUN_FROM_PACKAGE',
-            value: '1'
-        });
-    }
-
-    if (context.aiInstrumentationKey) {
-        appSettings.push({
-            name: 'APPINSIGHTS_INSTRUMENTATIONKEY',
-            value: context.aiInstrumentationKey
-        });
-    }
-
-    return appSettings;
 }
