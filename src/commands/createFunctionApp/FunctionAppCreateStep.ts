@@ -54,7 +54,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         if (context.newSiteOS === WebsiteOS.linux) {
             if (context.useConsumptionPlan) {
                 newSiteConfig.use32BitWorkerProcess = false; // Needs to be explicitly set to false per the platform team
-                newSiteConfig.linuxFxVersion = context.newSiteRuntime;
+                if (isVersionedRuntime(context.newSiteRuntime)) {
+                    newSiteConfig.linuxFxVersion = context.newSiteRuntime;
+                }
             } else {
                 newSiteConfig.linuxFxVersion = this.getDockerLinuxFxVersion(context);
             }
@@ -70,7 +72,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const runtimeWithoutVersion: string = getRuntimeWithoutVersion(runtime);
         let middlePart: string = `${runtimeWithoutVersion}:${funcVersion}`;
-        if (runtime.includes(separator)) {
+        if (isVersionedRuntime(runtime)) {
             middlePart += '-' + runtime.replace(separator, '');
         }
 
@@ -149,6 +151,10 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 }
 
 const separator: string = '|';
+function isVersionedRuntime(runtime: string | undefined): boolean {
+    return !!runtime && runtime.includes(separator);
+}
+
 function getRuntimeWithoutVersion(runtime: string): string {
     return runtime.split(separator)[0];
 }
