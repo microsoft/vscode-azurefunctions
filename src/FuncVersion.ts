@@ -18,14 +18,13 @@ export enum FuncVersion {
 export const latestGAVersion: FuncVersion = FuncVersion.v2;
 
 export async function promptForFuncVersion(message?: string): Promise<FuncVersion> {
-    const picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [];
+    let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
+        { label: 'Azure Functions v2', description: '(.NET Core)', data: FuncVersion.v2 },
+        { label: 'Azure Functions v3 Preview', description: '(.NET Core)', data: FuncVersion.v3 },
+        { label: 'Azure Functions v1', description: '(.NET Framework)', data: FuncVersion.v1 }
+    ];
 
-    picks.push({ label: 'Azure Functions v2', description: '(.NET Core)', data: FuncVersion.v2 });
-    picks.push({ label: 'Azure Functions v3 Preview', description: '(.NET Core)', data: FuncVersion.v3 });
-
-    if (isWindows) {
-        picks.push({ label: 'Azure Functions v1', description: '(.NET Framework)', data: FuncVersion.v1 });
-    }
+    picks = picks.filter(p => osSupportsVersion(p.data));
 
     picks.push({ label: localize('learnMore', 'Learn more...'), description: '', data: undefined });
 
@@ -52,8 +51,16 @@ export function tryParseFuncVersion(data: string | undefined): FuncVersion | und
     return undefined;
 }
 
+export function getGAVersionsForOS(): FuncVersion[] {
+    return Object.values(FuncVersion).filter(v => !isPreviewVersion(v) && osSupportsVersion(v));
+}
+
 export function isPreviewVersion(version: FuncVersion): boolean {
     return version === FuncVersion.v3;
+}
+
+function osSupportsVersion(version: FuncVersion | undefined): boolean {
+    return version !== FuncVersion.v1 || isWindows;
 }
 
 export function getMajorVersion(data: string): string {
