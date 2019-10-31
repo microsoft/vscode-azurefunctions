@@ -13,7 +13,10 @@ import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharpScript;
-    public version: FuncVersion = FuncVersion.v1;
+
+    public constructor() {
+        super(FuncVersion.v1);
+    }
 
     public getExpectedPaths(functionName: string): string[] {
         return [
@@ -23,6 +26,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
     }
 }
 
+// NOTE: Only need to test v1 since v2+ emphasizes C# class libraries instead of C#Script
 suite('Create Function C# Script ~1', async () => {
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester();
 
