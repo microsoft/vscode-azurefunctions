@@ -113,18 +113,18 @@ brew install azure-functions-core-tools
     sudo apt-get install azure-functions-core-tools
     ```
 
-See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/README.md) for more installation options and the latest instructions.
+See [here](https://aka.ms/AA6i3ev) for more information on Azure Functions v3 preview and [here](https://github.com/Azure/azure-functions-core-tools/blob/master/README.md) for more installation options and the latest instructions.
 
 ## Language-Specific Prerequisites
 
 ### Node
 
-* [Node 8.0+](https://nodejs.org/)
+* [Node.js](https://nodejs.org/) 8.x or 10.x
 
 ### .NET
 
 * [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
-* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+* .NET Core Sdk [2.x](https://dotnet.microsoft.com/download/dotnet-core/2.2) or [3.x](https://dotnet.microsoft.com/download/dotnet-core/3.0)
 
 > **NOTE**: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
 
@@ -137,15 +137,15 @@ See [here](https://github.com/Azure/azure-functions-core-tools/blob/master/READM
 
 ### Python
 
-* [Python 3.6.x](https://www.python.org/downloads/)
+* [Python](https://www.python.org/downloads/) 3.6.x or 3.7.x
 
-> **NOTE**: [Python 3.6.8](https://www.python.org/downloads/release/python-368/) is the last release of Python 3.6 with installable binaries for Windows.
+  > **NOTE**: [Python 3.6.8](https://www.python.org/downloads/release/python-368/) is the last release of Python 3.6.x with installable binaries for Windows.
 
 ### PowerShell
 
 * [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
 * [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
-* [.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+* [.NET Core Sdk](https://dotnet.microsoft.com/download)
 
 > **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/azure/azure-functions/functions-debug-powershell-local) for complete steps.
 

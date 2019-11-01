@@ -2,6 +2,24 @@
 
 # Change Log
 
+## 0.20.0 - 2019-11-04
+
+### Added
+- Select Node.js or Python runtime version when creating a Function App in Azure
+- Added support for [Azure Functions v3 Preview](https://aka.ms/AA6i3ev)
+  - Install v3 preview of the func cli from the command palette (brew and npm supported)
+  - Now allows .NET Core 3.0 for C#
+  - Supports v3 when version affects templates and deploy validation
+- View Files and Logs for your Function App in Azure
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.20.0%22+is%3Aclosed)
+
+### Changed
+
+- Removed support for "azureFunctions.projectRuntime" value of "beta". Use "~1", "~2", or "~3" instead
+
 ## 0.19.1 - 2019-10-15
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.19.1%22+is%3Aclosed)
