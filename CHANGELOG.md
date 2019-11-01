@@ -6,10 +6,10 @@
 
 ### Added
 - Select Node.js or Python runtime version when creating a Function App in Azure
-- Added support for [Azure Functions v3 Preview](https://aka.ms/AA6i3ev)
-  - Install v3 preview of the func cli from the command palette (brew and npm supported)
-  - Now allows .NET Core 3.0 for C#
-  - Supports v3 when version affects templates and deploy validation
+- Added support for [Azure Functions v3 Preview](https://aka.ms/AA6i3ev) in the following existing features:
+  - Install func cli from the command palette (brew and npm only)
+  - Create new project/function from a version-specific template
+  - Validate local version matches remote version when deploying
 - View Files and Logs for your Function App in Azure
 
 ### Fixed
