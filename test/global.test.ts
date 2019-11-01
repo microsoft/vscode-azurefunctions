@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, ext, FuncVersion, getRandomHexString, IActionContext, parseError, ProjectLanguage, TemplateSource } from '../extension.bundle';
+import { CentralTemplateProvider, deploySubpathSetting, ext, FuncVersion, funcVersionSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, templateFilterSetting, TemplateSource, updateWorkspaceSetting } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -64,7 +64,7 @@ suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
     this.timeout(90 * 1000);
     try {
         await fse.remove(testFolderPath);
-        await fse.emptyDir(testWorkspacePath);
+        await cleanTestWorkspace();
     } catch (error) {
         // Build machines fail pretty often with an EPERM error on Windows, but removing the temp test folder isn't worth failing the build
         console.warn(`Failed to delete test folder path: ${parseError(error).message}`);
@@ -109,6 +109,23 @@ export async function runForTemplateSource(source: TemplateSource | undefined, c
     } finally {
         ext.templateProvider = oldProvider;
     }
+}
+
+export async function cleanTestWorkspace(): Promise<void> {
+    // Doing this because VS Code doesn't always register changes to settings if you just delete "settings.json"
+    const settings: string[] = [
+        projectLanguageSetting,
+        funcVersionSetting,
+        templateFilterSetting,
+        deploySubpathSetting,
+        preDeployTaskSetting,
+        pythonVenvSetting
+    ];
+    for (const setting of settings) {
+        await updateWorkspaceSetting(setting, undefined, testWorkspacePath);
+    }
+
+    await fse.emptyDir(testWorkspacePath);
 }
 
 async function initTestWorkspacePath(): Promise<string> {

@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
-import { createTestActionContext, longRunningTestsEnabled, runForTemplateSource, testUserInput, testWorkspacePath } from './global.test';
+import { cleanTestWorkspace, createTestActionContext, longRunningTestsEnabled, runForTemplateSource, testUserInput, testWorkspacePath } from './global.test';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
@@ -61,7 +61,7 @@ async function javaPreTest(testContext: IHookCallbackContext): Promise<void> {
     // Java templates require you to have a project open, so create one here
     if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // No need to create for every template source
         const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
-        await fse.emptyDir(testWorkspacePath);
+        await cleanTestWorkspace();
         await testUserInput.runWithInputs(inputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createNewProject');
         });

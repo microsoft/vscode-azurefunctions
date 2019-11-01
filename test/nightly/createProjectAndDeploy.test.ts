@@ -4,11 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
-import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
+import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
@@ -20,6 +19,14 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         if (!longRunningTestsEnabled) {
             this.skip();
         }
+    });
+
+    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+        if (!longRunningTestsEnabled) {
+            this.skip();
+        }
+
+        await cleanTestWorkspace();
     });
 
     test('JavaScript', async () => {
@@ -51,7 +58,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
 
 async function testCreateProjectAndDeploy(validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, createProjInputs: (RegExp | string)[] = [], deployInputs: (RegExp | string)[] = []): Promise<void> {
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
-    await fse.emptyDir(testWorkspacePath);
+    await cleanTestWorkspace();
 
     await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...createProjInputs, getRotatingAuthLevel()], async () => {
         await vscode.commands.executeCommand('azureFunctions.createNewProject');

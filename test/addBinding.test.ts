@@ -9,7 +9,7 @@ import * as path from 'path';
 import { commands, Uri } from 'vscode';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
-import { createTestActionContext, testUserInput, testWorkspacePath } from './global.test';
+import { cleanTestWorkspace, createTestActionContext, testUserInput, testWorkspacePath } from './global.test';
 
 suite('Add Binding', async () => {
     let functionJsonPath: string;
@@ -17,7 +17,7 @@ suite('Add Binding', async () => {
     let initialBindingsCount: number;
 
     suiteSetup(async () => {
-        await fse.emptyDir(testWorkspacePath);
+        await cleanTestWorkspace();
         await testUserInput.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, /http\s*trigger/i, functionName, 'Anonymous'], async () => {
             await commands.executeCommand('azureFunctions.createNewProject');
         });
