@@ -5,11 +5,10 @@
 
 import * as assert from 'assert';
 import { WebSiteManagementModels as Models } from 'azure-arm-website';
-import * as fse from 'fs-extra';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
-import { longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
+import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
@@ -30,7 +29,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
         }
 
         // Ensure files/settings from previous tests don't affect this suite
-        await fse.emptyDir(testWorkspacePath);
+        await cleanTestWorkspace();
 
         appName = getRandomHexString();
         app2Name = getRandomHexString();
