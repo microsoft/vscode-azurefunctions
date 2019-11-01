@@ -40,12 +40,12 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
         if (context.version === FuncVersion.v1) {
             picks.unshift({ label: 'Node.js', data: 'node' });
         } else {
-            picks.unshift({ label: 'Node.js 8', data: 'node|8' });
-            picks.unshift({ label: 'Node.js 10', data: 'node|10' });
+            picks.unshift({ label: 'Node.js 8.x', data: 'node|8' });
+            picks.unshift({ label: 'Node.js 10.x', data: 'node|10' });
 
             if (context.newSiteOS === WebsiteOS.linux) {
-                picks.push({ label: 'Python 3.7', data: 'python|3.7' });
-                picks.push({ label: 'Python 3.6', data: 'python|3.6' });
+                picks.push({ label: 'Python 3.7.x', data: 'python|3.7' });
+                picks.push({ label: 'Python 3.6.x', data: 'python|3.6' });
             } else {
                 picks.push({ label: 'Java', data: 'java' });
                 picks.push({ label: 'PowerShell', data: 'powershell' });
