@@ -54,8 +54,13 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         if (context.newSiteOS === WebsiteOS.linux) {
             if (context.useConsumptionPlan) {
                 newSiteConfig.use32BitWorkerProcess = false; // Needs to be explicitly set to false per the platform team
-                if (isVersionedRuntime(context.newSiteRuntime)) {
-                    newSiteConfig.linuxFxVersion = context.newSiteRuntime;
+                if (context.newSiteRuntime && isVersionedRuntime(context.newSiteRuntime)) {
+                    // The platform currently requires a minor version to be specified, even though only the major version is respected for Node
+                    let linuxFxVersion: string = context.newSiteRuntime;
+                    if (!linuxFxVersion.includes('.')) {
+                        linuxFxVersion += '.0';
+                    }
+                    newSiteConfig.linuxFxVersion = linuxFxVersion;
                 }
             } else {
                 newSiteConfig.linuxFxVersion = this.getDockerLinuxFxVersion(context);
@@ -151,7 +156,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 }
 
 const separator: string = '|';
-function isVersionedRuntime(runtime: string | undefined): boolean {
+function isVersionedRuntime(runtime: string): boolean {
     return !!runtime && runtime.includes(separator);
 }
 
