@@ -132,7 +132,7 @@ async function getPythonAlias(): Promise<string> {
         }
     }
 
-    const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python "{0}" executable to use.', minPythonVersionLabel);
+    const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python executable to use.');
     // Don't validate max version when prompting (because the Functions team will assumably support 3.7+ at some point and we don't want to block people from using that)
     return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias });
 }
