@@ -11,6 +11,7 @@ import { buildNativeDeps, extInstallCommand, func, funcWatchProblemMatcher, host
 import { ext } from '../extensionVariables';
 import { venvUtils } from '../utils/venvUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { getTasks } from '../vsCodeConfig/tasks';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
@@ -46,7 +47,13 @@ export class FuncTaskProvider implements TaskProvider {
                         if (projectRoot) {
                             const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
 
-                            const commands: string[] = [extInstallCommand, hostStartCommand];
+                            const commands: string[] = [extInstallCommand];
+
+                            // Don't add "host start" task if the folder already has that task configured. Instead, defer to `resolveTask`, which will handle any customizations the user has made
+                            if (!hasHostStartTask(folder)) {
+                                commands.push(hostStartCommand);
+                            }
+
                             if (language === ProjectLanguage.Python) {
                                 commands.push(packCommand);
                                 commands.push(`${packCommand} ${buildNativeDeps}`);
@@ -136,5 +143,13 @@ export class FuncTaskProvider implements TaskProvider {
         }
 
         return await debugProvider.getExecutionOptions(folder);
+    }
+}
+
+function hasHostStartTask(folder: WorkspaceFolder): boolean {
+    try {
+        return getTasks(folder).some(t => t.type === func && t.command && /^\s*(host )?start/i.test(t.command));
+    } catch {
+        return false;
     }
 }
