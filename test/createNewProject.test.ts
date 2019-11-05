@@ -3,127 +3,51 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
+import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { createNewProject, Platform, ProjectLanguage } from '../extension.bundle';
+import { createNewProject, FuncVersion, funcVersionSetting, getRandomHexString, Platform, ProjectLanguage } from '../extension.bundle';
 import { createTestActionContext, longRunningTestsEnabled, runForAllTemplateSources, testFolderPath, testUserInput } from './global.test';
-import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getScriptValidateOptions, getTypeScriptValidateOptions, validateProject } from './validateProject';
+import { runWithFuncSetting } from './runWithSetting';
+import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
-// tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Create New Project', async function (this: ISuiteCallbackContext): Promise<void> {
-    this.timeout(60 * 1000);
+suite('Create New Project', async () => {
+    const testCases: ICreateProjectTestCase[] = [
+        { validateOptions: getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
+        { validateOptions: getCSharpValidateOptions('C#Project', 'netcoreapp3.0', FuncVersion.v3) },
+        { validateOptions: getFSharpValidateOptions('F#Project', 'netcoreapp2.1', FuncVersion.v2), hiddenLanguage: true },
+        { validateOptions: getFSharpValidateOptions('F#Project', 'netcoreapp3.0', FuncVersion.v3), hiddenLanguage: true },
+    ];
 
-    const javaProject: string = 'JavaProject';
-    test(javaProject, async function (this: IHookCallbackContext): Promise<void> {
-        if (!longRunningTestsEnabled) {
-            this.skip();
-        }
-        this.timeout(5 * 60 * 1000);
-        const projectPath: string = path.join(testFolderPath, javaProject);
-        const appName: string = 'javaApp';
-        await testCreateNewProject(
-            projectPath,
-            ProjectLanguage.Java,
-            {},
-            TestInput.UseDefaultValue,
-            TestInput.UseDefaultValue,
-            TestInput.UseDefaultValue,
-            TestInput.UseDefaultValue,
-            appName
+    // Test cases that are the same for both v2 and v3
+    for (const version of [FuncVersion.v2, FuncVersion.v3]) {
+        testCases.push(
+            { validateOptions: getJavaScriptValidateOptions(true /* hasPackageJson */, version) },
+            { validateOptions: getTypeScriptValidateOptions(version) },
+            { validateOptions: getPowerShellValidateOptions(version) },
+            { validateOptions: getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), hiddenLanguage: true },
+            { validateOptions: getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), hiddenLanguage: true },
         );
-        await validateProject(projectPath, getJavaValidateOptions(appName));
-    });
 
-    const javaScriptProject: string = 'JavaScriptProject';
-    test(javaScriptProject, async () => {
-        const projectPath: string = path.join(testFolderPath, javaScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.JavaScript);
-        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
-    });
-
-    const csharpProject: string = 'CSharpProject';
-    test(csharpProject, async () => {
-        await runForAllTemplateSources(async (source) => {
-            const projectPath: string = path.join(testFolderPath, source, csharpProject);
-            await testCreateNewProject(projectPath, ProjectLanguage.CSharp);
-            await validateProject(projectPath, getCSharpValidateOptions(csharpProject, 'netcoreapp2.1'));
-        });
-    });
-
-    const fsharpProject: string = 'FSharpProject';
-    test(fsharpProject, async () => {
-        await runForAllTemplateSources(async (source) => {
-            const projectPath: string = path.join(testFolderPath, source, fsharpProject);
-            await testCreateNewProject(projectPath, ProjectLanguage.FSharp, { hiddenLanguage: true });
-            await validateProject(projectPath, getFSharpValidateOptions(fsharpProject, 'netcoreapp2.1'));
-        });
-    });
-
-    const bashProject: string = 'BashProject';
-    test(bashProject, async () => {
-        const projectPath: string = path.join(testFolderPath, bashProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Bash, { hiddenLanguage: true });
-        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.Bash));
-    });
-
-    const batchProject: string = 'BatchProject';
-    test(batchProject, async () => {
-        const projectPath: string = path.join(testFolderPath, batchProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Batch, { hiddenLanguage: true });
-        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.Batch));
-    });
-
-    const csharpScriptProject: string = 'CSharpScriptProject';
-    test(csharpScriptProject, async () => {
-        const projectPath: string = path.join(testFolderPath, csharpScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.CSharpScript, { hiddenLanguage: true });
-        await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript));
-    });
-
-    const fsharpScriptProject: string = 'FSharpScriptProject';
-    test(fsharpScriptProject, async () => {
-        const projectPath: string = path.join(testFolderPath, fsharpScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.FSharpScript, { hiddenLanguage: true });
-        await validateProject(projectPath, getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript));
-    });
-
-    const phpProject: string = 'PHPProject';
-    test(phpProject, async () => {
-        const projectPath: string = path.join(testFolderPath, phpProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PHP, { hiddenLanguage: true });
-        await validateProject(projectPath, getScriptValidateOptions(ProjectLanguage.PHP));
-    });
-
-    const powerShellProject: string = 'PowerShellProject';
-    test(powerShellProject, async () => {
-        const projectPath: string = path.join(testFolderPath, powerShellProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.PowerShell);
-        await validateProject(projectPath, getPowerShellValidateOptions());
-    });
-
-    const pythonProject: string = 'PythonProject';
-    test(pythonProject, async function (this: IHookCallbackContext): Promise<void> {
         // Temporarily disable this test on Linux due to inconsistent failures
         // https://github.com/Microsoft/vscode-azurefunctions/issues/910
-        if (!longRunningTestsEnabled || os.platform() === Platform.Linux) {
-            this.skip();
+        if (os.platform() !== Platform.Linux) {
+            testCases.push({ validateOptions: getPythonValidateOptions(version), timeout: 5 * 60 * 1000 });
         }
-        this.timeout(5 * 60 * 1000);
 
-        const projectPath: string = path.join(testFolderPath, pythonProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.Python);
-        await validateProject(projectPath, getPythonValidateOptions());
-    });
+        const appName: string = 'javaApp';
+        testCases.push({
+            validateOptions: getJavaValidateOptions(appName, version),
+            timeout: 5 * 60 * 1000,
+            inputs: [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName]
+        });
+    }
 
-    const typeScriptProject: string = 'TypeScriptProject';
-    test(typeScriptProject, async () => {
-        const projectPath: string = path.join(testFolderPath, typeScriptProject);
-        await testCreateNewProject(projectPath, ProjectLanguage.TypeScript);
-        await validateProject(projectPath, getTypeScriptValidateOptions());
-    });
+    for (const testCase of testCases) {
+        addTest(testCase);
+    }
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
     test('createNewProject API', async () => {
@@ -150,27 +74,52 @@ suite('Create New Project', async function (this: ISuiteCallbackContext): Promis
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
         await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
     });
-
-    async function testCreateNewProject(projectPath: string, language: ProjectLanguage, options?: { hiddenLanguage?: boolean }, ...inputs: (string | TestInput | RegExp)[]): Promise<void> {
-        const hiddenLanguage: boolean = !!options && !!options.hiddenLanguage;
-        if (!hiddenLanguage) {
-            inputs.unshift(language);
-        }
-
-        inputs.unshift(projectPath); // Select the test func app folder
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            inputs.unshift('$(file-directory) Browse...'); // If the test environment has an open workspace, select the 'Browse...' option
-        }
-
-        // All languages except Java support creating a function after creating a project
-        // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (language !== ProjectLanguage.Java) {
-            // don't create function
-            inputs.push(/skip for now/i);
-        }
-
-        await testUserInput.runWithInputs(inputs, async () => {
-            await createNewProject(createTestActionContext(), undefined, hiddenLanguage ? language : undefined, undefined, false);
-        });
-    }
 });
+
+interface ICreateProjectTestCase {
+    validateOptions: IValidateProjectOptions;
+    hiddenLanguage?: boolean;
+    timeout?: number;
+    inputs?: (string | TestInput)[];
+}
+
+function addTest(testCase: ICreateProjectTestCase): void {
+    test(`${testCase.validateOptions.language} ${testCase.validateOptions.version}`, async function (this: IHookCallbackContext): Promise<void> {
+        if (testCase.timeout !== undefined) {
+            if (longRunningTestsEnabled) {
+                this.timeout(testCase.timeout);
+            } else {
+                this.skip();
+            }
+        }
+
+        await runForAllTemplateSources(async () => {
+            // Clone inputs here so we have a different array each time
+            const inputs: (string | TestInput | RegExp)[] = testCase.inputs ? [...testCase.inputs] : [];
+            const language: ProjectLanguage = testCase.validateOptions.language;
+            const projectPath: string = path.join(testFolderPath, getRandomHexString(), language + 'Project');
+
+            if (!testCase.hiddenLanguage) {
+                inputs.unshift(language);
+            }
+
+            inputs.unshift(projectPath);
+            inputs.unshift('$(file-directory) Browse...');
+
+            // All languages except Java support creating a function after creating a project
+            // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
+            if (language !== ProjectLanguage.Java) {
+                // don't create function
+                inputs.push(/skip for now/i);
+            }
+
+            await runWithFuncSetting(funcVersionSetting, testCase.validateOptions.version, async () => {
+                await testUserInput.runWithInputs(inputs, async () => {
+                    await createNewProject(createTestActionContext(), undefined, testCase.hiddenLanguage ? language : undefined, undefined, false);
+                });
+            });
+
+            await validateProject(projectPath, testCase.validateOptions);
+        });
+    });
+}

@@ -86,6 +86,7 @@
         ],
         "no-use-before-declare": false,
         "newline-per-chained-call": false,
-        "no-dynamic-delete": false
+        "no-dynamic-delete": false,
+        "trailing-comma": false
     }
 }
