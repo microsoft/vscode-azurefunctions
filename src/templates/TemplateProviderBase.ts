@@ -12,7 +12,7 @@ import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 
-const v3BackupTemplatesVersion: string = '3.0.1';
+const v3BackupTemplatesVersion: string = '3.0.2';
 const v2BackupTemplatesVersion: string = '2.18.1';
 const v1BackupTemplatesVersion: string = '1.8.0';
 
