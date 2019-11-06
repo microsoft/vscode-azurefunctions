@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteHostingPlanStep, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
+import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
@@ -89,7 +90,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new SiteOSStep());
-        promptSteps.push(new SiteHostingPlanStep());
+        promptSteps.push(new FunctionAppHostingPlanStep());
         promptSteps.push(new FunctionAppRuntimeStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
