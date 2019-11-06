@@ -34,7 +34,7 @@ suite('Create New Project', async () => {
         // Temporarily disable this test on Linux due to inconsistent failures
         // https://github.com/Microsoft/vscode-azurefunctions/issues/910
         if (os.platform() !== Platform.Linux) {
-            testCases.push({ validateOptions: getPythonValidateOptions(version), timeout: 5 * 60 * 1000 });
+            testCases.push({ validateOptions: getPythonValidateOptions('.venv', version), timeout: 5 * 60 * 1000 });
         }
 
         const appName: string = 'javaApp';
