@@ -6,21 +6,23 @@
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ext, FuncVersion, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage } from '../extension.bundle';
+import { FuncVersion, IExtensionsJson, ILaunchJson, isPathEqual, ITasksJson, ProjectLanguage } from '../../extension.bundle';
+import { testWorkspacePath } from '../global.test';
 
 const defaultVersion: FuncVersion = FuncVersion.v2;
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
-        projectLanguage: ProjectLanguage.JavaScript,
-        projectRuntime: version,
-        deploySubpath: '.'
+        'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
+        'azureFunctions.projectRuntime': version,
+        'azureFunctions.deploySubpath': '.',
+        'debug.internalConsoleOptions': 'neverOpen',
     };
     const expectedPaths: string[] = [];
     const expectedTasks: string[] = ['host start'];
 
     if (hasPackageJson) {
-        expectedSettings.preDeployTask = 'npm prune';
+        expectedSettings['azureFunctions.preDeployTask'] = 'npm prune';
         expectedPaths.push('package.json');
         expectedTasks.push('npm install', 'npm prune');
     }
@@ -44,10 +46,11 @@ export function getTypeScriptValidateOptions(version: FuncVersion = defaultVersi
         language: ProjectLanguage.TypeScript,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.TypeScript,
-            projectRuntime: version,
-            deploySubpath: '.',
-            preDeployTask: 'npm prune'
+            'azureFunctions.projectLanguage': ProjectLanguage.TypeScript,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.deploySubpath': '.',
+            'azureFunctions.preDeployTask': 'npm prune',
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             'tsconfig.json',
@@ -72,10 +75,11 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
         language: ProjectLanguage.CSharp,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.CSharp,
-            projectRuntime: version,
-            preDeployTask: 'publish',
-            deploySubpath: `bin/Release/${targetFramework}/publish`
+            'azureFunctions.projectLanguage': ProjectLanguage.CSharp,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.preDeployTask': 'publish',
+            'azureFunctions.deploySubpath': `bin/Release/${targetFramework}/publish`,
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             `${projectName}.csproj`
@@ -104,10 +108,11 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
         language: ProjectLanguage.FSharp,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.FSharp,
-            projectRuntime: version,
-            preDeployTask: 'publish',
-            deploySubpath: `bin/Release/${targetFramework}/publish`
+            'azureFunctions.projectLanguage': ProjectLanguage.FSharp,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.preDeployTask': 'publish',
+            'azureFunctions.deploySubpath': `bin/Release/${targetFramework}/publish`,
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             `${projectName}.fsproj`
@@ -132,16 +137,22 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getPythonValidateOptions(venvName: string = '.venv', version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+    const expectedTasks: string[] = ['host start'];
+    if (venvName) {
+        expectedTasks.push('pipInstall');
+    }
+
     return {
         language: ProjectLanguage.Python,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.Python,
-            projectRuntime: version,
-            deploySubpath: '.',
-            scmDoBuildDuringDeployment: true,
-            pythonVenv: venvName
+            'azureFunctions.projectLanguage': ProjectLanguage.Python,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.deploySubpath': '.',
+            'azureFunctions.scmDoBuildDuringDeployment': true,
+            'azureFunctions.pythonVenv': venvName,
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             'requirements.txt'
@@ -152,10 +163,7 @@ export function getPythonValidateOptions(venvName: string = '.venv', version: Fu
         expectedDebugConfigs: [
             'Attach to Python Functions'
         ],
-        expectedTasks: [
-            'pipInstall',
-            'host start'
-        ]
+        expectedTasks
     };
 }
 
@@ -164,10 +172,11 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
         language: ProjectLanguage.Java,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.Java,
-            projectRuntime: version,
-            preDeployTask: 'package',
-            deploySubpath: `target/azure-functions/${appName}/`
+            'azureFunctions.projectLanguage': ProjectLanguage.Java,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.preDeployTask': 'package',
+            'azureFunctions.deploySubpath': `target/azure-functions/${appName}/`,
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             'src',
@@ -194,9 +203,10 @@ export function getDotnetScriptValidateOptions(language: ProjectLanguage, versio
         language,
         version,
         expectedSettings: {
-            projectLanguage: language,
-            projectRuntime: version,
-            deploySubpath: '.'
+            'azureFunctions.projectLanguage': language,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.deploySubpath': '.',
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
         ],
@@ -217,9 +227,10 @@ export function getPowerShellValidateOptions(version: FuncVersion = defaultVersi
         language: ProjectLanguage.PowerShell,
         version,
         expectedSettings: {
-            projectLanguage: ProjectLanguage.PowerShell,
-            projectRuntime: version,
-            deploySubpath: '.'
+            'azureFunctions.projectLanguage': ProjectLanguage.PowerShell,
+            'azureFunctions.projectRuntime': version,
+            'azureFunctions.deploySubpath': '.',
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
             'profile.ps1',
@@ -242,8 +253,9 @@ export function getScriptValidateOptions(language: ProjectLanguage, version: Fun
         language,
         version,
         expectedSettings: {
-            projectLanguage: language,
-            projectRuntime: version
+            'azureFunctions.projectLanguage': language,
+            'azureFunctions.projectRuntime': version,
+            'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
         ],
@@ -275,7 +287,7 @@ const commonExpectedPaths: string[] = [
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     version: FuncVersion;
-    expectedSettings: { [key: string]: string | boolean };
+    expectedSettings: { [key: string]: string | boolean | undefined };
     expectedPaths: string[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
@@ -315,9 +327,15 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
-        const value: string | boolean = options.expectedSettings[key];
-        assert.equal(settings[`${ext.prefix}.${key}`], value, `The setting with key "${key}" is not set to value "${value}".`);
+        const value: string | boolean | undefined = options.expectedSettings[key];
+        if (key === 'debug.internalConsoleOptions' && isPathEqual(testWorkspacePath, projectPath)) {
+            // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
+        } else {
+            assert.equal(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
+        }
+        delete settings[key];
     }
+    assert.equal(Object.keys(settings).length, 0, `settings.json has extra settings: ${JSON.stringify(settings)}`);
 
     //
     // Validate launch.json

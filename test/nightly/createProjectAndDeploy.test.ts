@@ -8,7 +8,7 @@ import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -52,7 +52,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        await testCreateProjectAndDeploy(getPythonValidateOptions(), ProjectLanguage.Python, [], [getRotatingPythonVersion()]);
+        await testCreateProjectAndDeploy(getPythonValidateOptions('.venv'), ProjectLanguage.Python, [], [getRotatingPythonVersion()]);
     });
 });
 
