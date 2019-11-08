@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
-import { getRandomHexString, initProjectForVSCode, Platform, ProjectLanguage } from '../../extension.bundle';
+import { getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
 import { createTestActionContext, testFolderPath, testUserInput } from '../global.test';
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
@@ -42,7 +42,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
     });
 
     function getMockVenvPath(venvName: string): MockFilePath {
-        return process.platform === Platform.Windows ? [venvName, 'Scripts', 'activate'] : [venvName, 'bin', 'activate'];
+        return process.platform === 'win32' ? [venvName, 'Scripts', 'activate'] : [venvName, 'bin', 'activate'];
     }
 
     test('Python', async () => {

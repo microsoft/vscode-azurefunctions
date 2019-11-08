@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, Platform, pythonVenvSetting } from "../../../constants";
+import { extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
@@ -74,13 +74,13 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
                     label: pipInstallLabel,
                     type: 'shell',
                     osx: {
-                        command: getPipInstallCommand(Platform.MacOS)
+                        command: getPipInstallCommand('darwin')
                     },
                     windows: {
-                        command: getPipInstallCommand(Platform.Windows)
+                        command: getPipInstallCommand('win32')
                     },
                     linux: {
-                        command: getPipInstallCommand(Platform.Linux)
+                        command: getPipInstallCommand('linux')
                     },
                     problemMatcher: []
                 }

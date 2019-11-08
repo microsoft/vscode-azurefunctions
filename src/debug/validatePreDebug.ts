@@ -12,7 +12,7 @@ import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWeb
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { functionJsonFileName, isWindows, localEmulatorConnectionString, localSettingsFileName, projectLanguageSetting, workerRuntimeKey } from "../constants";
+import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
@@ -142,7 +142,7 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
             });
         } catch (error) {
             const message: string = localize('failedToConnectEmulator', 'Failed to verify "{0}" connection specified in "{1}". Is the local emulator installed and running?', azureWebJobsStorageKey, localSettingsFileName);
-            const learnMoreLink: string = isWindows ? 'https://aka.ms/AA4ym56' : 'https://aka.ms/AA4yef8';
+            const learnMoreLink: string = process.platform === 'win32' ? 'https://aka.ms/AA4ym56' : 'https://aka.ms/AA4yef8';
             const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug anyway') };
             const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink, modal: true }, debugAnyway);
             return result === debugAnyway;

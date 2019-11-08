@@ -6,7 +6,7 @@
 import * as assert from 'assert';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
-import { getRandomHexString, isWindows, ProjectLanguage, requestUtils } from '../../extension.bundle';
+import { getRandomHexString, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
@@ -48,7 +48,7 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
 
     test('Python', async function (this: IHookCallbackContext): Promise<void> {
         // Disabling on Windows until we can get it to work
-        if (isWindows) {
+        if (process.platform === 'win32') {
             this.skip();
         }
 

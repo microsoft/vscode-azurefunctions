@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export const isWindows: boolean = /^win/.test(process.platform);
-
 export const projectLanguageSetting: string = 'projectLanguage';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const templateFilterSetting: string = 'templateFilter';
@@ -33,12 +31,6 @@ export enum TemplateFilter {
     All = 'All',
     Core = 'Core',
     Verified = 'Verified'
-}
-
-export enum Platform {
-    Windows = 'win32',
-    MacOS = 'darwin',
-    Linux = 'linux'
 }
 
 export const hostFileName: string = 'host.json';

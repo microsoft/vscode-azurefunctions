@@ -6,7 +6,6 @@
 import * as cp from 'child_process';
 import * as os from 'os';
 import { IAzExtOutputChannel } from 'vscode-azureextensionui';
-import { isWindows } from '../constants';
 import { localize } from '../localize';
 
 export namespace cpUtils {
@@ -83,7 +82,7 @@ export namespace cpUtils {
         formattedArgs: string;
     }
 
-    const quotationMark: string = isWindows ? '"' : '\'';
+    const quotationMark: string = process.platform === 'win32' ? '"' : '\'';
     /**
      * Ensures spaces and special characters (most notably $) are preserved
      */
