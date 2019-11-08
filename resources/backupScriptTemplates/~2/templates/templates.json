@@ -8,7 +8,6 @@
             "sample.dat": "samples-workitems/workitem.txt"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myBlob",
@@ -37,7 +36,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -51,7 +50,6 @@
             "sample.dat": "samples-workitems/workitem.txt"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myBlob",
@@ -80,7 +78,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -94,7 +92,6 @@
             "sample.dat": "samples-workitems/workitem.txt"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "InputBlob",
@@ -123,7 +120,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -169,7 +166,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -211,7 +208,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -257,7 +254,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.1"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -304,7 +301,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.1"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -351,7 +348,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.1"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -399,7 +396,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.1"
+                    "version": "3.0.3"
                 }
             ],
             "filters": [
@@ -449,7 +446,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
-                    "version": "3.0.1"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -467,8 +464,7 @@
                     "type": "activityTrigger",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "Hello",
@@ -476,6 +472,7 @@
             "name": "Durable Functions activity",
             "language": "C#",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -484,7 +481,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -502,8 +499,7 @@
                     "type": "activityTrigger",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "Hello",
@@ -511,6 +507,7 @@
             "name": "Durable Functions activity",
             "language": "JavaScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -519,7 +516,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -545,6 +542,7 @@
             "name": "Durable Functions activity",
             "language": "TypeScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -553,7 +551,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -587,8 +585,7 @@
                     "type": "orchestrationClient",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "DurableFunctionsHttpStart",
@@ -596,6 +593,7 @@
             "name": "Durable Functions HTTP starter",
             "language": "C#",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -604,7 +602,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -638,8 +636,7 @@
                     "type": "orchestrationClient",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "DurableFunctionsHttpStart",
@@ -647,6 +644,7 @@
             "name": "Durable Functions HTTP starter",
             "language": "JavaScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -655,7 +653,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -697,6 +695,7 @@
             "name": "Durable Functions HTTP starter",
             "language": "TypeScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -705,7 +704,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -723,8 +722,7 @@
                     "type": "orchestrationTrigger",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "DurableFunctionsOrchestrator",
@@ -732,6 +730,7 @@
             "name": "Durable Functions orchestrator",
             "language": "C#",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -740,7 +739,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -758,8 +757,7 @@
                     "type": "orchestrationTrigger",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "DurableFunctionsOrchestratorJS",
@@ -767,6 +765,7 @@
             "name": "Durable Functions orchestrator",
             "language": "JavaScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -775,7 +774,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -801,6 +800,7 @@
             "name": "Durable Functions orchestrator",
             "language": "TypeScript",
             "category": [
+                "$temp_category_core",
                 "$temp_category_durableFunctions"
             ],
             "categoryStyle": "other",
@@ -809,7 +809,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                    "version": "1.7.1"
+                    "version": "1.8.0"
                 }
             ]
         }
@@ -828,8 +828,7 @@
                     "name": "eventGridEvent",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "EventGridTrigger",
@@ -865,8 +864,7 @@
                     "name": "eventGridEvent",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "EventGridTrigger",
@@ -902,8 +900,7 @@
                     "name": "eventGridEvent",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "EventGridTrigger",
@@ -1006,7 +1003,6 @@
             "sample.dat": "Test Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1038,7 +1034,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1051,7 +1047,6 @@
             "sample.dat": "\"Test Message\""
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1083,7 +1078,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1096,7 +1091,6 @@
             "sample.dat": "\"Test Message\""
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1128,7 +1122,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1173,7 +1167,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1217,7 +1211,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1231,7 +1225,6 @@
             "sample.dat": "{\r\n    \"name\": \"Azure\"\r\n}"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "authLevel": "function",
@@ -1274,7 +1267,6 @@
             "sample.dat": "{\r\n    \"name\": \"Azure\"\r\n}"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "authLevel": "function",
@@ -1318,7 +1310,6 @@
             "sample.dat": "{\r\n    \"name\": \"Azure\"\r\n}\r\n"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "authLevel": "function",
@@ -1452,7 +1443,6 @@
             "sample.dat": "Test Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1482,7 +1472,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1495,7 +1485,6 @@
             "sample.dat": "Test Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1526,7 +1515,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1539,7 +1528,6 @@
             "sample.dat": "Test Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "type": "eventHubTrigger",
@@ -1570,7 +1558,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1613,7 +1601,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -1647,8 +1635,7 @@
                     "name": "$return",
                     "direction": "out"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "OutlookMessageWebhookCreator",
@@ -1719,8 +1706,7 @@
                     "name": "res",
                     "direction": "out"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "OutlookMessageWebhookDeleter",
@@ -1774,8 +1760,7 @@
                     "direction": "in",
                     "resourceType": "#Microsoft.Graph.Message"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "OutlookMessageWebhookHandler",
@@ -1834,8 +1819,7 @@
                     "name": "existingSubscriptions",
                     "direction": "in"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "OutlookMessageWebhookRefresher",
@@ -1904,8 +1888,7 @@
                     "type": "http",
                     "direction": "out"
                 }
-            ],
-            "disabled": false
+            ]
         },
         "metadata": {
             "defaultFunctionName": "ProfilePhotoAPI",
@@ -1946,7 +1929,6 @@
             "sample.dat": "sample queue data"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myQueueItem",
@@ -1975,7 +1957,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -1989,7 +1971,6 @@
             "sample.dat": "sample queue data"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myQueueItem",
@@ -2018,7 +1999,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2032,7 +2013,6 @@
             "sample.dat": "sample queue data"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "QueueItem",
@@ -2061,7 +2041,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2107,7 +2087,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2149,7 +2129,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2202,7 +2182,7 @@
                 },
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2259,7 +2239,7 @@
                 },
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2316,7 +2296,7 @@
                 },
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2373,7 +2353,7 @@
                 },
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.Storage",
-                    "version": "3.0.0"
+                    "version": "3.0.4"
                 }
             ]
         }
@@ -2386,7 +2366,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myQueueItem",
@@ -2415,7 +2394,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2428,7 +2407,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "mySbMsg",
@@ -2457,7 +2435,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2470,7 +2448,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "mySbMsg",
@@ -2499,7 +2476,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2541,7 +2518,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2582,7 +2559,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2595,7 +2572,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "mySbMsg",
@@ -2626,7 +2602,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2639,7 +2615,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "mySbMsg",
@@ -2670,7 +2645,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2683,7 +2658,6 @@
             "sample.dat": "Service Bus Message"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "mySbMsg",
@@ -2714,7 +2688,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2727,7 +2701,6 @@
             "__init__.py": "import logging\r\n\r\nimport azure.functions as func\r\n\r\n\r\ndef main(msg: func.ServiceBusMessage):\r\n    logging.info('Python ServiceBus topic trigger processed message: %s',\r\n                 msg.get_body().decode('utf-8'))\r\n"
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "msg",
@@ -2758,7 +2731,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2801,7 +2774,7 @@
             "extensions": [
                 {
                     "id": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
-                    "version": "3.0.0"
+                    "version": "3.0.3"
                 }
             ]
         }
@@ -2815,7 +2788,6 @@
             "sample.dat": ""
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myTimer",
@@ -2845,12 +2817,11 @@
         "id": "TimerTrigger-JavaScript",
         "runtime": "2",
         "files": {
-            "index.js": "module.exports = async function (context, myTimer) {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if(myTimer.isPastDue)\r\n    {\r\n        context.log('JavaScript is running late!');\r\n    }\r\n    context.log('JavaScript timer trigger function ran!', timeStamp);   \r\n};",
+            "index.js": "module.exports = async function (context, myTimer) {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if (myTimer.IsPastDue)\r\n    {\r\n        context.log('JavaScript is running late!');\r\n    }\r\n    context.log('JavaScript timer trigger function ran!', timeStamp);   \r\n};",
             "readme.md": "# TimerTrigger - JavaScript\r\n\r\nThe `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.\r\n\r\n## How it works\r\n\r\nFor a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: \"When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year\".\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation",
             "sample.dat": ""
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "myTimer",
@@ -2885,7 +2856,6 @@
             "sample.dat": ""
         },
         "function": {
-            "disabled": false,
             "bindings": [
                 {
                     "name": "Timer",
@@ -2953,7 +2923,7 @@
         "id": "TimerTrigger-TypeScript",
         "runtime": "2",
         "files": {
-            "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst timerTrigger: AzureFunction = async function (context: Context, myTimer: any): Promise<void> {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if(myTimer.isPastDue)\r\n    {\r\n        context.log('Timer function is running late!');\r\n    }\r\n    context.log('Timer trigger function ran!', timeStamp);   \r\n};\r\n\r\nexport default timerTrigger;\r\n",
+            "index.ts": "import { AzureFunction, Context } from \"@azure/functions\"\r\n\r\nconst timerTrigger: AzureFunction = async function (context: Context, myTimer: any): Promise<void> {\r\n    var timeStamp = new Date().toISOString();\r\n    \r\n    if (myTimer.IsPastDue)\r\n    {\r\n        context.log('Timer function is running late!');\r\n    }\r\n    context.log('Timer trigger function ran!', timeStamp);   \r\n};\r\n\r\nexport default timerTrigger;\r\n",
             "readme.md": "# TimerTrigger - TypeScript\r\n\r\nThe `TimerTrigger` makes it incredibly easy to have your functions executed on a schedule. This sample demonstrates a simple use case of calling your function every 5 minutes.\r\n\r\n## How it works\r\n\r\nFor a `TimerTrigger` to work, you provide a schedule in the form of a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression)(See the link for full details). A cron expression is a string with 6 separate expressions which represent a given schedule via patterns. The pattern we use to represent every 5 minutes is `0 */5 * * * *`. This, in plain text, means: \"When seconds is equal to 0, minutes is divisible by 5, for any hour, day of the month, month, day of the week, or year\".\r\n\r\n## Learn more\r\n\r\n<TODO> Documentation"
         },
         "function": {
