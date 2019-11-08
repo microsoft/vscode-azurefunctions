@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
-import { isWindows } from './constants';
 import { ext } from './extensionVariables';
 import { localize } from './localize';
 import { openUrl } from './utils/openUrl';
@@ -60,7 +59,7 @@ export function isPreviewVersion(version: FuncVersion): boolean {
 }
 
 function osSupportsVersion(version: FuncVersion | undefined): boolean {
-    return version !== FuncVersion.v1 || isWindows;
+    return version !== FuncVersion.v1 || process.platform === 'win32';
 }
 
 export function getMajorVersion(data: string): string {

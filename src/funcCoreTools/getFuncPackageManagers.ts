@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { funcPackageName, PackageManager, Platform } from '../constants';
+import { funcPackageName, PackageManager } from '../constants';
 import { FuncVersion } from '../FuncVersion';
 import { cpUtils } from '../utils/cpUtils';
 import { getBrewPackageName } from './getBrewPackageName';
@@ -11,10 +11,10 @@ import { getBrewPackageName } from './getBrewPackageName';
 export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<PackageManager[]> {
     const result: PackageManager[] = [];
     switch (process.platform) {
-        case Platform.Linux:
+        case 'linux':
             // https://github.com/Microsoft/vscode-azurefunctions/issues/311
             break;
-        case Platform.MacOS:
+        case 'darwin':
             if (await hasBrew(isFuncInstalled)) {
                 result.push(PackageManager.brew);
             }

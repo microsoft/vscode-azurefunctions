@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { workspace, WorkspaceConfiguration } from 'vscode';
-import { Platform, pythonVenvSetting } from "../constants";
+import { pythonVenvSetting } from "../constants";
 import { ext } from '../extensionVariables';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
@@ -36,7 +36,7 @@ export namespace venvUtils {
 
     export async function runCommandInVenv(command: string, venvName: string, folderPath: string): Promise<void> {
         // child_process uses cmd or bash, not PowerShell
-        const terminal: Terminal = process.platform === Platform.Windows ? Terminal.cmd : Terminal.bash;
+        const terminal: Terminal = process.platform === 'win32' ? Terminal.cmd : Terminal.bash;
         command = joinCommands(terminal, getVenvActivateCommand(venvName, terminal, process.platform), command);
         await cpUtils.executeCommand(ext.outputChannel, folderPath, command);
     }
@@ -56,7 +56,7 @@ export namespace venvUtils {
     }
 
     function getTerminal(platform: NodeJS.Platform): Terminal {
-        if (platform === Platform.Windows) {
+        if (platform === 'win32') {
             const config: WorkspaceConfiguration = workspace.getConfiguration();
             const terminalSetting: string | undefined = config.get('terminal.integrated.shell.windows');
             if (!terminalSetting || /(powershell|pwsh)/i.test(terminalSetting)) {
@@ -83,7 +83,7 @@ export namespace venvUtils {
     }
 
     function getVenvPath(venvName: string, lastFs: string, platform: NodeJS.Platform, pathJoin: (...p: string[]) => string): string {
-        const middleFs: string = platform === Platform.Windows ? 'Scripts' : 'bin';
+        const middleFs: string = platform === 'win32' ? 'Scripts' : 'bin';
         const paths: string[] = ['.', venvName, middleFs, lastFs];
         return pathJoin(...paths);
     }
