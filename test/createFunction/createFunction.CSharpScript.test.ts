@@ -7,8 +7,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
+import { getDotnetScriptValidateOptions, validateProject } from '../project/validateProject';
 import { runWithFuncSetting } from '../runWithSetting';
-import { getDotnetScriptValidateOptions, validateProject } from '../validateProject';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpScriptFunctionTester extends FunctionTesterBase {
