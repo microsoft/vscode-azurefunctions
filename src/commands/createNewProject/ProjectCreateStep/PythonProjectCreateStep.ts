@@ -6,20 +6,12 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
-import { Progress, QuickPickItem } from 'vscode';
-import { IAzureQuickPickOptions, parseError } from 'vscode-azureextensionui';
-import { ext } from '../../../extensionVariables';
+import { Progress } from 'vscode';
+import { requirementsFileName } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { localize } from "../../../localize";
-import { cpUtils } from "../../../utils/cpUtils";
 import { confirmOverwriteFile } from '../../../utils/fs';
-import { venvUtils } from '../../../utils/venvUtils';
-import { getGlobalSetting, getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
-
-const minPythonVersion: string = '3.6.0';
-const maxPythonVersion: string = '3.7.0';
 
 // Starting after this version, the func cli does not require a virtual environment and comes pre-packaged with the below dependencies
 const oldFuncVersion: string = '2.4.419';
@@ -31,7 +23,6 @@ protobuf==3.7.1
 six==1.12.0
 `;
 
-const requirementsFileName: string = 'requirements.txt';
 const defaultRequirements: string = 'azure-functions';
 
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
@@ -52,99 +43,6 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
 
             await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
         }
-
-        const settingKey: string = 'createPythonVenv';
-        const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>(settingKey, context.workspacePath);
-        context.telemetry.properties.createPythonVenv = String(createPythonVenv);
-        if (createPythonVenv && !await getExistingVenv(context.projectPath)) {
-            progress.report({ message: localize('creatingVenv', 'Creating virtual environment... To skip this step in the future, modify "{0}.{1}".', ext.prefix, settingKey) });
-            const defaultVenvName: string = '.venv';
-            await createVirtualEnviornment(defaultVenvName, context.projectPath);
-            progress.report({ message: this.creatingMessage });
-        }
-    }
-}
-
-export async function getExistingVenv(projectPath: string): Promise<string | undefined> {
-    const venvs: string[] = [];
-    const fsPaths: string[] = await fse.readdir(projectPath);
-    await Promise.all(fsPaths.map(async (venvName: string) => {
-        if (await venvUtils.venvExists(venvName, projectPath)) {
-            venvs.push(venvName);
-        }
-    }));
-
-    if (venvs.length === 0) {
-        return undefined;
-    } else if (venvs.length === 1) {
-        return venvs[0];
-    } else {
-        const picks: QuickPickItem[] = venvs.map((venv: string) => { return { label: venv }; });
-        const options: IAzureQuickPickOptions = {
-            placeHolder: localize('multipleVenv', 'Detected multiple virtual environments. Select one to use for your project.'),
-            suppressPersistence: true
-        };
-        return (await ext.ui.showQuickPick(picks, options)).label;
-    }
-}
-
-/**
- * Returns undefined if valid or an error message if not
- */
-async function validatePythonAlias(pyAlias: string, validateMaxVersion: boolean = false): Promise<string | undefined> {
-    try {
-        const result: cpUtils.ICommandResult = await cpUtils.tryExecuteCommand(undefined /*don't display output*/, undefined /*default to cwd*/, `${pyAlias} --version`);
-        if (result.code !== 0) {
-            return localize('failValidate', 'Failed to validate version: {0}', result.cmdOutputIncludingStderr);
-        }
-
-        const matches: RegExpMatchArray | null = result.cmdOutputIncludingStderr.match(/^Python (\S*)/i);
-        if (matches === null || !matches[1]) {
-            return localize('failedParse', 'Failed to parse version: {0}', result.cmdOutputIncludingStderr);
-        } else {
-            const pyVersion: string = matches[1];
-            if (semver.lt(pyVersion, minPythonVersion)) {
-                return localize('tooLowVersion', 'Python version "{0}" is below minimum version of "{1}".', pyVersion, minPythonVersion);
-            } else if (validateMaxVersion && semver.gte(pyVersion, maxPythonVersion)) {
-                return localize('tooHighVersion', 'Python version "{0}" is greater than or equal to the maximum version of "{1}".', pyVersion, maxPythonVersion);
-            } else {
-                return undefined;
-            }
-        }
-    } catch (error) {
-        return parseError(error).message;
-    }
-}
-
-async function getPythonAlias(): Promise<string> {
-    const aliasesToTry: string[] = ['python3.6', 'py -3.6', 'python3', 'python', 'py'];
-    const globalPythonPathSetting: string | undefined = getGlobalSetting('pythonPath', 'python');
-    if (globalPythonPathSetting) {
-        aliasesToTry.unshift(globalPythonPathSetting);
-    }
-
-    for (const alias of aliasesToTry) {
-        // Validate max version when silently picking the alias for the user
-        const errorMessage: string | undefined = await validatePythonAlias(alias, true /* validateMaxVersion */);
-        if (!errorMessage) {
-            return alias;
-        }
-    }
-
-    const prompt: string = localize('pyAliasPlaceholder', 'Enter the alias or full path of the Python executable to use.');
-    // Don't validate max version when prompting (because the Functions team will assumably support 3.7+ at some point and we don't want to block people from using that)
-    return await ext.ui.showInputBox({ prompt, validateInput: validatePythonAlias });
-}
-
-export async function createVirtualEnviornment(venvName: string, projectPath: string): Promise<void> {
-    const pythonAlias: string = await getPythonAlias();
-    await cpUtils.executeCommand(ext.outputChannel, projectPath, pythonAlias, '-m', 'venv', venvName);
-
-    try {
-        // Attempt to install packages so that users get Intellisense right away
-        await venvUtils.runCommandInVenv(`pip install -r ${requirementsFileName}`, venvName, projectPath);
-    } catch {
-        ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
     }
 }
 

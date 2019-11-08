@@ -12,7 +12,6 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;
-    protected creatingMessage: string = localize('creating', 'Creating new project...');
 
     public abstract async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 
@@ -21,7 +20,7 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
         context.telemetry.properties.projectRuntime = context.version;
         context.telemetry.properties.openBehavior = context.openBehavior;
 
-        progress.report({ message: this.creatingMessage });
+        progress.report({ message: localize('creating', 'Creating new project...') });
         await fse.ensureDir(context.projectPath);
 
         await this.executeCore(context, progress);

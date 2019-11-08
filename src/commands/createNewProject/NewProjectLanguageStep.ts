@@ -11,7 +11,7 @@ import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
-import { addInitVSCodeStep } from '../initProjectForVSCode/InitVSCodeLanguageStep';
+import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { FuncVersionStep } from './FuncVersionStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
@@ -23,9 +23,9 @@ import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreate
 import { JavaProjectCreateStep } from './ProjectCreateStep/JavaProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
-import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
+import { addPythonCreateProjectSteps } from './pythonSteps/addPythonCreateProjectSteps';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -85,7 +85,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
-                executeSteps.push(new PythonProjectCreateStep());
+                addPythonCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());
@@ -99,7 +99,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
         }
 
-        await addInitVSCodeStep(context, executeSteps);
+        await addInitVSCodeSteps(context, promptSteps, executeSteps);
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 

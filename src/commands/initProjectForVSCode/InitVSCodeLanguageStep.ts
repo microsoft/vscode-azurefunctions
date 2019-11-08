@@ -18,9 +18,9 @@ import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSC
 import { JavaInitVSCodeStep } from './InitVSCodeStep/JavaInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
-import { PythonInitVSCodeStep } from './InitVSCodeStep/PythonInitVSCodeStep';
 import { ScriptInitVSCodeStep } from './InitVSCodeStep/ScriptInitVSCodeStep';
 import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeStep';
+import { addPythonInitVSCodeSteps } from './pythonSteps/addPythonInitVSCodeSteps';
 
 export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -56,7 +56,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[] = [];
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
 
-        await addInitVSCodeStep(context, executeSteps);
+        await addInitVSCodeSteps(context, promptSteps, executeSteps);
         if (language !== ProjectLanguage.CSharp && language !== ProjectLanguage.FSharp) { // version will be detected from proj file
             promptSteps.push(new FuncVersionStep());
         }
@@ -65,7 +65,11 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
     }
 }
 
-export async function addInitVSCodeStep(context: IProjectWizardContext, executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
+export async function addInitVSCodeSteps(
+    context: IProjectWizardContext,
+    promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
+    executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
+
     switch (context.language) {
         case ProjectLanguage.JavaScript:
             executeSteps.push(new JavaScriptInitVSCodeStep());
@@ -78,7 +82,7 @@ export async function addInitVSCodeStep(context: IProjectWizardContext, executeS
             executeSteps.push(new DotnetInitVSCodeStep());
             break;
         case ProjectLanguage.Python:
-            executeSteps.push(new PythonInitVSCodeStep());
+            await addPythonInitVSCodeSteps(context, promptSteps, executeSteps);
             break;
         case ProjectLanguage.PowerShell:
             executeSteps.push(new PowerShellInitVSCodeStep());
