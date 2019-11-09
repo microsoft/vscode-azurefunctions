@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
-import { FuncVersion, getRandomHexString, isWindows, Platform } from '../../extension.bundle';
+import { FuncVersion, getRandomHexString } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
@@ -23,7 +23,7 @@ suite('Create New Python Project', async () => {
         }
         this.timeout(2 * 60 * 1000);
 
-        const alias: string = isWindows ? 'py -3.6' : 'python3.6';
+        const alias: string = process.platform === 'win32' ? 'py -3.6' : 'python3.6';
         await createAndValidateProject({ ...getPythonValidateOptions('.venv', FuncVersion.v2), inputs: [/enter/i, alias] });
     });
 
@@ -50,7 +50,7 @@ suite('Create New Python Project', async () => {
 });
 
 async function createTestVenv(projectPath: string, venvName: string): Promise<void> {
-    if (process.platform === Platform.Windows) {
+    if (process.platform === 'win32') {
         await fse.ensureFile(path.join(projectPath, venvName, 'Scripts', 'activate'));
     } else {
         await fse.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
