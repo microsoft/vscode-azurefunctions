@@ -6,8 +6,10 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { createVirtualEnviornment } from '../commands/createNewProject/ProjectCreateStep/PythonProjectCreateStep';
+import { AzureWizard, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { IPythonVenvWizardContext } from '../commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
+import { PythonAliasListStep } from '../commands/createNewProject/pythonSteps/PythonAliasListStep';
+import { PythonVenvCreateStep } from '../commands/createNewProject/pythonSteps/PythonVenvCreateStep';
 import { pythonVenvSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -26,12 +28,17 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
             const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
             if (result === createVenv) {
                 context.errorHandling.suppressDisplay = false;
-                await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('creatingVenv', 'Creating virtual environment...') }, async () => {
-                    // create venv
-                    await createVirtualEnviornment(venvName, projectPath);
-                });
-
                 context.telemetry.properties.verifyConfigResult = 'update';
+
+                const wizardContext: IPythonVenvWizardContext = { ...context, venvName, projectPath, suppressSkipVenv: true };
+                const wizard: AzureWizard<IPythonVenvWizardContext> = new AzureWizard(wizardContext, {
+                    promptSteps: [new PythonAliasListStep()],
+                    executeSteps: [new PythonVenvCreateStep()],
+                    title: localize('createVenv', 'Create virtual environment')
+                });
+                await wizard.prompt();
+                await wizard.execute();
+
                 // don't wait
                 vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
             } else if (result === DialogResponses.dontWarnAgain) {

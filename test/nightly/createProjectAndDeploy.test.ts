@@ -6,6 +6,7 @@
 import * as assert from 'assert';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
+import { TestInput } from 'vscode-azureextensiondev';
 import { getRandomHexString, ProjectLanguage, requestUtils } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
@@ -30,20 +31,20 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
     });
 
     test('JavaScript', async () => {
-        await testCreateProjectAndDeploy(getJavaScriptValidateOptions(true), ProjectLanguage.JavaScript, [], [getRotatingNodeVersion()]);
+        await testCreateProjectAndDeploy({ ...getJavaScriptValidateOptions(true), deployInputs: [getRotatingNodeVersion()] });
     });
 
     test('TypeScript', async () => {
-        await testCreateProjectAndDeploy(getTypeScriptValidateOptions(), ProjectLanguage.TypeScript, [], [getRotatingNodeVersion()]);
+        await testCreateProjectAndDeploy({ ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion()] });
     });
 
     test('CSharp', async () => {
         const namespace: string = 'Company.Function';
-        await testCreateProjectAndDeploy(getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), ProjectLanguage.CSharp, [namespace]);
+        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), createFunctionInputs: [namespace] });
     });
 
     test('PowerShell', async () => {
-        await testCreateProjectAndDeploy(getPowerShellValidateOptions(), ProjectLanguage.PowerShell);
+        await testCreateProjectAndDeploy({ ...getPowerShellValidateOptions() });
     });
 
     test('Python', async function (this: IHookCallbackContext): Promise<void> {
@@ -52,29 +53,40 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
             this.skip();
         }
 
-        await testCreateProjectAndDeploy(getPythonValidateOptions('.venv'), ProjectLanguage.Python, [], [getRotatingPythonVersion()]);
+        await testCreateProjectAndDeploy({ ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.6/], deployInputs: [getRotatingPythonVersion()] });
     });
 });
 
-async function testCreateProjectAndDeploy(validateProjectOptions: IValidateProjectOptions, projectLanguage: ProjectLanguage, createProjInputs: (RegExp | string)[] = [], deployInputs: (RegExp | string)[] = []): Promise<void> {
+interface ICreateProjectAndDeployOptions extends IValidateProjectOptions {
+    createProjectInputs?: (string | RegExp | TestInput)[];
+    createFunctionInputs?: (string | RegExp | TestInput)[];
+    deployInputs?: (string | RegExp | TestInput)[];
+}
+
+async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOptions): Promise<void> {
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
     await cleanTestWorkspace();
 
-    await testUserInput.runWithInputs([testWorkspacePath, projectLanguage, /http\s*trigger/i, functionName, ...createProjInputs, getRotatingAuthLevel()], async () => {
+    // tslint:disable: strict-boolean-expressions
+    options.createProjectInputs = options.createProjectInputs || [];
+    options.createFunctionInputs = options.createFunctionInputs || [];
+    options.deployInputs = options.deployInputs || [];
+    options.excludedPaths = options.excludedPaths || [];
+    // tslint:enable: strict-boolean-expressions
+
+    await testUserInput.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
         await vscode.commands.executeCommand('azureFunctions.createNewProject');
     });
-    // tslint:disable-next-line: strict-boolean-expressions
-    validateProjectOptions.excludedPaths = validateProjectOptions.excludedPaths || [];
-    validateProjectOptions.excludedPaths.push('.git'); // Since the workspace is already in a git repo
-    await validateProject(testWorkspacePath, validateProjectOptions);
+    options.excludedPaths.push('.git'); // Since the workspace is already in a git repo
+    await validateProject(testWorkspacePath, options);
 
     const appName: string = 'funcBasic' + getRandomHexString();
     resourceGroupsToDelete.push(appName);
-    await testUserInput.runWithInputs([/create new function app/i, appName, ...deployInputs, getRotatingLocation()], async () => {
+    await testUserInput.runWithInputs([/create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
 
-    await validateFunctionUrl(appName, functionName, projectLanguage);
+    await validateFunctionUrl(appName, functionName, options.language);
 }
 
 async function validateFunctionUrl(appName: string, functionName: string, projectLanguage: ProjectLanguage): Promise<void> {

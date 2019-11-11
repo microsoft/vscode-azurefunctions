@@ -45,10 +45,21 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         return process.platform === 'win32' ? [venvName, 'Scripts', 'activate'] : [venvName, 'bin', 'activate'];
     }
 
-    test('Python', async () => {
+    test('Python no venv', async () => {
+        const mockFiles: MockFile[] = [['HttpTrigger', '__init__.py'], 'requirements.txt'];
+        await initAndValidateProject({ ...getPythonValidateOptions(undefined), mockFiles });
+    });
+
+    test('Python single venv', async () => {
         const venvName: string = 'testEnv';
         const mockFiles: MockFile[] = [['HttpTrigger', '__init__.py'], 'requirements.txt', getMockVenvPath(venvName)];
         await initAndValidateProject({ ...getPythonValidateOptions(venvName), mockFiles });
+    });
+
+    test('Python multiple venvs', async () => {
+        const venvName: string = 'world';
+        const mockFiles: MockFile[] = [['HttpTrigger', '__init__.py'], 'requirements.txt', getMockVenvPath('hello'), getMockVenvPath(venvName)];
+        await initAndValidateProject({ ...getPythonValidateOptions(venvName), mockFiles, inputs: [venvName] });
     });
 
     test('F#', async () => {

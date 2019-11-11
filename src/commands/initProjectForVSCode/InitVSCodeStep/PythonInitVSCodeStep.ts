@@ -12,18 +12,18 @@ import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
-import { getExistingVenv } from '../../createNewProject/ProjectCreateStep/PythonProjectCreateStep';
+import { IPythonVenvWizardContext } from '../../createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
     private _venvName: string | undefined;
 
-    protected async executeCore(context: IProjectWizardContext): Promise<void> {
+    protected async executeCore(context: IProjectWizardContext & IPythonVenvWizardContext): Promise<void> {
         await super.executeCore(context);
 
         this.settings.push({ key: 'scmDoBuildDuringDeployment', value: true });
 
-        this._venvName = await getExistingVenv(context.projectPath);
+        this._venvName = context.venvName;
         if (this._venvName) {
             this.settings.push({ key: pythonVenvSetting, value: this._venvName });
             await ensureVenvInFuncIgnore(context.projectPath, this._venvName);
