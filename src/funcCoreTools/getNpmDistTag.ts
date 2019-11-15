@@ -6,6 +6,7 @@
 import * as semver from 'semver';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { parseJson } from '../utils/parseJson';
 import { requestUtils } from '../utils/requestUtils';
 
 const npmRegistryUri: string = 'https://aka.ms/AA2qmnu';
@@ -18,8 +19,7 @@ interface IPackageMetadata {
 
 export async function getNpmDistTag(version: FuncVersion): Promise<INpmDistTag> {
     const request: requestUtils.Request = await requestUtils.getDefaultRequest(npmRegistryUri);
-    const response: string = await requestUtils.sendRequest(request);
-    const packageMetadata: IPackageMetadata = <IPackageMetadata>JSON.parse(response);
+    const packageMetadata: IPackageMetadata = parseJson(await requestUtils.sendRequest(request));
     const majorVersion: string = getMajorVersion(version);
 
     const validVersions: string[] = Object.keys(packageMetadata.versions).filter((v: string) => !!semver.valid(v));

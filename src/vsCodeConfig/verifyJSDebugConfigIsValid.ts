@@ -12,6 +12,7 @@ import { oldFuncHostNameRegEx } from "../funcCoreTools/funcHostTask";
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { parseJson } from '../utils/parseJson';
 import { promptToReinitializeProject } from './promptToReinitializeProject';
 import { ITask, ITasksJson } from './tasks';
 
@@ -28,7 +29,7 @@ export async function verifyJSDebugConfigIsValid(projectLanguage: ProjectLanguag
         const funcNodeDebugEnvVar: string = 'languageWorkers__node__arguments';
         const oldFuncNodeDebugEnvVar: string = funcNodeDebugEnvVar.replace(/__/g, ':'); // Also check against an old version of the env var that works in most (but not all) cases
         if (!rawTasksData.includes(funcNodeDebugEnvVar) && !rawTasksData.includes(oldFuncNodeDebugEnvVar)) {
-            const tasksContent: ITasksJson = <ITasksJson>JSON.parse(rawTasksData);
+            const tasksContent: ITasksJson = parseJson(rawTasksData);
 
             // NOTE: Only checking against oldFuncHostNameRegEx (where label looks like "runFunctionsHost")
             // If they're using the tasks our extension provides (where label looks like "func: host start"), they are already good-to-go

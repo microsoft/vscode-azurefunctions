@@ -5,6 +5,7 @@
 
 import { parseError } from 'vscode-azureextensionui';
 import { localize } from '../localize';
+import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
 
 export namespace feedUtils {
@@ -36,7 +37,7 @@ export namespace feedUtils {
                     throw error;
                 }
             }
-            cachedFeed = { data: <{}>JSON.parse(response), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
+            cachedFeed = { data: parseJson(response), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);
         }
 

@@ -7,6 +7,7 @@ import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappser
 import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { parseJson } from '../utils/parseJson';
 import { treeUtils } from '../utils/treeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -71,7 +72,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         }
 
         try {
-            const rawProxyConfig: IRawProxyConfig = <IRawProxyConfig>JSON.parse(proxiesJson);
+            const rawProxyConfig: IRawProxyConfig = parseJson(proxiesJson);
             if (!rawProxyConfig.proxies) {
                 rawProxyConfig.proxies = {};
             }

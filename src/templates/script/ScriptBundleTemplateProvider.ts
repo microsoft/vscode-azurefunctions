@@ -11,6 +11,7 @@ import { ext } from '../../extensionVariables';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
+import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
@@ -33,15 +34,15 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(bundleMetadata, latestTemplateVersion);
 
         const bindingsRequest: requestUtils.Request = await requestUtils.getDefaultRequest(release.bindings);
-        this._rawBindings = <object>JSON.parse(await requestUtils.sendRequest(bindingsRequest));
+        this._rawBindings = parseJson(await requestUtils.sendRequest(bindingsRequest));
 
         const language: string = getScriptResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const resourcesRequest: requestUtils.Request = await requestUtils.getDefaultRequest(resourcesUrl);
-        this._rawResources = <object>JSON.parse(await requestUtils.sendRequest(resourcesRequest));
+        this._rawResources = parseJson(await requestUtils.sendRequest(resourcesRequest));
 
         const templatesRequest: requestUtils.Request = await requestUtils.getDefaultRequest(release.functions);
-        this._rawTemplates = <object[]>JSON.parse(await requestUtils.sendRequest(templatesRequest));
+        this._rawTemplates = parseJson(await requestUtils.sendRequest(templatesRequest));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
