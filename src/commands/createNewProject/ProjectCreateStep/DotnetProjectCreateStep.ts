@@ -8,6 +8,7 @@ import * as path from 'path';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
@@ -40,6 +41,8 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${majorVersion}.x`;
         const functionsVersion: string = 'v' + majorVersion;
         await executeDotnetTemplateCommand(version, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+
+        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }
 
     private async confirmOverwriteExisting(projectPath: string, projName: string): Promise<void> {
