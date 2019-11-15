@@ -6,6 +6,7 @@
 import { isString } from 'util';
 import { ProjectLanguage } from '../../constants';
 import { IFunctionBinding, ParsedFunctionJson } from '../../funcConfig/function';
+import { localize } from '../../localize';
 import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
@@ -75,9 +76,9 @@ interface IVariables { [name: string]: string; }
  * Describes script template resources to be used for parsing
  */
 export interface IResources {
-    lang?: { [key: string]: string };
+    lang?: { [key: string]: string | undefined };
     // Every Resources.json file also contains the english strings
-    en: { [key: string]: string };
+    en: { [key: string]: string | undefined };
 }
 
 // tslint:disable-next-line:no-any
@@ -99,10 +100,11 @@ export function getResourceValue(resources: IResources, data: string): string {
         return data;
     } else {
         const key: string = matches[1];
-        if (resources.lang && resources.lang[key]) {
-            return resources.lang[key];
+        const result: string | undefined = resources.lang && resources.lang[key] ? resources.lang[key] : resources.en[key];
+        if (result === undefined) {
+            throw new Error(localize('resourceNotFound', 'Resource "{0}" not found.', data));
         } else {
-            return resources.en[key];
+            return result;
         }
     }
 }
@@ -124,7 +126,7 @@ function parseScriptSetting(data: object, resources: IResources, variables: IVar
         resourceType: rawSetting.resource,
         valueType: rawSetting.value,
         description: rawSetting.help ? replaceHtmlLinkWithMarkdown(getResourceValue(resources, rawSetting.help)) : undefined,
-        defaultValue: rawSetting.defaultValue ? getVariableValue(resources, variables, rawSetting.defaultValue) : undefined,
+        defaultValue: rawSetting.defaultValue,
         label: getVariableValue(resources, variables, rawSetting.label),
         enums: enums,
         required: rawSetting.required,
