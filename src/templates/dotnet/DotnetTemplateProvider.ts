@@ -10,6 +10,7 @@ import { ext } from '../../extensionVariables';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { downloadFile } from '../../utils/fs';
+import { parseJson } from '../../utils/parseJson';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath } from './executeDotnetTemplateCommand';
@@ -63,7 +64,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     private async parseTemplates(): Promise<ITemplates> {
-        this._rawTemplates = <object[]>JSON.parse(await executeDotnetTemplateCommand(this.version, undefined, 'list'));
+        this._rawTemplates = parseJson(await executeDotnetTemplateCommand(this.version, undefined, 'list'));
         return parseDotnetTemplates(this._rawTemplates, this.version);
     }
 }

@@ -38,8 +38,8 @@ export namespace requestUtils {
         return getDefaultRequest(baseUrl + urlPath, context.credentials, method);
     }
 
-    export async function sendRequest<T>(request: Request): Promise<T> {
-        return await <Thenable<T>>requestP(request).promise();
+    export async function sendRequest(request: Request): Promise<string> {
+        return await <Thenable<string>>requestP(request).promise();
     }
 
     export async function signRequest(request: Request, cred: ServiceClientCredentials): Promise<void> {

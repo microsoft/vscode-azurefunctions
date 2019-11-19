@@ -8,6 +8,7 @@ import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { mavenUtils } from '../../utils/mavenUtils';
+import { parseJson } from '../../utils/parseJson';
 import { ITemplates } from '../ITemplates';
 import { parseScriptTemplates } from '../script/parseScriptTemplates';
 import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
@@ -46,9 +47,9 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         const regExp: RegExp = />> templates begin <<([\S\s]+)^.+INFO.+ >> templates end <<$[\S\s]+>> bindings begin <<([\S\s]+)^.+INFO.+ >> bindings end <<$[\S\s]+>> resources begin <<([\S\s]+)^.+INFO.+ >> resources end <<$/gm;
         const regExpResult: RegExpExecArray | null = regExp.exec(commandResult);
         if (regExpResult && regExpResult.length > 3) {
-            this._rawTemplates = (<IRawJavaTemplates>JSON.parse(regExpResult[1])).templates;
-            this._rawBindings = <object>JSON.parse(regExpResult[2]);
-            this._rawResources = <object[]>JSON.parse(regExpResult[3]);
+            this._rawTemplates = parseJson<IRawJavaTemplates>(regExpResult[1]).templates;
+            this._rawBindings = parseJson(regExpResult[2]);
+            this._rawResources = parseJson(regExpResult[3]);
             return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
         } else {
             throw new Error(localize('oldFunctionPlugin', 'You must update the Azure Functions maven plugin for this functionality.'));

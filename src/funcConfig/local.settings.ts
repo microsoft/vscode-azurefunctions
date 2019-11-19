@@ -11,6 +11,7 @@ import { localSettingsFileName } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import * as fsUtil from '../utils/fs';
+import { parseJson } from '../utils/parseJson';
 
 export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
@@ -75,7 +76,7 @@ export async function getLocalSettingsJson(localSettingsPath: string, allowOverw
         const data: string = (await fse.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
-                return <ILocalSettingsJson>JSON.parse(data);
+                return parseJson(data);
             } catch (error) {
                 if (allowOverwrite) {
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);
