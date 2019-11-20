@@ -113,17 +113,20 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             });
         }
 
-        if (context.newSiteOS === WebsiteOS.windows) {
-            if (runtimeWithoutVersion.toLowerCase() === 'node' && context.version !== FuncVersion.v1) {
-                // Linux doesn't need this because it uses linuxFxVersion
-                // v1 doesn't need this because it only supports one version of Node
-                appSettings.push({
-                    name: 'WEBSITE_NODE_DEFAULT_VERSION',
-                    value: '~' + getRuntimeVersion(runtime)
-                });
-            }
+        if (context.newSiteOS === WebsiteOS.windows && runtimeWithoutVersion.toLowerCase() === 'node' && context.version !== FuncVersion.v1) {
+            // Linux doesn't need this because it uses linuxFxVersion
+            // v1 doesn't need this because it only supports one version of Node
+            appSettings.push({
+                name: 'WEBSITE_NODE_DEFAULT_VERSION',
+                value: '~' + getRuntimeVersion(runtime)
+            });
+        }
 
-            // WEBSITE_CONTENT* settings only apply for Windows https://github.com/Microsoft/vscode-azurefunctions/issues/625
+        const isElasticPremium: boolean = !!(context.plan && context.plan.sku && context.plan.sku.family && context.plan.sku.family.toLowerCase() === 'ep');
+        if (context.newSiteOS === WebsiteOS.windows || isElasticPremium) {
+            // WEBSITE_CONTENT* settings only apply for the following scenarios:
+            // Windows: https://github.com/Microsoft/vscode-azurefunctions/issues/625
+            // Linux Elastic Premium: https://github.com/microsoft/vscode-azurefunctions/issues/1682
             appSettings.push({
                 name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
                 value: storageConnectionString
@@ -132,16 +135,16 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: 'WEBSITE_CONTENTSHARE',
                 value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
+        }
 
-            // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
-            // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
-            // It also doesn't apply for Linux
-            if (!(context.language === ProjectLanguage.CSharpScript && context.version === FuncVersion.v1)) {
-                appSettings.push({
-                    name: 'WEBSITE_RUN_FROM_PACKAGE',
-                    value: '1'
-                });
-            }
+        // This setting is not required, but we will set it since it has many benefits https://docs.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+        // That being said, it doesn't work on v1 C# Script https://github.com/Microsoft/vscode-azurefunctions/issues/684
+        // It also doesn't apply for Linux
+        if (context.newSiteOS === WebsiteOS.windows && !(context.language === ProjectLanguage.CSharpScript && context.version === FuncVersion.v1)) {
+            appSettings.push({
+                name: 'WEBSITE_RUN_FROM_PACKAGE',
+                value: '1'
+            });
         }
 
         if (context.appInsightsComponent) {

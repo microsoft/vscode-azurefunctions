@@ -144,8 +144,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         let result: boolean | undefined = this._cachedIsConsumption;
         if (result === undefined) {
             try {
-                const asp: WebSiteManagementModels.AppServicePlan | undefined = await this.root.client.getAppServicePlan();
-                result = !asp || !asp.sku || !asp.sku.tier || asp.sku.tier.toLowerCase() === 'dynamic';
+                result = await this.root.client.getIsConsumption();
             } catch {
                 // ignore and use default
                 result = true;
