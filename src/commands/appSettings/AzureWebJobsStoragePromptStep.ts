@@ -26,7 +26,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
 
         const buttons: MessageItem[] = [selectAccount];
         if (process.platform === 'win32') {
-            // Only show on Windows until this is fixed: https://github.com/Microsoft/vscode-azurefunctions/issues/1245
+            // Only show on Windows until Azurite is officially supported: https://github.com/Azure/azure-functions-core-tools/issues/1247
             buttons.push(useEmulator);
         }
         if (!this._suppressSkipForNow) {
