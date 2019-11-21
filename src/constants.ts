@@ -43,6 +43,7 @@ export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
+export const extensionsCsprojFilename: string = 'extensions.csproj';
 
 export enum PackageManager {
     npm = 'npm',
