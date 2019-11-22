@@ -14,7 +14,7 @@
         "url": "https://github.com/Microsoft/vscode-azurefunctions"
     },
     "galleryBanner": {
-        "color": "#0072c6",
+        "color": "#3a3d41",
         "theme": "dark"
     },
     "homepage": "https://github.com/Microsoft/vscode-azurefunctions/blob/master/README.md",
