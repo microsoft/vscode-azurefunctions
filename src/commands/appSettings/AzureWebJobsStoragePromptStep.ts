@@ -24,7 +24,11 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
 
         const message: string = localize('selectAzureWebJobsStorage', 'In order to debug, you must select a storage account for internal use by the Azure Functions runtime.');
 
-        const buttons: MessageItem[] = [selectAccount, useEmulator];
+        const buttons: MessageItem[] = [selectAccount];
+        if (process.platform === 'win32') {
+            // Only show on Windows until Azurite is officially supported: https://github.com/Azure/azure-functions-core-tools/issues/1247
+            buttons.push(useEmulator);
+        }
         if (!this._suppressSkipForNow) {
             buttons.push(skipForNow);
         }
