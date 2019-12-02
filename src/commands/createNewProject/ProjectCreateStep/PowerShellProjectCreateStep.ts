@@ -40,7 +40,7 @@ const requirementspsd1: string = `# This file enables modules to be automaticall
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
-    'Az' = '2.*'
+    'Az' = '3.*'
 }`;
 
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
