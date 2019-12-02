@@ -2,6 +2,14 @@
 
 # Change Log
 
+## 0.20.1 - 2019-12-05
+
+### Added
+- Select Python version (3.6.x or 3.7.x) when creating a project
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.20.1%22+is%3Aclosed)
+- Linux Premium Function App fails to run because it's missing CONTENT* app settings
+
 ## 0.20.0 - 2019-11-04
 
 ### Added
