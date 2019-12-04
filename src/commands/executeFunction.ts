@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceClientCredentials, TokenCredentials } from 'ms-rest';
 import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
@@ -22,10 +21,11 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? node.parent.parent.root.client : undefined;
     const hostUrl: string = node.parent.parent.hostUrl;
     await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
-        const adminKey: string | undefined = client && await client.getFunctionsAdminToken();
-        const creds: ServiceClientCredentials | undefined = adminKey ? new TokenCredentials(adminKey) : undefined;
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        const request: requestUtils.Request = await requestUtils.getDefaultRequest(`${hostUrl}/admin/functions/${name}`, creds, 'POST');
+        const request: requestUtils.Request = await requestUtils.getDefaultRequest(`${hostUrl}/admin/functions/${name}`, undefined, 'POST');
+        if (client) {
+            request.headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
+        }
         request.headers['Content-Type'] = 'application/json';
         request.body = { input: '' };
         request.json = true;
