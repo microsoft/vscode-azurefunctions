@@ -21,7 +21,8 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
 
     protected packageJsonDevDeps: { [key: string]: string } = {
         '@azure/functions': '^1.0.2-beta2',
-        typescript: '^3.3.3'
+        typescript: '^3.3.3',
+        '@types/node': '^12.12.15'
     };
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
