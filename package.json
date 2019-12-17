@@ -991,7 +991,7 @@
         "@types/xml2js": "^0.4.4",
         "@types/xregexp": "^3.0.30",
         "azure-arm-resource": "^3.0.0-preview",
-        "copy-webpack-plugin": "^4.6.0",
+        "copy-webpack-plugin": "^5.1.1",
         "gulp": "^4.0.2",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.1",
