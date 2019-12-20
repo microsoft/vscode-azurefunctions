@@ -67,8 +67,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
 
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
-        const isOnline: boolean = await confirmOverwriteFile(requirementspsd1Path);
-        if (isOnline) {
+        if (await confirmOverwriteFile(requirementspsd1Path)) {
             if (await this.isPowerShellGallaryAccessible()) {
                 await fse.writeFile(requirementspsd1Path, requirementspsd1);
             } else {
