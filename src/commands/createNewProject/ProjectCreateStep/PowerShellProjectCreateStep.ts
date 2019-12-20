@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import * as retry from 'p-retry';
 import * as path from 'path';
-import { Progress } from 'vscode';
+import { Progress, version } from 'vscode';
+import * as xml2js from 'xml2js';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { requestUtils } from '../../../utils/requestUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -13,8 +15,6 @@ import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 const profileps1FileName: string = 'profile.ps1';
 const requirementspsd1FileName: string = 'requirements.psd1';
-const powershellGalleryUrl: string = 'https://www.powershellgallery.com';
-
 const profileps1: string = `# Azure Functions profile.ps1
 #
 # This profile.ps1 will get executed every "cold start" of your Function App.
@@ -38,15 +38,16 @@ if ($env:MSI_SECRET -and (Get-Module -ListAvailable Az.Accounts)) {
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
 `;
 
-const requirementspsd1: string = `# This file enables modules to be automatically managed by the Functions service.
-# See https://aka.ms/functionsmanageddependency for additional information.
-#
-@{
-    'Az' = '3.*'
-}`;
+function requirementspsd1(majorVersion: number): string {
+    return `# This file enables modules to be automatically managed by the Functions service.
+    # See https://aka.ms/functionsmanageddependency for additional information.
+    #
+    @{
+        'Az' = '${majorVersion}.*'
+    }`;
+}
 
 const requirementspsd1Offine: string = `# This file enables modules to be automatically managed by the Functions service.
-# Only the Azure Az module is supported in public preview.
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
@@ -58,6 +59,12 @@ const requirementspsd1Offine: string = `# This file enables modules to be automa
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     protected supportsManagedDependencies: boolean = true;
 
+    private readonly numberOfRequestRetries: number = 3;
+    private readonly requestTimeoutMs: number = 3 * 1000;
+
+    private readonly azModuleName: string = 'Az';
+    private readonly azModuleGalleryUrl: string = `https://www.powershellgallery.com/api/v2/FindPackagesById()?id='${this.azModuleName}'`;
+
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
 
@@ -66,23 +73,95 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
+        const majorVersion: number | undefined = await this.getLatestAzModuleMajorVersion();
+        if (majorVersion !== undefined) {
+            progress.report({
+                message: `Successfully retrieved ${this.azModuleName} information from PowerShell Gallery"`,
+                increment: 1
+            });
+        } else {
+            progress.report({
+                message: `Failed to retrieve ${this.azModuleName} information from PowerShell Gallery, creating offline template"`,
+                increment: 1
+            });
+        }
+
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
         if (await confirmOverwriteFile(requirementspsd1Path)) {
-            if (await this.isPowerShellGallaryAccessible()) {
-                await fse.writeFile(requirementspsd1Path, requirementspsd1);
+            if (majorVersion !== undefined) {
+                await fse.writeFile(requirementspsd1Path, requirementspsd1(majorVersion));
             } else {
                 await fse.writeFile(requirementspsd1Path, requirementspsd1Offine);
             }
         }
     }
 
-    private async isPowerShellGallaryAccessible(): Promise<boolean> {
-        const request: requestUtils.Request = await requestUtils.getDefaultRequest(powershellGalleryUrl, undefined, 'GET');
-        try {
-            await requestUtils.sendRequest(request);
-            return true;
-        } catch {
-            return false;
+    private async getLatestAzModuleMajorVersion(): Promise<number | undefined> {
+        const xmlResult: string | undefined = await this.getPSGalleryAzModuleInfo();
+        if (!xmlResult) {
+            return undefined;
         }
+
+        const versionResult: string | undefined = await this.parseLatestAzModuleVersion(xmlResult);
+        if (!versionResult) {
+            return undefined;
+        }
+
+        try {
+            const [major]: string[] = versionResult.split('.');
+            return parseInt(major);
+        } catch {
+            return undefined;
+        }
+    }
+
+    private async getPSGalleryAzModuleInfo(): Promise<string | undefined> {
+        const request: requestUtils.Request = (
+            await requestUtils.getDefaultRequest(this.azModuleGalleryUrl, undefined, 'GET')
+        );
+
+        let xmlResult: string | undefined;
+        try {
+            await retry(
+                async () => {
+                    xmlResult = await requestUtils.sendRequest(request);
+                },
+                { retries: this.numberOfRequestRetries, minTimeout: this.requestTimeoutMs }
+            );
+        } catch {
+            return undefined;
+        }
+        return xmlResult;
+    }
+
+    private async parseLatestAzModuleVersion(azModuleInfo: string | undefined): Promise<string | undefined> {
+        if (!azModuleInfo) {
+            return undefined;
+        }
+
+        return await new Promise((resolve: (ret: string | undefined) => void): void => {
+            // tslint:disable-next-line:no-any
+            xml2js.parseString(azModuleInfo, { explicitArray: false }, (err: any, result: any): void => {
+                if (result && !err) {
+                    // tslint:disable-next-line:no-string-literal no-unsafe-any
+                    if (result['feed'] && result['feed']['entry'] && Array.isArray(result['feed']['entry'])) {
+                        // tslint:disable-next-line:no-string-literal no-unsafe-any
+                        const releasedVersions: string[] = result['feed']['entry']
+                            // tslint:disable-next-line:no-string-literal no-unsafe-any
+                            .filter(entry => entry['m:properties']['d:IsPrerelease']['_'] === 'false')
+                            // tslint:disable-next-line:no-string-literal no-unsafe-any
+                            .map(entry => entry['m:properties']['d:Version']);
+
+                        // Select the latest version
+                        if (releasedVersions.length > 0) {
+                            const lastIndex: number = releasedVersions.length - 1;
+                            resolve(releasedVersions[lastIndex]);
+                            return;
+                        }
+                    }
+                }
+                resolve(undefined);
+            });
+        });
     }
 }
