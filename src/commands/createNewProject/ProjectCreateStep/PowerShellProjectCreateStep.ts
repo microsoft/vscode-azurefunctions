@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as retry from 'p-retry';
 import * as path from 'path';
-import { Progress, version } from 'vscode';
+import { Progress } from 'vscode';
 import * as xml2js from 'xml2js';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { requestUtils } from '../../../utils/requestUtils';
@@ -40,11 +40,11 @@ if ($env:MSI_SECRET -and (Get-Module -ListAvailable Az.Accounts)) {
 
 function requirementspsd1(majorVersion: number): string {
     return `# This file enables modules to be automatically managed by the Functions service.
-    # See https://aka.ms/functionsmanageddependency for additional information.
-    #
-    @{
-        'Az' = '${majorVersion}.*'
-    }`;
+# See https://aka.ms/functionsmanageddependency for additional information.
+#
+@{
+    'Az' = '${majorVersion}.*'
+}`;
 }
 
 const requirementspsd1Offine: string = `# This file enables modules to be automatically managed by the Functions service.
@@ -73,16 +73,14 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
-        const majorVersion: number | undefined = await this.getLatestAzModuleMajorVersion();
+        const majorVersion: number | undefined = await this.getLatestAzModuleMajorVersion(progress);
         if (majorVersion !== undefined) {
             progress.report({
-                message: `Successfully retrieved ${this.azModuleName} information from PowerShell Gallery"`,
-                increment: 1
+                message: `Successfully retrieved ${this.azModuleName} information from PowerShell Gallery"`
             });
         } else {
             progress.report({
-                message: `Failed to retrieve ${this.azModuleName} information from PowerShell Gallery, creating offline template"`,
-                increment: 1
+                message: `Failed to get ${this.azModuleName} module version. Edit the requirements.psd1 file when the powershellgallery.com is accessible.`
             });
         }
 
@@ -96,7 +94,11 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private async getLatestAzModuleMajorVersion(): Promise<number | undefined> {
+    private async getLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
+        progress.report({
+            message: 'Connecting to PowerShell Gallery...'
+        });
+
         const xmlResult: string | undefined = await this.getPSGalleryAzModuleInfo();
         if (!xmlResult) {
             return undefined;
