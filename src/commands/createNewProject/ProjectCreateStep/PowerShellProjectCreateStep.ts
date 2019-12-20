@@ -8,6 +8,7 @@ import * as retry from 'p-retry';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import * as xml2js from 'xml2js';
+import { localize } from '../../../localize';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { requestUtils } from '../../../utils/requestUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -75,11 +76,11 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         const majorVersion: number | undefined = await this.getLatestAzModuleMajorVersion(progress);
         if (majorVersion !== undefined) {
             progress.report({
-                message: `Successfully retrieved ${this.azModuleName} information from PowerShell Gallery"`
+                message: localize('successfullyConnected', 'Successfully retrieved {0} information from PowerShell Gallery', this.azModuleName)
             });
         } else {
             progress.report({
-                message: `Failed to get ${this.azModuleName} module version. Edit the requirements.psd1 file when the powershellgallery.com is accessible.`
+                message: localize('failedToConnect', 'Failed to get {0} module version. Edit the requirements.psd1 file when the powershellgallery.com is accessible.', this.azModuleName)
             });
         }
 
@@ -95,7 +96,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
     private async getLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
         progress.report({
-            message: 'Connecting to PowerShell Gallery...'
+            message: localize('connecting', 'Connecting to PowerShell Gallery...')
         });
 
         const xmlResult: string | undefined = await this.getPSGalleryAzModuleInfo();
