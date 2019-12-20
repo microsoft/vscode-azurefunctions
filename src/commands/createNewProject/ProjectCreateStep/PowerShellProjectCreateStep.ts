@@ -7,11 +7,13 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { confirmOverwriteFile } from "../../../utils/fs";
+import { requestUtils } from '../../../utils/requestUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 const profileps1FileName: string = 'profile.ps1';
 const requirementspsd1FileName: string = 'requirements.psd1';
+const powershellGalleryUrl: string = 'https://www.powershellgallery.com';
 
 const profileps1: string = `# Azure Functions profile.ps1
 #
@@ -43,6 +45,16 @@ const requirementspsd1: string = `# This file enables modules to be automaticall
     'Az' = '3.*'
 }`;
 
+const requirementspsd1Offine: string = `# This file enables modules to be automatically managed by the Functions service.
+# Only the Azure Az module is supported in public preview.
+# See https://aka.ms/functionsmanageddependency for additional information.
+#
+@{
+    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'.
+    # Uncomment the next line and replace the MAJOR_VERSION, e.g., 'Az' = '3.*'
+    # 'Az' = 'MAJOR_VERSION.*'
+}`;
+
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     protected supportsManagedDependencies: boolean = true;
 
@@ -55,8 +67,23 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
 
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
-        if (await confirmOverwriteFile(requirementspsd1Path)) {
-            await fse.writeFile(requirementspsd1Path, requirementspsd1);
+        const isOnline: boolean = await confirmOverwriteFile(requirementspsd1Path);
+        if (isOnline) {
+            if (await this.isPowerShellGallaryAccessible()) {
+                await fse.writeFile(requirementspsd1Path, requirementspsd1);
+            } else {
+                await fse.writeFile(requirementspsd1Path, requirementspsd1Offine);
+            }
+        }
+    }
+
+    private async isPowerShellGallaryAccessible(): Promise<boolean> {
+        const request: requestUtils.Request = await requestUtils.getDefaultRequest(powershellGalleryUrl, undefined, 'GET');
+        try {
+            await requestUtils.sendRequest(request);
+            return true;
+        } catch {
+            return false;
         }
     }
 }
