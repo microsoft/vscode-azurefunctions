@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import * as retry from 'p-retry';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import * as xml2js from 'xml2js';
@@ -59,11 +58,8 @@ const requirementspsd1Offine: string = `# This file enables modules to be automa
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     protected supportsManagedDependencies: boolean = true;
 
-    private readonly numberOfRequestRetries: number = 3;
-    private readonly requestTimeoutMs: number = 3 * 1000;
-
     private readonly azModuleName: string = 'Az';
-    private readonly azModuleGalleryUrl: string = `https://www.powershellgallery.com/api/v2/FindPackagesById()?id='${this.azModuleName}'`;
+    private readonly azModuleGalleryUrl: string = `https://aka.ms/PwshPackageInfo?id='${this.azModuleName}'`;
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
@@ -124,14 +120,9 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
         let xmlResult: string | undefined;
         try {
-            await retry(
-                async () => {
-                    xmlResult = await requestUtils.sendRequest(request);
-                },
-                { retries: this.numberOfRequestRetries, minTimeout: this.requestTimeoutMs }
-            );
+            xmlResult = await requestUtils.sendRequest(request);
         } catch {
-            return undefined;
+            xmlResult = undefined;
         }
         return xmlResult;
     }
@@ -141,29 +132,37 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             return undefined;
         }
 
-        return await new Promise((resolve: (ret: string | undefined) => void): void => {
+        const moduleInfo: string = await new Promise((
+            resolve: (ret: string) => void,
             // tslint:disable-next-line:no-any
-            xml2js.parseString(azModuleInfo, { explicitArray: false }, (err: any, result: any): void => {
-                if (result && !err) {
-                    // tslint:disable-next-line:no-string-literal no-unsafe-any
-                    if (result['feed'] && result['feed']['entry'] && Array.isArray(result['feed']['entry'])) {
-                        // tslint:disable-next-line:no-string-literal no-unsafe-any
-                        const releasedVersions: string[] = result['feed']['entry']
-                            // tslint:disable-next-line:no-string-literal no-unsafe-any
-                            .filter(entry => entry['m:properties']['d:IsPrerelease']['_'] === 'false')
-                            // tslint:disable-next-line:no-string-literal no-unsafe-any
-                            .map(entry => entry['m:properties']['d:Version']);
-
-                        // Select the latest version
-                        if (releasedVersions.length > 0) {
-                            const lastIndex: number = releasedVersions.length - 1;
-                            resolve(releasedVersions[lastIndex]);
-                            return;
-                        }
-                    }
+            rejects: (reason: any) => void): void => {
+            // tslint:disable-next-line:no-any
+            xml2js.parseString(azModuleInfo, { explicitArray: false }, (err: any, result: string): void => {
+                if (err) {
+                    rejects(err);
+                } else {
+                    resolve(result);
                 }
-                resolve(undefined);
             });
         });
+
+        // tslint:disable-next-line:no-string-literal no-unsafe-any
+        if (moduleInfo['feed'] && moduleInfo['feed']['entry'] && Array.isArray(moduleInfo['feed']['entry'])) {
+            // tslint:disable-next-line:no-string-literal no-unsafe-any
+            const releasedVersions: string[] = moduleInfo['feed']['entry']
+                // tslint:disable-next-line:no-string-literal no-unsafe-any
+                .filter(entry => entry['m:properties']['d:IsPrerelease']['_'] === 'false')
+                // tslint:disable-next-line:no-string-literal no-unsafe-any
+                .map(entry => entry['m:properties']['d:Version']);
+
+            // Select the latest version
+            if (releasedVersions.length > 0) {
+                const lastIndex: number = releasedVersions.length - 1;
+                return releasedVersions[lastIndex];
+            }
+        }
+
+        // If no version is found, return undefined
+        return undefined;
     }
 }
