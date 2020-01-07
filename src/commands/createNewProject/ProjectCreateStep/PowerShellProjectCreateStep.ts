@@ -69,7 +69,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
-        const majorVersion: number | undefined = await this.getLatestAzModuleMajorVersion(progress);
+        const majorVersion: number | undefined = await this.tryGetLatestAzModuleMajorVersion(progress);
         if (majorVersion !== undefined) {
             progress.report({
                 message: localize('successfullyConnected', 'Successfully retrieved {0} information from PowerShell Gallery', this.azModuleName)
@@ -90,22 +90,14 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private async getLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
+    private async tryGetLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
         progress.report({
             message: localize('connecting', 'Connecting to PowerShell Gallery...')
         });
 
-        const xmlResult: string | undefined = await this.getPSGalleryAzModuleInfo();
-        if (!xmlResult) {
-            return undefined;
-        }
-
-        const versionResult: string | undefined = await this.parseLatestAzModuleVersion(xmlResult);
-        if (!versionResult) {
-            return undefined;
-        }
-
         try {
+            const xmlResult: string = await this.getPSGalleryAzModuleInfo();
+            const versionResult: string = await this.parseLatestAzModuleVersion(xmlResult);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);
         } catch {
@@ -113,25 +105,12 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private async getPSGalleryAzModuleInfo(): Promise<string | undefined> {
-        const request: requestUtils.Request = (
-            await requestUtils.getDefaultRequest(this.azModuleGalleryUrl, undefined, 'GET')
-        );
-
-        let xmlResult: string | undefined;
-        try {
-            xmlResult = await requestUtils.sendRequest(request);
-        } catch {
-            xmlResult = undefined;
-        }
-        return xmlResult;
+    private async getPSGalleryAzModuleInfo(): Promise<string> {
+        const request: requestUtils.Request = await requestUtils.getDefaultRequest(this.azModuleGalleryUrl, undefined, 'GET');
+        return await requestUtils.sendRequest(request);
     }
 
-    private async parseLatestAzModuleVersion(azModuleInfo: string | undefined): Promise<string | undefined> {
-        if (!azModuleInfo) {
-            return undefined;
-        }
-
+    private async parseLatestAzModuleVersion(azModuleInfo: string): Promise<string> {
         const moduleInfo: string = await new Promise((
             resolve: (ret: string) => void,
             // tslint:disable-next-line:no-any
@@ -162,7 +141,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             }
         }
 
-        // If no version is found, return undefined
-        return undefined;
+        // If no version is found, throw exception
+        throw new Error(`Failed to parse latest Az module version ${azModuleInfo}`);
     }
 }
