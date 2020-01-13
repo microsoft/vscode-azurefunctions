@@ -147,10 +147,6 @@ export class CentralTemplateProvider {
                 bindingTemplates: result.bindingTemplates.filter(b => provider.includeTemplate(b))
             };
         } else if (latestErrorMessage) {
-            if (!context.errorHandling.suppressDisplay) {
-                // Show output so that users see cache/backup errors as well
-                ext.outputChannel.show();
-            }
             throw new Error(latestErrorMessage);
         } else {
             // This should only happen for dev/test scenarios where we explicitly set templateSource
