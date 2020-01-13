@@ -43,7 +43,10 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp2.1'), createFunctionInputs: [namespace] });
     });
 
-    test('PowerShell', async () => {
+    test('PowerShell', async function (this: IHookCallbackContext): Promise<void> {
+        // Skipping until we fix this: https://github.com/microsoft/vscode-azurefunctions/issues/1659
+        this.skip();
+
         await testCreateProjectAndDeploy({ ...getPowerShellValidateOptions() });
     });
 
