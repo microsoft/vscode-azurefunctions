@@ -148,7 +148,7 @@ suite('verifyVersionAndLanguage', () => {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
         };
-        await verifyVersionAndLanguage(FuncVersion.v2, ProjectLanguage.Bash, props);
+        await verifyVersionAndLanguage(FuncVersion.v2, <ProjectLanguage>"unknown", props);
         assert.deepEqual(props, {
             FUNCTIONS_EXTENSION_VERSION: '~2',
             FUNCTIONS_WORKER_RUNTIME: 'dotnet'
