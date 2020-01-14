@@ -7,7 +7,6 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { hostFileName } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
@@ -68,10 +67,13 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     private async getBundleInfo(): Promise<IBundleMetadata | undefined> {
         let data: unknown;
         if (this.projectPath) {
-            try {
-                data = await fse.readJSON(path.join(this.projectPath, hostFileName));
-            } catch (error) {
-                ext.outputChannel.appendLine(localize('failedToParseHostJson', 'WARNING: Function templates may not reflect your extension bundle. Failed to parse host.json: "{0}"', parseError(error).message));
+            const hostJsonPath: string = path.join(this.projectPath, hostFileName);
+            if (await fse.pathExists(hostJsonPath)) {
+                try {
+                    data = await fse.readJSON(hostJsonPath);
+                } catch (error) {
+                    throw new Error(localize('failedToParseHostJson', 'Failed to parse host.json: "{0}"', parseError(error).message));
+                }
             }
         }
 
