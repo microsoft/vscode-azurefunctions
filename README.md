@@ -61,30 +61,51 @@ Install the prerequisites for your desired language:
 
 ### Windows
 
-Both v1 and v2 of the runtime can be installed on Windows. [See here](https://docs.microsoft.com/azure/azure-functions/functions-versions) for more information on each version.
+To install runtime with npm:
 
-To install v1:
-
+**v2**
 ```bash
-npm i -g azure-functions-core-tools@1
+npm i -g azure-functions-core-tools@2 --unsafe-perm true
 ```
 
-To install v2:
+**v3**
+```bash
+npm i -g azure-functions-core-tools@3 --unsafe-perm true
+```
+
+To install with chocolatey:
 
 ```bash
-npm i -g azure-functions-core-tools@2
+choco install azure-functions-core-tools
 ```
 
 ### Mac
 
+To install with homebrew:
+
+**v2**
 ```bash
 brew tap azure/functions
-brew install azure-functions-core-tools
+brew install azure-functions-core-tools@2
+```
+
+**v3**
+```bash
+brew tap azure/functions
+brew install azure-functions-core-tools@3
 ```
 
 ### Linux
 
 1. Set up package feed
+
+    * Ubuntu 19.04
+
+        ```bash
+        wget -q https://packages.microsoft.com/config/ubuntu/19.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        ```
+
     * Ubuntu 18.10
 
         ```bash
@@ -106,6 +127,17 @@ brew install azure-functions-core-tools
         sudo dpkg -i packages-microsoft-prod.deb
         ```
 
+    * Debian 9
+
+        ```bash
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
+        sudo mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/
+        wget -q https://packages.microsoft.com/config/debian/9/prod.list
+        sudo mv prod.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg
+        sudo chown root:root /etc/apt/sources.list.d/microsoft-prod.list
+        ```
+
 1. Install
 
     ```bash
@@ -113,7 +145,7 @@ brew install azure-functions-core-tools
     sudo apt-get install azure-functions-core-tools
     ```
 
-See [here](https://aka.ms/AA6i3ev) for more information on Azure Functions v3 preview and [here](https://github.com/Azure/azure-functions-core-tools/blob/master/README.md) for more installation options and the latest instructions.
+See [here](https://aka.ms/Dqur4e) for more installation options and the latest instructions.
 
 ## Language-Specific Prerequisites
 
