@@ -8,9 +8,6 @@ import { IActionContext, registerEvent } from 'vscode-azureextensionui';
 import { delay } from '../utils/delay';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
-// The name of the task before we started providing it in FuncTaskProvider.ts
-export const oldFuncHostNameRegEx: RegExp = /run\s*functions\s*host/i;
-
 export interface IRunningFuncTask {
     startTime: number;
     processId: number;

@@ -13,8 +13,6 @@ import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { getWorkspaceSetting, updateGlobalSetting } from './settings';
-import { verifyJavaDeployConfigIsValid } from './verifyJavaDeployConfigIsValid';
-import { verifyJSDebugConfigIsValid } from './verifyJSDebugConfigIsValid';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
 
@@ -44,12 +42,6 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);
                     context.telemetry.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
-                        case ProjectLanguage.JavaScript:
-                            await verifyJSDebugConfigIsValid(projectLanguage, workspacePath, context);
-                            break;
-                        case ProjectLanguage.Java:
-                            await verifyJavaDeployConfigIsValid(projectLanguage, workspacePath, context);
-                            break;
                         case ProjectLanguage.Python:
                             await verifyPythonVenv(projectPath, context);
                             break;

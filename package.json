@@ -885,16 +885,6 @@
                         "description": "%azureFunctions.showProjectWarning%",
                         "default": true
                     },
-                    "azureFunctions.showDebugConfigWarning": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.showDebugConfigWarning%",
-                        "default": true
-                    },
-                    "azureFunctions.showJavaDeployConfigWarning": {
-                        "type": "boolean",
-                        "description": "%azureFunctions.showJavaDeployConfigWarning%",
-                        "default": true
-                    },
                     "azureFunctions.showPythonVenvWarning": {
                         "type": "boolean",
                         "description": "%azureFunctions.showPythonVenvWarning%",
