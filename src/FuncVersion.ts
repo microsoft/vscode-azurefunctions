@@ -18,8 +18,8 @@ export const latestGAVersion: FuncVersion = FuncVersion.v2;
 
 export async function promptForFuncVersion(message?: string): Promise<FuncVersion> {
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
+        { label: 'Azure Functions v3', description: '(.NET Core)', data: FuncVersion.v3 },
         { label: 'Azure Functions v2', description: '(.NET Core)', data: FuncVersion.v2 },
-        { label: 'Azure Functions v3 Preview', description: '(.NET Core)', data: FuncVersion.v3 },
         { label: 'Azure Functions v1', description: '(.NET Framework)', data: FuncVersion.v1 }
     ];
 
@@ -54,8 +54,8 @@ export function getGAVersionsForOS(): FuncVersion[] {
     return Object.values(FuncVersion).filter(v => !isPreviewVersion(v) && osSupportsVersion(v));
 }
 
-export function isPreviewVersion(version: FuncVersion): boolean {
-    return version === FuncVersion.v3;
+export function isPreviewVersion(_version: FuncVersion): boolean {
+    return false;
 }
 
 function osSupportsVersion(version: FuncVersion | undefined): boolean {
