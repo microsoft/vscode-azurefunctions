@@ -17,18 +17,12 @@ import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export function getScriptFileNameFromLanguage(language: string): string | undefined {
     switch (language) {
-        case ProjectLanguage.Bash:
-            return 'run.sh';
-        case ProjectLanguage.Batch:
-            return 'run.bat';
         case ProjectLanguage.CSharpScript:
             return 'run.csx';
         case ProjectLanguage.FSharpScript:
             return 'run.fsx';
         case ProjectLanguage.JavaScript:
             return 'index.js';
-        case ProjectLanguage.PHP:
-            return 'run.php';
         case ProjectLanguage.PowerShell:
             return 'run.ps1';
         case ProjectLanguage.Python:

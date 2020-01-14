@@ -29,15 +29,12 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const previewDescription: string = localize('previewDescription', '(Preview)');
         // Display all languages, even if we don't have full support for them
         const languagePicks: QuickPickItem[] = [
-            { label: ProjectLanguage.Bash, description: previewDescription },
-            { label: ProjectLanguage.Batch, description: previewDescription },
             { label: ProjectLanguage.CSharp },
             { label: ProjectLanguage.CSharpScript },
             { label: ProjectLanguage.FSharp },
             { label: ProjectLanguage.FSharpScript },
             { label: ProjectLanguage.Java },
             { label: ProjectLanguage.JavaScript },
-            { label: ProjectLanguage.PHP, description: previewDescription },
             { label: ProjectLanguage.PowerShell, description: previewDescription },
             { label: ProjectLanguage.Python },
             { label: ProjectLanguage.TypeScript }

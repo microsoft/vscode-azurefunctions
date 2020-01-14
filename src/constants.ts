@@ -13,15 +13,12 @@ export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 
 export enum ProjectLanguage {
-    Bash = 'Bash',
-    Batch = 'Batch',
     CSharp = 'C#',
     CSharpScript = 'C#Script',
     FSharp = 'F#',
     FSharpScript = 'F#Script',
     Java = 'Java',
     JavaScript = 'JavaScript',
-    PHP = 'PHP',
     PowerShell = 'PowerShell',
     Python = 'Python',
     TypeScript = 'TypeScript'
