@@ -14,7 +14,7 @@ export enum FuncVersion {
     v3 = '~3'
 }
 
-export const latestGAVersion: FuncVersion = FuncVersion.v2;
+export const latestGAVersion: FuncVersion = FuncVersion.v3;
 
 export async function promptForFuncVersion(message?: string): Promise<FuncVersion> {
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
@@ -48,10 +48,6 @@ export function tryParseFuncVersion(data: string | undefined): FuncVersion | und
     }
 
     return undefined;
-}
-
-export function getGAVersionsForOS(): FuncVersion[] {
-    return Object.values(FuncVersion).filter(v => !isPreviewVersion(v) && osSupportsVersion(v));
 }
 
 export function isPreviewVersion(_version: FuncVersion): boolean {

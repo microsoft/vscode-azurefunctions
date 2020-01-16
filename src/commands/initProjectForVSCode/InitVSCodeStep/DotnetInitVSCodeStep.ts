@@ -57,10 +57,9 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
         const versionInProjFile: string = await getFuncVersion(projFilePath);
         context.telemetry.properties.versionInProjFile = versionInProjFile;
-        context.version = tryParseFuncVersion(versionInProjFile);
-        if (context.version === undefined) {
-            throw new Error(localize('unrecognizedFuncVersion', 'Unrecognized version "{0}".', versionInProjFile));
-        }
+        // The version from the proj file takes precedence over whatever was set in `context` before this
+        // tslint:disable-next-line: strict-boolean-expressions
+        context.version = tryParseFuncVersion(versionInProjFile) || context.version;
 
         if (context.version === FuncVersion.v1) {
             const settingKey: string = 'show64BitWarning';

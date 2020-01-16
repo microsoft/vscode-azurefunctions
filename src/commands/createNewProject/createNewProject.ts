@@ -7,7 +7,8 @@ import { window } from 'vscode';
 import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { tryParseFuncVersion } from '../../FuncVersion';
+import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
+import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getGlobalSetting, getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IFunctionWizardContext } from '../createFunction/IFunctionWizardContext';
@@ -29,7 +30,8 @@ export async function createNewProject(
 
     // tslint:disable-next-line: strict-boolean-expressions
     language = language || getGlobalSetting(projectLanguageSetting);
-    version = version || getGlobalSetting(funcVersionSetting);
+    // tslint:disable-next-line: strict-boolean-expressions
+    version = version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
 
     const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, { functionName, language, version: tryParseFuncVersion(version) });
 
