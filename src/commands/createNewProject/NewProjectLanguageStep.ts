@@ -12,7 +12,6 @@ import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
-import { FuncVersionStep } from './FuncVersionStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
 import { JavaArtifactIdStep } from './javaSteps/JavaArtifactIdStep';
@@ -72,7 +71,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[] = [];
 
-        const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [new FuncVersionStep()];
+        const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
                 executeSteps.push(new JavaScriptProjectCreateStep());
