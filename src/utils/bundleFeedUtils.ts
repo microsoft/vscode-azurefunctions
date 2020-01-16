@@ -5,7 +5,7 @@
 
 import * as semver from 'semver';
 import { ext, TemplateSource } from '../extensionVariables';
-import { IBundleMetadata } from '../funcConfig/host';
+import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
@@ -62,6 +62,20 @@ export namespace bundleFeedUtils {
     export async function getLatestVersionRange(): Promise<string> {
         const feed: IBundleFeed = await getBundleFeed(undefined);
         return feed.defaultVersionRange;
+    }
+
+    export async function addDefaultBundle(hostJson: IHostJsonV2): Promise<void> {
+        let versionRange: string;
+        try {
+            versionRange = await getLatestVersionRange();
+        } catch {
+            versionRange = defaultVersionRange;
+        }
+
+        hostJson.extensionBundle = {
+            id: defaultBundleId,
+            version: versionRange
+        };
     }
 
     async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {

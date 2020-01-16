@@ -28,17 +28,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         }
 
         if (!hostJson.extensionBundle) {
-            let versionRange: string;
-            try {
-                versionRange = await bundleFeedUtils.getLatestVersionRange();
-            } catch {
-                versionRange = bundleFeedUtils.defaultVersionRange;
-            }
-
-            hostJson.extensionBundle = {
-                id: bundleFeedUtils.defaultBundleId,
-                version: versionRange
-            };
+            await bundleFeedUtils.addDefaultBundle(hostJson);
             await writeFormattedJson(hostFilePath, hostJson);
         }
     }
