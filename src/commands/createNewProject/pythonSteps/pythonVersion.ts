@@ -42,5 +42,10 @@ export async function getSupportedPythonVersions(): Promise<string[]> {
 }
 
 export function isSupportedPythonVersion(supportedVersions: string[], version: string): boolean {
-    return !!supportedVersions.some(v => semver.satisfies(version, v));
+    try {
+        return !!supportedVersions.some(v => semver.satisfies(version, v));
+    } catch {
+        // If the version is not valid semver, assume it's not supported
+        return false;
+    }
 }
