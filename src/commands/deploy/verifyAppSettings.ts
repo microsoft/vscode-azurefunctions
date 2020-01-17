@@ -16,7 +16,7 @@ import { getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
-        await verifyVersionAndLanguage(node.root.client.fullName, version, language, appSettings.properties);
+        await verifyVersionAndLanguage(context, node.root.client.fullName, version, language, appSettings.properties);
 
         const updateAppSettings: boolean = await verifyWebContentSettings(node, context, appSettings.properties);
         if (updateAppSettings) {
@@ -27,11 +27,13 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     }
 }
 
-export async function verifyVersionAndLanguage(siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
+export async function verifyVersionAndLanguage(context: IActionContext, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
     const rawAzureVersion: string = remoteProperties[extensionVersionKey];
+    context.telemetry.properties.remoteVersion = rawAzureVersion;
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
 
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
+    context.telemetry.properties.remoteRuntime = azureWorkerRuntime;
     const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
     if (localVersion !== FuncVersion.v1 && azureWorkerRuntime && localWorkerRuntime && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
@@ -41,8 +43,10 @@ export async function verifyVersionAndLanguage(siteName: string, localVersion: F
         const message: string = localize('incompatibleVersion', 'The remote version "{0}" for function app "{1}" does not match your local version "{2}".', rawAzureVersion, siteName, localVersion);
         const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
         const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
+        context.telemetry.properties.cancelStep = 'incompatibleVersion';
         // No need to check result - cancel will throw a UserCancelledError
         await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
+        context.telemetry.properties.cancelStep = undefined;
     }
 }
 
