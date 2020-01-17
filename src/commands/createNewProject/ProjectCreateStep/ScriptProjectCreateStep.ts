@@ -11,6 +11,7 @@ import { gitignoreFileName, hostFileName, localSettingsFileName, proxiesFileName
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { FuncVersion } from '../../../FuncVersion';
+import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
@@ -26,7 +27,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const version: FuncVersion = nonNullProp(context, 'version');
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: IHostJsonV2 | IHostJsonV1 = this.getHostContent(version);
+            const hostJson: IHostJsonV2 | IHostJsonV1 = await this.getHostContent(version);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -73,20 +74,23 @@ local.settings.json`));
         }
     }
 
-    private getHostContent(version: FuncVersion): IHostJsonV2 | IHostJsonV1 {
+    private async getHostContent(version: FuncVersion): Promise<IHostJsonV2 | IHostJsonV1> {
         if (version === FuncVersion.v1) {
             return {};
         } else {
+            const hostJson: IHostJsonV2 = {
+                version: '2.0'
+            };
+
+            await bundleFeedUtils.addDefaultBundle(hostJson);
+
             if (this.supportsManagedDependencies) {
-                return {
-                    version: '2.0',
-                    managedDependency: {
-                        enabled: true
-                    }
+                hostJson.managedDependency = {
+                    enabled: true
                 };
             }
 
-            return { version: '2.0' };
+            return hostJson;
         }
     }
 }
