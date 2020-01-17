@@ -18,11 +18,11 @@ export namespace venvUtils {
         powerShell
     }
 
-    export function convertToVenvCommand(command: string, folderPath: string, platform: NodeJS.Platform = process.platform): string {
-        const terminal: Terminal = getTerminal(platform);
+    export function convertToVenvCommand(command: string, folderPath: string): string {
+        const terminal: Terminal = getTerminal(process.platform);
         const venvName: string | undefined = getWorkspaceSetting<string>(pythonVenvSetting, folderPath);
         if (venvName) {
-            return joinCommands(terminal, getVenvActivateCommand(venvName, terminal, platform), command);
+            return joinCommands(terminal, getVenvActivateCommand(venvName, terminal, process.platform), command);
         } else {
             return command;
         }
