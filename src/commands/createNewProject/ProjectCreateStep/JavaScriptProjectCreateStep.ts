@@ -11,7 +11,10 @@ import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = nodeGitignore;
-    protected packageJsonScripts: { [key: string]: string } = { test: 'echo \"No tests yet...\"' };
+    protected packageJsonScripts: { [key: string]: string } = {
+        start: 'func start',
+        test: 'echo \"No tests yet...\"'
+    };
     protected packageJsonDeps: { [key: string]: string } = {};
     protected packageJsonDevDeps: { [key: string]: string } = {};
 
