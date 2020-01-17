@@ -6,18 +6,19 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { extensionVersionKey, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
 
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
-        const updateAppSettings: boolean = await verifyWebContentSettings(node, context, appSettings.properties) || await verifyVersionAndLanguage(version, language, appSettings.properties);
+        await verifyVersionAndLanguage(node.root.client.fullName, version, language, appSettings.properties);
+
+        const updateAppSettings: boolean = await verifyWebContentSettings(node, context, appSettings.properties);
         if (updateAppSettings) {
             await node.root.client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
@@ -26,43 +27,22 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     }
 }
 
-/**
- * NOTE: If we can't recognize the remote settings, just assume it's compatible
- */
-export async function verifyVersionAndLanguage(localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    const rawAzureVersion: string = remoteProperties.FUNCTIONS_EXTENSION_VERSION;
+export async function verifyVersionAndLanguage(siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
+    const rawAzureVersion: string = remoteProperties[extensionVersionKey];
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
 
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
     const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
-
-    let shouldPrompt: boolean = !!rawAzureVersion && azureVersion !== localVersion;
-    let message: string = localize('incompatibleRuntimeV1', 'The remote version "{0}" is not compatible with your local version "{1}".', rawAzureVersion, localVersion);
-    if (localVersion !== FuncVersion.v1 && localWorkerRuntime) {
-        shouldPrompt = shouldPrompt || (!!azureWorkerRuntime && azureWorkerRuntime !== localWorkerRuntime);
-        message = localize('incompatibleVersionAndRuntime', 'The remote version "{0}" and runtime "{1}" is not compatible with your local version "{2}" and runtime "{3}".', rawAzureVersion, azureWorkerRuntime, localVersion, localWorkerRuntime);
+    if (localVersion !== FuncVersion.v1 && azureWorkerRuntime && localWorkerRuntime && azureWorkerRuntime !== localWorkerRuntime) {
+        throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
     }
 
-    if (shouldPrompt) {
-        const updateRemoteRuntime: vscode.MessageItem = { title: localize('updateRemoteSettings', 'Update remote settings') };
+    if (!!rawAzureVersion && azureVersion !== localVersion) {
+        const message: string = localize('incompatibleVersion', 'The remote version "{0}" for function app "{1}" does not match your local version "{2}".', rawAzureVersion, siteName, localVersion);
+        const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
         const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
         // No need to check result - cancel will throw a UserCancelledError
-        await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, updateRemoteRuntime);
-
-        const newAppSettings: { [key: string]: string } = await cliFeedUtils.getAppSettings(localVersion);
-        if (localVersion !== FuncVersion.v1 && localWorkerRuntime) {
-            newAppSettings[workerRuntimeKey] = localWorkerRuntime;
-        }
-
-        for (const key of Object.keys(newAppSettings)) {
-            const value: string = newAppSettings[key];
-            ext.outputChannel.appendLog(localize('updateFunctionRuntime', 'Updating "{0}" to "{1}"...', key, value));
-            remoteProperties[key] = value;
-        }
-
-        return true;
-    } else {
-        return false;
+        await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
     }
 }
 
