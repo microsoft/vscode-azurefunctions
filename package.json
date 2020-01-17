@@ -38,6 +38,7 @@
         "onCommand:azureFunctions.createFunctionApp",
         "onCommand:azureFunctions.createFunctionAppAdvanced",
         "onCommand:azureFunctions.openInPortal",
+        "onCommand:azureFunctions.browseWebsite",
         "onCommand:azureFunctions.startFunctionApp",
         "onCommand:azureFunctions.stopFunctionApp",
         "onCommand:azureFunctions.restartFunctionApp",
@@ -142,6 +143,11 @@
             {
                 "command": "azureFunctions.openInPortal",
                 "title": "%azureFunctions.openInPortal%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.browseWebsite",
+                "title": "%azureFunctions.browseWebsite%",
                 "category": "Azure Functions"
             },
             {
@@ -423,6 +429,11 @@
                     "command": "azureFunctions.openInPortal",
                     "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureFunctions.browseWebsite",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",

@@ -9,6 +9,7 @@
     "azureFunctions.appSettings.rename": "Rename Setting...",
     "azureFunctions.appSettings.toggleSlotSetting": "Toggle as Slot Setting",
     "azureFunctions.appSettings.upload": "Upload Local Settings...",
+    "azureFunctions.browseWebsite": "Browse Website",
     "azureFunctions.configureDeploymentSource": "Configure Deployment Source...",
     "azureFunctions.connectToGitHub": "Connect to GitHub Repository...",
     "azureFunctions.copyFunctionUrl": "Copy Function Url",

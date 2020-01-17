@@ -19,6 +19,7 @@ import { encryptLocalSettings } from './appSettings/encryptLocalSettings';
 import { setAzureWebJobsStorage } from './appSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
+import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
@@ -61,6 +62,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.appSettings.rename', renameAppSetting);
     registerCommand('azureFunctions.appSettings.toggleSlotSetting', toggleSlotSetting);
     registerCommand('azureFunctions.appSettings.upload', uploadAppSettings);
+    registerCommand('azureFunctions.browseWebsite', browseWebsite);
     registerCommand('azureFunctions.configureDeploymentSource', configureDeploymentSource);
     registerCommand('azureFunctions.connectToGitHub', connectToGitHub);
     registerCommand('azureFunctions.copyFunctionUrl', copyFunctionUrl);
