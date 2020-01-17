@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { workspace, WorkspaceConfiguration } from 'vscode';
+import * as vscode from 'vscode';
 import { pythonVenvSetting } from "../constants";
 import { ext } from '../extensionVariables';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -57,12 +57,9 @@ export namespace venvUtils {
 
     function getTerminal(platform: NodeJS.Platform): Terminal {
         if (platform === 'win32') {
-            const config: WorkspaceConfiguration = workspace.getConfiguration();
-            const terminalSetting: string | undefined = config.get('terminal.integrated.shell.windows');
-            if (!terminalSetting || /(powershell|pwsh)/i.test(terminalSetting)) {
-                // powershell is the default if setting isn't defined
+            if (/(powershell|pwsh)/i.test(vscode.env.shell)) {
                 return Terminal.powerShell;
-            } else if (/bash/i.test(terminalSetting)) {
+            } else if (/bash/i.test(vscode.env.shell)) {
                 return Terminal.bash;
             } else {
                 return Terminal.cmd;
