@@ -2,6 +2,20 @@
 
 # Change Log
 
+## 0.20.2 - 2020-01-23
+
+### Added
+- Browse to website
+- Added option to create a Node 12.x Function App, only supported in v3 of the Azure Functions runtime
+
+### Changed
+- If the Azure Functions runtime version cannot be automatically detected, default to v3 instead of v2
+- Removed ability to update app settings in Azure if language or runtime version don't match when deploying. Instead, create a new Function App in Azure
+
+### Fixed
+
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.20.2%22+is%3Aclosed)
+
 ## 0.20.1 - 2019-12-05
 
 ### Added
