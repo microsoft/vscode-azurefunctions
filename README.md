@@ -151,7 +151,7 @@ See [here](https://aka.ms/Dqur4e) for more installation options and the latest i
 
 ### Node
 
-* [Node.js](https://nodejs.org/) 8.x or 10.x
+* [Node.js](https://nodejs.org/) 8.x, 10.x, or 12.x
 
 ### .NET
 
