@@ -38,6 +38,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 return;
             } else if (packageManagers.length === 1) {
                 packageManager = packageManagers[0];
+                context.telemetry.properties.packageManager = packageManager;
             } else {
                 context.telemetry.properties.multiFunc = 'true';
                 if (showMultiCoreToolsWarning) {

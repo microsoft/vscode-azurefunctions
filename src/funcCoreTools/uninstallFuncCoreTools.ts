@@ -10,7 +10,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { nonNullValue } from '../utils/nonNull';
-import { getBrewPackageName } from './getBrewPackageName';
+import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 
@@ -35,7 +35,7 @@ export async function uninstallFuncCoreTools(_context: IActionContext, packageMa
             break;
         case PackageManager.brew:
             const version: FuncVersion = nonNullValue(await tryGetLocalFuncVersion(), 'localFuncVersion');
-            const brewPackageName: string = getBrewPackageName(version);
+            const brewPackageName: string = nonNullValue(await tryGetInstalledBrewPackageName(version), 'brewPackageName');
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'uninstall', brewPackageName);
             break;
         default:
