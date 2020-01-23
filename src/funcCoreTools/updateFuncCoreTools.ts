@@ -8,7 +8,8 @@ import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
-import { getBrewPackageName } from './getBrewPackageName';
+import { nonNullValue } from '../utils/nonNull';
+import { getBrewPackageName, tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
 export async function updateFuncCoreTools(packageManager: PackageManager, version: FuncVersion): Promise<void> {
@@ -20,10 +21,16 @@ export async function updateFuncCoreTools(packageManager: PackageManager, versio
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'upgrade', brewPackageName);
+            const installedBrewPackageName: string = nonNullValue(await tryGetInstalledBrewPackageName(version), 'brewPackageName');
+            if (brewPackageName !== installedBrewPackageName) {
+                // Uninstall deprecated tag and install latest tag
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'uninstall', installedBrewPackageName);
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'install', brewPackageName);
+            } else {
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'upgrade', brewPackageName);
+            }
             break;
         default:
             throw new RangeError(localize('invalidPackageManager', 'Invalid package manager "{0}".', packageManager));
-            break;
     }
 }
