@@ -26,7 +26,7 @@ export let longRunningTestsEnabled: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
-    return { telemetry: { properties: {}, measurements: {} }, errorHandling: {} };
+    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} } };
 }
 
 let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;

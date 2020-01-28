@@ -23,7 +23,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         context.telemetry.properties.newSiteOS = context.newSiteOS;
         context.telemetry.properties.newSiteRuntime = context.newSiteRuntime;
-        context.telemetry.properties.planSkuTier = context.plan && context.plan.sku && context.plan.sku.tier;
+        context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
 
         const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
         ext.outputChannel.appendLog(message);
@@ -38,7 +38,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             name: siteName,
             kind: context.newSiteKind,
             location: locationName,
-            serverFarmId: context.plan && context.plan.id,
+            serverFarmId: context.plan?.id,
             clientAffinityEnabled: false,
             siteConfig: await this.getNewSiteConfig(context),
             reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
@@ -122,7 +122,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             });
         }
 
-        const isElasticPremium: boolean = !!(context.plan && context.plan.sku && context.plan.sku.family && context.plan.sku.family.toLowerCase() === 'ep');
+        const isElasticPremium: boolean = context.plan?.sku?.family?.toLowerCase() === 'ep';
         if (context.newSiteOS === WebsiteOS.windows || isElasticPremium) {
             // WEBSITE_CONTENT* settings only apply for the following scenarios:
             // Windows: https://github.com/Microsoft/vscode-azurefunctions/issues/625
@@ -160,7 +160,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
 const separator: string = '|';
 function isVersionedRuntime(runtime: string): boolean {
-    return !!runtime && runtime.includes(separator);
+    return runtime?.includes(separator);
 }
 
 function getRuntimeWithoutVersion(runtime: string): string {
