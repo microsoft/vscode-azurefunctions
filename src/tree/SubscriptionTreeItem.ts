@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
@@ -135,6 +135,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
         LocationListStep.addStep(wizardContext, promptSteps);
 
+        executeSteps.push(new VerifyProvidersStep(['Microsoft.Web', 'Microsoft.Storage', 'Microsoft.Insights']));
         executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
