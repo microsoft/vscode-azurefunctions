@@ -14,6 +14,7 @@ import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionT
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
+import { enableFileLogging } from './enableFileLogging';
 
 export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
@@ -37,15 +38,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
             if (!isApplicationLoggingEnabled(logsConfig)) {
                 const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
                 await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
-                // tslint:disable-next-line:strict-boolean-expressions
-                logsConfig.applicationLogs = logsConfig.applicationLogs || {};
-                // tslint:disable-next-line:strict-boolean-expressions
-                logsConfig.applicationLogs.fileSystem = logsConfig.applicationLogs.fileSystem || {};
-                logsConfig.applicationLogs.fileSystem.level = 'Information';
-                // Azure will throw errors if these have incomplete information (aka missing a sasUrl). Since we already know these are turned off, just make them undefined
-                logsConfig.applicationLogs.azureBlobStorage = undefined;
-                logsConfig.applicationLogs.azureTableStorage = undefined;
-                await client.updateLogsConfig(logsConfig);
+                await enableFileLogging(client, logsConfig);
             }
         };
 

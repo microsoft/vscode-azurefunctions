@@ -10,6 +10,7 @@ import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionApp
 import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { enableFileLogging } from '../commands/logstream/enableFileLogging';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -155,7 +156,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await wizard.execute();
         const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
-        return new ProductionSlotTreeItem(this, new SiteClient(site, this.root), site);
+
+        const client: SiteClient = new SiteClient(site, this.root);
+        if (!client.isLinux) { // not supported on linux
+            try {
+                await enableFileLogging(client);
+            } catch (error) {
+                // optional part of creating function app, so not worth blocking on error
+                context.telemetry.properties.fileLoggingError = parseError(error).message;
+            }
+        }
+
+        return new ProductionSlotTreeItem(this, client, site);
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {
