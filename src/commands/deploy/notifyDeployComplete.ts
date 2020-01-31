@@ -60,16 +60,25 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
     const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
     await node.treeDataProvider.refresh(functionsNode);
+
+    const logOptions: {} = { resourceName: node.client.fullName };
+    let hasHttpTriggers: boolean = false;
     const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
     const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
     if (anonFunctions.length > 0) {
-        ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'));
+        hasHttpTriggers = true;
+        ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
         for (const func of anonFunctions) {
             ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
         }
     }
 
     if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
-        ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'));
+        hasHttpTriggers = true;
+        ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'), logOptions);
+    }
+
+    if (!hasHttpTriggers) {
+        ext.outputChannel.appendLog(localize('noHttpTriggers', 'No HTTP triggers found.'), logOptions);
     }
 }
