@@ -56,6 +56,7 @@
     "azureFunctions.setAzureWebJobsStorage": "Set AzureWebJobsStorage...",
     "azureFunctions.show64BitWarning": "Show a warning to install a 64-bit version of the Azure Functions Core Tools when you create a .NET Framework project.",
     "azureFunctions.showCoreToolsWarning": "Show a warning if your installed version of Azure Functions Core Tools is out-of-date.",
+    "azureFunctions.showDeployConfirmation": "Ask for confirmation before deploying to a Function App in Azure (deploying will overwrite any previous deployment and cannot be undone).",
     "azureFunctions.showDeploySubpathWarning": "Show a warning when the \"deploySubpath\" setting does not match the selected folder for deploying.",
     "azureFunctions.showExplorer": "Show or hide the Azure Functions Explorer",
     "azureFunctions.showMultiCoreToolsWarning": "Show a warning if multiple installs of Azure Functions Core Tools are detected.",
