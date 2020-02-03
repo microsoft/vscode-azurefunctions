@@ -24,11 +24,19 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
     });
 
     test('JavaScript with extensions.csproj', async () => {
-        await initAndValidateProject({ ...getJavaScriptValidateOptions(), mockFiles: [['HttpTriggerJs', 'index.js'], 'extensions.csproj'] });
+        const options: IValidateProjectOptions = getJavaScriptValidateOptions(true /* hasPackageJson */);
+        options.expectedSettings['files.exclude'] = { obj: true, bin: true };
+        await initAndValidateProject({ ...options, mockFiles: [['HttpTriggerJs', 'index.js'], 'package.json'] });
     });
 
     test('TypeScript', async () => {
         await initAndValidateProject({ ...getTypeScriptValidateOptions(), mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json'] });
+    });
+
+    test('TypeScript with extensions.csproj', async () => {
+        const options: IValidateProjectOptions = getTypeScriptValidateOptions();
+        options.expectedSettings['files.exclude'] = { obj: true, bin: true };
+        await initAndValidateProject({ ...options, mockFiles: [['HttpTrigger', 'index.ts'], 'tsconfig.json', 'package.json', 'extensions.csproj'] });
     });
 
     test('C#', async () => {
@@ -62,6 +70,16 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
         await initAndValidateProject({ ...getPythonValidateOptions(venvName), mockFiles, inputs: [venvName] });
     });
 
+    test('Python with extensions.csproj', async () => {
+        const venvName: string = 'testEnv';
+        const options: IValidateProjectOptions = getPythonValidateOptions(venvName);
+        options.expectedTasks.push('extensions install');
+        options.expectedSettings['files.exclude'] = { obj: true, bin: true };
+        options.expectedSettings['azureFunctions.preDeployTask'] = 'func: extensions install';
+        const mockFiles: MockFile[] = [['HttpTrigger', '__init__.py'], 'requirements.txt', getMockVenvPath(venvName), 'extensions.csproj'];
+        await initAndValidateProject({ ...options, mockFiles });
+    });
+
     test('F#', async () => {
         const mockFiles: MockFile[] = [{ fsPath: 'test.fsproj', contents: '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>' }];
         await initAndValidateProject({ ...getFSharpValidateOptions('test', 'netstandard2.0'), mockFiles });
@@ -85,6 +103,13 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
 
     test('PowerShell', async () => {
         await initAndValidateProject({ ...getPowerShellValidateOptions(), mockFiles: [['HttpTriggerPS', 'run.ps1'], 'profile.ps1', 'requirements.psd1'] });
+    });
+
+    test('PowerShell with extensions.csproj', async () => {
+        const options: IValidateProjectOptions = getPowerShellValidateOptions();
+        options.expectedSettings['files.exclude'] = { obj: true, bin: true };
+        options.expectedSettings['azureFunctions.preDeployTask'] = 'func: extensions install';
+        await initAndValidateProject({ ...options, mockFiles: [['HttpTriggerPS', 'run.ps1'], 'profile.ps1', 'requirements.psd1', 'extensions.csproj'] });
     });
 
     test('Multi-language', async () => {

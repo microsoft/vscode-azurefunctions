@@ -287,7 +287,7 @@ const commonExpectedPaths: string[] = [
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     version: FuncVersion;
-    expectedSettings: { [key: string]: string | boolean | undefined };
+    expectedSettings: { [key: string]: string | boolean | object | undefined };
     expectedPaths: string[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
@@ -327,11 +327,11 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
-        const value: string | boolean | undefined = options.expectedSettings[key];
+        const value: string | boolean | object | undefined = options.expectedSettings[key];
         if (key === 'debug.internalConsoleOptions' && isPathEqual(testWorkspacePath, projectPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
         } else {
-            assert.equal(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
+            assert.deepStrictEqual(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
         }
         delete settings[key];
     }
