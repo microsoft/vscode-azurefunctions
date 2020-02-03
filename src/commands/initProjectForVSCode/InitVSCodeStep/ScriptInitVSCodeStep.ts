@@ -36,6 +36,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
             const extensionsCsprojPath: string = path.join(context.projectPath, 'extensions.csproj');
             if (await fse.pathExists(extensionsCsprojPath)) {
                 this.useFuncExtensionsInstall = true;
+                context.telemetry.properties.hasExtensionsCsproj = 'true';
             } else if (context.version === FuncVersion.v2) { // no need to check v1 or v3+
                 const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
                 // Starting after this version, projects can use extension bundle instead of running "func extensions install"
