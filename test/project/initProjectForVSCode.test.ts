@@ -26,7 +26,7 @@ suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): 
     test('JavaScript with extensions.csproj', async () => {
         const options: IValidateProjectOptions = getJavaScriptValidateOptions(true /* hasPackageJson */);
         options.expectedSettings['files.exclude'] = { obj: true, bin: true };
-        await initAndValidateProject({ ...options, mockFiles: [['HttpTriggerJs', 'index.js'], 'package.json'] });
+        await initAndValidateProject({ ...options, mockFiles: [['HttpTriggerJs', 'index.js'], 'package.json', 'extensions.csproj'] });
     });
 
     test('TypeScript', async () => {
