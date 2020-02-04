@@ -5,7 +5,7 @@
 
 import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
@@ -29,7 +29,16 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         request.headers['Content-Type'] = 'application/json';
         request.body = { input: '' };
         request.json = true;
-        await requestUtils.sendRequest(request);
+        try {
+            await requestUtils.sendRequest(request);
+        } catch (error) {
+            if (!client && parseError(error).errorType === 'ECONNREFUSED') {
+                context.errorHandling.suppressReportIssue = true;
+                throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
+            } else {
+                throw error;
+            }
+        }
     });
 
     window.showInformationMessage(localize('executed', 'Executed function "{0}"', name));
