@@ -33,7 +33,8 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         progress.report({ message: localize('retrieving', 'Retrieving connection string...') });
 
         const result: IConnection = await this.getConnection(context);
-        const appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
+        let appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
+        appSettingKey = appSettingKey.replace(/[^a-z0-9_\.]/gi, ''); // remove invalid chars
         setBindingSetting(context, this._setting, appSettingKey);
         await setLocalAppSetting(context.projectPath, appSettingKey, result.connectionString);
     }
