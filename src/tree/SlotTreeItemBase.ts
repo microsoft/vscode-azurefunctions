@@ -191,7 +191,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
                         if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
                             return this.deploymentsNode;
                         }
-                    } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function, ProjectResource.Bindings, ProjectResource.Binding)) {
+                    } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
                         return this._functionsTreeItem;
                     }
             }

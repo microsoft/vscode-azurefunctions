@@ -19,9 +19,7 @@ export enum ProjectAccess {
 
 export enum ProjectResource {
     Functions = 'Functions',
-    Function = 'Function',
-    Bindings = 'Bindings',
-    Binding = 'Binding'
+    Function = 'Function'
 }
 
 export function getProjectContextValue(source: ProjectSource, access: ProjectAccess, resource: ProjectResource, ...parts: string[]): string {

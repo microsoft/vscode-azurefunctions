@@ -80,7 +80,7 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
 
     public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzExtTreeItem | undefined {
         for (const expectedContextValue of expectedContextValues) {
-            if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function, ProjectResource.Bindings, ProjectResource.Binding)) {
+            if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
                 return this._localFunctionsTreeItem;
             }
         }
