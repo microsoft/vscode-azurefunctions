@@ -40,7 +40,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
                     command: hostStartCommand,
                     problemMatcher: funcWatchProblemMatcher,
                     isBackground: true,
-                    dependsOn: this.requiresFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel
+                    dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel
                 },
                 {
                     type: 'shell',
@@ -51,7 +51,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
                     type: 'shell',
                     label: npmPruneTaskLabel,
                     command: 'npm prune --production', // This removes dev dependencies, but importantly also installs prod dependencies
-                    dependsOn: this.requiresFuncExtensionsInstall ? extInstallTaskName : undefined,
+                    dependsOn: this.useFuncExtensionsInstall ? extInstallTaskName : undefined,
                     problemMatcher: []
                 }
             ];

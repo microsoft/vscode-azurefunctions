@@ -27,7 +27,7 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
                 type: 'shell',
                 label: npmBuildTaskLabel,
                 command: 'npm run build',
-                dependsOn: this.requiresFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel,
+                dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel,
                 problemMatcher: '$tsc'
             },
             {

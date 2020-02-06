@@ -42,7 +42,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
 
     protected getTasks(): TaskDefinition[] {
         const pipInstallLabel: string = 'pipInstall';
-        const dependsOn: string | undefined = this.requiresFuncExtensionsInstall ? extInstallTaskName : this._venvName ? pipInstallLabel : undefined;
+        const dependsOn: string | undefined = this.useFuncExtensionsInstall ? extInstallTaskName : this._venvName ? pipInstallLabel : undefined;
         const tasks: TaskDefinition[] = [
             {
                 type: func,
@@ -54,7 +54,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
         ];
 
         if (this._venvName) {
-            if (this.requiresFuncExtensionsInstall) {
+            if (this.useFuncExtensionsInstall) {
                 tasks.push({
                     type: func,
                     command: extInstallCommand,
