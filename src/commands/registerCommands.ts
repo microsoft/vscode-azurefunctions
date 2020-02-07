@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem } from 'vscode-azureappservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from 'vscode-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
@@ -75,8 +75,8 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.deleteFunctionApp', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProductionSlotTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteProxy', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProxyTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));
-    registerCommand('azureFunctions.deploy', deployProductionSlot);
-    registerCommand('azureFunctions.deploySlot', deploySlot);
+    registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
+    registerSiteCommand('azureFunctions.deploySlot', deploySlot);
     registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommand('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
@@ -85,7 +85,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.openFile', openFile);
     registerCommand('azureFunctions.openInPortal', openInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
-    registerCommand('azureFunctions.redeploy', redeployDeployment);
+    registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
     registerCommand('azureFunctions.refresh', async (_context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(node));
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
     registerCommand('azureFunctions.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
@@ -100,7 +100,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.toggleAppSettingVisibility', async (_context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
     registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommand('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
-    registerCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
+    registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties);
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
 }
