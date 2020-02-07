@@ -536,6 +536,11 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureFunctions.addBinding",
+                    "when": "view == azFuncTree && viewItem =~ /Local;ReadWrite;Function;/i",
+                    "group": "2@1"
+                },
+                {
                     "command": "azureFunctions.deleteFunction",
                     "when": "view == azFuncTree && viewItem =~ /Remote;ReadWrite;Function;/i",
                     "group": "2@1"
@@ -549,16 +554,6 @@
                     "command": "azureFunctions.stopStreamingLogs",
                     "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
                     "group": "3@2"
-                },
-                {
-                    "command": "azureFunctions.viewProperties",
-                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
-                    "group": "4@1"
-                },
-                {
-                    "command": "azureFunctions.viewProperties",
-                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Binding;/i",
-                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.add",
@@ -644,10 +639,6 @@
                     "command": "azureFunctions.viewDeploymentLogs",
                     "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "inline"
-                },
-                {
-                    "command": "azureFunctions.addBinding",
-                    "when": "view == azFuncTree && viewItem =~ /Local;ReadWrite;Bindings;/i"
                 },
                 {
                     "command": "azureFunctions.refresh",

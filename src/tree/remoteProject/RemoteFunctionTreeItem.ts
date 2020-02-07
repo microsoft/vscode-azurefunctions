@@ -6,23 +6,19 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { ProgressLocation, window } from 'vscode';
 import { IFunctionKeys, IHostKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem, DialogResponses } from 'vscode-azureextensionui';
+import { DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
-import { BindingsTreeItem } from '../BindingsTreeItem';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
-    private readonly _bindingsNode: BindingsTreeItem;
-
     private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string) {
         super(parent, config, name);
-        this._bindingsNode = new BindingsTreeItem(this);
     }
 
     public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
@@ -48,14 +44,6 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this.name)}`;
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        return [this._bindingsNode];
     }
 
     public async deleteTreeItemImpl(): Promise<void> {

@@ -3,26 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Uri, window } from 'vscode';
 import { IActionContext, openReadOnlyJson } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
-import { BindingTreeItem } from '../tree/BindingTreeItem';
-import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
+import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
-export async function viewProperties(context: IActionContext, node?: SlotTreeItemBase | FunctionTreeItemBase | BindingTreeItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    let data: {};
-    if (node instanceof SlotTreeItemBase) {
-        data = node.site;
-    } else if (node instanceof FunctionTreeItemBase) {
-        data = node.config.data;
+    if (node instanceof LocalFunctionTreeItem) {
+        await window.showTextDocument(Uri.file(node.functionJsonPath));
     } else {
-        data = node.binding;
-    }
+        let data: {};
+        if (node instanceof SlotTreeItemBase) {
+            data = node.site;
+        } else {
+            data = node.config.data;
+        }
 
-    await openReadOnlyJson(node, data);
+        await openReadOnlyJson(node, data);
+    }
 }
