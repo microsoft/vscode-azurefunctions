@@ -83,7 +83,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
         const targetFramework: string = await getTargetFramework(projFilePath);
         this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
-        this._debugSubpath = `bin/Debug/${targetFramework}`;
+        this._debugSubpath = getDotnetDebugSubpath(targetFramework);
     }
 
     protected getTasks(): TaskDefinition[] {
@@ -151,6 +151,10 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             }
         ];
     }
+}
+
+export function getDotnetDebugSubpath(targetFramework: string): string {
+    return path.posix.join('bin', 'Debug', targetFramework);
 }
 
 export async function tryGetCsprojFile(projectPath: string): Promise<string | undefined> {

@@ -26,22 +26,24 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     public readonly label: string = localize('localProject', 'Local Project');
     public readonly source: ProjectSource = ProjectSource.Local;
     public readonly projectName: string;
-    public readonly projectPath: string;
+    public readonly effectiveProjectPath: string;
+    public readonly preCompiledProjectPath: string | undefined;
     public readonly workspacePath: string;
     public readonly workspaceFolder: WorkspaceFolder;
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    public constructor(parent: AzExtParentTreeItem, projectPath: string, workspacePath: string, workspaceFolder: WorkspaceFolder) {
+    public constructor(parent: AzExtParentTreeItem, options: { effectiveProjectPath: string; folder: WorkspaceFolder; preCompiledProjectPath?: string }) {
         super(parent);
-        this.projectName = path.basename(projectPath);
-        this.projectPath = projectPath;
-        this.workspacePath = workspacePath;
-        this.workspaceFolder = workspaceFolder;
+        this.projectName = path.basename(options.preCompiledProjectPath || options.effectiveProjectPath);
+        this.effectiveProjectPath = options.effectiveProjectPath;
+        this.workspacePath = options.folder.uri.fsPath;
+        this.workspaceFolder = options.folder;
+        this.preCompiledProjectPath = options.preCompiledProjectPath;
 
-        this._disposables.push(createRefreshFileWatcher(this, path.join(projectPath, '*', functionJsonFileName)));
-        this._disposables.push(createRefreshFileWatcher(this, path.join(projectPath, localSettingsFileName)));
+        this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
+        this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
     }
@@ -91,7 +93,7 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     public async getHostJson(): Promise<IParsedHostJson> {
         const version: FuncVersion = await this.getVersion();
         // tslint:disable-next-line: no-any
-        const data: any = await fse.readJSON(path.join(this.projectPath, hostFileName));
+        const data: any = await fse.readJSON(path.join(this.effectiveProjectPath, hostFileName));
         return parseHostJson(data, version);
     }
 
@@ -101,7 +103,7 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     }
 
     public async getApplicationSettings(): Promise<ApplicationSettings> {
-        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(path.join(this.projectPath, localSettingsFileName));
+        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(path.join(this.effectiveProjectPath, localSettingsFileName));
         // tslint:disable-next-line: strict-boolean-expressions
         return localSettings.Values || {};
     }

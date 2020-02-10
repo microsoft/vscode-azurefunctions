@@ -35,7 +35,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         functionJsonPath = data.functionJsonPath;
         workspaceFolder = data.parent.parent.workspaceFolder;
         workspacePath = data.parent.parent.workspacePath;
-        projectPath = data.parent.parent.projectPath;
+        projectPath = data.parent.parent.effectiveProjectPath;
     }
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, projectPath);
