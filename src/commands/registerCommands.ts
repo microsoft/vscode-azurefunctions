@@ -27,6 +27,7 @@ import { createFunction } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
 import { createNewProject } from './createNewProject/createNewProject';
 import { createSlot } from './createSlot';
+import { deleteFunction } from './deleteFunction';
 import { deleteNode } from './deleteNode';
 import { deployProductionSlot, deploySlot } from './deploy/deploy';
 import { connectToGitHub } from './deployments/connectToGitHub';
@@ -71,7 +72,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
     registerCommand('azureFunctions.createNewProject', createNewProject);
     registerCommand('azureFunctions.createSlot', createSlot);
-    registerCommand('azureFunctions.deleteFunction', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, /Remote;ReadWrite;Function;/i, node));
+    registerCommand('azureFunctions.deleteFunction', deleteFunction);
     registerCommand('azureFunctions.deleteFunctionApp', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProductionSlotTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteProxy', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProxyTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));

@@ -11,7 +11,8 @@ import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
 export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Http;/i, context);
+        const noItemFoundErrorMessage: string = localize('noHTTPFunctions', 'No HTTP functions found.');
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Http;/i, { ...context, noItemFoundErrorMessage });
     }
 
     if (node.triggerUrl) {
