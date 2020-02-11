@@ -8,6 +8,7 @@ import { AzureWizard, IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from "../../FuncVersion";
+import { localize } from "../../localize";
 import { LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
 import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
@@ -29,7 +30,8 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         projectPath = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
     } else {
         if (!data) {
-            data = await ext.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, context);
+            const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
+            data = await ext.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
         }
 
         functionJsonPath = data.functionJsonPath;

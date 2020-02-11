@@ -14,7 +14,8 @@ import { requestUtils } from '../utils/requestUtils';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Timer;/i, context);
+        const noItemFoundErrorMessage: string = localize('noTimerFunctions', 'No timer functions found.');
+        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Timer;/i, { ...context, noItemFoundErrorMessage });
     }
 
     const name: string = node.name;
