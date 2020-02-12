@@ -65,7 +65,7 @@ async function getFramework(workingDirectory: string | undefined): Promise<strin
         }
 
         if (!cachedFramework) {
-            throw new Error(localize('noMatchingFramework', 'You must have version 2.x or 3.x of the .NET Core SDK installed to perform this operation.'));
+            throw new Error(localize('noMatchingFramework', 'You must have the .NET Core SDK installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
         }
     }
 
