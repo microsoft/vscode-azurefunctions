@@ -15,6 +15,12 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
         const picks: IAzureQuickPickItem<string>[] = this.getPicks(context);
         const placeHolder: string = localize('selectRuntime', 'Select a runtime');
         context.newSiteRuntime = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+
+        if (/^python/i.test(context.newSiteRuntime)) {
+            context.newSiteOS = WebsiteOS.linux;
+        } else if (/^(powershell|java)/i.test(context.newSiteRuntime)) {
+            context.newSiteOS = WebsiteOS.windows;
+        }
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
@@ -48,10 +54,12 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
                 picks.unshift({ label: 'Node.js 12.x', data: 'node|12' });
             }
 
-            if (context.newSiteOS === WebsiteOS.linux) {
+            if (context.newSiteOS !== WebsiteOS.windows) {
                 picks.push({ label: 'Python 3.7.x', data: 'python|3.7' });
                 picks.push({ label: 'Python 3.6.x', data: 'python|3.6' });
-            } else {
+            }
+
+            if (context.newSiteOS !== WebsiteOS.linux) {
                 picks.push({ label: 'Java', data: 'java' });
                 picks.push({ label: 'PowerShell', data: 'powershell' });
             }
