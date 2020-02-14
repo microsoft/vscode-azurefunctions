@@ -12,14 +12,13 @@ import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWeb
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, projectLanguageSetting, workerRuntimeKey } from "../constants";
+import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, ProjectLanguage, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
-import { supportsLocalProjectTree } from "../tree/localProject/supportsLocalProjectTree";
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getFunctionsWorkerRuntime, getWorkspaceSetting } from "../vsCodeConfig/settings";
 
@@ -70,8 +69,15 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 }
 
 export function canValidateAzureWebJobStorageOnDebug(projectLanguage: string | undefined): boolean {
-    // For now this is the same as `langSupportsLocalProjectTree`, but that's more of an implementation detail and may change in the future
-    return supportsLocalProjectTree(projectLanguage);
+    switch (projectLanguage) {
+        case ProjectLanguage.CSharp:
+        case ProjectLanguage.FSharp:
+        case ProjectLanguage.Java:
+            // We know if we need `AzureWebJobStorage` based on the function.json files, but those files don't exist until after a build for languages that need to be compiled
+            return false;
+        default:
+            return true;
+    }
 }
 
 function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.WorkspaceFolder {

@@ -175,7 +175,7 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
             'azureFunctions.projectLanguage': ProjectLanguage.Java,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'package',
-            'azureFunctions.deploySubpath': `target/azure-functions/${appName}/`,
+            'azureFunctions.deploySubpath': `target/azure-functions/${appName}`,
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [

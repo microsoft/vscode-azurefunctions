@@ -7,14 +7,17 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { funcVersionSetting, hostFileName, projectLanguageSetting } from '../constants';
+import { getDotnetDebugSubpath, getTargetFramework, tryGetCsprojFile, tryGetFsprojFile } from '../commands/initProjectForVSCode/InitVSCodeStep/DotnetInitVSCodeStep';
+import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
+import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { mavenUtils } from '../utils/mavenUtils';
 import { treeUtils } from '../utils/treeUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
+import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
-import { supportsLocalProjectTree } from './localProject/supportsLocalProjectTree';
 import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
@@ -53,13 +56,24 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         for (const folder of folders) {
             const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
             if (projectPath) {
-                hasLocalProject = true;
+                try {
+                    hasLocalProject = true;
 
-                const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                if (supportsLocalProjectTree(projectLanguage)) {
-                    const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, projectPath, folder.uri.fsPath, folder);
+                    let preCompiledProjectPath: string | undefined;
+                    let effectiveProjectPath: string;
+                    const compiledProjectPath: string | undefined = await getCompiledProjectPath(projectPath);
+                    if (compiledProjectPath) {
+                        preCompiledProjectPath = projectPath;
+                        effectiveProjectPath = compiledProjectPath;
+                    } else {
+                        effectiveProjectPath = projectPath;
+                    }
+
+                    const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, preCompiledProjectPath });
                     this._projectDisposables.push(treeItem);
                     children.push(treeItem);
+                } catch (error) {
+                    children.push(new InvalidLocalProjectTreeItem(this, projectPath, error));
                 }
             }
 
@@ -107,5 +121,27 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         }
 
         return super.pickTreeItemImpl(expectedContextValues);
+    }
+}
+
+async function getCompiledProjectPath(projectPath: string): Promise<string | undefined> {
+    const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+    if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
+        const projFileName: string | undefined = projectLanguage === ProjectLanguage.CSharp ? await tryGetCsprojFile(projectPath) : await tryGetFsprojFile(projectPath);
+        if (projFileName) {
+            const targetFramework: string = await getTargetFramework(path.join(projectPath, projFileName));
+            return path.join(projectPath, getDotnetDebugSubpath(targetFramework));
+        } else {
+            throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
+        }
+    } else if (projectLanguage === ProjectLanguage.Java) {
+        const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(path.join(projectPath, 'pom.xml'));
+        if (!functionAppName) {
+            throw new Error(localize('unableToGetFunctionAppName', 'Unable to detect property "functionAppName" in pom.xml.'));
+        } else {
+            return path.join(projectPath, getJavaDebugSubpath(functionAppName));
+        }
+    } else {
+        return undefined;
     }
 }

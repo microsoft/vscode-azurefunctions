@@ -28,7 +28,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
             this._debugSubpath = '<function_build_path>';
             window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
         } else {
-            this._debugSubpath = `target/azure-functions/${functionAppName}/`;
+            this._debugSubpath = getJavaDebugSubpath(functionAppName);
         }
 
         this.setDeploySubpath(context, this._debugSubpath);
@@ -49,7 +49,11 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
             {
                 label: javaPackageTaskLabel,
                 command: 'mvn clean package',
-                type: 'shell'
+                type: 'shell',
+                group: {
+                    kind: 'build',
+                    isDefault: true
+                }
             }
         ];
     }
@@ -61,4 +65,8 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
     protected getRecommendedExtensions(): string[] {
         return ['vscjava.vscode-java-debug'];
     }
+}
+
+export function getJavaDebugSubpath(functionAppName: string): string {
+    return path.posix.join('target', 'azure-functions', functionAppName);
 }
