@@ -1011,7 +1011,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.55.1",
+        "vscode-azureappservice": "^0.55.2",
         "vscode-azureextensionui": "^0.29.8",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",

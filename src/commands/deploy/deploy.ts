@@ -76,29 +76,20 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
         async () => {
-            try {
-                // Stop function app here to avoid *.jar file in use on server side.
-                // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-                if (language === ProjectLanguage.Java) {
-                    ext.outputChannel.appendLog(localize('stopFunctionApp', 'Stopping Function App: {0} ...', node.root.client.fullName));
-                    await node.root.client.stop();
-                }
-                // preDeploy tasks are only required for zipdeploy so subpath may not exist
-                let deployFsPath: string = effectiveDeployFsPath;
+            // Stop function app here to avoid *.jar file in use on server side.
+            // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
+            (<appservice.IDeployContext>context).stopAppBeforeDeploy = language === ProjectLanguage.Java;
 
-                if (!isZipDeploy && !isPathEqual(effectiveDeployFsPath, originalDeployFsPath)) {
-                    deployFsPath = originalDeployFsPath;
-                    const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, originalDeployFsPath)}" for non-zip deploy.`;
-                    ext.outputChannel.appendLog(noSubpathWarning);
-                }
+            // preDeploy tasks are only required for zipdeploy so subpath may not exist
+            let deployFsPath: string = effectiveDeployFsPath;
 
-                await appservice.deploy(node.root.client, deployFsPath, context);
-            } finally {
-                if (language === ProjectLanguage.Java) {
-                    ext.outputChannel.appendLog(localize('startFunctionApp', 'Starting Function App: {0} ...', node.root.client.fullName));
-                    await node.root.client.start();
-                }
+            if (!isZipDeploy && !isPathEqual(effectiveDeployFsPath, originalDeployFsPath)) {
+                deployFsPath = originalDeployFsPath;
+                const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, originalDeployFsPath)}" for non-zip deploy.`;
+                ext.outputChannel.appendLog(noSubpathWarning);
             }
+
+            await appservice.deploy(node.root.client, deployFsPath, context);
         }
     );
 

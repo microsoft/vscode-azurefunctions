@@ -18,8 +18,10 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
 
         if (/^python/i.test(context.newSiteRuntime)) {
             context.newSiteOS = WebsiteOS.linux;
-        } else if (/^(powershell|java)/i.test(context.newSiteRuntime)) {
+        } else if (/^powershell/i.test(context.newSiteRuntime)) {
             context.newSiteOS = WebsiteOS.windows;
+        } else if (/^java/i.test(context.newSiteRuntime) && context.version === FuncVersion.v2) {
+            context.newSiteOS = WebsiteOS.windows; // v1 doesn't support java at all. v2 is windows-only. v3+ supports both OS's.
         }
     }
 
@@ -50,7 +52,7 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
                 picks.unshift({ label: 'Node.js 8.x', data: 'node|8' });
             }
             picks.unshift({ label: 'Node.js 10.x', data: 'node|10' });
-            if (context.version === FuncVersion.v3) {
+            if (context.version !== FuncVersion.v2) {
                 picks.unshift({ label: 'Node.js 12.x', data: 'node|12' });
             }
 
@@ -60,8 +62,12 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
             }
 
             if (context.newSiteOS !== WebsiteOS.linux) {
-                picks.push({ label: 'Java', data: 'java' });
                 picks.push({ label: 'PowerShell', data: 'powershell' });
+            }
+
+            // v1 doesn't support java at all. v2 is windows-only. v3+ supports both OS's.
+            if (context.version !== FuncVersion.v2 || context.newSiteOS !== WebsiteOS.linux) {
+                picks.push({ label: 'Java', data: 'java|8' });
             }
         }
 
