@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { getRandomHexString, ProjectLanguage, requestUtils } from '../../extension.bundle';
+import { getRandomHexString, requestUtils } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
@@ -89,14 +89,12 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
 
-    await validateFunctionUrl(appName, functionName, options.language);
+    await validateFunctionUrl(appName, functionName);
 }
 
-async function validateFunctionUrl(appName: string, functionName: string, projectLanguage: ProjectLanguage): Promise<void> {
-    const inputs: (string | RegExp)[] = [appName, functionName];
-    if (projectLanguage !== ProjectLanguage.CSharp) { // CSharp doesn't support local project tree view
-        inputs.unshift(/^((?!Local Project).)*$/i); // match any item except local project
-    }
+async function validateFunctionUrl(appName: string, functionName: string): Promise<void> {
+    // first input matches any item except local project (aka it should match the test subscription)
+    const inputs: (string | RegExp)[] = [/^((?!Local Project).)*$/i, appName, functionName];
 
     await vscode.env.clipboard.writeText(''); // Clear the clipboard
     await testUserInput.runWithInputs(inputs, async () => {
