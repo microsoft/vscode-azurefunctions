@@ -79,6 +79,16 @@ function addSuite(version: FuncVersion): void {
             );
         });
 
+        const iotHubTrigger: string = 'IotHubTrigger';
+        test(iotHubTrigger, async () => {
+            await csTester.testCreateFunction(
+                iotHubTrigger,
+                'TestCompany.TestFunction',
+                'AzureWebJobsStorage', // Use existing app setting
+                'testmessages/testevents'
+            );
+        });
+
         const httpTrigger: string = 'HttpTrigger';
         test(httpTrigger, async () => {
             await csTester.testCreateFunction(

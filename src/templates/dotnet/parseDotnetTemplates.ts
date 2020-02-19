@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage } from '../../constants';
+import { ProjectLanguage, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
@@ -115,7 +115,7 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.errorHandling.suppressDisplay = true;
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
-        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version);
+        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All);
         for (const csharpTemplate of csharpTemplates) {
             const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
             if (jsTemplate) {
