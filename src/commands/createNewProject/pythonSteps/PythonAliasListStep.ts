@@ -15,7 +15,7 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
     public hideStepCount: boolean = true;
 
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
-        const placeHolder: string = localize('selectAlias', 'Select a Python alias to create a virtual environment');
+        const placeHolder: string = localize('selectAlias', 'Select a Python interpreter to create a virtual environment');
         const result: string | boolean = (await ext.ui.showQuickPick(getPicks(context), { placeHolder })).data;
         if (typeof result === 'string') {
             context.pythonAlias = result;
@@ -76,7 +76,7 @@ async function getPicks(context: IPythonVenvWizardContext): Promise<IAzureQuickP
 
     context.telemetry.properties.detectedPythonVersions = versions.join(',');
 
-    picks.push({ label: localize('enterAlias', '$(keyboard) Manually enter Python alias or full path'), data: true });
+    picks.push({ label: localize('enterAlias', '$(keyboard) Manually enter Python interpreter or full path'), data: true });
 
     if (!context.suppressSkipVenv) {
         picks.push({ label: localize('skipVenv', '$(circle-slash) Skip virtual environment'), data: false, suppressPersistence: true });
