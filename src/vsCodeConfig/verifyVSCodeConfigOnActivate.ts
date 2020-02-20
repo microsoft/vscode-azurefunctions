@@ -43,7 +43,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     context.telemetry.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
                         case ProjectLanguage.Python:
-                            await verifyPythonVenv(projectPath, context);
+                            await verifyPythonVenv(projectPath, context, version);
                             break;
                         case ProjectLanguage.CSharp:
                         case ProjectLanguage.FSharp:

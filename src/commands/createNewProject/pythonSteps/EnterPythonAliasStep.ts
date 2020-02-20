@@ -14,7 +14,7 @@ export class EnterPythonAliasStep extends AzureWizardPromptStep<IPythonVenvWizar
 
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
         const prompt: string = localize('pyAliasPlaceholder', 'Enter the Python interpreter or full path');
-        const supportedVersions: string[] = await getSupportedPythonVersions();
+        const supportedVersions: string[] = await getSupportedPythonVersions(context.version);
         context.pythonAlias = await ext.ui.showInputBox({ prompt, validateInput: async (value: string): Promise<string | undefined> => await validatePythonAlias(supportedVersions, value) });
     }
 

@@ -12,10 +12,11 @@ import { PythonAliasListStep } from '../commands/createNewProject/pythonSteps/Py
 import { PythonVenvCreateStep } from '../commands/createNewProject/pythonSteps/PythonVenvCreateStep';
 import { pythonVenvSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { getWorkspaceSetting, updateGlobalSetting } from './settings';
 
-export async function verifyPythonVenv(projectPath: string, context: IActionContext): Promise<void> {
+export async function verifyPythonVenv(projectPath: string, context: IActionContext, version: FuncVersion): Promise<void> {
     const settingKey: string = 'showPythonVenvWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
@@ -30,7 +31,7 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
                 context.errorHandling.suppressDisplay = false;
                 context.telemetry.properties.verifyConfigResult = 'update';
 
-                const wizardContext: IPythonVenvWizardContext = { ...context, venvName, projectPath, suppressSkipVenv: true };
+                const wizardContext: IPythonVenvWizardContext = { ...context, version, venvName, projectPath, suppressSkipVenv: true };
                 const wizard: AzureWizard<IPythonVenvWizardContext> = new AzureWizard(wizardContext, {
                     promptSteps: [new PythonAliasListStep()],
                     executeSteps: [new PythonVenvCreateStep()],

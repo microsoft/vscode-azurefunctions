@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "vscode-azureextensionui";
+import { FuncVersion } from "../../../FuncVersion";
 
 export interface IPythonVenvWizardContext extends IActionContext {
     projectPath: string;
+    version: FuncVersion;
     pythonAlias?: string;
     manuallyEnterAlias?: boolean;
     useExistingVenv?: boolean;

@@ -6,6 +6,7 @@
 import * as semver from 'semver';
 import { ext } from '../../../extensionVariables';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
+import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 
@@ -23,22 +24,43 @@ export async function getPythonVersion(pyAlias: string): Promise<string> {
     }
 }
 
-export async function getSupportedPythonVersions(): Promise<string[]> {
-    const versions: string[] = ['3.6'];
+export async function getSupportedPythonVersions(funcVersionFromSetting: FuncVersion): Promise<string[]> {
+    // Cache the task so we're not waiting on this every time
+    const localVersionTask: Promise<string | null> = getLocalFuncCoreToolsVersion();
 
-    const minFuncVersion: string = '2.7.1846';
-    try {
-        const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
-        if (currentVersion && semver.lt(currentVersion, minFuncVersion)) {
-            ext.outputChannel.appendLine(localize('outOfDateWarning', 'WARNING: Some Python versions are not supported with version "{0}" of the func CLI. Update to at least "{1}".', currentVersion, minFuncVersion));
-            return versions;
+    const result: string[] = [];
+
+    const versionInfo: [string, string][] = [
+        ['2.0.0', '3.6'],
+        ['2.7.1846', '3.7']
+        // ['3.?.?', '3.8'] todo update min version once func cli ships with 3.8 support
+    ];
+
+    for (const [minFuncVersion, pyVersion] of versionInfo) {
+        function showVersionWarning(currentVersion: string): void {
+            ext.outputChannel.appendLine(localize('outOfDateWarning', 'WARNING: Python version {0}+ is not supported with version "{1}" of the func CLI. Update to at least "{2}" for support.', pyVersion, currentVersion, minFuncVersion));
         }
-    } catch {
-        // ignore
+
+        try {
+            // Prioritize checking against VS Code setting first which is faster than `getLocalFuncCoreToolsVersion`
+            if (semver.satisfies(minFuncVersion, getMajorVersion(funcVersionFromSetting))) {
+                const currentVersion: string | null = await localVersionTask;
+                if (currentVersion && semver.lt(currentVersion, minFuncVersion)) {
+                    showVersionWarning(currentVersion);
+                    return result;
+                }
+            } else if (semver.gtr(minFuncVersion, getMajorVersion(funcVersionFromSetting))) {
+                showVersionWarning(funcVersionFromSetting);
+                return result;
+            }
+        } catch {
+            // ignore
+        }
+
+        result.push(pyVersion);
     }
 
-    versions.push('3.7');
-    return versions;
+    return result;
 }
 
 export function isSupportedPythonVersion(supportedVersions: string[], version: string): boolean {
