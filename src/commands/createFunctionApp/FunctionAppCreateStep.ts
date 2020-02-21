@@ -54,34 +54,18 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         if (context.newSiteOS === WebsiteOS.linux) {
             if (context.useConsumptionPlan) {
                 newSiteConfig.use32BitWorkerProcess = false; // Needs to be explicitly set to false per the platform team
-                if (context.newSiteRuntime && isVersionedRuntime(context.newSiteRuntime)) {
-                    // The platform currently requires a minor version to be specified, even though only the major version is respected for Node
-                    let linuxFxVersion: string = context.newSiteRuntime;
-                    if (!linuxFxVersion.includes('.')) {
-                        linuxFxVersion += '.0';
-                    }
-                    newSiteConfig.linuxFxVersion = linuxFxVersion;
-                }
-            } else {
-                newSiteConfig.linuxFxVersion = this.getDockerLinuxFxVersion(context);
             }
+
+            // The platform currently requires a minor version to be specified, even though only the major version is respected for Node
+            let linuxFxVersion: string = nonNullProp(context, 'newSiteRuntime');
+            if (!linuxFxVersion.includes('.')) {
+                linuxFxVersion += '.0';
+            }
+            newSiteConfig.linuxFxVersion = linuxFxVersion;
         }
 
         newSiteConfig.appSettings = await this.getAppSettings(context);
         return newSiteConfig;
-    }
-
-    private getDockerLinuxFxVersion(context: IFunctionAppWizardContext): string {
-        const runtime: string = nonNullProp(context, 'newSiteRuntime');
-        const funcVersion: string = getMajorVersion(context.version) + '.0';
-
-        const runtimeWithoutVersion: string = getRuntimeWithoutVersion(runtime);
-        let middlePart: string = `${runtimeWithoutVersion}:${funcVersion}`;
-        if (isVersionedRuntime(runtime)) {
-            middlePart += '-' + runtime.replace(separator, '');
-        }
-
-        return `DOCKER|mcr.microsoft.com/azure-functions/${middlePart}-appservice`;
     }
 
     private async getAppSettings(context: IFunctionAppWizardContext): Promise<SiteModels.NameValuePair[]> {
@@ -159,10 +143,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 }
 
 const separator: string = '|';
-function isVersionedRuntime(runtime: string): boolean {
-    return runtime?.includes(separator);
-}
-
 function getRuntimeWithoutVersion(runtime: string): string {
     return runtime.split(separator)[0];
 }

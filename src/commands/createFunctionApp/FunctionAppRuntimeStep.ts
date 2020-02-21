@@ -43,31 +43,40 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
     private getPicks(context: IFunctionAppWizardContext): IAzureQuickPickItem<string>[] {
         const picks: IAzureQuickPickItem<string>[] = [];
 
-        picks.push({ label: '.NET', data: 'dotnet' });
-
         if (context.version === FuncVersion.v1) {
-            picks.unshift({ label: 'Node.js', data: 'node' });
+            // v1 doesn't need a version in `data`
+            picks.push({ label: 'Node.js 6', data: 'node' });
+            picks.push({ label: '.NET Framework 4.7', data: 'dotnet' });
         } else {
-            if (context.version === FuncVersion.v2) {
-                picks.unshift({ label: 'Node.js 8.x', data: 'node|8' });
-            }
-            picks.unshift({ label: 'Node.js 10.x', data: 'node|10' });
             if (context.version !== FuncVersion.v2) {
-                picks.unshift({ label: 'Node.js 12.x', data: 'node|12' });
+                picks.push({ label: 'Node.js 12', data: 'node|12' });
+            }
+            picks.push({ label: 'Node.js 10', data: 'node|10' });
+            if (context.version === FuncVersion.v2) {
+                picks.push({ label: 'Node.js 8', data: 'node|8' });
+            }
+
+            if (context.version === FuncVersion.v2) {
+                picks.push({ label: '.NET Core 2.2', data: 'dotnet|2.2' });
+            } else {
+                picks.push({ label: '.NET Core 3.1', data: 'dotnet|3.1' });
             }
 
             if (context.newSiteOS !== WebsiteOS.windows) {
-                picks.push({ label: 'Python 3.7.x', data: 'python|3.7' });
-                picks.push({ label: 'Python 3.6.x', data: 'python|3.6' });
+                if (context.version !== FuncVersion.v2) {
+                    picks.push({ label: 'Python 3.8', data: 'python|3.8' });
+                }
+                picks.push({ label: 'Python 3.7', data: 'python|3.7' });
+                picks.push({ label: 'Python 3.6', data: 'python|3.6' });
             }
 
             if (context.newSiteOS !== WebsiteOS.linux) {
-                picks.push({ label: 'PowerShell', data: 'powershell' });
+                picks.push({ label: 'PowerShell Core 6', data: 'powershell|6' });
             }
 
             // v1 doesn't support java at all. v2 is windows-only. v3+ supports both OS's.
             if (context.version !== FuncVersion.v2 || context.newSiteOS !== WebsiteOS.linux) {
-                picks.push({ label: 'Java', data: 'java|8' });
+                picks.push({ label: 'Java 8', data: 'java|8' });
             }
         }
 
