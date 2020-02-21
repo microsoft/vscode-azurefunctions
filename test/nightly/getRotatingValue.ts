@@ -18,14 +18,14 @@ export function getRotatingLocation(): string {
 }
 
 let nodeVersionCount: number = getStartingIndex();
-const nodeVersions: RegExp[] = [/node.*8/i, /node.*10/i];
+const nodeVersions: RegExp[] = [/node.*10/i, /node.*12/i];
 export function getRotatingNodeVersion(): RegExp {
     nodeVersionCount += 1;
     return nodeVersions[nodeVersionCount % nodeVersions.length];
 }
 
 let pyVersionCount: number = getStartingIndex();
-const pyVersions: RegExp[] = [/python.*3\.6/i]; // 3.7 should work soon, but not quite yet
+const pyVersions: RegExp[] = [/python.*3\.6/i, /python.*3\.7/i, /python.*3\.8/i];
 export function getRotatingPythonVersion(): RegExp {
     pyVersionCount += 1;
     return pyVersions[pyVersionCount % pyVersions.length];

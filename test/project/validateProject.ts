@@ -9,7 +9,7 @@ import * as path from 'path';
 import { FuncVersion, IExtensionsJson, ILaunchJson, isPathEqual, ITasksJson, ProjectLanguage } from '../../extension.bundle';
 import { testWorkspacePath } from '../global.test';
 
-const defaultVersion: FuncVersion = FuncVersion.v2;
+const defaultVersion: FuncVersion = FuncVersion.v3;
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
