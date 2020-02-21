@@ -30,19 +30,17 @@ export function getScriptVerifiedTemplateIds(version: string): string[] {
             'EventGridTrigger-JavaScript',
             'EventHubTrigger-JavaScript',
             'ServiceBusQueueTrigger-JavaScript',
-            'ServiceBusTopicTrigger-JavaScript'
+            'ServiceBusTopicTrigger-JavaScript',
+            'SendGrid-JavaScript',
+            'IoTHubTrigger-JavaScript',
         ]);
 
         const javaScriptTemplateIds: string[] = verifiedTemplateIds;
 
-        // Python is only supported in v2+ - same functions as JavaScript except Durable
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'Python')));
-
-        // TypeScript is only supported in v2+ - same functions as JavaScript
+        // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'Python')));
         verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
-
-        // PowerShell is only supported in v2+ - same functions as JavaScript except Durable
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.filter(t => !/durable/i.test(t)).map(t => t.replace('JavaScript', 'PowerShell')));
+        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'PowerShell')));
     }
 
     return verifiedTemplateIds;

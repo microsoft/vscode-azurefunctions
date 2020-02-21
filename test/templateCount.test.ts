@@ -21,17 +21,17 @@ function addSuite(source: TemplateSource | undefined): void {
     suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, async () => {
         const cases: [ProjectLanguage, FuncVersion, number][] = [
             [ProjectLanguage.JavaScript, FuncVersion.v1, 8],
-            [ProjectLanguage.JavaScript, FuncVersion.v2, 12],
-            [ProjectLanguage.JavaScript, FuncVersion.v3, 12],
+            [ProjectLanguage.JavaScript, FuncVersion.v2, 14],
+            [ProjectLanguage.JavaScript, FuncVersion.v3, 14],
             [ProjectLanguage.CSharp, FuncVersion.v1, 12],
             [ProjectLanguage.CSharp, FuncVersion.v2, 10],
             [ProjectLanguage.CSharp, FuncVersion.v3, 10],
             [ProjectLanguage.Python, FuncVersion.v2, 9],
             [ProjectLanguage.Python, FuncVersion.v3, 9],
-            [ProjectLanguage.TypeScript, FuncVersion.v2, 12],
-            [ProjectLanguage.TypeScript, FuncVersion.v3, 12],
-            [ProjectLanguage.PowerShell, FuncVersion.v2, 9],
-            [ProjectLanguage.PowerShell, FuncVersion.v3, 9],
+            [ProjectLanguage.TypeScript, FuncVersion.v2, 14],
+            [ProjectLanguage.TypeScript, FuncVersion.v3, 14],
+            [ProjectLanguage.PowerShell, FuncVersion.v2, 11],
+            [ProjectLanguage.PowerShell, FuncVersion.v3, 11],
             [ProjectLanguage.Java, FuncVersion.v2, 4]
             // https://github.com/microsoft/vscode-azurefunctions/issues/1605
             // [ProjectLanguage.Java, FuncVersion.v3, 4]

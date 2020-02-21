@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunction, ext, FuncVersion, funcVersionSetting, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
+import { createFunction, ext, FuncVersion, funcVersionSetting, getRandomHexString, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
 import { createTestActionContext, runForAllTemplateSources, testFolderPath, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
@@ -76,7 +76,7 @@ export abstract class FunctionTesterBase implements Disposable {
         const expectedContents: string[] = inputs.slice(0);
 
         // Setup common inputs
-        const funcName: string = templateName.replace(/ /g, '');
+        const funcName: string = templateName.replace(/[^a-z0-9]/ig, '') + getRandomHexString();
         inputs.unshift(funcName); // Specify the function name
         inputs.unshift(templateName); // Select the function template
 

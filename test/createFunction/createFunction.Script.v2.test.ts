@@ -184,6 +184,25 @@ function addSuite(tester: FunctionTesterBase): void {
             });
         }
 
+        // For now - these are not supported in Python
+        if (tester.language !== ProjectLanguage.Python) {
+            const iotHubTrigger: string = 'IoT Hub (Event Hub)';
+            test(iotHubTrigger, async () => {
+                await tester.testCreateFunction(
+                    iotHubTrigger,
+                    'AzureWebJobsStorage', // Use existing app setting
+                    'testConsumerGroup'
+                );
+            });
+
+            const sendGridTrigger: string = 'SendGrid';
+            test(iotHubTrigger, async () => {
+                await tester.testCreateFunction(
+                    sendGridTrigger
+                );
+            });
+        }
+
         // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
         test('createFunction API', async () => {
             await runForAllTemplateSources(async (source) => {
