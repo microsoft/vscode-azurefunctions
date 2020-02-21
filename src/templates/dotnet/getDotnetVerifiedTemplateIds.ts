@@ -26,7 +26,8 @@ export function getDotnetVerifiedTemplateIds(version: string): string[] {
         ]);
     } else {
         verifiedTemplateIds = verifiedTemplateIds.concat([
-            'DurableFunctionsOrchestration'
+            'DurableFunctionsOrchestration',
+            'IotHubTrigger'
         ]);
     }
 
