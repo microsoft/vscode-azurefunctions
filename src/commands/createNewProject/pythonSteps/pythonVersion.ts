@@ -32,8 +32,8 @@ export async function getSupportedPythonVersions(funcVersionFromSetting: FuncVer
 
     const versionInfo: [string, string][] = [
         ['2.0.0', '3.6'],
-        ['2.7.1846', '3.7']
-        // ['3.?.?', '3.8'] todo update min version once func cli ships with 3.8 support
+        ['2.7.1846', '3.7'],
+        ['3.0.0', '3.8'] // Need to update the min version to be exact once func cli ships with 3.8 support
     ];
 
     for (const [minFuncVersion, pyVersion] of versionInfo) {
