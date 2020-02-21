@@ -6,6 +6,7 @@
 import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { FuncVersion } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath, testUserInput } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
@@ -16,7 +17,7 @@ suite('Create New Project API', async () => {
         await testUserInput.runWithInputs([/skip for now/i], async () => {
             await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'JavaScript', '~2', false /* openFolder */);
         });
-        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */));
+        await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v2));
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
@@ -33,6 +34,6 @@ suite('Create New Project API', async () => {
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1'));
+        await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1', FuncVersion.v2));
     });
 });

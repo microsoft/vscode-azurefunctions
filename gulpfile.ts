@@ -38,7 +38,7 @@ async function getFuncLink() {
     // tslint:disable-next-line:no-any
     const body = await <any>requestP('https://aka.ms/V00v5v');
     const cliFeed = JSON.parse(body);
-    const version = cliFeed.tags['v2-prerelease'].release;
+    const version = cliFeed.tags['v3-prerelease'].release;
     console.log(`Func cli feed version: ${version}`);
     const cliRelease = cliFeed.releases[version].standaloneCli.find((rel) => {
         return rel.Architecture === 'x64' && (
