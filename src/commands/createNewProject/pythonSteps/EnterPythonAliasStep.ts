@@ -13,7 +13,7 @@ export class EnterPythonAliasStep extends AzureWizardPromptStep<IPythonVenvWizar
     public hideStepCount: boolean = true;
 
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
-        const prompt: string = localize('pyAliasPlaceholder', 'Enter the Python alias or full path');
+        const prompt: string = localize('pyAliasPlaceholder', 'Enter the Python interpreter or full path');
         const supportedVersions: string[] = await getSupportedPythonVersions();
         context.pythonAlias = await ext.ui.showInputBox({ prompt, validateInput: async (value: string): Promise<string | undefined> => await validatePythonAlias(supportedVersions, value) });
     }
