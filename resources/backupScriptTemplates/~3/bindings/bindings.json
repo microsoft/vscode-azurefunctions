@@ -888,6 +888,27 @@
                     ],
                     "label": "$eventHubTrigger_cardinality_label",
                     "help": "$eventHubTrigger_cardinality_help"
+                },
+                {
+                    "name": "dataType",
+                    "value": "enum",
+                    "required": false,
+                    "enum": [
+                        {
+                            "value": "string",
+                            "display": "String"
+                        },
+                        {
+                            "value": "binary",
+                            "display": "Binary"
+                        },
+                        {
+                            "value": "stream",
+                            "display": "Stream"
+                        }
+                    ],
+                    "label": "$eventHubTrigger_dataType_label",
+                    "help": "$eventHubTrigger_dataType_help"
                 }
             ]
         },
@@ -2004,7 +2025,7 @@
             "documentation": "#### Settings\r\n\r\n- `activity`: (optional) the name of the activity. If not specified uses the Function name. You use the activity name to call a given Function from an orchestration triggered Functions\r\n\r\nNote: this feature is in preview and docs will improve before we GA",
             "extension": {
                 "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                "version": "1.8.0"
+                "version": "1.8.3"
             },
             "settings": [
                 {
@@ -2038,7 +2059,7 @@
             "documentation": "#### Settings\r\n\r\n- `orchestration`: (optional) the name of the orchestration. If not specified uses the Function name. You use the orchestration name to start the given Function from an orchestration client\r\n\r\nNote: this feature is in preview and docs will improve before we GA",
             "extension": {
                 "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                "version": "1.8.0"
+                "version": "1.8.3"
             },
             "settings": [
                 {
@@ -2072,7 +2093,7 @@
             "documentation": "\r\nNote: this feature is in preview and docs will improve before we GA",
             "extension": {
                 "id": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
-                "version": "1.8.0"
+                "version": "1.8.3"
             },
             "settings": [
                 {
@@ -2331,6 +2352,98 @@
                     "required": false,
                     "label": "$documentDBIn_sqlQuery_label",
                     "help": "$documentDBIn_sqlQuery_help"
+                }
+            ]
+        },
+        {
+            "type": "signalRConnectionInfo",
+            "displayName": "$signalRConnectionInfoIn_displayName",
+            "direction": "in",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for SignalRConnectionInfo input binding\n\nThe settings specifies the following properties.\n\n- `name` :Variable name used in function code for connection info object.\n- `hubName` : This value must be set to the name of the SignalR hub for which the connection information is generated.\n- `userId` : (Optional) The value of the user identifier claim to be set in the access key token.\n- `connectionStringSetting` : The name of the app setting that contains the SignalR Service connection string (defaults to \"AzureSignalRConnectionString\")\n- `type` : Must be set to *signalRConnectionInfo*.\n- `direction` : Must be set to *in*. \n\n#### C# types for SignalRConnectionInfo input binding\n\nThe `SignalRConnectionInfo` binding uses provides its data in a `SignalRConnectionInfo` object.\n\n#### C# Example for SignalRConnectionInfo input binding\n\nThis C# code example uses the binding to generate a valid connection info object and returns it in a web request.\n\n```csharp\n[FunctionName(\"negotiate\")]\npublic static SignalRConnectionInfo Negotiate(\n    [HttpTrigger(AuthorizationLevel.Anonymous)]HttpRequest req,\n    [SignalRConnectionInfo(HubName = \"chat\")]SignalRConnectionInfo connectionInfo)\n{\n    return connectionInfo;\n}\n```\n\n#### JavaScript example for SignalRConnectionInfo input binding\n\nThis JavaScript code example uses the binding to generate a valid connection info object and returns it in a web request.\n\n```JavaScript\nmodule.exports = async function (context, req, connectionInfo) {\n    // connectionInfo contains an access key token with a name identifier\n    // claim set to the authenticated user\n    context.res.body = connectionInfo;\n};\n```\n\nFor more information, see the full refernence for the binding in the [Azure Functions documentation](https://docs.microsoft.com/azure/azure-functions/functions-bindings-signalr-service#signalr-connection-info-input-binding).\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.SignalRService",
+                "version": "1.0.0"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "connectionInfo",
+                    "required": true,
+                    "label": "$signalRConnectionInfoIn_name_label",
+                    "help": "$signalRConnectionInfoIn_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "hubName",
+                    "value": "string",
+                    "defaultValue": "chat",
+                    "required": true,
+                    "label": "$signalRConnectionInfoIn_hubName_label",
+                    "help": "$signalRConnectionInfoIn_hubName_help"
+                },
+                {
+                    "name": "userId",
+                    "value": "string",
+                    "defaultValue": "",
+                    "required": false,
+                    "label": "$signalRConnectionInfoIn_userId_label",
+                    "help": "$signalRConnectionInfoIn_userId_help"
+                },
+                {
+                    "name": "connectionStringSetting",
+                    "value": "string",
+                    "required": false,
+                    "label": "$signalRConnectionInfoIn_connectionString_label",
+                    "help": "$signalRConnectionInfoIn_connectionString_help"
+                }
+            ]
+        },
+        {
+            "type": "signalR",
+            "displayName": "$signalROut_displayName",
+            "direction": "out",
+            "enabledInTryMode": false,
+            "documentation": "#### Settings for SignalR output binding\n\nThe settings specifies the following properties.\n\n- `name` : Variable name used in function code for connection info object.\n- `hubName` : This value must be set to the name of the SignalR hub for which the connection information is generated.\n- `connectionStringSetting` : The name of the app setting that contains the SignalR Service connection string (defaults to \"AzureSignalRConnectionString\")\n- `type` : Must be set to *signalR*.\n- `direction` : Must be set to *out*. \n\n#### C# types for SignalR output binding\n\nThe `signalR` binding can serialize the following types to a SignalR message:\n\n* `SignalRMessage`\n* `SignalRGroupAction`\n\nIn C# you can also bind to `ICollector<T>` or `IAsyncCollector<T>` where `T` is one of the supported types.\n\n#### C# Example for SignalR output binding\n\nThis C# code example sends a message to all clients connected to a SignalR hub named `chat`.\n\n```csharp\npublic static Task SendMessage(object message, IAsyncCollector<SignalRMessage> signalRMessages)\n{\n    return signalRMessages.AddAsync(\n        new SignalRMessage \n        {\n            Target = \"newMessage\", \n            Arguments = new [] { message } \n        });\n}\n```\n\n#### JavaScript example for SignalR output binding\n\nJavaScript supports outputing a single object/string or an array of objects/strings. You access your bindings on `context.bindings` object.\n\nThis shows outputing a single item:\n\n```JavaScript\nmodule.exports = async function (context, req) {\n    context.bindings.signalRMessage = {\n        \"target\": \"newMessage\",\n        \"arguments\": [ req.body ]\n    };\n};\n```\n\nFor more information, see the full refernence for the binding in the [Azure Functions documentation](https://docs.microsoft.com/azure/azure-functions/functions-bindings-signalr-service#signalr-output-binding).\n",
+            "extension": {
+                "id": "Microsoft.Azure.WebJobs.Extensions.SignalRService",
+                "version": "1.0.0"
+            },
+            "settings": [
+                {
+                    "name": "name",
+                    "value": "string",
+                    "defaultValue": "signalRMessages",
+                    "required": true,
+                    "label": "$signalROut_name_label",
+                    "help": "$signalROut_name_help",
+                    "validators": [
+                        {
+                            "expression": "^[a-zA-Z][a-zA-Z0-9]{0,127}$",
+                            "errorText": "[variables('parameterName')]"
+                        }
+                    ]
+                },
+                {
+                    "name": "hubName",
+                    "value": "string",
+                    "defaultValue": "chat",
+                    "required": true,
+                    "label": "$signalROut_hubName_label",
+                    "help": "$signalROut_hubName_help"
+                },
+                {
+                    "name": "connectionStringSetting",
+                    "value": "string",
+                    "required": false,
+                    "label": "$signalROut_connectionString_label",
+                    "help": "$signalROut_connectionString_help"
                 }
             ]
         }
