@@ -105,7 +105,13 @@ export async function runForTemplateSource(source: TemplateSource | undefined, c
             ext.templateProvider = templateProvider;
         }
 
-        await callback(templateProvider);
+        try {
+            await callback(templateProvider);
+        } catch (e) {
+            // Only display this when a test fails, otherwise it'll clog up the logs
+            console.log(`Test failed for template source "${source}".`);
+            throw e;
+        }
     } finally {
         ext.templateProvider = oldProvider;
     }
