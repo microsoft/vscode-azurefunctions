@@ -17,10 +17,11 @@ export enum FuncVersion {
 export const latestGAVersion: FuncVersion = FuncVersion.v3;
 
 export async function promptForFuncVersion(message?: string): Promise<FuncVersion> {
+    const recommended: string = localize('recommended', '(Recommended)');
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
-        { label: 'Azure Functions v3', description: '(.NET Core)', data: FuncVersion.v3 },
-        { label: 'Azure Functions v2', description: '(.NET Core)', data: FuncVersion.v2 },
-        { label: 'Azure Functions v1', description: '(.NET Framework)', data: FuncVersion.v1 }
+        { label: 'Azure Functions v3', description: recommended, data: FuncVersion.v3 },
+        { label: 'Azure Functions v2', data: FuncVersion.v2 },
+        { label: 'Azure Functions v1', data: FuncVersion.v1 }
     ];
 
     picks = picks.filter(p => osSupportsVersion(p.data));
