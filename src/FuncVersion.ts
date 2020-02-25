@@ -26,7 +26,7 @@ export async function promptForFuncVersion(message?: string): Promise<FuncVersio
 
     picks = picks.filter(p => osSupportsVersion(p.data));
 
-    picks.push({ label: localize('learnMore', 'Learn more...'), description: '', data: undefined });
+    picks.push({ label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined });
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), suppressPersistence: true };
     // tslint:disable-next-line: no-constant-condition
