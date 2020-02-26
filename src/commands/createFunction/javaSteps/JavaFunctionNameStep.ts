@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import { localize } from "../../../localize";
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
-import { getUniqueFsPath } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaClassName, getJavaFunctionFilePath, getJavaPackagePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
@@ -16,7 +15,7 @@ export class JavaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardCo
     protected async getUniqueFunctionName(context: IFunctionWizardContext & IJavaProjectWizardContext): Promise<string | undefined> {
         const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
         const packageName: string = nonNullProp(context, 'javaPackageName');
-        return await getUniqueFsPath(getJavaPackagePath(context.projectPath, packageName), getJavaClassName(template.defaultFunctionName), '.java');
+        return await this.getUniqueFsPath(getJavaPackagePath(context.projectPath, packageName), getJavaClassName(template.defaultFunctionName), '.java');
     }
 
     protected async validateFunctionNameCore(context: IFunctionWizardContext & IJavaProjectWizardContext, name: string): Promise<string | undefined> {

@@ -66,20 +66,6 @@ export async function confirmOverwriteFile(fsPath: string): Promise<boolean> {
     }
 }
 
-export async function getUniqueFsPath(folderPath: string, defaultValue: string, fileExtension?: string): Promise<string | undefined> {
-    let count: number = 0;
-    const maxCount: number = 1024;
-
-    while (count < maxCount) {
-        const fileName: string = defaultValue + (count === 0 ? '' : count.toString());
-        if (!(await fse.pathExists(path.join(folderPath, fileExtension ? `${fileName}${fileExtension}` : fileName)))) {
-            return fileName;
-        }
-        count += 1;
-    }
-    return undefined;
-}
-
 export function getRandomHexString(length: number = 10): string {
     const buffer: Buffer = crypto.randomBytes(Math.ceil(length / 2));
     return buffer.toString('hex').slice(0, length);

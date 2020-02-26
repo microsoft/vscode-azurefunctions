@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
+import * as path from 'path';
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -28,6 +30,24 @@ export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> ext
 
     protected abstract getUniqueFunctionName(context: T): Promise<string | undefined>;
     protected abstract validateFunctionNameCore(context: T, name: string): Promise<string | undefined>;
+
+    /**
+     * NOTE: This will always at least add `1` to the default value to (hopefully) make clear the function name is an instance of the template
+     */
+    protected async getUniqueFsPath(folderPath: string, defaultValue: string, fileExtension?: string): Promise<string | undefined> {
+        let count: number = 1;
+        const maxCount: number = 1024;
+
+        while (count < maxCount) {
+            const fileName: string = defaultValue + count.toString();
+            if (!(await fse.pathExists(path.join(folderPath, fileExtension ? fileName + fileExtension : fileName)))) {
+                return fileName;
+            }
+            count += 1;
+        }
+
+        return undefined;
+    }
 
     private async validateFunctionName(context: T, name: string | undefined): Promise<string | undefined> {
         if (!name) {
