@@ -5,7 +5,7 @@
 
 import { IHookCallbackContext } from 'mocha';
 import { TestInput } from 'vscode-azureextensiondev';
-import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
+import { ext, FuncVersion, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
@@ -13,9 +13,10 @@ import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpVali
 suite('Create New Project', async () => {
     const testCases: ICreateProjectTestCase[] = [
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
-        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.0', FuncVersion.v3) },
+        // Temorarily disable latest because it still references netcoreapp3.0
+        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3), templateSourceToSkip: TemplateSource.Latest },
         { ...getFSharpValidateOptions('F#Project', 'netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
-        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.0', FuncVersion.v3), isHiddenLanguage: true },
+        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.1', FuncVersion.v3), isHiddenLanguage: true, templateSourceToSkip: TemplateSource.Latest },
     ];
 
     // Test cases that are the same for both v2 and v3
@@ -49,6 +50,7 @@ suite('Create New Project', async () => {
 
 interface ICreateProjectTestCase extends ICreateProjectTestOptions {
     timeout?: number;
+    templateSourceToSkip?: TemplateSource;
 }
 
 function addTest(testCase: ICreateProjectTestCase): void {
@@ -62,6 +64,11 @@ function addTest(testCase: ICreateProjectTestCase): void {
         }
 
         await runForAllTemplateSources(async () => {
+            if (testCase.templateSourceToSkip === ext.templateProvider.templateSource) {
+                console.log(`Skipping template source "${ext.templateProvider.templateSource}"`);
+                return;
+            }
+
             await createAndValidateProject(testCase);
         });
     });

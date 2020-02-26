@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISuiteCallbackContext } from 'mocha';
+import { ISuiteCallbackContext, ITestCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
+import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
@@ -170,10 +171,16 @@ function addSuite(tester: FunctionTesterBase): void {
             });
 
             const durableHttpStarter: string = 'Durable Functions HTTP starter';
-            test(durableHttpStarter, async () => {
-                await tester.testCreateFunction(
-                    durableHttpStarter
-                );
+            test(durableHttpStarter, async function (this: ITestCallbackContext): Promise<void> {
+                try {
+                    await tester.testCreateFunction(
+                        durableHttpStarter,
+                        ...getRotatingAuthLevel()
+                    );
+                } catch (e) {
+                    // temporarily ignore errors until this is fixed: https://github.com/Azure/azure-functions-templates/pull/932
+                    this.skip();
+                }
             });
 
             const durableOrchestrator: string = 'Durable Functions orchestrator';
