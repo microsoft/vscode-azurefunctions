@@ -16,7 +16,6 @@ import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { isPathEqual } from '../../utils/fs';
-import * as workspaceUtil from '../../utils/workspace';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { getDeployNode, IDeployNode } from './getDeployNode';
@@ -36,12 +35,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
 async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
     addLocalFuncTelemetry(context);
 
-    const { originalDeployFsPath, effectiveDeployFsPath } = await appservice.getDeployFsPath(target, ext.prefix);
-    const workspaceFolder: vscode.WorkspaceFolder | undefined = workspaceUtil.getContainingWorkspace(effectiveDeployFsPath);
-    if (!workspaceFolder) {
-        throw new Error(localize('folderOpenWarning', 'Failed to deploy because the path is not part of an open workspace. Open in a workspace and try again.'));
-    }
-
+    const { originalDeployFsPath, effectiveDeployFsPath, workspaceFolder } = await appservice.getDeployFsPath(context, target);
     const { node, isNewFunctionApp }: IDeployNode = await getDeployNode(context, target, functionAppId, expectedContextValue);
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, effectiveDeployFsPath);
