@@ -617,19 +617,24 @@
                     "group": "2@1"
                 },
                 {
-                    "command": "azureFunctions.redeploy",
+                    "command": "azureFunctions.viewDeploymentLogs",
                     "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.openInPortal",
+                    "command": "azureFunctions.redeploy",
                     "when": "view == azFuncTree && viewItem =~ /^deployment//",
                     "group": "1@2"
                 },
                 {
+                    "command": "azureFunctions.openInPortal",
+                    "when": "view == azFuncTree && viewItem =~ /^deployment//",
+                    "group": "1@3"
+                },
+                {
                     "command": "azureFunctions.viewCommitInGitHub",
                     "when": "view == azFuncTree && viewItem == deployment/github",
-                    "group": "1@3"
+                    "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.refresh",
