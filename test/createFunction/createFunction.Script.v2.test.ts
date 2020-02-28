@@ -6,7 +6,7 @@
 import { ISuiteCallbackContext, ITestCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, parseError, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -175,10 +175,11 @@ function addSuite(tester: FunctionTesterBase): void {
                 try {
                     await tester.testCreateFunction(
                         durableHttpStarter,
-                        ...getRotatingAuthLevel()
+                        getRotatingAuthLevel()
                     );
                 } catch (e) {
                     // temporarily ignore errors until this is fixed: https://github.com/Azure/azure-functions-templates/pull/932
+                    console.log(parseError(e).message);
                     this.skip();
                 }
             });

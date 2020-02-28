@@ -5,7 +5,7 @@
 
 import { IHookCallbackContext } from 'mocha';
 import { TestInput } from 'vscode-azureextensiondev';
-import { ext, FuncVersion, ProjectLanguage, TemplateSource } from '../../extension.bundle';
+import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
@@ -49,7 +49,6 @@ suite('Create New Project', async () => {
 
 interface ICreateProjectTestCase extends ICreateProjectTestOptions {
     timeout?: number;
-    templateSourceToSkip?: TemplateSource;
 }
 
 function addTest(testCase: ICreateProjectTestCase): void {
@@ -63,11 +62,6 @@ function addTest(testCase: ICreateProjectTestCase): void {
         }
 
         await runForAllTemplateSources(async () => {
-            if (testCase.templateSourceToSkip === ext.templateProvider.templateSource) {
-                console.log(`Skipping template source "${ext.templateProvider.templateSource}"`);
-                return;
-            }
-
             await createAndValidateProject(testCase);
         });
     });
