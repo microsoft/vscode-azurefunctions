@@ -167,7 +167,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
     };
 }
 
-export function getJavaValidateOptions(appName: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getJavaValidateOptions(_appName: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.Java,
         version,
@@ -175,7 +175,8 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
             'azureFunctions.projectLanguage': ProjectLanguage.Java,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'package',
-            'azureFunctions.deploySubpath': `target/azure-functions/${appName}`,
+            // Can't check the exact value because of this issue: https://github.com/microsoft/azure-maven-archetypes/issues/136
+            'azureFunctions.deploySubpath': /^target\/azure-functions\/.*/,
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
@@ -287,7 +288,7 @@ const commonExpectedPaths: string[] = [
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     version: FuncVersion;
-    expectedSettings: { [key: string]: string | boolean | object | undefined };
+    expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
     expectedPaths: string[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
@@ -327,11 +328,13 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
-        const value: string | boolean | object | undefined = options.expectedSettings[key];
+        const expectedValue: RegExp | string | boolean | object | undefined = options.expectedSettings[key];
         if (key === 'debug.internalConsoleOptions' && isPathEqual(testWorkspacePath, projectPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
+        } else if (expectedValue instanceof RegExp) {
+            assert.ok(expectedValue.test(settings[key].toString()), `The setting with key "${key}" does not match RegExp "${expectedValue.source}".`);
         } else {
-            assert.deepStrictEqual(settings[key], value, `The setting with key "${key}" is not set to value "${value}".`);
+            assert.deepStrictEqual(settings[key], expectedValue, `The setting with key "${key}" is not set to value "${expectedValue}".`);
         }
         delete settings[key];
     }
