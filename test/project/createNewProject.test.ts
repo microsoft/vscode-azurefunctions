@@ -13,10 +13,9 @@ import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpVali
 suite('Create New Project', async () => {
     const testCases: ICreateProjectTestCase[] = [
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
-        // Temorarily disable latest because it still references netcoreapp3.0
-        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3), templateSourceToSkip: TemplateSource.Latest },
+        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3) },
         { ...getFSharpValidateOptions('F#Project', 'netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
-        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.1', FuncVersion.v3), isHiddenLanguage: true, templateSourceToSkip: TemplateSource.Latest },
+        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.1', FuncVersion.v3), isHiddenLanguage: true },
     ];
 
     // Test cases that are the same for both v2 and v3
