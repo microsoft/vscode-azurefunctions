@@ -11,5 +11,5 @@ export async function viewDeploymentLogs(context: IActionContext, node?: Deploym
     if (!node) {
         node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context);
     }
-    await node.viewDeploymentLogs();
+    await node.viewDeploymentLogs(context);
 }
