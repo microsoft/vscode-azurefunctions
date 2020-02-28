@@ -1,6 +1,6 @@
 # Azure Functions for Visual Studio Code (Preview)
 
-[![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azurefunctions)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=2) [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/Microsoft/vscode-azurefunctions/blob/master/LICENSE.md)
+[![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azurefunctions)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=2)
 
 Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
 out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
@@ -76,7 +76,7 @@ npm i -g azure-functions-core-tools@3 --unsafe-perm true
 To install with chocolatey:
 
 ```bash
-choco install azure-functions-core-tools
+choco install azure-functions-core-tools --params "'/x64'"
 ```
 
 ### Mac
@@ -169,7 +169,7 @@ See [here](https://aka.ms/Dqur4e) for more installation options and the latest i
 
 ### Python
 
-* [Python](https://www.python.org/downloads/) 3.6.x or 3.7.x
+* [Python](https://www.python.org/downloads/) 3.6.x, 3.7.x, or 3.8.x
 
   > **NOTE**: [Python 3.6.8](https://www.python.org/downloads/release/python-368/) is the last release of Python 3.6.x with installable binaries for Windows.
 
