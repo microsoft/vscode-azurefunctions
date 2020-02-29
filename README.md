@@ -3,7 +3,7 @@
 [![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azurefunctions)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=2)
 
 Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
-out this [deployment tutorial](https://code.visualstudio.com/tutorials/functions-extension/getting-started)
+out this [deployment tutorial](https://docs.microsoft.com/azure/azure-functions/functions-create-first-function-vs-code)
 to get started with the Azure Functions extension and check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
 
 **Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for additional information about the extension.**
