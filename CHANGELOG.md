@@ -1,6 +1,26 @@
-<!-- markdownlint-disable MD024 -->
-
 # Change Log
+
+## 0.21.0 - 2020-03-03
+
+### Added
+- Java and C# support for the local project tree item
+  - Copy local http trigger urls
+  - Execute local timer triggers
+- Allow Python 3.8 when creating local project or deploying to Azure (only supported in v3 of the Azure Functions runtime)
+- Allow deploying Java projects to Linux Function Apps in Azure (only supported in v3 of the Azure Functions runtime)
+- Added setting "azureFunctions.showDeployConfirmation" to turn off "Are you sure you want to deploy..." dialog
+- Logging is enabled by default when creating a Function App in Azure
+
+### Changed
+- Bindings are no longer displayed in the tree. View properties on the function instead
+- "Add Binding..." was moved from the local "Bindings" tree item to the function tree item
+- Prompt for runtime before OS when creating a Function App in Azure. OS will not be prompted if the runtime doesn't support it
+- Inline button to view deployment logs was removed. Left or right click the tree item instead
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.21.0%22+is%3Aclosed)
+- Reduced time to create the first Function App in Azure on some new subscriptions
+- Prompt to select existing resource group instead of "403" error when subscription doesn't have permissions to create
+- "Init project for VS Code" will detect projects using "extensions.csproj" and configure to use "func extensions install" instead of bundle
 
 ## 0.20.2 - 2020-01-23
 
