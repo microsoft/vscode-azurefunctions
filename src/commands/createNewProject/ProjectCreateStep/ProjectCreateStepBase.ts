@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import { Progress } from 'vscode';
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -28,11 +28,6 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
         if (await gitUtils.isGitInstalled(context.workspacePath) && !await gitUtils.isInsideRepo(context.workspacePath)) {
             await gitUtils.gitInit(context.workspacePath);
         }
-
-        // OpenFolderStep sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
-        await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', (startedContext: IActionContext) => {
-            Object.assign(startedContext, context);
-        });
     }
 
     public shouldExecute(_context: IProjectWizardContext): boolean {

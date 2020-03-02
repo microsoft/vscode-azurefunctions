@@ -4,13 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, Uri, workspace, WorkspaceFolder } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 250;
 
     public async execute(context: IProjectWizardContext): Promise<void> {
+        // OpenFolderStep sometimes restarts the extension host. Adding a second event here to see if we're losing any telemetry
+        await callWithTelemetryAndErrorHandling('azureFunctions.createNewProjectStarted', (startedContext: IActionContext) => {
+            Object.assign(startedContext, context);
+        });
+
         // tslint:disable-next-line:strict-boolean-expressions
         const openFolders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         if (context.openBehavior === 'AddToWorkspace' && openFolders.length === 0) {
