@@ -552,6 +552,11 @@
                     "group": "3@2"
                 },
                 {
+                    "command": "azureFunctions.viewProperties",
+                    "when": "view == azFuncTree && viewItem =~ /Remote;.*;Function;/i",
+                    "group": "4@1"
+                },
+                {
                     "command": "azureFunctions.appSettings.add",
                     "when": "view == azFuncTree && viewItem == applicationSettings",
                     "group": "1@1"
