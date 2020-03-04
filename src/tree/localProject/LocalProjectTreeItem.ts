@@ -6,58 +6,44 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable, WorkspaceFolder } from 'vscode';
-import { AzExtParentTreeItem, AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
-import { functionJsonFileName, funcVersionSetting, hostFileName, localSettingsFileName } from '../../constants';
+import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
+import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
-import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
-import { localize } from '../../localize';
-import { nonNullValue } from '../../utils/nonNull';
-import { treeUtils } from '../../utils/treeUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { FuncVersion } from '../../FuncVersion';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
+import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
-export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposable, IProjectTreeItem {
+export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {
     public static contextValue: string = 'azFuncLocalProject';
     public contextValue: string = LocalProjectTreeItem.contextValue;
-    public readonly label: string = localize('localProject', 'Local Project');
     public readonly source: ProjectSource = ProjectSource.Local;
-    public readonly projectName: string;
     public readonly effectiveProjectPath: string;
     public readonly preCompiledProjectPath: string | undefined;
     public readonly workspacePath: string;
     public readonly workspaceFolder: WorkspaceFolder;
+    public readonly version: FuncVersion;
+    public readonly langauge: ProjectLanguage;
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
-    public constructor(parent: AzExtParentTreeItem, options: { effectiveProjectPath: string; folder: WorkspaceFolder; preCompiledProjectPath?: string }) {
-        super(parent);
-        this.projectName = path.basename(options.preCompiledProjectPath || options.effectiveProjectPath);
+    public constructor(parent: AzExtParentTreeItem, options: { effectiveProjectPath: string; folder: WorkspaceFolder; version: FuncVersion; language: ProjectLanguage; preCompiledProjectPath?: string }) {
+        super(parent, options.preCompiledProjectPath || options.effectiveProjectPath);
         this.effectiveProjectPath = options.effectiveProjectPath;
         this.workspacePath = options.folder.uri.fsPath;
         this.workspaceFolder = options.folder;
         this.preCompiledProjectPath = options.preCompiledProjectPath;
+        this.version = options.version;
+        this.langauge = options.language;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return treeUtils.getThemedIconPath('CreateNewProject');
-    }
-
-    public get id(): string {
-        return 'localProject' + this.projectName;
-    }
-
-    public get description(): string {
-        return this.projectName;
     }
 
     public get hostUrl(): string {
@@ -98,8 +84,7 @@ export class LocalProjectTreeItem extends AzExtParentTreeItem implements Disposa
     }
 
     public async getVersion(): Promise<FuncVersion> {
-        const rawSetting: string | undefined = getWorkspaceSetting(funcVersionSetting, this.workspacePath);
-        return nonNullValue(tryParseFuncVersion(rawSetting), 'version');
+        return this.version;
     }
 
     public async getApplicationSettings(): Promise<ApplicationSettings> {
