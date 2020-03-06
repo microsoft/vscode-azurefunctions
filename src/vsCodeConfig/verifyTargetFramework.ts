@@ -6,10 +6,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { getTargetFramework, tryGetCsprojFile, tryGetFsprojFile } from '../commands/initProjectForVSCode/InitVSCodeStep/DotnetInitVSCodeStep';
 import { deploySubpathSetting, ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { dotnetUtils } from '../utils/dotnetUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
 import { getTasks, ITask, updateTasks } from './tasks';
 
@@ -17,12 +17,12 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
     const settingKey: string = 'showTargetFrameworkWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
-        const projFileName: string | undefined = projectLanguage === ProjectLanguage.CSharp ? await tryGetCsprojFile(projectPath) : await tryGetFsprojFile(projectPath);
-        if (projFileName) {
+        const projFiles: string[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        if (projFiles.length === 1) {
 
             let targetFramework: string;
             try {
-                targetFramework = await getTargetFramework(path.join(projectPath, projFileName));
+                targetFramework = await dotnetUtils.getTargetFramework(path.join(projectPath, projFiles[0]));
             } catch {
                 // ignore
                 return;

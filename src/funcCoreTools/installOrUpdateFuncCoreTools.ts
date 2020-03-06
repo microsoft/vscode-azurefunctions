@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
@@ -14,11 +14,12 @@ import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 import { updateFuncCoreTools } from './updateFuncCoreTools';
 import { funcToolsInstalled } from './validateFuncCoreToolsInstalled';
 
-export async function installOrUpdateFuncCoreTools(): Promise<void> {
+export async function installOrUpdateFuncCoreTools(context: IActionContext): Promise<void> {
     const isFuncInstalled: boolean = await funcToolsInstalled();
     const packageManagers: PackageManager[] = await getFuncPackageManagers(isFuncInstalled);
     if (packageManagers.length === 0) {
-        throw new Error(localize('installNotSupported', 'Install or update is only supported for brew or npm.'));
+        context.errorHandling.suppressReportIssue = true;
+        throw new Error(localize('installNotSupported', 'Failed to install or update. Follow [these instructions](https://aka.ms/Dqur4e) to install manually.'));
     }
 
     if (isFuncInstalled) {

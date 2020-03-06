@@ -43,7 +43,8 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
     context.telemetry.properties.projectRuntime = version;
 
     if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
-        throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps.  Deploy to a Linux Function App instead.'));
+        context.errorHandling.suppressReportIssue = true;
+        throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
     await validateRemoteBuild(context, node.root.client, workspaceFolder.uri.fsPath, language);

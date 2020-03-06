@@ -7,11 +7,11 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { getDotnetDebugSubpath, getTargetFramework, tryGetCsprojFile, tryGetFsprojFile } from '../commands/initProjectForVSCode/InitVSCodeStep/DotnetInitVSCodeStep';
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
 import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { dotnetUtils } from '../utils/dotnetUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { treeUtils } from '../utils/treeUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -127,10 +127,10 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 async function getCompiledProjectPath(projectPath: string): Promise<string | undefined> {
     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
-        const projFileName: string | undefined = projectLanguage === ProjectLanguage.CSharp ? await tryGetCsprojFile(projectPath) : await tryGetFsprojFile(projectPath);
-        if (projFileName) {
-            const targetFramework: string = await getTargetFramework(path.join(projectPath, projFileName));
-            return path.join(projectPath, getDotnetDebugSubpath(targetFramework));
+        const projFiles: string[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        if (projFiles.length === 1) {
+            const targetFramework: string = await dotnetUtils.getTargetFramework(path.join(projectPath, projFiles[0]));
+            return path.join(projectPath, dotnetUtils.getDotnetDebugSubpath(targetFramework));
         } else {
             throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
         }

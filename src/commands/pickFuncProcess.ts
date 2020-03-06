@@ -43,7 +43,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
     const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
 
-    const pid: string = await startFuncTask(result.workspace, funcTask, timeoutInSeconds, timeoutError);
+    const pid: string = await startFuncTask(context, result.workspace, funcTask, timeoutInSeconds, timeoutError);
     return process.platform === 'win32' ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
 }
 
@@ -59,12 +59,13 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
     let taskError: Error | undefined;
     const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
         if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
+            context.errorHandling.suppressReportIssue = true;
             // Throw if _any_ task fails, not just funcTask (since funcTask often depends on build/clean tasks)
-            taskError = new Error(localize('taskFailed', 'Failed to start debugging. Task "{0}" failed with exit code "{1}".', e.execution.task.name, e.exitCode));
+            taskError = new Error(localize('taskFailed', 'Error exists after running preLaunchTask "{0}". View task output for more information.', e.execution.task.name, e.exitCode));
             errorListener.dispose();
         }
     });
