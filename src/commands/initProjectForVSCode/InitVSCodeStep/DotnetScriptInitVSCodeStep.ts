@@ -19,6 +19,6 @@ export class DotnetScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 
     protected getRecommendedExtensions(): string[] {
-        return ['ms-vscode.csharp'];
+        return ['ms-dotnettools.csharp'];
     }
 }

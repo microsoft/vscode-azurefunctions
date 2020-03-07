@@ -33,7 +33,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
     protected getRecommendedExtensions(language: ProjectLanguage): string[] {
         // The csharp extension is really a 'dotnet' extension because it provides debugging for both
-        const recs: string[] = ['ms-vscode.csharp'];
+        const recs: string[] = ['ms-dotnettools.csharp'];
         if (language === ProjectLanguage.FSharp) {
             recs.push('ionide.ionide-fsharp');
         }

@@ -54,7 +54,7 @@ This will create the template with the specified identity. The `require` paramet
 
 ## Contributing
 
-In order to work on this tool, make sure to install the [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp). You must also make sure to open the `JsonCli` folder _and only_ the `JsonCli` folder in VS Code. The source code has been excluded from VS Code when the root of this repo is open so that it doesn't display a bunch of warnings/errors/notifications while working on the extension itself.
+In order to work on this tool, make sure to install the [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp). You must also make sure to open the `JsonCli` folder _and only_ the `JsonCli` folder in VS Code. The source code has been excluded from VS Code when the root of this repo is open so that it doesn't display a bunch of warnings/errors/notifications while working on the extension itself.
 
 ### Debug
 

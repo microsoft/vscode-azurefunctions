@@ -85,7 +85,7 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
             `${projectName}.csproj`
         ],
         expectedExtensionRecs: [
-            'ms-vscode.csharp'
+            'ms-dotnettools.csharp'
         ],
         excludedPaths: [
             '.funcignore'
@@ -118,7 +118,7 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
             `${projectName}.fsproj`
         ],
         expectedExtensionRecs: [
-            'ms-vscode.csharp',
+            'ms-dotnettools.csharp',
             'ionide.ionide-fsharp'
         ],
         excludedPaths: [
@@ -212,7 +212,7 @@ export function getDotnetScriptValidateOptions(language: ProjectLanguage, versio
         expectedPaths: [
         ],
         expectedExtensionRecs: [
-            'ms-vscode.csharp'
+            'ms-dotnettools.csharp'
         ],
         expectedDebugConfigs: [
             'Attach to .NET Script Functions'

@@ -155,7 +155,7 @@ See [here](https://aka.ms/Dqur4e) for more installation options and the latest i
 
 ### .NET
 
-* [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp)
+* [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp)
 * .NET Core Sdk [2.x](https://dotnet.microsoft.com/download/dotnet-core/2.2) or [3.x](https://dotnet.microsoft.com/download/dotnet-core/3.0)
 
 > **NOTE**: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
