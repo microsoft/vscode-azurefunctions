@@ -6,8 +6,8 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
-import { tryGetCsprojFile, tryGetFsprojFile } from './InitVSCodeStep/DotnetInitVSCodeStep';
 
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
@@ -35,11 +35,11 @@ async function isJavaProject(projectPath: string): Promise<boolean> {
 }
 
 async function isCSharpProject(projectPath: string): Promise<boolean> {
-    return !!await tryGetCsprojFile(projectPath);
+    return (await dotnetUtils.getProjFiles(ProjectLanguage.CSharp, projectPath)).length === 1;
 }
 
 async function isFSharpProject(projectPath: string): Promise<boolean> {
-    return !!await tryGetFsprojFile(projectPath);
+    return (await dotnetUtils.getProjFiles(ProjectLanguage.FSharp, projectPath)).length === 1;
 }
 
 /**

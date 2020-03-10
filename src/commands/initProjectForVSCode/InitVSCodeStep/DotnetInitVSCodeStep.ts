@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
@@ -11,6 +10,7 @@ import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand
 import { ext } from '../../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
+import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
@@ -48,14 +48,22 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const projectPath: string = context.projectPath;
         const language: ProjectLanguage = nonNullProp(context, 'language');
 
-        const projFileName: string | undefined = language === ProjectLanguage.FSharp ? await tryGetFsprojFile(projectPath) : await tryGetCsprojFile(projectPath);
-        if (!projFileName) {
-            throw new Error(localize('projNotFound', 'Expected to find a single project file in folder "{1}", but found zero or multiple instead.', path.basename(projectPath)));
+        let projFileName: string;
+        const projFiles: string[] = await dotnetUtils.getProjFiles(language, projectPath);
+        const fileExt: string = language === ProjectLanguage.FSharp ? 'fsproj' : 'csproj';
+        if (projFiles.length === 1) {
+            projFileName = projFiles[0];
+        } else if (projFiles.length === 0) {
+            context.errorHandling.suppressReportIssue = true;
+            throw new Error(localize('projNotFound', 'Failed to find {0} file in folder "{1}".', fileExt, path.basename(projectPath)));
+        } else {
+            context.errorHandling.suppressReportIssue = true;
+            throw new Error(localize('projNotFound', 'Expected to find a single {0} file in folder "{1}", but found multiple instead: {2}.', fileExt, path.basename(projectPath), projFiles.join(', ')));
         }
 
         const projFilePath: string = path.join(projectPath, projFileName);
 
-        const versionInProjFile: string = await getFuncVersion(projFilePath);
+        const versionInProjFile: string = await dotnetUtils.getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
         context.telemetry.properties.versionInProjFile = versionInProjFile;
         // The version from the proj file takes precedence over whatever was set in `context` before this
         // tslint:disable-next-line: strict-boolean-expressions
@@ -81,9 +89,9 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             }
         }
 
-        const targetFramework: string = await getTargetFramework(projFilePath);
+        const targetFramework: string = await dotnetUtils.getTargetFramework(projFilePath);
         this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
-        this._debugSubpath = getDotnetDebugSubpath(targetFramework);
+        this._debugSubpath = dotnetUtils.getDotnetDebugSubpath(targetFramework);
     }
 
     protected getTasks(): TaskDefinition[] {
@@ -151,45 +159,4 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             }
         ];
     }
-}
-
-export function getDotnetDebugSubpath(targetFramework: string): string {
-    return path.posix.join('bin', 'Debug', targetFramework);
-}
-
-export async function tryGetCsprojFile(projectPath: string): Promise<string | undefined> {
-    return await tryGetProjFile(projectPath, /\.csproj$/i);
-}
-
-export async function tryGetFsprojFile(projectPath: string): Promise<string | undefined> {
-    return await tryGetProjFile(projectPath, /\.fsproj$/i);
-}
-
-async function getFuncVersion(projFilePath: string): Promise<string> {
-    return await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
-}
-
-export async function getTargetFramework(projFilePath: string): Promise<string> {
-    return await getPropertyInProjFile(projFilePath, 'TargetFramework');
-}
-
-export async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
-    const projContents: string = (await fse.readFile(projFilePath)).toString();
-    const regExp: RegExp = new RegExp(`<${prop}>(.*)<\\/${prop}>`);
-    const matches: RegExpMatchArray | null = projContents.match(regExp);
-    if (!matches) {
-        throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFilePath));
-    } else {
-        return matches[1];
-    }
-}
-
-/**
- * If a single proj file is found at the root of this folder, returns the path to that file. Otherwise returns undefined
- * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
- */
-async function tryGetProjFile(projectPath: string, regexp: RegExp): Promise<string | undefined> {
-    const files: string[] = await fse.readdir(projectPath);
-    const projectFiles: string[] = files.filter((f: string) => regexp.test(f) && !/extensions\.csproj$/i.test(f));
-    return projectFiles.length === 1 ? projectFiles[0] : undefined;
 }
