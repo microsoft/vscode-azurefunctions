@@ -17,7 +17,6 @@
             ],
             "preLaunchTask": "npm: compile",
             "env": {
-                "AZCODE_FUNCTIONS_IGNORE_BUNDLE": "1",
                 "DEBUGTELEMETRY": "v",
                 "NODE_DEBUG": ""
             }
@@ -58,7 +57,6 @@
             ],
             "preLaunchTask": "npm: compile",
             "env": {
-                "AZCODE_FUNCTIONS_IGNORE_BUNDLE": "1",
                 "MOCHA_grep": "", // RegExp of tests to run (empty for all)
                 "MOCHA_enableTimeouts": "0", // Disable time-outs
                 "DEBUGTELEMETRY": "v",

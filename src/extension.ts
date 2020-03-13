@@ -26,8 +26,9 @@ import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
+    ext.ignoreBundle = ignoreBundle;
     ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = createAzExtOutputChannel('Azure Functions', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
