@@ -1,3 +1,7 @@
+variables:
+  ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
+  ENABLE_LONG_RUNNING_TESTS: true
+
 jobs:
 - job: Windows
   pool:
@@ -23,3 +27,21 @@ jobs:
   - template: common/build.yml
   - template: common/lint.yml
   - template: common/test.yml
+
+trigger:
+  branches:
+    include:
+    - '*'
+
+pr:
+  branches:
+    include:
+    - '*'
+
+schedules:
+- cron: "30 7 * * *"
+  displayName: Nightly at 12:30 PT
+  always: true # Run even when there are no code changes
+  branches:
+    include:
+    - master
