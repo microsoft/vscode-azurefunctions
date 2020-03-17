@@ -24,6 +24,15 @@ import * as buffer from 'vinyl-buffer';
 import * as source from 'vinyl-source-stream';
 import { gulp_installAzureAccount, gulp_installVSCodeExtension, gulp_webpack } from 'vscode-azureextensiondev';
 
+async function prepareForWebpack(): Promise<void> {
+    const mainJsPath: string = path.join(__dirname, 'main.js');
+    let contents: string = (await fse.readFile(mainJsPath)).toString();
+    contents = contents
+        .replace('out/src/extension', 'dist/extension.bundle')
+        .replace(', true /* ignoreBundle */', '');
+    await fse.writeFile(mainJsPath, contents);
+}
+
 function test() {
     const env = process.env;
     env.DEBUGTELEMETRY = 'v';
@@ -84,6 +93,6 @@ function gulp_installPythonExtension() {
     return gulp_installVSCodeExtension('2019.8.30787', 'ms-python', 'python');
 }
 
-exports['webpack-dev'] = () => gulp_webpack('development');
-exports['webpack-prod'] = () => gulp_webpack('production');
+exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
+exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
 exports.test = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli, test);

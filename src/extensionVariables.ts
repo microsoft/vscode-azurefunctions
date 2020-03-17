@@ -22,8 +22,7 @@ export namespace ext {
     export let templateProvider: CentralTemplateProvider;
     export let reporter: ITelemetryReporter;
     export let funcCliPath: string = func;
-    // tslint:disable-next-line: strict-boolean-expressions
-    export let ignoreBundle: boolean = !/^(false|0)?$/i.test(process.env.AZCODE_FUNCTIONS_IGNORE_BUNDLE || '');
+    export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureFunctions';
 }
 
