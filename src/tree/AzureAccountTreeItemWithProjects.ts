@@ -10,14 +10,17 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
 import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { mavenUtils } from '../utils/mavenUtils';
 import { treeUtils } from '../utils/treeUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
+import { InitLocalProjectTreeItem } from './localProject/InitLocalProjectTreeItem';
 import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
+import { LocalProjectTreeItemBase } from './localProject/LocalProjectTreeItemBase';
 import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
@@ -59,19 +62,25 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                 try {
                     hasLocalProject = true;
 
-                    let preCompiledProjectPath: string | undefined;
-                    let effectiveProjectPath: string;
-                    const compiledProjectPath: string | undefined = await getCompiledProjectPath(projectPath);
-                    if (compiledProjectPath) {
-                        preCompiledProjectPath = projectPath;
-                        effectiveProjectPath = compiledProjectPath;
+                    const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                    const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
+                    if (language === undefined || version === undefined) {
+                        children.push(new InitLocalProjectTreeItem(this, projectPath));
                     } else {
-                        effectiveProjectPath = projectPath;
-                    }
+                        let preCompiledProjectPath: string | undefined;
+                        let effectiveProjectPath: string;
+                        const compiledProjectPath: string | undefined = await getCompiledProjectPath(projectPath, language);
+                        if (compiledProjectPath) {
+                            preCompiledProjectPath = projectPath;
+                            effectiveProjectPath = compiledProjectPath;
+                        } else {
+                            effectiveProjectPath = projectPath;
+                        }
 
-                    const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, preCompiledProjectPath });
-                    this._projectDisposables.push(treeItem);
-                    children.push(treeItem);
+                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath });
+                        this._projectDisposables.push(treeItem);
+                        children.push(treeItem);
+                    }
                 } catch (error) {
                     children.push(new InvalidLocalProjectTreeItem(this, projectPath, error));
                 }
@@ -96,9 +105,9 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
-        if (item1 instanceof LocalProjectTreeItem && !(item2 instanceof LocalProjectTreeItem)) {
+        if (item1 instanceof LocalProjectTreeItemBase && !(item2 instanceof LocalProjectTreeItemBase)) {
             return 1;
-        } else if (!(item1 instanceof LocalProjectTreeItem) && item2 instanceof LocalProjectTreeItem) {
+        } else if (!(item1 instanceof LocalProjectTreeItemBase) && item2 instanceof LocalProjectTreeItemBase) {
             return -1;
         } else {
             return super.compareChildrenImpl(item1, item2);
@@ -124,8 +133,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     }
 }
 
-async function getCompiledProjectPath(projectPath: string): Promise<string | undefined> {
-    const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+async function getCompiledProjectPath(projectPath: string, projectLanguage: ProjectLanguage): Promise<string | undefined> {
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
         const projFiles: string[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
         if (projFiles.length === 1) {

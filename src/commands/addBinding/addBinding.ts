@@ -10,6 +10,7 @@ import { ext } from "../../extensionVariables";
 import { FuncVersion } from "../../FuncVersion";
 import { localize } from "../../localize";
 import { LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
+import { LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
 import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
 import { verifyInitForVSCode } from "../../vsCodeConfig/verifyInitForVSCode";
@@ -22,12 +23,15 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
     let workspaceFolder: WorkspaceFolder;
     let workspacePath: string;
     let projectPath: string | undefined;
+    let language: ProjectLanguage;
+    let version: FuncVersion;
 
     if (data instanceof Uri) {
         functionJsonPath = data.fsPath;
         workspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
         workspacePath = workspaceFolder.uri.fsPath;
         projectPath = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
+        [language, version] = await verifyInitForVSCode(context, projectPath);
     } else {
         if (!data) {
             const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
@@ -35,12 +39,15 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         }
 
         functionJsonPath = data.functionJsonPath;
-        workspaceFolder = data.parent.parent.workspaceFolder;
-        workspacePath = data.parent.parent.workspacePath;
-        projectPath = data.parent.parent.effectiveProjectPath;
+
+        const projectTi: LocalProjectTreeItem = data.parent.parent;
+        workspaceFolder = projectTi.workspaceFolder;
+        workspacePath = projectTi.workspacePath;
+        projectPath = projectTi.effectiveProjectPath;
+        language = projectTi.langauge;
+        version = projectTi.version;
     }
 
-    const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, projectPath);
     const wizardContext: IBindingWizardContext = Object.assign(context, { functionJsonPath, workspacePath, projectPath, workspaceFolder, language, version });
     const wizard: AzureWizard<IBindingWizardContext> = createBindingWizard(wizardContext);
     await wizard.prompt();
