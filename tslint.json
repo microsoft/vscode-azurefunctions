@@ -88,5 +88,10 @@
         "newline-per-chained-call": false,
         "no-dynamic-delete": false,
         "trailing-comma": false
+    },
+    "linterOptions": {
+        "exclude": [
+            "**/*.d.ts"
+        ]
     }
 }

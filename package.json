@@ -959,7 +959,7 @@
         "build": "tsc",
         "compile": "tsc -watch",
         "package": "vsce package",
-        "lint": "tslint --project tsconfig.json -e src/*.d.ts -t verbose",
+        "lint": "tslint --project tsconfig.json -t verbose",
         "lint-fix": "tslint --project tsconfig.json -t verbose --fix",
         "pretest": "npm run webpack-prod && gulp preTest",
         "test": "node ./out/test/runTest.js",
