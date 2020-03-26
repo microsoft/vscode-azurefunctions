@@ -10,7 +10,6 @@
 // tslint:disable:typedef
 // tslint:disable:no-unsafe-any
 
-import * as cp from 'child_process';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as chmod from 'gulp-chmod';
@@ -31,15 +30,6 @@ async function prepareForWebpack(): Promise<void> {
         .replace('out/src/extension', 'dist/extension.bundle')
         .replace(', true /* ignoreBundle */', '');
     await fse.writeFile(mainJsPath, contents);
-}
-
-function test() {
-    const env = process.env;
-    env.DEBUGTELEMETRY = 'v';
-    env.MOCHA_timeout = String(20 * 1000);
-    env.CODE_TESTS_WORKSPACE = path.join(__dirname, 'test/test.code-workspace');
-    env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
-    return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
 }
 
 let downloadLink;
@@ -89,10 +79,10 @@ function installFuncCli() {
         .pipe(gulp.dest(funcDir));
 }
 
-function gulp_installPythonExtension() {
-    return gulp_installVSCodeExtension('2019.8.30787', 'ms-python', 'python');
+async function gulp_installPythonExtension() {
+    return gulp_installVSCodeExtension('ms-python', 'python');
 }
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.test = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli, test);
+exports.preTest = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli);

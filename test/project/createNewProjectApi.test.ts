@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion } from '../../extension.bundle';
@@ -21,7 +20,7 @@ suite('Create New Project API', async () => {
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
-    test('C# Script IoT', async function (this: IHookCallbackContext): Promise<void> {
+    test('C# Script IoT', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }

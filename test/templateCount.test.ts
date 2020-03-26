@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
@@ -38,7 +37,7 @@ function addSuite(source: TemplateSource | undefined): void {
         ];
 
         for (const [language, version, expectedCount] of cases) {
-            test(`${language} ${version}`, async function (this: IHookCallbackContext): Promise<void> {
+            test(`${language} ${version}`, async function (this: Mocha.Context): Promise<void> {
                 if (language === ProjectLanguage.Java) {
                     await javaPreTest(this);
                 }
@@ -52,7 +51,7 @@ function addSuite(source: TemplateSource | undefined): void {
     });
 }
 
-async function javaPreTest(testContext: IHookCallbackContext): Promise<void> {
+async function javaPreTest(testContext: Mocha.Context): Promise<void> {
     if (!longRunningTestsEnabled) {
         testContext.skip();
     }

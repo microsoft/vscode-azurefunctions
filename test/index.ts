@@ -3,64 +3,55 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-//
-// PLEASE DO NOT MODIFY / DELETE UNLESS YOU KNOW WHAT YOU ARE DOING
-//
-// This file is providing the test runner to use when running extension tests.
-// By default the test runner in use is Mocha based.
-//
-// You can provide your own test runner if you want to override it by exporting
-// a function run(testRoot: string, clb: (error:Error) => void) that the extension
-// host can call to run the tests. The test runner is expected to use console.log
-// to report the results back to the caller. When the tests are finished, return
-// a possible error to the callback or null if none.
-
+import * as glob from 'glob';
+import * as Mocha from 'mocha';
 import * as path from 'path';
-// tslint:disable-next-line:no-require-imports no-submodule-imports
-import testRunner = require('vscode/lib/testrunner');
 
-const options: { [key: string]: string | boolean | number | object } = {
-    ui: 'tdd', 		// the TDD UI is being used in extension.test.ts (suite, test, etc.)
-    useColors: true // colored output from test results
-};
-
-// You can directly control Mocha options using environment variables beginning with MOCHA_.
-// For example:
-// {
-//   "name": "Launch Tests",
-//   "type": "extensionHost",
-//   "request": "launch",
-//   ...
-//   "env": {
-//     "MOCHA_enableTimeouts": "0",
-//     "MOCHA_grep": "tests-to-run"
-// }
-//
-// See https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically#set-options for all available options
-
-// Defaults
-options.reporter = 'mocha-multi-reporters';
-options.reporterOptions = {
-    reporterEnabled: 'spec, mocha-junit-reporter',
-    mochaJunitReporterReporterOptions: {
-        mochaFile: path.join(__dirname, '..', '..', 'test-results.xml')
-    }
-};
-
-for (const envVar of Object.keys(process.env)) {
-    const match: RegExpMatchArray | null = envVar.match(/^mocha_(.+)/i);
-    if (match) {
-        const [, option] = match;
-        // tslint:disable-next-line:strict-boolean-expressions
-        let value: string | number = process.env[envVar] || '';
-        if (typeof value === 'string' && !isNaN(parseInt(value))) {
-            value = parseInt(value);
+// tslint:disable-next-line: export-name
+export async function run(): Promise<void> {
+    const options: Mocha.MochaOptions = {
+        ui: 'tdd',
+        color: true,
+        reporter: 'mocha-multi-reporters',
+        reporterOptions: {
+            reporterEnabled: 'spec, mocha-junit-reporter',
+            mochaJunitReporterReporterOptions: {
+                mochaFile: path.resolve(__dirname, '..', '..', 'test-results.xml')
+            }
         }
-        options[option] = value;
+    };
+
+    addEnvVarsToMochaOptions(options);
+    console.log(`Mocha options: ${JSON.stringify(options, undefined, 2)}`);
+
+    const mocha = new Mocha(options);
+
+    const files: string[] = await new Promise((resolve, reject) => {
+        glob('**/**.test.js', { cwd: __dirname }, (err, result) => {
+            err ? reject(err) : resolve(result);
+        });
+    });
+
+    files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
+
+    const failures = await new Promise<number>(resolve => mocha.run(resolve));
+    if (failures > 0) {
+        throw new Error(`${failures} tests failed.`);
     }
 }
-console.warn(`Mocha options: ${JSON.stringify(options, undefined, 2)}`);
 
-testRunner.configure(options);
-
-module.exports = testRunner;
+function addEnvVarsToMochaOptions(options: Mocha.MochaOptions): void {
+    for (const envVar of Object.keys(process.env)) {
+        const match: RegExpMatchArray | null = envVar.match(/^mocha_(.+)/i);
+        if (match) {
+            const [, option] = match;
+            // tslint:disable-next-line:strict-boolean-expressions
+            let value: string | number = process.env[envVar] || '';
+            if (typeof value === 'string' && !isNaN(parseInt(value))) {
+                value = parseInt(value);
+            }
+            // tslint:disable-next-line: no-any
+            (<any>options)[option] = value;
+        }
+    }
+}

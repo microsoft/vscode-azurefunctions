@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { IHookCallbackContext } from 'mocha';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -32,7 +31,7 @@ export function createTestActionContext(): IActionContext {
 let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
 
 // Runs before all tests
-suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
+suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
 
     await fse.ensureDir(testFolderPath);
@@ -60,7 +59,7 @@ suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
     process.env.AzureWebJobsStorage = 'ignore';
 });
 
-suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
+suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     this.timeout(90 * 1000);
     try {
         await fse.remove(testFolderPath);

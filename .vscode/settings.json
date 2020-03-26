@@ -1,8 +1,15 @@
 {
+    "editor.codeActionsOnSave": {
+        "source.fixAll.tslint": true,
+        "source.organizeImports": true
+    },
+    "editor.detectIndentation": false,
     "editor.formatOnSave": true,
     "editor.insertSpaces": true,
-    "editor.detectIndentation": false,
     "editor.tabSize": 4,
+    "files.exclude": {
+        "tools/JsonCli/src/**": true
+    },
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
     "search.exclude": {
@@ -11,12 +18,7 @@
         ".vscode-test": true,
         "resources/backup*Templates": true
     },
-    "editor.codeActionsOnSave": {
-        "source.fixAll.tslint": true,
-    },
     "tslint.ignoreDefinitionFiles": true,
-    "files.exclude": {
-        "tools/JsonCli/src/**": true
-    },
-    "typescript.preferences.importModuleSpecifier": "relative"
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

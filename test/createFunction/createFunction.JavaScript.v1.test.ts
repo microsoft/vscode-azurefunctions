@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
@@ -27,7 +26,7 @@ class JSFunctionTesterV1 extends FunctionTesterBase {
 }
 
 // tslint:disable-next-line:max-func-body-length no-function-expression
-suite('Create Function JavaScript ~1', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create Function JavaScript ~1', async function (this: Mocha.Suite): Promise<void> {
     const jsTester: JSFunctionTesterV1 = new JSFunctionTesterV1();
 
     suiteSetup(async () => {

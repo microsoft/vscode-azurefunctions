@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISuiteCallbackContext, ITestCallbackContext } from 'mocha';
+import { ITestCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, parseError, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
@@ -70,7 +70,7 @@ function addSuitesForVersion(version: FuncVersion): void {
 
 function addSuite(tester: FunctionTesterBase): void {
     // tslint:disable-next-line:max-func-body-length no-function-expression
-    suite(`Create Function ${tester.language} ${tester.version}`, async function (this: ISuiteCallbackContext): Promise<void> {
+    suite(`Create Function ${tester.language} ${tester.version}`, async function (this: Mocha.Suite): Promise<void> {
         suiteSetup(async () => {
             await tester.initAsync();
         });

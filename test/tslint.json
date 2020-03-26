@@ -1,23 +1,28 @@
 {
     "extends": "../tslint.json",
     "rules": {
+        "align": false,
+        "max-func-body-length": false,
+        "no-any": false,
         "no-console": false,
+        "no-empty": false,
         "no-implicit-dependencies": [
             true,
-            "dev"
+            "dev",
+            [
+                "vscode"
+            ]
         ],
+        "no-multiline-string": false,
+        "no-non-null-assertion": false,
+        "no-unexternalized-strings": false,
+        "no-unsafe-any": false,
         "typedef": [
             true,
             "call-signature",
-            // "arrow-call-signature",
             "parameter",
-            // "arrow-parameter",
             "property-declaration",
-            "variable-declaration",
             "member-variable-declaration"
-            // "object-destructuring",
-            // "array-destructuring"
-        ],
-        "no-unexternalized-strings": false
+        ]
     }
 }

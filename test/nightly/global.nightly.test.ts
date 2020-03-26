@@ -5,7 +5,6 @@
 
 import { ResourceManagementClient } from 'azure-arm-resource';
 import { WebSiteManagementClient } from 'azure-arm-website';
-import { IHookCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { TestAzureAccount } from 'vscode-azureextensiondev';
 import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
@@ -16,27 +15,25 @@ export let testClient: WebSiteManagementClient;
 export const resourceGroupsToDelete: string[] = [];
 
 // Runs before all nightly tests
-suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
-    if (!longRunningTestsEnabled) {
-        this.skip();
-    }
-    this.timeout(2 * 60 * 1000);
+suiteSetup(async function (this: Mocha.Context): Promise<void> {
+    if (longRunningTestsEnabled) {
+        this.timeout(2 * 60 * 1000);
 
-    testAccount = new TestAzureAccount(vscode);
-    await testAccount.signIn();
-    ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects(testAccount);
-    ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
-    testClient = createAzureClient(testAccount.getSubscriptionContext(), WebSiteManagementClient);
+        testAccount = new TestAzureAccount(vscode);
+        await testAccount.signIn();
+        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects(testAccount);
+        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
+        testClient = createAzureClient(testAccount.getSubscriptionContext(), WebSiteManagementClient);
+    }
 });
 
-suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-    if (!longRunningTestsEnabled) {
-        this.skip();
-    }
-    this.timeout(10 * 60 * 1000);
+suiteTeardown(async function (this: Mocha.Context): Promise<void> {
+    if (longRunningTestsEnabled) {
+        this.timeout(10 * 60 * 1000);
 
-    await deleteResourceGroups();
-    ext.azureAccountTreeItem.dispose();
+        await deleteResourceGroups();
+        ext.azureAccountTreeItem.dispose();
+    }
 });
 
 async function deleteResourceGroups(): Promise<void> {
