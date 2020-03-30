@@ -23,6 +23,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
 
     if (hasPackageJson) {
         expectedSettings['azureFunctions.preDeployTask'] = 'npm prune';
+        expectedSettings['azureFunctions.postDeployTask'] = 'npm install';
         expectedPaths.push('package.json');
         expectedTasks.push('npm install', 'npm prune');
     }
@@ -50,6 +51,7 @@ export function getTypeScriptValidateOptions(version: FuncVersion = defaultVersi
             'azureFunctions.projectRuntime': version,
             'azureFunctions.deploySubpath': '.',
             'azureFunctions.preDeployTask': 'npm prune',
+            'azureFunctions.postDeployTask': 'npm install',
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [

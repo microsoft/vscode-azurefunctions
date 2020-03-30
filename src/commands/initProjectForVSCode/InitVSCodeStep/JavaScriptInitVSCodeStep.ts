@@ -23,6 +23,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         this.hasPackageJson = await fse.pathExists(path.join(context.projectPath, 'package.json'));
         if (this.hasPackageJson) {
             this.preDeployTask = npmPruneTaskLabel;
+            this.settings.push({ key: 'postDeployTask', value: npmInstallTaskLabel });
         }
     }
 

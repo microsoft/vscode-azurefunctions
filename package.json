@@ -920,6 +920,11 @@
                         "type": "string",
                         "description": "%azureFunctions.preDeployTask%"
                     },
+                    "azureFunctions.postDeployTask": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azureFunctions.postDeployTask%"
+                    },
                     "azureFunctions.pythonVenv": {
                         "scope": "resource",
                         "type": "string",
