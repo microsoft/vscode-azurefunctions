@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import { WebSiteManagementModels as Models } from 'azure-arm-website';
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
@@ -14,7 +13,7 @@ import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue'
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
 
 // tslint:disable-next-line: max-func-body-length
-suite('Function App Operations', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Function App Operations', async function (this: Mocha.Suite): Promise<void> {
     this.timeout(7 * 60 * 1000);
 
     let appName: string;
@@ -23,7 +22,7 @@ suite('Function App Operations', async function (this: ISuiteCallbackContext): P
     let saName: string;
     let aiName: string;
 
-    suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
+    suiteSetup(async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }

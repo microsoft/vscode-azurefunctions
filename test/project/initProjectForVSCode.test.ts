@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { ISuiteCallbackContext } from 'mocha';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
@@ -12,7 +11,7 @@ import { createTestActionContext, testFolderPath, testUserInput } from '../globa
 import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Init Project For VS Code', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Init Project For VS Code', async function (this: Mocha.Suite): Promise<void> {
     this.timeout(30 * 1000);
 
     test('JavaScript', async () => {

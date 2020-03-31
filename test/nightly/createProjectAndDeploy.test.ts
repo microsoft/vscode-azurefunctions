@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { IHookCallbackContext, ISuiteCallbackContext } from 'mocha';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { getRandomHexString, requestUtils } from '../../extension.bundle';
@@ -13,21 +12,19 @@ import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellVa
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
-suite('Create Project and Deploy', async function (this: ISuiteCallbackContext): Promise<void> {
+suite('Create Project and Deploy', async function (this: Mocha.Suite): Promise<void> {
     this.timeout(7 * 60 * 1000);
 
-    suiteSetup(async function (this: IHookCallbackContext): Promise<void> {
+    suiteSetup(async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }
     });
 
-    suiteTeardown(async function (this: IHookCallbackContext): Promise<void> {
-        if (!longRunningTestsEnabled) {
-            this.skip();
+    suiteTeardown(async () => {
+        if (longRunningTestsEnabled) {
+            await cleanTestWorkspace();
         }
-
-        await cleanTestWorkspace();
     });
 
     test('JavaScript', async () => {
@@ -43,14 +40,14 @@ suite('Create Project and Deploy', async function (this: ISuiteCallbackContext):
         await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp3.1'), createFunctionInputs: [namespace] });
     });
 
-    test('PowerShell', async function (this: IHookCallbackContext): Promise<void> {
+    test('PowerShell', async function (this: Mocha.Context): Promise<void> {
         // Skipping until we fix this: https://github.com/microsoft/vscode-azurefunctions/issues/1659
         this.skip();
 
         await testCreateProjectAndDeploy({ ...getPowerShellValidateOptions() });
     });
 
-    test('Python', async function (this: IHookCallbackContext): Promise<void> {
+    test('Python', async function (this: Mocha.Context): Promise<void> {
         // Disabling on Windows until we can get it to work
         if (process.platform === 'win32') {
             this.skip();

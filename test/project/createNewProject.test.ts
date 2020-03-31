@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IHookCallbackContext } from 'mocha';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.test';
@@ -52,7 +51,7 @@ interface ICreateProjectTestCase extends ICreateProjectTestOptions {
 }
 
 function addTest(testCase: ICreateProjectTestCase): void {
-    test(`${testCase.language} ${testCase.version}`, async function (this: IHookCallbackContext): Promise<void> {
+    test(`${testCase.language} ${testCase.version}`, async function (this: Mocha.Context): Promise<void> {
         if (testCase.timeout !== undefined) {
             if (longRunningTestsEnabled) {
                 this.timeout(testCase.timeout);

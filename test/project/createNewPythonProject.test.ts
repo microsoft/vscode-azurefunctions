@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { IHookCallbackContext } from 'mocha';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
@@ -17,7 +16,7 @@ suite('Create New Python Project', async () => {
         await createAndValidateProject({ ...getPythonValidateOptions(undefined, FuncVersion.v2), inputs: [/skip/i] });
     });
 
-    test('enter venv', async function (this: IHookCallbackContext): Promise<void> {
+    test('enter venv', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }
