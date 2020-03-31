@@ -6,10 +6,9 @@
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { FuncVersion } from '../../../FuncVersion';
-import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
-import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -21,7 +20,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
     }
 
     public static async createStep(context: IActionContext): Promise<DotnetFunctionCreateStep> {
-        await dotnetUtils.validateDotnetInstalled(context);
+        await validateDotnetInstalled(context);
         return new DotnetFunctionCreateStep();
     }
 
@@ -46,7 +45,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
 
         const version: FuncVersion = nonNullProp(context, 'version');
-        await executeDotnetTemplateCommand(version, context.projectPath, 'create', '--identity', template.id, ...args);
+        await executeDotnetTemplateCommand(context, version, context.projectPath, 'create', '--identity', template.id, ...args);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
-    const framework: string = await getFramework(workingDirectory);
+export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
+    const framework: string = await getFramework(context, workingDirectory);
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
         undefined,
@@ -39,8 +40,13 @@ export function getDotnetProjectTemplatePath(version: FuncVersion): string {
     return path.join(getDotnetTemplatesPath(), `projectTemplates-${version}.nupkg`);
 }
 
+export async function validateDotnetInstalled(context: IActionContext): Promise<void> {
+    // NOTE: Doesn't feel obvious that `getFramework` would validate dotnet is installed, hence creating a separate function named `validateDotnetInstalled` to export from this file
+    await getFramework(context, undefined);
+}
+
 let cachedFramework: string | undefined;
-async function getFramework(workingDirectory: string | undefined): Promise<string> {
+async function getFramework(context: IActionContext, workingDirectory: string | undefined): Promise<string> {
     if (!cachedFramework) {
         let versions: string = '';
         try {
@@ -65,7 +71,8 @@ async function getFramework(workingDirectory: string | undefined): Promise<strin
         }
 
         if (!cachedFramework) {
-            throw new Error(localize('noMatchingFramework', 'You must have the .NET Core SDK installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
+            context.errorHandling.suppressReportIssue = true;
+            throw new Error(localize('noMatchingFramework', 'You must have the [.NET Core SDK](https://aka.ms/AA4ac70) installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
         }
     }
 
