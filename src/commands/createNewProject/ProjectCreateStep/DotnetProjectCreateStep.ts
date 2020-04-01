@@ -11,9 +11,8 @@ import { ext } from '../../../extensionVariables';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
-import { executeDotnetTemplateCommand } from '../../../templates/dotnet/executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { cpUtils } from '../../../utils/cpUtils';
-import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
@@ -24,7 +23,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
     }
 
     public static async createStep(context: IActionContext): Promise<DotnetProjectCreateStep> {
-        await dotnetUtils.validateDotnetInstalled(context);
+        await validateDotnetInstalled(context);
         return new DotnetProjectCreateStep();
     }
 
@@ -40,7 +39,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const majorVersion: string = getMajorVersion(version);
         const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${majorVersion}.x`;
         const functionsVersion: string = 'v' + majorVersion;
-        await executeDotnetTemplateCommand(version, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        await executeDotnetTemplateCommand(context, version, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
         await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }

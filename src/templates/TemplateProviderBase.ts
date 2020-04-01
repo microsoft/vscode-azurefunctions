@@ -56,8 +56,8 @@ export abstract class TemplateProviderBase {
 
     public abstract getLatestTemplateVersion(): Promise<string>;
     public abstract getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates>;
-    public abstract getCachedTemplates(): Promise<ITemplates | undefined>;
-    public abstract getBackupTemplates(): Promise<ITemplates>;
+    public abstract getCachedTemplates(context: IActionContext): Promise<ITemplates | undefined>;
+    public abstract getBackupTemplates(context: IActionContext): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
 
     /**

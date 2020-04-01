@@ -172,7 +172,7 @@ export class CentralTemplateProvider {
         if (!this.templateSource) {
             try {
                 context.telemetry.properties.templateSource = 'cache';
-                return await provider.getCachedTemplates();
+                return await provider.getCachedTemplates(context);
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
                 ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
@@ -190,7 +190,7 @@ export class CentralTemplateProvider {
                 context.telemetry.properties.templateSource = 'backup';
                 const backupTemplateVersion: string = provider.getBackupTemplateVersion();
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
-                const result: ITemplates = await provider.getBackupTemplates();
+                const result: ITemplates = await provider.getBackupTemplates(context);
                 ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), backupTemplateVersion);
                 await provider.cacheTemplates();
                 return result;
