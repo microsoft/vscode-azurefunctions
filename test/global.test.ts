@@ -22,6 +22,7 @@ export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRan
 export let testWorkspacePath: string;
 
 export let longRunningTestsEnabled: boolean;
+export let skipStagingTemplateSource: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
@@ -43,17 +44,19 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
+    skipStagingTemplateSource = isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
     await preLoadTemplates(ext.templateProvider);
     templateProviderMap = new Map();
     for (const source of Object.values(TemplateSource)) {
-        templateProviderMap.set(source, new CentralTemplateProvider(source));
+        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
+            templateProviderMap.set(source, new CentralTemplateProvider(source));
+        }
     }
 
     await runForAllTemplateSources(async (_source, provider) => await preLoadTemplates(provider));
 
-    // tslint:disable-next-line:strict-boolean-expressions
-    longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
+    longRunningTestsEnabled = isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
@@ -69,6 +72,11 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
         console.warn(`Failed to delete test folder path: ${parseError(error).message}`);
     }
 });
+
+function isEnvironmentVariableSet(val: string | undefined): boolean {
+    // tslint:disable-next-line: strict-boolean-expressions
+    return !/^(false|0)?$/i.test(val || '');
+}
 
 /**
  * Pre-load templates so that the first related unit test doesn't time out

@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, longRunningTestsEnabled, runForTemplateSource, testUserInput, testWorkspacePath } from './global.test';
+import { cleanTestWorkspace, createTestActionContext, longRunningTestsEnabled, runForTemplateSource, skipStagingTemplateSource, testUserInput, testWorkspacePath } from './global.test';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
@@ -38,6 +38,10 @@ function addSuite(source: TemplateSource | undefined): void {
 
         for (const [language, version, expectedCount] of cases) {
             test(`${language} ${version}`, async function (this: Mocha.Context): Promise<void> {
+                if (source === TemplateSource.Staging && skipStagingTemplateSource) {
+                    this.skip();
+                }
+
                 if (language === ProjectLanguage.Java) {
                     await javaPreTest(this);
                 }
