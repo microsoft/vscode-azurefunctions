@@ -34,24 +34,12 @@ export abstract class TemplateProviderBase {
         this.projectPath = projectPath;
     }
 
-    /**
-     * Adds version, templateType, and language information to a key to ensure there are no collisions in the cache
-     * For backwards compatability, the original version, templateType, and language will not have this information
-     */
-    public getCacheKey(key: string): string {
-        if (this.version !== FuncVersion.v1) {
-            key = `${key}.${this.version}`;
-        }
+    public async updateCachedValue(key: string, value: unknown): Promise<void> {
+        ext.context.globalState.update(await this.getCacheKey(key), value);
+    }
 
-        if (this.templateType !== TemplateType.Script) {
-            key = `${key}.${this.templateType}`;
-        }
-
-        if (vscode.env.language && !/^en(-us)?$/i.test(vscode.env.language)) {
-            key = `${key}.${vscode.env.language}`;
-        }
-
-        return key;
+    public async getCachedValue<T>(key: string): Promise<T | undefined> {
+        return ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
 
     public abstract getLatestTemplateVersion(): Promise<string>;
@@ -68,7 +56,7 @@ export abstract class TemplateProviderBase {
     }
 
     public async getCachedTemplateVersion(): Promise<string | undefined> {
-        return ext.context.globalState.get(this.getCacheKey(TemplateProviderBase.templateVersionKey));
+        return this.getCachedValue(TemplateProviderBase.templateVersionKey);
     }
 
     public getBackupTemplateVersion(): string {
@@ -82,5 +70,31 @@ export abstract class TemplateProviderBase {
             default:
                 throw new RangeError(localize('invalidVersion', 'Invalid version "{0}".', this.version));
         }
+    }
+
+    protected async getCacheKeySuffix(): Promise<string> {
+        return '';
+    }
+
+    /**
+     * Adds version, templateType, and language information to a key to ensure there are no collisions in the cache
+     * For backwards compatability, the original version, templateType, and language will not have this information
+     */
+    private async getCacheKey(key: string): Promise<string> {
+        key = key + await this.getCacheKeySuffix();
+
+        if (this.version !== FuncVersion.v1) {
+            key = `${key}.${this.version}`;
+        }
+
+        if (this.templateType !== TemplateType.Script) {
+            key = `${key}.${this.templateType}`;
+        }
+
+        if (vscode.env.language && !/^en(-us)?$/i.test(vscode.env.language)) {
+            key = `${key}.${vscode.env.language}`;
+        }
+
+        return key;
     }
 }

@@ -23,7 +23,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     const hostUrl: string = node.parent.parent.hostUrl;
     await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        const request: requestUtils.Request = await requestUtils.getDefaultRequest(`${hostUrl}/admin/functions/${name}`, undefined, 'POST');
+        const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(`${hostUrl}/admin/functions/${name}`, undefined, 'POST');
         if (client) {
             request.headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }

@@ -3,12 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import { HttpMethods, ServiceClientCredentials, WebResource } from "ms-rest";
+import * as path from 'path';
 import * as requestP from 'request-promise';
 import { appendExtensionUserAgent, ISubscriptionContext } from "vscode-azureextensionui";
+import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 
 export namespace requestUtils {
     export type Request = WebResource & requestP.RequestPromiseOptions;
+
+    export async function getDefaultRequestWithTimeout(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
+        const request: Request = await getDefaultRequest(url, credentials, method);
+        const timeoutSeconds: number | undefined = getWorkspaceSetting('requestTimeout');
+        if (timeoutSeconds !== undefined) {
+            request.timeout = timeoutSeconds * 1000;
+        }
+        return request;
+    }
 
     export async function getDefaultRequest(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
         const request: WebResource = new WebResource();
@@ -51,6 +63,18 @@ export namespace requestUtils {
                     resolve();
                 }
             });
+        });
+    }
+
+    export async function downloadFile(url: string, filePath: string): Promise<void> {
+        const request: Request = await getDefaultRequestWithTimeout(url);
+        await fse.ensureDir(path.dirname(filePath));
+        await new Promise(async (resolve, reject): Promise<void> => {
+            requestP(request, err => {
+                if (err) {
+                    reject(err);
+                }
+            }).pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
         });
     }
 }

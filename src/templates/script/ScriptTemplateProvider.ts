@@ -11,7 +11,8 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
-import { downloadFile, getRandomHexString } from '../../utils/fs';
+import { getRandomHexString } from '../../utils/fs';
+import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
@@ -32,9 +33,9 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     private readonly _resourcesKey: string = 'FunctionTemplateResources';
 
     public async getCachedTemplates(): Promise<ITemplates | undefined> {
-        const cachedResources: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._resourcesKey));
-        const cachedTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._templatesKey));
-        const cachedConfig: object | undefined = ext.context.globalState.get<object>(this.getCacheKey(this._bindingsKey));
+        const cachedResources: object | undefined = await this.getCachedValue(this._resourcesKey);
+        const cachedTemplates: object[] | undefined = await this.getCachedValue(this._templatesKey);
+        const cachedConfig: object | undefined = await this.getCachedValue(this._bindingsKey);
         if (cachedResources && cachedTemplates && cachedConfig) {
             return parseScriptTemplates(cachedResources, cachedTemplates, cachedConfig);
         } else {
@@ -52,7 +53,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         const templatesPath: string = path.join(ext.context.globalStoragePath, 'scriptTemplates');
         try {
             const filePath: string = path.join(templatesPath, `${getRandomHexString()}.zip`);
-            await downloadFile(templateRelease.templateApiZip, filePath);
+            await requestUtils.downloadFile(templateRelease.templateApiZip, filePath);
 
             await new Promise(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
                 // tslint:disable-next-line:no-unsafe-any
@@ -79,18 +80,13 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async cacheTemplates(): Promise<void> {
-        const suffix: string = await this.getCacheKeySuffix();
-        ext.context.globalState.update(this.getCacheKey(this._templatesKey + suffix), this._rawTemplates);
-        ext.context.globalState.update(this.getCacheKey(this._bindingsKey + suffix), this._rawBindings);
-        ext.context.globalState.update(this.getCacheKey(this._resourcesKey + suffix), this._rawResources);
+        await this.updateCachedValue(this._templatesKey, this._rawTemplates);
+        await this.updateCachedValue(this._bindingsKey, this._rawBindings);
+        await this.updateCachedValue(this._resourcesKey, this._rawResources);
     }
 
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return this.version === FuncVersion.v1 || !bundleFeedUtils.isBundleTemplate(template);
-    }
-
-    protected async getCacheKeySuffix(): Promise<string> {
-        return '';
     }
 
     protected async parseTemplates(templatesPath: string): Promise<ITemplates> {

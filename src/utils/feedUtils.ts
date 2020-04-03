@@ -24,8 +24,7 @@ export namespace feedUtils {
     export async function getJsonFeed<T extends {}>(url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const request: requestUtils.Request = await requestUtils.getDefaultRequest(url);
-            request.timeout = 15 * 1000;
+            const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(url);
 
             let response: string;
             try {
