@@ -54,7 +54,7 @@ suite('Init Project For VS Code', async function (this: Mocha.Suite): Promise<vo
 
     test('Python no venv', async () => {
         const mockFiles: MockFile[] = [['HttpTrigger', '__init__.py'], 'requirements.txt'];
-        await initAndValidateProject({ ...getPythonValidateOptions(undefined), mockFiles });
+        await initAndValidateProject({ ...getPythonValidateOptions(undefined), mockFiles, inputs: [/skip/i] });
     });
 
     test('Python single venv', async () => {
