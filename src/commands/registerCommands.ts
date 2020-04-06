@@ -50,6 +50,7 @@ import { restartFunctionApp } from './restartFunctionApp';
 import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 import { swapSlot } from './swapSlot';
+import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
@@ -76,9 +77,11 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.deleteFunctionApp', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProductionSlotTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteProxy', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProxyTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));
+    registerCommand('azureFunctions.disableFunction', disableFunction);
     registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
     registerSiteCommand('azureFunctions.deploySlot', deploySlot);
     registerCommand('azureFunctions.disconnectRepo', disconnectRepo);
+    registerCommand('azureFunctions.enableFunction', enableFunction);
     registerCommand('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);

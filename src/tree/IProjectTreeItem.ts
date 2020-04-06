@@ -15,4 +15,5 @@ export interface IProjectTreeItem {
     getHostJson(): Promise<IParsedHostJson>;
     getVersion(): Promise<FuncVersion>;
     getApplicationSettings(): Promise<ApplicationSettings>;
+    setApplicationSetting(key: string, value: string): Promise<void>;
 }

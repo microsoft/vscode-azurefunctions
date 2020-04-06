@@ -48,6 +48,8 @@
         "onCommand:azureFunctions.executeFunction",
         "onCommand:azureFunctions.viewProperties",
         "onCommand:azureFunctions.deleteFunction",
+        "onCommand:azureFunctions.enableFunction",
+        "onCommand:azureFunctions.disableFunction",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.deploySlot",
         "onCommand:azureFunctions.configureDeploymentSource",
@@ -222,6 +224,16 @@
             {
                 "command": "azureFunctions.deleteFunction",
                 "title": "%azureFunctions.deleteFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.enableFunction",
+                "title": "%azureFunctions.enableFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.disableFunction",
+                "title": "%azureFunctions.disableFunction%",
                 "category": "Azure Functions"
             },
             {
@@ -534,12 +546,22 @@
                 {
                     "command": "azureFunctions.addBinding",
                     "when": "view == azFuncTree && viewItem =~ /Local;ReadWrite;Function;/i",
+                    "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.enableFunction",
+                    "when": "view == azFuncTree && viewItem =~ /Function;.*;Disabled;/i",
+                    "group": "2@1"
+                },
+                {
+                    "command": "azureFunctions.disableFunction",
+                    "when": "view == azFuncTree && viewItem =~ /Function;.*;Enabled;/i",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.deleteFunction",
                     "when": "view == azFuncTree && viewItem =~ /Remote;ReadWrite;Function;/i",
-                    "group": "2@1"
+                    "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
