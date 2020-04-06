@@ -140,6 +140,15 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return appSettings.properties || {};
     }
 
+    public async setApplicationSetting(key: string, value: string): Promise<void> {
+        const settings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+        if (!settings.properties) {
+            settings.properties = {};
+        }
+        settings.properties[key] = value;
+        await this.root.client.updateApplicationSettings(settings);
+    }
+
     public async getIsConsumption(): Promise<boolean> {
         let result: boolean | undefined = this._cachedIsConsumption;
         if (result === undefined) {

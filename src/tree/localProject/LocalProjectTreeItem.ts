@@ -9,7 +9,7 @@ import { Disposable, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
 import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
-import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
+import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
 import { FuncVersion } from '../../FuncVersion';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
@@ -91,5 +91,9 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         const localSettings: ILocalSettingsJson = await getLocalSettingsJson(path.join(this.effectiveProjectPath, localSettingsFileName));
         // tslint:disable-next-line: strict-boolean-expressions
         return localSettings.Values || {};
+    }
+
+    public async setApplicationSetting(key: string, value: string): Promise<void> {
+        await setLocalAppSetting(this.effectiveProjectPath, key, value, MismatchBehavior.Overwrite);
     }
 }

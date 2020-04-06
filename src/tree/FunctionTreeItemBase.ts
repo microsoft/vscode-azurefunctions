@@ -47,7 +47,9 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             triggerType = 'Unknown';
         }
 
-        return getProjectContextValue(this.parent.parent.source, this.parent.access, ProjectResource.Function, triggerType);
+        const state: string = this._disabled ? 'Disabled' : 'Enabled';
+
+        return getProjectContextValue(this.parent.parent.source, this.parent.access, ProjectResource.Function, triggerType, state);
     }
 
     public get description(): string | undefined {
@@ -67,6 +69,10 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('azFuncFunction');
+    }
+
+    public get disabledStateKey(): string {
+        return `AzureWebJobs.${this.name}.Disabled`;
     }
 
     public abstract getKey(): Promise<string | undefined>;
@@ -104,8 +110,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             this._disabled = this.config.disabled;
         } else {
             const appSettings: ApplicationSettings = await this.parent.parent.getApplicationSettings();
-            // tslint:disable-next-line:strict-boolean-expressions
-            const key: string = `AzureWebJobs.${this.name}.Disabled`;
+
             /**
              * The docs only officially mentioned 'true' and 'false', but here is what I found:
              * The following resulted in a disabled function:
@@ -114,7 +119,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
              * false, fAlse, 0, fdsaf, 2, undefined
              */
             // tslint:disable-next-line:strict-boolean-expressions
-            this._disabled = /^(1|true)$/i.test(appSettings[key] || '');
+            this._disabled = /^(1|true)$/i.test(appSettings[this.disabledStateKey] || '');
         }
     }
 }
