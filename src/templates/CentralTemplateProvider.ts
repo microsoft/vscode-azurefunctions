@@ -159,7 +159,7 @@ export class CentralTemplateProvider {
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
             const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
-            ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), latestTemplateVersion);
+            await provider.updateCachedValue(TemplateProviderBase.templateVersionKey, latestTemplateVersion);
             await provider.cacheTemplates();
             return result;
         }
@@ -191,7 +191,7 @@ export class CentralTemplateProvider {
                 const backupTemplateVersion: string = provider.getBackupTemplateVersion();
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates(context);
-                ext.context.globalState.update(provider.getCacheKey(TemplateProviderBase.templateVersionKey), backupTemplateVersion);
+                await provider.updateCachedValue(TemplateProviderBase.templateVersionKey, backupTemplateVersion);
                 await provider.cacheTemplates();
                 return result;
             } catch (error) {

@@ -8,8 +8,8 @@ import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
-import { downloadFile } from '../../utils/fs';
 import { parseJson } from '../../utils/parseJson';
+import { requestUtils } from '../../utils/requestUtils';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
@@ -27,7 +27,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
             return undefined;
         }
 
-        const cachedDotnetTemplates: object[] | undefined = ext.context.globalState.get<object[]>(this.getCacheKey(this._dotnetTemplatesKey));
+        const cachedDotnetTemplates: object[] | undefined = await this.getCachedValue(this._dotnetTemplatesKey);
         if (cachedDotnetTemplates) {
             return await parseDotnetTemplates(cachedDotnetTemplates, this.version);
         } else {
@@ -45,10 +45,13 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const release: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(latestTemplateVersion);
 
         const projectFilePath: string = getDotnetProjectTemplatePath(this.version);
-        await downloadFile(release.projectTemplates, projectFilePath);
 
         const itemFilePath: string = getDotnetItemTemplatePath(this.version);
-        await downloadFile(release.itemTemplates, itemFilePath);
+
+        await Promise.all([
+            requestUtils.downloadFile(release.projectTemplates, projectFilePath),
+            requestUtils.downloadFile(release.itemTemplates, itemFilePath)
+        ]);
 
         return await this.parseTemplates(context);
     }
@@ -59,7 +62,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     public async cacheTemplates(): Promise<void> {
-        ext.context.globalState.update(this.getCacheKey(this._dotnetTemplatesKey), this._rawTemplates);
+        await this.updateCachedValue(this._dotnetTemplatesKey, this._rawTemplates);
     }
 
     private async parseTemplates(context: IActionContext): Promise<ITemplates> {

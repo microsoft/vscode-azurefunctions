@@ -32,16 +32,17 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
         const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(bundleMetadata, latestTemplateVersion);
 
-        const bindingsRequest: requestUtils.Request = await requestUtils.getDefaultRequest(release.bindings);
-        this._rawBindings = parseJson(await requestUtils.sendRequest(bindingsRequest));
+        const bindingsRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(release.bindings);
 
         const language: string = getScriptResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
-        const resourcesRequest: requestUtils.Request = await requestUtils.getDefaultRequest(resourcesUrl);
-        this._rawResources = parseJson(await requestUtils.sendRequest(resourcesRequest));
+        const resourcesRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(resourcesUrl);
 
-        const templatesRequest: requestUtils.Request = await requestUtils.getDefaultRequest(release.functions);
-        this._rawTemplates = parseJson(await requestUtils.sendRequest(templatesRequest));
+        const templatesRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(release.functions);
+
+        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>(
+            await Promise.all([bindingsRequest, resourcesRequest, templatesRequest].map(requestUtils.sendRequest))
+        ).map(parseJson);
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }

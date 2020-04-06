@@ -976,6 +976,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showDeployConfirmation%",
                         "default": true
+                    },
+                    "azureFunctions.requestTimeout": {
+                        "type": "number",
+                        "description": "%azureFunctions.requestTimeout%",
+                        "default": 15
                     }
                 }
             }

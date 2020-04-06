@@ -6,8 +6,6 @@
 import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-// tslint:disable-next-line:no-require-imports
-import request = require('request-promise');
 import { MessageItem } from "vscode";
 import { DialogResponses } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
@@ -82,24 +80,3 @@ export function isSubpath(expectedParent: string, expectedChild: string, relativ
 }
 
 type pathRelativeFunc = (fsPath1: string, fsPath2: string) => string;
-
-export async function downloadFile(url: string, filePath: string): Promise<void> {
-    return new Promise<void>(async (resolve: () => void, reject: (e: Error) => void): Promise<void> => {
-        const templateOptions: request.OptionsWithUri = {
-            method: 'GET',
-            uri: url
-        };
-
-        await fse.ensureDir(path.dirname(filePath));
-        request(templateOptions, (err: Error) => {
-            // tslint:disable-next-line:strict-boolean-expressions
-            if (err) {
-                reject(err);
-            }
-        }).pipe(fse.createWriteStream(filePath).on('finish', () => {
-            resolve();
-        }).on('error', (error: Error) => {
-            reject(error);
-        }));
-    });
-}

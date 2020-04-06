@@ -106,7 +106,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     private async getPSGalleryAzModuleInfo(): Promise<string> {
-        const request: requestUtils.Request = await requestUtils.getDefaultRequest(this.azModuleGalleryUrl, undefined, 'GET');
+        const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(this.azModuleGalleryUrl, undefined, 'GET');
         return await requestUtils.sendRequest(request);
     }
 

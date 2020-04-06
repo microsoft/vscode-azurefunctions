@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseError } from 'vscode-azureextensionui';
-import { localize } from '../localize';
 import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
 
@@ -24,19 +22,9 @@ export namespace feedUtils {
     export async function getJsonFeed<T extends {}>(url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const request: requestUtils.Request = await requestUtils.getDefaultRequest(url);
-            request.timeout = 15 * 1000;
+            const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(url);
 
-            let response: string;
-            try {
-                response = await requestUtils.sendRequest(request);
-            } catch (error) {
-                if (parseError(error).errorType === 'ETIMEDOUT') {
-                    throw new Error(localize('timeoutFeed', 'Timed out retrieving feed "{0}".', url));
-                } else {
-                    throw error;
-                }
-            }
+            const response: string = await requestUtils.sendRequest(request);
             cachedFeed = { data: parseJson(response), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);
         }

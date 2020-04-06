@@ -107,7 +107,7 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
         if (packageManager === PackageManager.brew) {
             const packageName: string = getBrewPackageName(versionFromSetting);
             const brewRegistryUri: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
-            const request: requestUtils.Request = await requestUtils.getDefaultRequest(brewRegistryUri);
+            const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(brewRegistryUri);
             const brewInfo: string = await requestUtils.sendRequest(request);
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
             if (matches && matches.length > 1) {

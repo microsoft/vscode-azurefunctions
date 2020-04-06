@@ -3,12 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
 import { HttpMethods, ServiceClientCredentials, WebResource } from "ms-rest";
+import * as path from 'path';
 import * as requestP from 'request-promise';
-import { appendExtensionUserAgent, ISubscriptionContext } from "vscode-azureextensionui";
+import { appendExtensionUserAgent, ISubscriptionContext, parseError } from "vscode-azureextensionui";
+import { ext } from '../extensionVariables';
+import { localize } from '../localize';
+import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 
 export namespace requestUtils {
     export type Request = WebResource & requestP.RequestPromiseOptions;
+
+    const timeoutKey: string = 'requestTimeout';
+
+    export async function getDefaultRequestWithTimeout(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
+        const request: Request = await getDefaultRequest(url, credentials, method);
+        const timeoutSeconds: number | undefined = getWorkspaceSetting(timeoutKey);
+        if (timeoutSeconds !== undefined) {
+            request.timeout = timeoutSeconds * 1000;
+        }
+        return request;
+    }
 
     export async function getDefaultRequest(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
         const request: WebResource = new WebResource();
@@ -39,7 +55,15 @@ export namespace requestUtils {
     }
 
     export async function sendRequest(request: Request): Promise<string> {
-        return await <Thenable<string>>requestP(request).promise();
+        try {
+            return await <Thenable<string>>requestP(request).promise();
+        } catch (error) {
+            if (parseError(error).errorType === 'ETIMEDOUT') {
+                throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
+            } else {
+                throw error;
+            }
+        }
     }
 
     export async function signRequest(request: Request, cred: ServiceClientCredentials): Promise<void> {
@@ -51,6 +75,18 @@ export namespace requestUtils {
                     resolve();
                 }
             });
+        });
+    }
+
+    export async function downloadFile(url: string, filePath: string): Promise<void> {
+        const request: Request = await getDefaultRequestWithTimeout(url);
+        await fse.ensureDir(path.dirname(filePath));
+        await new Promise(async (resolve, reject): Promise<void> => {
+            requestP(request, err => {
+                if (err) {
+                    reject(err);
+                }
+            }).pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
         });
     }
 }
