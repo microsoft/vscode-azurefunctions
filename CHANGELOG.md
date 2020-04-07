@@ -1,5 +1,16 @@
 # Change Log
 
+## 0.22.0 - 2020-04-08
+
+### Added
+- Enable/disable a function
+- Added setting "azureFunctions.postDeployTask" to run a task after every deploy. New JavaScript/TypeScript projects will run "npm install" by default
+- Improved performance of loading templates
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.22.0%22+is%3Aclosed)
+- Pre-deploy task notification becomes unresponsive and prevents deploy
+- Updated C# recommended extension id to "ms-dotnettools.csharp"
+
 ## 0.21.0 - 2020-03-03
 
 ### Added
