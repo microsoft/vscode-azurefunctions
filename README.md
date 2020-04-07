@@ -2,198 +2,70 @@
 
 [![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azurefunctions)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=2)
 
-Create, debug, manage, and deploy Azure Functions directly from VS Code. Check
-out this [deployment tutorial](https://docs.microsoft.com/azure/azure-functions/functions-create-first-function-vs-code)
-to get started with the Azure Functions extension and check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
+Use the Azure Functions extension to quickly create, debug, manage, and deploy serverless apps directly from VS Code. Check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
 
-**Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for additional information about the extension.**
+**Visit the [wiki](https://github.com/Microsoft/vscode-azurefunctions/wiki) for more information about Azure Functions and how to use the advanced features of this extension.**
 
 > Sign up today for your free Azure account and receive 12 months of free popular services, $200 free credit and 25+ always free services 👉 [Start Free](https://azure.microsoft.com/free/open-source).
 
-## Prerequisites
+## Create your first serverless app
 
-Follow the OS-specific instructions to install the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local):
+1. Select the button to create a new project in the Azure Functions explorer
 
-* [Windows](#windows)
-* [Mac](#mac) (Homebrew)
-* [Linux](#linux) (Ubuntu/Debian)
+    ![createNewProject](resources/readme/createNewProject.png)
 
-Install the prerequisites for your desired language:
+1. Select a new, _empty_ folder to contain your project
+1. Select your desired programming language
+1. Select "HTTP trigger" for your project's first function
+1. Use "HttpTrigger1" as the function name
+1. Select "Anonymous" for the authorization level, which enables anyone to call your function endpoint without a key.
+    > To learn more about authorization levels, see [here](https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp#authorization-keys).
+1. If the selected folder is not already open, select "Open in current window" to open it
 
-* [JavaScript](#node)
-* [TypeScript](#node)
-* [C#](#net)
-* [Java](#java)
-* [Python](#python)
-* [PowerShell (Preview)](#powershell)
+## Run the serverless app locally
 
-## Features
+This extension integrates with the [Azure Functions Core Tools](https://docs.microsoft.com/azure/azure-functions/functions-run-local) to let you run your project locally before publishing to Azure.
 
-* Create new function projects
-* Create new functions from a template
-* Debug function projects locally
-* Deploy to Azure
-* View, create, delete, start, stop, and restart Azure Function Apps
-* View, edit, upload, and download application settings
-* JSON Intellisense for `function.json`, `host.json`, and `proxies.json`
-* Stream logs from your Azure Function Apps
-* View and manage deployment slots
-* Debug Node.js function project in Azure (experimental)
-    > **NOTE**: To enable, set `azureFunctions.enableRemoteDebugging` to true.
-* Debug Java function project in Azure (experimental)
-    > **NOTE**: To enable, set `azureFunctions.enableJavaRemoteDebugging` to true.
+1. To start your project, press F5 or the "play" button
 
-### Create New Project
+    ![debug](resources/readme/debug.png)
 
-![CreateProject](resources/CreateProject.gif)
+1. If you do not have the [Azure Functions Core Tools](https://aka.ms/Dqur4e) installed, you will be automatically prompted to install. Follow the specified instructions, or skip to the "Deploy" step if you would rather deploy without running locally.
+    > TIP: The "Terminal" panel should pop up automatically and you know your project is running if you see output
+1. Expand your _local project_ in the Azure Functions explorer to copy your function's url
 
-### Debug Function Project Locally
+    ![debug2](resources/readme/debug2.png)
 
-![Debug](resources/Debug.gif)
+1. Navigate to a browser, paste the url, and append `?name=world`
+    > TIP: Your url should look like this: `http://localhost:7071/api/HttpTrigger1?name=world`
+1. A response of "Hello world" is returned in the browser and you know your function worked!
+1. Select the "Detach" button to stop your project from running locally
 
-### Deploy to Azure
+    ![debug3](resources/readme/debug3.png)
 
-![Deploy](resources/Deploy.gif)
+## Deploy to Azure
 
-## OS-Specific Prerequisites
+1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Functions explorer
+    >  If you don't already have an Azure Account, click "Create a Free Azure Account"
+1. Select the button to deploy
 
-> **NOTE**: npm can be used on all platforms. On unix platforms, you may need to specify `--unsafe-perm` if you are running npm with sudo. That's due to npm behavior of post install script.
+    ![deploy](resources/readme/deploy.png)
 
-### Windows
+1. Choose "Create new Function App in Azure..."
+1. Enter a globally unique name for your Function App
+1. If multiple versions of your language's runtime are supported (i.e. Node.js 10 and Node.js 12), select your desired version (the latest is recommended)
+1. Select a location
+1. Wait for deployment to complete. Progress will be shown in the bottom right corner of your window
 
-To install runtime with npm:
+    ![deploy2](resources/readme/deploy2.png)
 
-**v2**
-```bash
-npm i -g azure-functions-core-tools@2 --unsafe-perm true
-```
+1. Once deployment is complete, expand your _subscription_ in the Azure Functions explorer to copy your deployed function's url
 
-**v3**
-```bash
-npm i -g azure-functions-core-tools@3 --unsafe-perm true
-```
+    ![deploy3](resources/readme/deploy3.png)
 
-To install with chocolatey:
-
-```bash
-choco install azure-functions-core-tools --params "'/x64'"
-```
-
-### Mac
-
-To install with homebrew:
-
-**v2**
-```bash
-brew tap azure/functions
-brew install azure-functions-core-tools@2
-```
-
-**v3**
-```bash
-brew tap azure/functions
-brew install azure-functions-core-tools@3
-```
-
-### Linux
-
-1. Set up package feed
-
-    * Ubuntu 19.04
-
-        ```bash
-        wget -q https://packages.microsoft.com/config/ubuntu/19.04/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        ```
-
-    * Ubuntu 18.10
-
-        ```bash
-        wget -q https://packages.microsoft.com/config/ubuntu/18.10/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        ```
-
-    * Ubuntu 18.04
-
-        ```bash
-        wget -q https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        ```
-
-    * Ubuntu 16.04 / Linux Mint 18
-
-        ```bash
-        wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        ```
-
-    * Debian 9
-
-        ```bash
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
-        sudo mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/
-        wget -q https://packages.microsoft.com/config/debian/9/prod.list
-        sudo mv prod.list /etc/apt/sources.list.d/microsoft-prod.list
-        sudo chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg
-        sudo chown root:root /etc/apt/sources.list.d/microsoft-prod.list
-        ```
-
-1. Install
-
-    ```bash
-    sudo apt-get update
-    sudo apt-get install azure-functions-core-tools
-    ```
-
-See [here](https://aka.ms/Dqur4e) for more installation options and the latest instructions.
-
-## Language-Specific Prerequisites
-
-### Node
-
-* [Node.js](https://nodejs.org/) 8.x, 10.x, or 12.x
-
-### .NET
-
-* [VS Code Debugger for C#](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp)
-* .NET Core Sdk [2.x](https://dotnet.microsoft.com/download/dotnet-core/2.2) or [3.x](https://dotnet.microsoft.com/download/dotnet-core/3.0)
-
-> **NOTE**: The default experience for C# uses class libraries (&ast;.cs files), which provide superior performance, scalability, and versatility over C# Scripts (&ast;.csx files). If you want to use C# Scripts, you may change your `azureFunctions.projectLanguage` user setting to `C#Script`.
-
-### Java
-
-* [VS Code Debugger for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-debug)
-* [JDK 1.8](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
-* [Maven 3.0+](https://maven.apache.org/)
-  > **NOTE**: Once Maven is downloaded, you must ensure that Maven is in your PATH environment variable. You can check this by running: `mvn -v`.
-
-### Python
-
-* [Python](https://www.python.org/downloads/) 3.6.x, 3.7.x, or 3.8.x
-
-  > **NOTE**: [Python 3.6.8](https://www.python.org/downloads/release/python-368/) is the last release of Python 3.6.x with installable binaries for Windows.
-
-### PowerShell
-
-* [PowerShell Core 6.2 or higher](https://github.com/powershell/powershell#get-powershell)
-* [VS Code Debugger for PowerShell](https://marketplace.visualstudio.com/items?itemName=ms-vscode.PowerShell)
-* [.NET Core Sdk](https://dotnet.microsoft.com/download)
-
-> **NOTE**: Debugging PowerShell functions and placing breakpoints works differently than other languages for now. Take a look at the [official guide for locally debugging PowerShell functions](https://docs.microsoft.com/azure/azure-functions/functions-debug-powershell-local) for complete steps.
-
-## Managing Azure Subscriptions
-
-If you are not signed in to Azure, you will see a "Sign in to Azure..." link. Alternatively, you can select "View->Command Palette" in the VS Code menu, and search for "Azure: Sign In".
-
-![Sign in to Azure](resources/SignIn.gif)
-
-If you don't have an Azure Account, you can sign up for one today for free and receive $200 in credits by selecting "Create a Free Azure Account..." or selecting "View->Command Palette" and searching for "Azure: Create an Account".
-
-You may sign out of Azure by selecting "View->Command Palette" and searching for "Azure: Sign Out".
-
-To select which subscriptions show up in the extension's explorer, click on the "Select Subscriptions..." button on any subscription node (indicated by a "filter" icon when you hover over it), or select "View->Command Palette" and search for "Azure: Select Subscriptions". Note that this selection affects all VS Code extensions that support the [Azure Account and Sign-In](https://github.com/Microsoft/vscode-azure-account) extension.
-
-![Select Azure Subscriptions](resources/SelectSubscriptions.gif)
+1. Navigate to a browser, paste the url, and append `?name=world`
+    > TIP: Your url should look like this: `https://<function app name>.azurewebsites.net/api/HttpTrigger1?name=world`
+1. A response of "Hello world" is returned in the browser and you know your function worked!
 
 ## Contributing
 
@@ -203,7 +75,7 @@ There are a couple of ways you can contribute to this repo:
 * **Documentation**: Found a typo or strangely worded sentences? Submit a PR!
 * **Code**: Contribute bug fixes, features or design changes:
   * Clone the repository locally and open in VS Code.
-  * Install [TSLint for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-tslint-plugin).
+  * Install the extensions recommended by this workspace (search `@recommended` in the "Extensions" explorer with the workspace open)
   * Open the terminal (press `CTRL+`\`) and run `npm install`.
   * To build, press `F1` and type in `Tasks: Run Build Task`.
   * Debug: press `F5` to start debugging the extension.
