@@ -56,7 +56,7 @@ export namespace bundleFeedUtils {
     }
 
     export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
-        return !template.isHttpTrigger && !template.isTimerTrigger;
+        return (!template.isHttpTrigger && !template.isTimerTrigger) || isDurableTemplate(template);
     }
 
     export async function getLatestVersionRange(): Promise<string> {
@@ -76,6 +76,10 @@ export namespace bundleFeedUtils {
             id: defaultBundleId,
             version: versionRange
         };
+    }
+
+    function isDurableTemplate(template: Partial<IFunctionTemplate>): boolean {
+        return !!template.id?.toLowerCase().includes('durable');
     }
 
     async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
