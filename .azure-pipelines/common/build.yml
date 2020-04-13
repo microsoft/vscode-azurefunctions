@@ -5,7 +5,9 @@ steps:
     versionSpec: 10.x
 
 - task: Npm@1
-  displayName: 'npm install'
+  displayName: 'npm ci'
+  inputs:
+    command: ci
 
 - task: Npm@1
   displayName: 'Build'
