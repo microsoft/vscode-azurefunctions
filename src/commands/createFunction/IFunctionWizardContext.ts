@@ -11,6 +11,7 @@ import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext
 export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, IProjectWizardContext {
     functionTemplate?: IFunctionTemplate;
     functionName?: string;
+    skipForNow?: boolean;
 }
 
 export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: string | undefined): void {

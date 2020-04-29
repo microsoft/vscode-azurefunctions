@@ -41,15 +41,29 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public static async create(context: IFunctionWizardContext, options: IFunctionListStepOptions): Promise<FunctionListStep> {
-        if (options.templateId) {
+        if (options.templateId === 'skipForNow') {
+            context.skipForNow = true;
+        } else if (options.templateId) {
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All);
-            const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
+            let foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
             } else {
-                throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", version "{1}", and id "{2}".', context.language, context.version, options.templateId));
+                foundTemplate = templates.find((t: IFunctionTemplate) => {
+                    if (!options.templateId) {
+                        return;
+                    }
+
+                    return t.id.includes(options.templateId);
+                });
+
+                if (!foundTemplate) {
+                    throw new Error(localize('templateNotFound', 'Could not find template with language "{0}", version "{1}", and id "{2}".', context.language, context.version, options.templateId));
+                } else {
+                    context.functionTemplate = foundTemplate;
+                }
             }
         }
 
@@ -136,7 +150,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        return !context.functionTemplate;
+        return !context.functionTemplate && !context.skipForNow;
     }
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
