@@ -6,8 +6,11 @@
 import * as fse from 'fs-extra';
 import { AzureWizardExecuteStep, AzureWizardPromptStep } from "vscode-azureextensionui";
 import { venvUtils } from '../../../utils/venvUtils';
+import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
+import { PythonAliasListStep } from "../../createNewProject/pythonSteps/PythonAliasListStep";
+import { PythonVenvCreateStep } from "../../createNewProject/pythonSteps/PythonVenvCreateStep";
 import { PythonInitVSCodeStep } from "../InitVSCodeStep/PythonInitVSCodeStep";
 import { PythonVenvListStep } from "./PythonVenvListStep";
 
@@ -16,7 +19,10 @@ export async function addPythonInitVSCodeSteps(
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
 
+    const createPythonVenv: boolean = !!getWorkspaceSetting<boolean>('createPythonVenv', context.workspacePath);
     const venvs: string[] = [];
+
+    context.telemetry.properties.createPythonVenv = String(createPythonVenv);
 
     if (await fse.pathExists(context.projectPath)) {
         const fsPaths: string[] = await fse.readdir(context.projectPath);
@@ -34,6 +40,9 @@ export async function addPythonInitVSCodeSteps(
         } else {
             promptSteps.push(new PythonVenvListStep(venvs));
         }
+    } else if (createPythonVenv) {
+        promptSteps.push(new PythonAliasListStep());
+        executeSteps.push(new PythonVenvCreateStep());
     }
 
     executeSteps.push(new PythonInitVSCodeStep());
