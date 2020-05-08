@@ -76,9 +76,9 @@ There are a couple of ways you can contribute to this repo:
 * **Code**: Contribute bug fixes, features or design changes:
   * Clone the repository locally and open in VS Code.
   * Install the extensions recommended by this workspace (search `@recommended` in the "Extensions" explorer with the workspace open)
-  * Open the terminal (press `CTRL+`\`) and run `npm install`.
-  * To build, press `F1` and type in `Tasks: Run Build Task`.
-  * Debug: press `F5` to start debugging the extension.
+  * Open the terminal (press <kbd>CTRL</kbd>+ <kbd>\`</kbd>) and run `npm install`.
+  * To build, press <kbd>F1</kbd> and type in `Tasks: Run Build Task`.
+  * Debug: press <kbd>F5</kbd> to start debugging the extension.
 
 ### Legal
 
