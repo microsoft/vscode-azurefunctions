@@ -138,7 +138,7 @@ function addSuite(version: FuncVersion): void {
         });
 
         // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
-        test('createFunction API', async () => {
+        test('createFunction API (deprecated)', async () => {
             await runForAllTemplateSources(async (source) => {
                 // Intentionally testing IoTHub trigger since a partner team plans to use that
                 const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';

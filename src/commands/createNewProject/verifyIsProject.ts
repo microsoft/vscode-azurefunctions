@@ -10,8 +10,9 @@ import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azu
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
+import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { createNewProject } from './createNewProject';
+import { createNewProjectInternal } from './createNewProject';
 
 const projectSubpathKey: string = 'projectSubpath';
 
@@ -72,13 +73,20 @@ async function promptForProjectSubpath(workspacePath: string, matchingSubpaths: 
 /**
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
-export async function verifyAndPromptToCreateProject(context: IActionContext, fsPath: string): Promise<string | undefined> {
+export async function verifyAndPromptToCreateProject(context: IActionContext, fsPath: string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
+    // tslint:disable-next-line: strict-boolean-expressions
+    options = options || {};
+
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(fsPath);
     if (!projectPath) {
-        const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
-        // No need to check result - cancel will throw a UserCancelledError
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
-        await createNewProject(context, fsPath);
+        if (!options.suppressCreateProjectPrompt) {
+            const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
+            // No need to check result - cancel will throw a UserCancelledError
+            await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        }
+
+        options.folderPath = fsPath;
+        await createNewProjectInternal(context, options);
         return undefined;
     } else {
         return projectPath;

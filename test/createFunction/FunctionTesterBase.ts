@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunction, ext, FuncVersion, funcVersionSetting, getRandomHexString, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
+import { createFunctionInternal, ext, FuncVersion, funcVersionSetting, getRandomHexString, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting } from '../../extension.bundle';
 import { createTestActionContext, runForAllTemplateSources, testFolderPath, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
@@ -84,7 +84,9 @@ export abstract class FunctionTesterBase implements Disposable {
             await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
                 await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
                     await runWithFuncSetting(funcVersionSetting, this.version, async () => {
-                        await createFunction(createTestActionContext(), testFolder);
+                        await createFunctionInternal(createTestActionContext(), {
+                            folderPath: testFolder
+                        });
                     });
                 });
             });

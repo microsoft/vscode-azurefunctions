@@ -48,7 +48,7 @@ suite('Create Function C# Script ~1', async () => {
     const iotExpectedContents: string[] = [iotConnection, iotPath, iotConsumerGroup];
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
-    test('createFunction API', async () => {
+    test('createFunction API (deprecated)', async () => {
         await runForAllTemplateSources(async (source) => {
             // Intentionally testing IoTHub trigger since a partner team plans to use that
             const projectPath: string = path.join(tester.baseTestFolder, source);
@@ -61,7 +61,7 @@ suite('Create Function C# Script ~1', async () => {
         });
     });
 
-    test('createNewProjectAndFunction API', async () => {
+    test('createNewProjectAndFunction API (deprecated)', async () => {
         await runForAllTemplateSources(async (source) => {
             const projectPath: string = path.join(tester.baseTestFolder, source, 'createNewProjectAndFunction');
             await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#Script', '~1', false /* openFolder */, iotTemplateId, iotFunctionName, iotTriggerSettings);
