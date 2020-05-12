@@ -14,6 +14,7 @@ export interface IProjectWizardContext extends IActionContext {
     workspaceFolder: WorkspaceFolder | undefined;
 
     language?: ProjectLanguage;
+    languageFilter?: RegExp;
     version: FuncVersion;
     openBehavior?: OpenBehavior;
 }

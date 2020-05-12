@@ -34,6 +34,7 @@ export * from './src/tree/AzureAccountTreeItemWithProjects';
 export * from './src/utils/cpUtils';
 export * from './src/utils/delay';
 export * from './src/utils/fs';
+export * from './src/utils/nonNull';
 export * from './src/utils/nugetUtils';
 export * from './src/utils/requestUtils';
 export * from './src/utils/venvUtils';

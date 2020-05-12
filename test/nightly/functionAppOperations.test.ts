@@ -57,7 +57,7 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
     });
 
     // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-function-app
-    test('Create - API', async () => {
+    test('Create - API (deprecated)', async () => {
         const apiRgName: string = getRandomHexString();
         resourceGroupsToDelete.push(apiRgName);
         const apiAppName: string = getRandomHexString();
