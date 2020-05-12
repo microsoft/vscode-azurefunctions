@@ -52,7 +52,7 @@ export function convertToValidPackageName(name: string): string {
         // Replace any disallowed characters with a hyphen
         .replace(/[^a-z0-9-\._~]/g, '-')
         // Replace the first character with a hyphen if it's a period or underscore
-        .replace(/^(\.|_)/, '-').trim();
+        .replace(/^(\.|_)/, '-');
 }
 
 // https://raw.githubusercontent.com/github/gitignore/master/Node.gitignore
