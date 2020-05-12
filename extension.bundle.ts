@@ -19,6 +19,7 @@ export * from 'vscode-azureextensionui';
 export * from './src/commands/createFunction/createFunction';
 export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createNewProject/createNewProject';
+export * from './src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
 export * from './src/constants';
