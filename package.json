@@ -977,6 +977,11 @@
                         "description": "%azureFunctions.showDeployConfirmation%",
                         "default": true
                     },
+                    "azureFunctions.validateFuncCoreTools": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.validateFuncCoreTools%",
+                        "default": true
+                    },
                     "azureFunctions.requestTimeout": {
                         "type": "number",
                         "description": "%azureFunctions.requestTimeout%",
