@@ -23,7 +23,10 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (context: IActionContext) => {
         context.errorHandling.suppressDisplay = true;
 
-        if (await funcToolsInstalled()) {
+        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', fsPath)) {
+            context.telemetry.properties.validateFuncCoreTools = 'false';
+            installed = true;
+        } else if (await funcToolsInstalled()) {
             installed = true;
         } else {
             const items: MessageItem[] = [];
