@@ -56,7 +56,8 @@ export namespace bundleFeedUtils {
     }
 
     export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
-        return (!template.isHttpTrigger && !template.isTimerTrigger) || isDurableTemplate(template);
+        const bundleTemplateTypes: string[] = ['durable', 'signalr'];
+        return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
     export async function getLatestVersionRange(): Promise<string> {
@@ -78,8 +79,8 @@ export namespace bundleFeedUtils {
         };
     }
 
-    function isDurableTemplate(template: Partial<IFunctionTemplate>): boolean {
-        return !!template.id?.toLowerCase().includes('durable');
+    function isTemplateOfType(template: Partial<IFunctionTemplate>, templateType: string): boolean {
+        return !!template.id?.toLowerCase().includes(templateType.toLowerCase());
     }
 
     async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
