@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
+import { AzureParentTreeItem, AzureTreeItem, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { treeUtils } from '../utils/treeUtils';
@@ -84,19 +83,14 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public async deleteProxy(name: string): Promise<void> {
-        const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {
             this._deletingProxy = true;
             try {
-                ext.outputChannel.show(true);
-                ext.outputChannel.appendLog(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
                 this._etag = await putFile(this.root.client, data, this._proxiesJsonPath, this._etag);
-                ext.outputChannel.appendLog(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;
             }

@@ -9,9 +9,7 @@ import { ext } from '../extensionVariables';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTreeItem): Promise<void> {
-    if (!sourceSlotNode) {
-        sourceSlotNode = await ext.tree.showTreeItemPicker<SlotTreeItem>(SlotTreeItem.contextValue, context);
-    }
+    sourceSlotNode = await ext.tree.showTreeItemWizard<SlotTreeItem>(SlotTreeItem.contextValue, context, sourceSlotNode);
 
     const deploymentSlots: SlotTreeItem[] = <SlotTreeItem[]>await sourceSlotNode.parent.getCachedChildren(context);
     await appservice.swapSlot(sourceSlotNode, deploymentSlots);

@@ -8,8 +8,6 @@ import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 
 export async function redeployDeployment(context: IActionContext, node?: DeploymentTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context);
-    }
+    node = await ext.tree.showTreeItemWizard<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context, node);
     await node.redeployDeployment(context);
 }

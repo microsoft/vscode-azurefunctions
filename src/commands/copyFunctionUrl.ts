@@ -4,16 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
+import { ITreeItemWizardContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
-export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
-    if (!node) {
-        const noItemFoundErrorMessage: string = localize('noHTTPFunctions', 'No HTTP functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Http;/i, { ...context, noItemFoundErrorMessage });
-    }
+export async function copyFunctionUrl(context: ITreeItemWizardContext, node?: FunctionTreeItemBase): Promise<void> {
+    context.noItemFoundErrorMessage = localize('noHTTPFunctions', 'No HTTP functions found.');
+    node = await ext.tree.showTreeItemWizard<FunctionTreeItemBase>(/Function;Http;/i, context, node);
 
     if (node.triggerUrl) {
         await vscode.env.clipboard.writeText(node.triggerUrl);

@@ -17,9 +17,7 @@ import { openUrl } from '../../utils/openUrl';
 import { enableFileLogging } from './enableFileLogging';
 
 export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
-    if (!treeItem) {
-        treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
+    treeItem = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, treeItem);
 
     const client: appservice.SiteClient = treeItem.client;
 

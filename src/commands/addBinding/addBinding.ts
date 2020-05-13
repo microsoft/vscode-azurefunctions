@@ -33,10 +33,8 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         projectPath = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
         [language, version] = await verifyInitForVSCode(context, projectPath);
     } else {
-        if (!data) {
-            const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
-            data = await ext.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
-        }
+        const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
+        data = await ext.tree.showTreeItemWizard<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage }, data);
 
         functionJsonPath = data.functionJsonPath;
 

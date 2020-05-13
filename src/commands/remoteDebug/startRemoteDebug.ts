@@ -13,9 +13,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { getRemoteDebugLanguage } from './getRemoteDebugLanguage';
 
 export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
+    node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, node);
 
     const siteClient: appservice.SiteClient = node.root.client;
     const siteConfig: WebSiteManagementModels.SiteConfig = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, cancellable: true }, async (progress, token) => {

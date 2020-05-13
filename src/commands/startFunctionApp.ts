@@ -11,12 +11,10 @@ import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 export async function startFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
+    node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, node);
 
     const client: SiteClient = node.root.client;
-    await node.runWithTemporaryDescription(
+    await node.withProgress(
         localize('starting', 'Starting...'),
         async () => {
             await client.start();

@@ -13,7 +13,7 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
     let node: ProductionSlotTreeItem | DeploymentsTreeItem;
 
     if (!target) {
-        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
+        node = await ext.tree.showTreeItemWizard<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context, undefined);
     } else {
         node = <DeploymentsTreeItem>target.parent;
     }

@@ -12,15 +12,15 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
     public static contextValue: string = 'azFuncProxy';
     public static readOnlyContextValue: string = 'azFuncProxyReadOnly';
     public readonly parent: ProxiesTreeItem;
-    private readonly _name: string;
+    public readonly name: string;
 
     public constructor(parent: ProxiesTreeItem, name: string) {
         super(parent);
-        this._name = name;
+        this.name = name;
     }
 
     public get label(): string {
-        return this._name;
+        return this.name;
     }
 
     public get contextValue(): string {
@@ -29,9 +29,5 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath(ProxyTreeItem.contextValue);
-    }
-
-    public async deleteTreeItemImpl(): Promise<void> {
-        await this.parent.deleteProxy(this._name);
     }
 }

@@ -19,9 +19,7 @@ const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
 export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
+    node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, node);
     const client: SiteClient = node.root.client;
     const portNumber: number = await portfinder.getPortPromise();
     const publishCredential: WebSiteManagementModels.User = await client.getWebAppPublishCredential();

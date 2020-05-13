@@ -5,23 +5,21 @@
 
 import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { ITreeItemWizardContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { requestUtils } from '../utils/requestUtils';
 
-export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
-    if (!node) {
-        const noItemFoundErrorMessage: string = localize('noTimerFunctions', 'No timer functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Timer;/i, { ...context, noItemFoundErrorMessage });
-    }
+export async function executeFunction(context: ITreeItemWizardContext, node?: FunctionTreeItemBase): Promise<void> {
+    context.noItemFoundErrorMessage = localize('noTimerFunctions', 'No timer functions found.');
+    node = await ext.tree.showTreeItemWizard<FunctionTreeItemBase>(/Function;Timer;/i, context, node);
 
     const name: string = node.name;
     const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? node.parent.parent.root.client : undefined;
     const hostUrl: string = node.parent.parent.hostUrl;
-    await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
+    await node.withProgress(localize('executing', 'Executing...'), async () => {
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
         const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(`${hostUrl}/admin/functions/${name}`, undefined, 'POST');
         if (client) {

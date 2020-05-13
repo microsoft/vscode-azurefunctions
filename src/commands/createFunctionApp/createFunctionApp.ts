@@ -3,32 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureParentTreeItem, IActionContext } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzureParentTreeItem, ITreeItemWizardContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 
-export async function createFunctionApp(context: IActionContext & Partial<ICreateFuntionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
-    let node: AzureParentTreeItem | undefined;
-    if (typeof subscription === 'string') {
-        node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`, context);
-        if (!node) {
-            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscription));
+export async function createFunctionApp(context: ITreeItemWizardContext & Partial<ICreateFuntionAppContext>, arg1?: AzureParentTreeItem | string, newResourceGroupName?: string, advancedCreation?: boolean): Promise<string> {
+    let startingTreeItem: AzExtParentTreeItem | undefined;
+    if (typeof arg1 === 'string') {
+        startingTreeItem = await ext.tree.findTreeItem(`/subscriptions/${arg1}`, context);
+        if (!startingTreeItem) {
+            throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', arg1));
         }
-    } else if (!subscription) {
-        node = await ext.tree.showTreeItemPicker<AzureParentTreeItem>(SubscriptionTreeItem.contextValue, context);
     } else {
-        node = subscription;
+        startingTreeItem = arg1;
     }
 
     context.newResourceGroupName = newResourceGroupName;
-    const funcAppNode: ProductionSlotTreeItem = await node.createChild(context);
+    const funcAppNode: ProductionSlotTreeItem = await ext.tree.showCreateWizard(SubscriptionTreeItem.contextValue, context, startingTreeItem, advancedCreation);
     funcAppNode.showCreatedOutput();
 
     return funcAppNode.fullId;
 }
 
-export async function createFunctionAppAdvanced(context: IActionContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
-    return await createFunctionApp({ ...context, advancedCreation: true }, subscription, newResourceGroupName);
+export async function createFunctionAppAdvanced(context: ITreeItemWizardContext, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
+    return await createFunctionApp(context, subscription, newResourceGroupName, true);
 }

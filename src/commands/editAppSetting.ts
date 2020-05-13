@@ -8,9 +8,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
 export async function editAppSetting(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<AppSettingTreeItem>(AppSettingTreeItem.contextValue, context);
-    }
-
+    node = await ext.tree.showTreeItemWizard<AppSettingTreeItem>(AppSettingTreeItem.contextValue, context, node);
     await node.edit(context);
 }

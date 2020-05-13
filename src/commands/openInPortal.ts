@@ -8,9 +8,6 @@ import { ext } from '../extensionVariables';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 
 export async function openInPortal(context: IActionContext, node?: AzureTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<AzureTreeItem>(ProductionSlotTreeItem.contextValue, context);
-    }
-
+    node = await ext.tree.showTreeItemWizard<AzureTreeItem>(ProductionSlotTreeItem.contextValue, context, node);
     await node.openInPortal();
 }

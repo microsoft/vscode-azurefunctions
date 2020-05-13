@@ -10,9 +10,6 @@ import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { openUrl } from '../utils/openUrl';
 
 export async function browseWebsite(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
-
+    node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, node);
     await openUrl(node.root.client.defaultHostUrl);
 }

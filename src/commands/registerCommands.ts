@@ -4,16 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from 'vscode-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
+import { AppSettingTreeItem, registerSiteCommand } from 'vscode-azureappservice';
+import { AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
-import { ProxyTreeItem } from '../tree/ProxyTreeItem';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
 import { addBinding } from './addBinding/addBinding';
+import { addAppSetting } from './appSettings/addAppSetting';
 import { decryptLocalSettings } from './appSettings/decryptLocalSettings';
+import { deleteAppSetting } from './appSettings/deleteAppSetting';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
 import { encryptLocalSettings } from './appSettings/encryptLocalSettings';
 import { setAzureWebJobsStorage } from './appSettings/setAzureWebJobsStorage';
@@ -22,13 +21,14 @@ import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite';
 import { configureDeploymentSource } from './configureDeploymentSource';
 import { copyFunctionUrl } from './copyFunctionUrl';
-import { createChildNode } from './createChildNode';
 import { createFunction } from './createFunction/createFunction';
 import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionApp/createFunctionApp';
 import { createNewProject } from './createNewProject/createNewProject';
 import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
-import { deleteNode } from './deleteNode';
+import { deleteFunctionApp } from './deleteFunctionApp';
+import { deleteProxy } from './deleteProxy';
+import { deleteSlot } from './deleteSlot';
 import { deployProductionSlot, deploySlot } from './deploy/deploy';
 import { connectToGitHub } from './deployments/connectToGitHub';
 import { disconnectRepo } from './deployments/disconnectRepo';
@@ -55,9 +55,9 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
     registerCommand('azureFunctions.addBinding', addBinding);
-    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, AppSettingsTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.add', addAppSetting);
     registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
-    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, AppSettingTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.delete', deleteAppSetting);
     registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommand('azureFunctions.appSettings.edit', editAppSetting);
     registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
@@ -74,9 +74,9 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.createNewProject', createNewProject);
     registerCommand('azureFunctions.createSlot', createSlot);
     registerCommand('azureFunctions.deleteFunction', deleteFunction);
-    registerCommand('azureFunctions.deleteFunctionApp', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProductionSlotTreeItem.contextValue, node));
-    registerCommand('azureFunctions.deleteProxy', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProxyTreeItem.contextValue, node));
-    registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));
+    registerCommand('azureFunctions.deleteFunctionApp', deleteFunctionApp);
+    registerCommand('azureFunctions.deleteProxy', deleteProxy);
+    registerCommand('azureFunctions.deleteSlot', deleteSlot);
     registerCommand('azureFunctions.disableFunction', disableFunction);
     registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
     registerSiteCommand('azureFunctions.deploySlot', deploySlot);

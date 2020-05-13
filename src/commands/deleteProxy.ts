@@ -7,21 +7,21 @@ import { ProgressLocation, window } from 'vscode';
 import { AzExtTreeItem, DialogResponses, ITreeItemWizardContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
+import { ProxyTreeItem } from '../tree/ProxyTreeItem';
 
-export async function deleteFunction(context: ITreeItemWizardContext, arg1?: AzExtTreeItem): Promise<void> {
-    context.noItemFoundErrorMessage = localize('noFuntionsToDelete', 'No matching functions found or your function app is read-only.');
+export async function deleteProxy(context: ITreeItemWizardContext, arg1?: AzExtTreeItem): Promise<void> {
+    context.noItemFoundErrorMessage = localize('noFuntionsToDelete', 'No matching proxies found or your function app is read-only.');
     context.suppressCreatePick = true;
-    const node: RemoteFunctionTreeItem = await ext.tree.showTreeItemWizard(/Remote;ReadWrite;Function;/i, context, arg1);
+    const node: ProxyTreeItem = await ext.tree.showTreeItemWizard(ProxyTreeItem.contextValue, context, arg1);
 
-    const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', node.name);
-    await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+    const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', node.name);
+    await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse);
     await node.withDeleteProgress(async () => {
-        const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', node.name);
-        const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', node.name);
+        const deleting: string = localize('DeletingProxy', 'Deleting proxy "{0}"...', node.name);
+        const deleteSucceeded: string = localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', node.name);
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
             ext.outputChannel.appendLog(deleting);
-            await node.client.deleteFunction(node.name);
+            await node.parent.deleteProxy(node.name);
             window.showInformationMessage(deleteSucceeded);
             ext.outputChannel.appendLog(deleteSucceeded);
         });

@@ -29,7 +29,7 @@ export async function getDeployNode(context: IActionContext, target: vscode.Uri 
         const newNodes: SlotTreeItemBase[] = [];
         const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
         try {
-            node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(expectedContextValue, context);
+            node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(expectedContextValue, context, undefined);
         } finally {
             disposable.dispose();
         }

@@ -3,18 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from 'vscode-azureextensionui';
+import { ITreeItemWizardContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { SlotsTreeItem } from '../tree/SlotsTreeItem';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function createSlot(context: IActionContext, node?: SlotsTreeItem): Promise<string> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
-    }
-
-    const slotNode: SlotTreeItem = await node.createChild(context);
+export async function createSlot(context: ITreeItemWizardContext, node?: SlotsTreeItem): Promise<string> {
+    const slotNode: SlotTreeItem = await ext.tree.showCreateWizard<SlotTreeItem>(SlotsTreeItem.contextValue, context, node);
     slotNode.showCreatedOutput();
-
     return slotNode.fullId;
 }

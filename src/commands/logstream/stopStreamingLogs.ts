@@ -11,9 +11,6 @@ import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionT
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
-    }
-
+    node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context, node);
     await appservice.stopStreamingLogs(node.client, node.logStreamPath);
 }

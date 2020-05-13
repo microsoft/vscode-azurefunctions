@@ -68,7 +68,7 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         validateGlobSettings(context, effectiveDeployFsPath);
     }
 
-    await node.runWithTemporaryDescription(
+    await node.withProgress(
         localize('deploying', 'Deploying...'),
         async () => {
             // Stop function app here to avoid *.jar file in use on server side.
