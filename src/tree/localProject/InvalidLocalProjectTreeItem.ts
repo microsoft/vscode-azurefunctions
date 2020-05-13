@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeItem, IContextValue } from 'vscode-azureextensionui';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class InvalidLocalProjectTreeItem extends LocalProjectTreeItemBase {
-    public contextValue: string = 'invalidAzFuncLocalProject';
+    public contextValue: IContextValue = { id: 'invalidAzFuncLocalProject' };
 
     private readonly _projectError: unknown | undefined;
 

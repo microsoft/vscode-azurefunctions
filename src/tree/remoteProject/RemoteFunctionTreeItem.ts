@@ -4,10 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import { ProgressLocation, window } from 'vscode';
 import { IFunctionKeys, IHostKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { DialogResponses } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
@@ -44,19 +41,6 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
 
     public get logStreamPath(): string {
         return `application/functions/function/${encodeURIComponent(this.name)}`;
-    }
-
-    public async deleteTreeItemImpl(): Promise<void> {
-        const message: string = localize('ConfirmDeleteFunction', 'Are you sure you want to delete function "{0}"?', this.name);
-        const deleting: string = localize('DeletingFunction', 'Deleting function "{0}"...', this.name);
-        const deleteSucceeded: string = localize('DeleteFunctionSucceeded', 'Successfully deleted function "{0}".', this.name);
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
-        await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
-            ext.outputChannel.appendLog(deleting);
-            await this.client.deleteFunction(this.name);
-            window.showInformationMessage(deleteSucceeded);
-            ext.outputChannel.appendLog(deleteSucceeded);
-        });
     }
 
     public async getKey(): Promise<string | undefined> {

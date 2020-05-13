@@ -5,15 +5,15 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient, ICreateChildImplContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, createAzureClient, IActionContext, IContextValue, IExpectedContextValue, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 
 export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
-    public static contextValue: string = 'azFuncSlots';
-    public readonly contextValue: string = SlotsTreeItem.contextValue;
+    public static contextValue: IContextValue = { id: 'slots' };
+    public readonly contextValue: IContextValue = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
     public readonly parent: ProductionSlotTreeItem;
@@ -29,7 +29,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath(this.contextValue);
+        return treeUtils.getIconPath(this.contextValue.id);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -61,9 +61,13 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         );
     }
 
-    public async createChildImpl(context: ICreateChildImplContext): Promise<AzureTreeItem<ISiteTreeRoot>> {
+    public async createChildImpl(context: IActionContext): Promise<AzureTreeItem<ISiteTreeRoot>> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
         const newSite: WebSiteManagementModels.Site = await createSlot(this.root, existingSlots, context);
         return new SlotTreeItem(this, new SiteClient(newSite, this.root), newSite);
+    }
+
+    public isAncestorOfImpl(expectedContextValue: IExpectedContextValue): boolean {
+        return expectedContextValue.id === SlotTreeItem.contextValueId;
     }
 }

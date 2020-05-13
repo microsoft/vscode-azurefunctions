@@ -5,29 +5,26 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { MessageItem, window } from 'vscode';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AppSettingsTreeItem, DeploymentsTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
+import { AzExtTreeItem, AzureParentTreeItem, IContextValue } from 'vscode-azureextensionui';
 import { KuduClient } from 'vscode-azurekudu';
 import { ext } from '../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
-import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
-import { ProxyTreeItem } from './ProxyTreeItem';
 import { RemoteFunctionsTreeItem } from './remoteProject/RemoteFunctionsTreeItem';
 
 export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot> implements IProjectTreeItem {
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
-    public readonly source: ProjectSource = ProjectSource.Remote;
     public readonly site: WebSiteManagementModels.Site;
 
-    public abstract readonly contextValue: string;
+    public abstract readonly contextValue: IContextValue;
     public abstract readonly label: string;
+    public autoSelectInTreeItemPicker: boolean = true;
 
     private readonly _root: ISiteTreeRoot;
     private _state?: string;
@@ -72,10 +69,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public get description(): string | undefined {
         return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -180,35 +173,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._proxiesTreeItem];
     }
 
-    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        for (const expectedContextValue of expectedContextValues) {
-            switch (expectedContextValue) {
-                case AppSettingsTreeItem.contextValue:
-                case AppSettingTreeItem.contextValue:
-                    return this.appSettingsTreeItem;
-                case ProxiesTreeItem.contextValue:
-                case ProxyTreeItem.contextValue:
-                case ProxyTreeItem.readOnlyContextValue:
-                    return this._proxiesTreeItem;
-                case DeploymentsTreeItem.contextValueConnected:
-                case DeploymentsTreeItem.contextValueUnconnected:
-                case DeploymentTreeItem.contextValue:
-                    return this.deploymentsNode;
-                default:
-                    if (typeof expectedContextValue === 'string') {
-                        // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                        if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
-                            return this.deploymentsNode;
-                        }
-                    } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
-                        return this._functionsTreeItem;
-                    }
-            }
-        }
-
-        return undefined;
-    }
-
     public compareChildrenImpl(): number {
         return 0; // already sorted
     }
@@ -216,10 +180,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public async isReadOnly(): Promise<boolean> {
         const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
         return !!appSettings.properties && !!(appSettings.properties.WEBSITE_RUN_FROM_PACKAGE || appSettings.properties.WEBSITE_RUN_FROM_ZIP);
-    }
-
-    public async deleteTreeItemImpl(): Promise<void> {
-        await deleteSite(this.root.client);
     }
 
     public showCreatedOutput(): void {

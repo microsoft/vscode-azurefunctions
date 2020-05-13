@@ -13,7 +13,7 @@ import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 export async function viewProperties(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
+        node = await ext.tree.showTreeItemWizard<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
     }
 
     if (node instanceof LocalFunctionTreeItem) {

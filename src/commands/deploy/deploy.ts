@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
 import * as appservice from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, IExpectedContextValue } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -32,7 +32,7 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
     await deploy(context, target, functionAppId, SlotTreeItem.contextValue);
 }
 
-async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
+async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: IExpectedContextValue): Promise<void> {
     addLocalFuncTelemetry(context);
 
     const { originalDeployFsPath, effectiveDeployFsPath, workspaceFolder } = await appservice.getDeployFsPath(context, target);
@@ -68,7 +68,7 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         validateGlobSettings(context, effectiveDeployFsPath);
     }
 
-    await node.runWithTemporaryDescription(
+    await node.withTemporaryDescription(
         localize('deploying', 'Deploying...'),
         async () => {
             // Stop function app here to avoid *.jar file in use on server side.

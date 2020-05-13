@@ -4,17 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as url from 'url';
-import { AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IContextValue, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
+import { FunctionState, TriggerType } from './contextValues';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
 import { ApplicationSettings } from './IProjectTreeItem';
-import { getProjectContextValue, ProjectResource } from './projectContextValues';
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
+    public static contextValueId: string = 'function';
     public readonly parent: FunctionsTreeItemBase;
     public readonly config: ParsedFunctionJson;
     public readonly name: string;
@@ -37,19 +38,23 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
         return this.name;
     }
 
-    public get contextValue(): string {
-        let triggerType: string;
+    public get contextValue(): IContextValue {
+        let triggerType: TriggerType;
         if (this.config.isHttpTrigger) {
-            triggerType = 'Http';
+            triggerType = TriggerType.http;
         } else if (this.config.isTimerTrigger) {
-            triggerType = 'Timer';
+            triggerType = TriggerType.timer;
         } else {
-            triggerType = 'Unknown';
+            triggerType = TriggerType.unknown;
         }
 
-        const state: string = this._disabled ? 'Disabled' : 'Enabled';
+        const state: string = this._disabled ? FunctionState.disabled : FunctionState.enabled;
 
-        return getProjectContextValue(this.parent.parent.source, this.parent.access, ProjectResource.Function, triggerType, state);
+        return {
+            id: FunctionTreeItemBase.contextValueId,
+            triggerType,
+            state
+        };
     }
 
     public get description(): string | undefined {
@@ -68,7 +73,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath('azFuncFunction');
+        return treeUtils.getIconPath('function');
     }
 
     public get disabledStateKey(): string {

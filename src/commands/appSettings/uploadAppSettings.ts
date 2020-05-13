@@ -23,12 +23,12 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
+        node = await ext.tree.showTreeItemWizard<AppSettingsTreeItem>(AppSettingsTreeItem.contextValueId, context);
     }
 
     const client: SiteClient = node.root.client;
 
-    await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
+    await node.withTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLog(localize('uploadStart', 'Uploading settings to "{0}"...', client.fullName));
         let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);

@@ -4,17 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
+import { AzureParentTreeItem, AzureTreeItem, IContextValue, IExpectedContextValue, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { treeUtils } from '../utils/treeUtils';
+import { AppPerms } from './contextValues';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
-    public static contextValue: string = 'azFuncProxies';
-    public readonly contextValue: string = ProxiesTreeItem.contextValue;
+    public static contextValueId: string = 'proxies';
     public readonly label: string = localize('Proxies', 'Proxies');
     public readonly childTypeLabel: string = localize('Proxy', 'Proxy');
     public readonly parent: SlotTreeItemBase;
@@ -23,7 +22,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     private _proxyConfig: IProxyConfig;
     private _etag: string;
     private _deletingProxy: boolean = false;
-    private _readOnly: boolean;
+    private _isReadOnly: boolean;
 
     private constructor(parent: SlotTreeItemBase) {
         super(parent);
@@ -40,20 +39,27 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return 'proxies';
     }
 
+    public get contextValue(): IContextValue {
+        return {
+            id: ProxiesTreeItem.contextValueId,
+            perms: this.isReadOnly ? AppPerms.readOnly : AppPerms.readWrite
+        };
+    }
+
     public get description(): string {
-        return this._readOnly ? localize('readOnly', 'Read-only') : '';
+        return this._isReadOnly ? localize('readOnly', 'Read-only') : '';
     }
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getThemedIconPath('list-unordered');
     }
 
-    public get readOnly(): boolean {
-        return this._readOnly;
+    public get isReadOnly(): boolean {
+        return this._isReadOnly;
     }
 
     public async refreshImpl(): Promise<void> {
-        this._readOnly = await this.parent.isReadOnly();
+        this._isReadOnly = await this.parent.isReadOnly();
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -84,23 +90,22 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public async deleteProxy(name: string): Promise<void> {
-        const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {
             this._deletingProxy = true;
             try {
-                ext.outputChannel.show(true);
-                ext.outputChannel.appendLog(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
                 this._etag = await putFile(this.root.client, data, this._proxiesJsonPath, this._etag);
-                ext.outputChannel.appendLog(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;
             }
         }
+    }
+
+    public isAncestorOfImpl(expectedContextValue: IExpectedContextValue): boolean {
+        return expectedContextValue.id === ProxyTreeItem.contextValueId;
     }
 }
 

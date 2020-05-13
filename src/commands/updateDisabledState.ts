@@ -8,6 +8,7 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { FunctionsTreeItemBase } from '../tree/FunctionsTreeItemBase';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 
 export async function enableFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
@@ -20,9 +21,8 @@ export async function disableFunction(context: IActionContext, node?: FunctionTr
 
 async function updateDisabledState(context: IActionContext, node: FunctionTreeItemBase | undefined, isDisabled: boolean): Promise<void> {
     if (!node) {
-        const expectedContextValue: RegExp = new RegExp(`Function;.*;${isDisabled ? 'Enabled' : 'Disabled'};`);
         const noItemFoundErrorMessage: string = isDisabled ? localize('noEnabledFuncs', 'No enabled functions found.') : localize('noDisabledFuncs', 'No disabled functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(expectedContextValue, { ...context, noItemFoundErrorMessage });
+        node = await ext.tree.showTreeItemWizard<FunctionTreeItemBase>({ id: FunctionsTreeItemBase.contextValueId, state: isDisabled ? 'Enabled' : 'Disabled' }, { ...context, noItemFoundErrorMessage });
     }
 
     const version: FuncVersion = await node.parent.parent.getVersion();

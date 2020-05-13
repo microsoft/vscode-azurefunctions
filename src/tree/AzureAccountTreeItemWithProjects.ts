@@ -21,7 +21,6 @@ import { InitLocalProjectTreeItem } from './localProject/InitLocalProjectTreeIte
 import { InvalidLocalProjectTreeItem } from './localProject/InvalidLocalProjectTreeItem';
 import { LocalProjectTreeItem } from './localProject/LocalProjectTreeItem';
 import { LocalProjectTreeItemBase } from './localProject/LocalProjectTreeItemBase';
-import { isLocalProjectCV, isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
@@ -114,13 +113,13 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         }
     }
 
-    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
+    /*public async pickTreeItemImpl(expectedContextValue: IExpectedContextValue): Promise<AzExtTreeItem | undefined> {
         const subscription: string = localize('subscription', 'subscription');
 
-        if (expectedContextValues.some(isProjectCV)) {
-            if (expectedContextValues.some(isLocalProjectCV) && expectedContextValues.some(isRemoteProjectCV)) {
+        if (expectedContextValue.some(isProjectCV)) {
+            if (expectedContextValue.some(isLocalProjectCV) && expectedContextValue.some(isRemoteProjectCV)) {
                 this.childTypeLabel = localize('projectOrSubscription', 'project or subscription');
-            } else if (expectedContextValues.some(isLocalProjectCV)) {
+            } else if (expectedContextValue.some(isLocalProjectCV)) {
                 this.childTypeLabel = localize('project', 'project');
             } else {
                 this.childTypeLabel = subscription;
@@ -129,8 +128,8 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
             this.childTypeLabel = subscription;
         }
 
-        return super.pickTreeItemImpl(expectedContextValues);
-    }
+        return super.pickTreeItemImpl(expectedContextValue);
+    }*/
 }
 
 async function getCompiledProjectPath(projectPath: string, projectLanguage: ProjectLanguage): Promise<string | undefined> {

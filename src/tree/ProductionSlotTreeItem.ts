@@ -5,16 +5,15 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem } from 'vscode-azureextensionui';
-import { localize } from '../localize';
+import { AzExtTreeItem, IContextValue, TreeItemIconPath } from 'vscode-azureextensionui';
+import { treeUtils } from '../utils/treeUtils';
 import { SlotsTreeItem } from './SlotsTreeItem';
-import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class ProductionSlotTreeItem extends SlotTreeItemBase {
-    public static contextValue: string = 'azFuncProductionSlot';
-    public readonly contextValue: string = ProductionSlotTreeItem.contextValue;
+    public static contextValue: IContextValue = { id: 'productionSlot' };
+    public readonly contextValue: IContextValue = ProductionSlotTreeItem.contextValue;
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
@@ -27,6 +26,10 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
         return this.root.client.fullName;
     }
 
+    public get iconPath(): TreeItemIconPath {
+        return treeUtils.getIconPath(ProductionSlotTreeItem.contextValue.id);
+    }
+
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
         if (await this.supportsSlots()) {
@@ -35,22 +38,15 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
         return children;
     }
 
-    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        for (const expectedContextValue of expectedContextValues) {
-            switch (expectedContextValue) {
-                case SlotsTreeItem.contextValue:
-                case SlotTreeItem.contextValue:
-                    if (await this.supportsSlots()) {
-                        return this._slotsTreeItem;
-                    } else {
-                        throw new Error(localize('slotNotSupported', 'Linux Consumption apps do not support slots.'));
-                    }
-                default:
-            }
+    /*public async pickTreeItemImpl(expectedContextValue: IExpectedContextValue): Promise<AzExtTreeItem | undefined> {
+        if (await this.supportsSlots()) {
+            return this._slotsTreeItem;
+        } else {
+            throw new Error(localize('slotNotSupported', 'Linux Consumption apps do not support slots.')); todo
         }
 
-        return super.pickTreeItemImpl(expectedContextValues);
-    }
+        return super.pickTreeItemImpl(expectedContextValue);
+    }*/
 
     private async supportsSlots(): Promise<boolean> {
         // Slots are not yet supported for Linux Consumption

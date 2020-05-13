@@ -5,22 +5,21 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, IContextValue, INewStorageAccountDefaults, ITreeItemWizardContext, IWizardOptions, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { FunctionAppRuntimeStep } from '../commands/createFunctionApp/FunctionAppRuntimeStep';
+import { FunctionAppSetDefaultsStep } from '../commands/createFunctionApp/FunctionAppSetDefaultsStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
-import { enableFileLogging } from '../commands/logstream/enableFileLogging';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
-import { nonNullProp } from '../utils/nonNull';
 import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { AppSource } from './contextValues';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
-import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
-export interface ICreateFuntionAppContext extends ICreateChildImplContext {
+export interface ICreateFuntionAppContext extends ITreeItemWizardContext {
     newResourceGroupName?: string;
 }
 
@@ -32,6 +31,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public hasMoreChildrenImpl(): boolean {
         return this._nextLink !== undefined;
+    }
+
+    public get contextValue(): IContextValue {
+        return { id: SubscriptionTreeItem.contextValueId, source: AppSource.remote };
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
@@ -74,7 +77,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
+    public async getCreateSubWizardImpl(context: ICreateFuntionAppContext, advancedCreation: boolean): Promise<IWizardOptions<IFunctionAppWizardContext>> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
@@ -104,7 +107,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.newSiteOS = WebsiteOS.windows;
         }
 
-        if (!context.advancedCreation) {
+        if (!advancedCreation) {
             wizardContext.useConsumptionPlan = true;
             wizardContext.runtimeFilter = getFunctionsWorkerRuntime(language);
             if (wizardContext.runtimeFilter) {
@@ -114,6 +117,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
             executeSteps.push(new AppInsightsCreateStep());
+            executeSteps.push(new FunctionAppSetDefaultsStep());
         } else {
             promptSteps.push(new ResourceGroupListStep());
             promptSteps.push(new StorageAccountListStep(
@@ -136,43 +140,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         LocationListStep.addStep(wizardContext, promptSteps);
 
         executeSteps.push(new VerifyProvidersStep(['Microsoft.Web', 'Microsoft.Storage', 'Microsoft.Insights']));
-        executeSteps.push(new FunctionAppCreateStep());
+        executeSteps.push(new FunctionAppCreateStep(this));
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
-        const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
-
-        await wizard.prompt();
-        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
-        context.telemetry.properties.os = wizardContext.newSiteOS;
-        context.telemetry.properties.runtime = wizardContext.newSiteRuntime;
-        if (!context.advancedCreation) {
-            const newName: string | undefined = await wizardContext.relatedNameTask;
-            if (!newName) {
-                throw new Error(localize('noUniqueName', 'Failed to generate unique name for resources. Use advanced creation to manually enter resource names.'));
-            }
-            wizardContext.newResourceGroupName = context.newResourceGroupName || newName;
-            wizardContext.newStorageAccountName = newName;
-            wizardContext.newAppInsightsName = newName;
-        }
-
-        await wizard.execute();
-        const site: WebSiteManagementModels.Site = nonNullProp(wizardContext, 'site');
-
-        const client: SiteClient = new SiteClient(site, this.root);
-        if (!client.isLinux) { // not supported on linux
-            try {
-                await enableFileLogging(client);
-            } catch (error) {
-                // optional part of creating function app, so not worth blocking on error
-                context.telemetry.properties.fileLoggingError = parseError(error).message;
-            }
-        }
-
-        return new ProductionSlotTreeItem(this, client, site);
-    }
-
-    public isAncestorOfImpl(contextValue: string | RegExp): boolean {
-        return !isProjectCV(contextValue) || isRemoteProjectCV(contextValue);
+        return { promptSteps, executeSteps, title };
     }
 }
 

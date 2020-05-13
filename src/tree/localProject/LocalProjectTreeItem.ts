@@ -6,27 +6,27 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable, WorkspaceFolder } from 'vscode';
-import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeItem, IContextValue } from 'vscode-azureextensionui';
 import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
 import { FuncVersion } from '../../FuncVersion';
+import { AppSource } from '../contextValues';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
-import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {
-    public static contextValue: string = 'azFuncLocalProject';
-    public contextValue: string = LocalProjectTreeItem.contextValue;
-    public readonly source: ProjectSource = ProjectSource.Local;
+    public static contextValue: IContextValue = { id: 'localProject', source: AppSource.local };
+    public contextValue: IContextValue = LocalProjectTreeItem.contextValue;
     public readonly effectiveProjectPath: string;
     public readonly preCompiledProjectPath: string | undefined;
     public readonly workspacePath: string;
     public readonly workspaceFolder: WorkspaceFolder;
     public readonly version: FuncVersion;
     public readonly langauge: ProjectLanguage;
+    public autoSelectInTreeItemPicker: boolean = true;
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
@@ -60,20 +60,6 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._localFunctionsTreeItem];
-    }
-
-    public isAncestorOfImpl(contextValue: string | RegExp): boolean {
-        return isLocalProjectCV(contextValue);
-    }
-
-    public pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): AzExtTreeItem | undefined {
-        for (const expectedContextValue of expectedContextValues) {
-            if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
-                return this._localFunctionsTreeItem;
-            }
-        }
-
-        return undefined;
     }
 
     public async getHostJson(): Promise<IParsedHostJson> {

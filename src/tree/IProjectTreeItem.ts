@@ -5,12 +5,10 @@
 
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
-import { ProjectSource } from './projectContextValues';
 
 export type ApplicationSettings = { [propertyName: string]: string };
 
 export interface IProjectTreeItem {
-    source: ProjectSource;
     hostUrl: string;
     getHostJson(): Promise<IParsedHostJson>;
     getVersion(): Promise<FuncVersion>;

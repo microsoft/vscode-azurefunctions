@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IContextValue } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { treeUtils } from '../../utils/treeUtils';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
-    public contextValue: string = 'initAzFuncLocalProject';
+    public contextValue: IContextValue = { id: 'initAzFuncLocalProject' };
 
     private readonly _projectPath: string;
 

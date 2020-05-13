@@ -4,9 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AppSettingsTreeItem, AppSettingTreeItem, DeploymentsTreeItem, DeploymentTreeItem } from 'vscode-azureappservice';
+import { AzExtParentTreeItem, IExpectedContextValue, SubscriptionTreeItemBase, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { treeUtils } from '../../utils/treeUtils';
+import { ProxiesTreeItem } from '../ProxiesTreeItem';
+import { ProxyTreeItem } from '../ProxyTreeItem';
 
 export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('localProject', 'Local Project');
@@ -27,5 +30,20 @@ export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
 
     public get description(): string {
         return this._projectName;
+    }
+
+    public isAncestorOfImpl(expectedContextValue: IExpectedContextValue): boolean {
+        switch (expectedContextValue.id) {
+            case AppSettingsTreeItem.contextValueId:
+            case AppSettingTreeItem.contextValueId:
+            case DeploymentsTreeItem.contextValueId:
+            case DeploymentTreeItem.contextValueId:
+            case ProxiesTreeItem.contextValueId:
+            case ProxyTreeItem.contextValueId:
+            case SubscriptionTreeItemBase.contextValueId:
+                return false;
+            default:
+                return super.isAncestorOfImpl(expectedContextValue);
+        }
     }
 }

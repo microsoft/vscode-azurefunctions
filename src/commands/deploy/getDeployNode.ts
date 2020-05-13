@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AzureTreeItem, IActionContext } from 'vscode-azureextensionui';
+import { AzureTreeItem, IActionContext, IExpectedContextValue } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
@@ -14,7 +14,7 @@ export interface IDeployNode {
     isNewFunctionApp: boolean;
 }
 
-export async function getDeployNode(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<IDeployNode> {
+export async function getDeployNode(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: IExpectedContextValue): Promise<IDeployNode> {
     let node: SlotTreeItemBase | undefined;
     let isNewFunctionApp: boolean = false;
 
@@ -29,7 +29,7 @@ export async function getDeployNode(context: IActionContext, target: vscode.Uri 
         const newNodes: SlotTreeItemBase[] = [];
         const disposable: vscode.Disposable = ext.tree.onTreeItemCreate((newNode: SlotTreeItemBase) => { newNodes.push(newNode); });
         try {
-            node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(expectedContextValue, context);
+            node = await ext.tree.showTreeItemWizard<SlotTreeItemBase>(expectedContextValue, context);
         } finally {
             disposable.dispose();
         }

@@ -19,7 +19,7 @@ import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
+        node = await ext.tree.showTreeItemWizard<AppSettingsTreeItem>(AppSettingsTreeItem.contextValueId, context);
     }
 
     const client: SiteClient = node.root.client;
@@ -28,7 +28,7 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
     const localSettingsPath: string = await getLocalSettingsFile(message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
-    await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
+    await node.withTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
         ext.outputChannel.show(true);
         ext.outputChannel.appendLog(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
         let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);

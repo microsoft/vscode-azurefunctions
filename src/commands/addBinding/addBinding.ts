@@ -9,6 +9,8 @@ import { ProjectLanguage } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from "../../FuncVersion";
 import { localize } from "../../localize";
+import { AppPerms, AppSource } from "../../tree/contextValues";
+import { FunctionTreeItemBase } from "../../tree/FunctionTreeItemBase";
 import { LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
 import { LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
 import { nonNullValue } from "../../utils/nonNull";
@@ -35,7 +37,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
     } else {
         if (!data) {
             const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
-            data = await ext.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
+            data = await ext.tree.showTreeItemWizard<LocalFunctionTreeItem>({ id: FunctionTreeItemBase.contextValueId, source: AppSource.local, perms: AppPerms.readWrite }, { ...context, noItemFoundErrorMessage });
         }
 
         functionJsonPath = data.functionJsonPath;

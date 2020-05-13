@@ -5,20 +5,29 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from 'azure-arm-website';
 import { Progress } from 'vscode';
-import { WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardExecuteStep, createAzureClient } from 'vscode-azureextensionui';
+import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
+import { AzureWizardExecuteStep, createAzureClient, parseError } from 'vscode-azureextensionui';
 import { extensionVersionKey, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
+import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 import { getStorageConnectionString } from '../../utils/azure';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullOrEmptyValue, nonNullProp } from '../../utils/nonNull';
+import { enableFileLogging } from '../logstream/enableFileLogging';
 import { IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
+    private readonly _parent: SubscriptionTreeItem;
+
+    public constructor(parent: SubscriptionTreeItem) {
+        super();
+        this._parent = parent;
+    }
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         context.telemetry.properties.newSiteOS = context.newSiteOS;
@@ -43,6 +52,18 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             siteConfig: await this.getNewSiteConfig(context),
             reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
         });
+
+        const siteClient: SiteClient = new SiteClient(context.site, context);
+        if (!siteClient.isLinux) { // not supported on linux
+            try {
+                await enableFileLogging(siteClient);
+            } catch (error) {
+                // optional part of creating function app, so not worth blocking on error
+                context.telemetry.properties.fileLoggingError = parseError(error).message;
+            }
+        }
+
+        context.newChildTreeItem = new ProductionSlotTreeItem(this._parent, new SiteClient(context.site, context), context.site);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
