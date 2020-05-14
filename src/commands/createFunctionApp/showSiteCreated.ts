@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MessageItem, window } from 'vscode';
+import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
+import { viewOutput } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 
@@ -21,7 +22,6 @@ export function showSiteCreated(client: SiteClient, context: ISiteCreatedOptions
     ext.outputChannel.appendLog(message);
 
     if (context.showCreatedNotification) {
-        const viewOutput: MessageItem = { title: localize('viewOutput', 'View Output') };
         // don't wait
         window.showInformationMessage(message, viewOutput).then(async result => {
             if (result === viewOutput) {
