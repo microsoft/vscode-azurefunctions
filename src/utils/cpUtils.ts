@@ -46,7 +46,7 @@ export namespace cpUtils {
                 outputChannel.appendLog(localize('runningCommand', 'Running command: "{0} {1}"...', command, formattedArgs));
             }
 
-            childProc.stdout.on('data', (data: string | Buffer) => {
+            childProc.stdout?.on('data', (data: string | Buffer) => {
                 data = data.toString();
                 cmdOutput = cmdOutput.concat(data);
                 cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
@@ -55,7 +55,7 @@ export namespace cpUtils {
                 }
             });
 
-            childProc.stderr.on('data', (data: string | Buffer) => {
+            childProc.stderr?.on('data', (data: string | Buffer) => {
                 data = data.toString();
                 cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
                 if (outputChannel) {

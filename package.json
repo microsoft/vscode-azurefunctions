@@ -1018,7 +1018,7 @@
         "@types/request-promise": "4.1.38",
         "@types/semver": "^5.5.0",
         "@types/vscode": "1.40.0",
-        "@types/websocket": "^0.0.37",
+        "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "^3.0.30",
         "azure-arm-resource": "^3.0.0-preview",
