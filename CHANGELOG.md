@@ -1,5 +1,17 @@
 # Change Log
 
+## 0.22.1 - 2020-05-15
+
+### Added
+- Enhanced deployment logs to show more information and more accurately detect failures
+- Added setting "azureFunctions.validateFuncCoreTools" to skip validating Azure Functions Core Tools before debugging
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.22.1%22+is%3Aclosed)
+
+### Changed
+- Minimum version of VS Code is now 1.40.0
+
 ## 0.22.0 - 2020-04-08
 
 ### Added
