@@ -8,6 +8,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
+import { ISiteCreatedOptions } from './showSiteCreated';
 
 export async function createFunctionApp(context: IActionContext & Partial<ICreateFuntionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
     let node: AzureParentTreeItem | undefined;
@@ -23,9 +24,8 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
     }
 
     context.newResourceGroupName = newResourceGroupName;
+    (<ISiteCreatedOptions>context).showCreatedNotification = true;
     const funcAppNode: ProductionSlotTreeItem = await node.createChild(context);
-    funcAppNode.showCreatedOutput();
-
     return funcAppNode.fullId;
 }
 

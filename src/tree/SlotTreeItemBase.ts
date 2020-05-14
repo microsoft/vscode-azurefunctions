@@ -4,14 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import { MessageItem, window } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { KuduClient } from 'vscode-azurekudu';
-import { ext } from '../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
-import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
@@ -220,24 +217,5 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async deleteTreeItemImpl(): Promise<void> {
         await deleteSite(this.root.client);
-    }
-
-    public showCreatedOutput(): void {
-        const slot: string = localize('createdNewSlot', 'Created new slot "{0}": {1}', this.root.client.fullName, `https://${this.root.client.defaultHostName}`);
-        const functionApp: string = localize('createdNewApp', 'Created new function app "{0}": {1}', this.root.client.fullName, `https://${this.root.client.defaultHostName}`);
-        const createdNewSlotTree: string = this.root.client.isSlot ? slot : functionApp;
-
-        ext.outputChannel.appendLog(createdNewSlotTree);
-        ext.outputChannel.appendLine('');
-        const viewOutput: MessageItem = {
-            title: localize('viewOutput', 'View Output')
-        };
-
-        // Note: intentionally not waiting for the result of this before returning
-        window.showInformationMessage(createdNewSlotTree, viewOutput).then(async (result: MessageItem | undefined) => {
-            if (result === viewOutput) {
-                ext.outputChannel.show();
-            }
-        });
     }
 }
