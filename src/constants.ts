@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from "./localize";
+
 export const projectLanguageSetting: string = 'projectLanguage';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const templateFilterSetting: string = 'templateFilter';
@@ -79,3 +81,5 @@ export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
+
+export const viewOutput: string = localize('viewOutput', 'View Output');
