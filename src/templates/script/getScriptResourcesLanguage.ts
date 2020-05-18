@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 
 export const english: string = 'en-US';
-const supportedLanguages: string[] = [
+export const supportedLanguages: string[] = [
     'cs-CZ',
     'de-DE',
     english,
@@ -20,7 +20,6 @@ const supportedLanguages: string[] = [
     'pl-PL',
     'pt-BR',
     'pt-PT',
-    'qps-ploc',
     'ru-RU',
     'sv-SE',
     'tr-TR',

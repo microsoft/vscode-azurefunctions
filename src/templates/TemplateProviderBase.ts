@@ -3,18 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fse from 'fs-extra';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
-import { localize } from '../localize';
 import { IBindingTemplate } from './IBindingTemplate';
 import { IFunctionTemplate } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
-
-const v3BackupTemplatesVersion: string = '3.4.1';
-const v2BackupTemplatesVersion: string = '2.47.1';
-const v1BackupTemplatesVersion: string = '1.11.0';
 
 export enum TemplateType {
     Script = 'Script',
@@ -28,6 +25,9 @@ export abstract class TemplateProviderBase {
     public abstract templateType: TemplateType;
     public readonly version: FuncVersion;
     public readonly projectPath: string | undefined;
+    public resourcesLanguage: string | undefined;
+
+    protected abstract backupSubpath: string;
 
     public constructor(version: FuncVersion, projectPath: string | undefined) {
         this.version = version;
@@ -47,6 +47,7 @@ export abstract class TemplateProviderBase {
     public abstract getCachedTemplates(context: IActionContext): Promise<ITemplates | undefined>;
     public abstract getBackupTemplates(context: IActionContext): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
+    public abstract updateBackupTemplates(): Promise<void>;
 
     /**
      * Unless this is overidden, all templates will be included
@@ -59,21 +60,26 @@ export abstract class TemplateProviderBase {
         return this.getCachedValue(TemplateProviderBase.templateVersionKey);
     }
 
-    public getBackupTemplateVersion(): string {
-        switch (this.version) {
-            case FuncVersion.v1:
-                return v1BackupTemplatesVersion;
-            case FuncVersion.v2:
-                return v2BackupTemplatesVersion;
-            case FuncVersion.v3:
-                return v3BackupTemplatesVersion;
-            default:
-                throw new RangeError(localize('invalidVersion', 'Invalid version "{0}".', this.version));
-        }
+    public async getBackupTemplateVersion(): Promise<string> {
+        return (await fse.readFile(this.getBackupVersionPath())).toString().trim();
+    }
+
+    public async updateBackupTemplateVersion(version: string): Promise<void> {
+        const filePath: string = this.getBackupVersionPath();
+        await fse.ensureFile(filePath);
+        await fse.writeFile(filePath, version);
+    }
+
+    protected getBackupPath(): string {
+        return ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
     }
 
     protected async getCacheKeySuffix(): Promise<string> {
         return '';
+    }
+
+    private getBackupVersionPath(): string {
+        return path.join(this.getBackupPath(), 'version.txt');
     }
 
     /**

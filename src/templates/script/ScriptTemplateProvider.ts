@@ -22,7 +22,10 @@ import { parseScriptTemplates } from './parseScriptTemplates';
 
 export class ScriptTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
-    protected readonly _backupSubpath: string = 'backupScriptTemplates';
+
+    protected get backupSubpath(): string {
+        return path.join('script', this.version);
+    }
 
     protected _rawResources: object;
     protected _rawTemplates: object[];
@@ -75,8 +78,16 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     public async getBackupTemplates(): Promise<ITemplates> {
-        const backupTemplatesPath: string = ext.context.asAbsolutePath(path.join('resources', this._backupSubpath, this.version));
-        return await this.parseTemplates(backupTemplatesPath);
+        return await this.parseTemplates(this.getBackupPath());
+    }
+
+    public async updateBackupTemplates(): Promise<void> {
+        const paths: ITemplatePaths = this.getTemplatePaths(this.getBackupPath());
+        const fileData: [string, object][] = [[paths.resources, this._rawResources], [paths.templates, this._rawTemplates], [paths.bindings, this._rawBindings]];
+        for (const [file, data] of fileData) {
+            await fse.ensureFile(file);
+            await fse.writeJSON(file, data);
+        }
     }
 
     public async cacheTemplates(): Promise<void> {
@@ -89,13 +100,30 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         return this.version === FuncVersion.v1 || !bundleFeedUtils.isBundleTemplate(template);
     }
 
-    protected async parseTemplates(templatesPath: string): Promise<ITemplates> {
-        const language: string = getScriptResourcesLanguage();
-        // Unlike templates.json and bindings.json, Resources.json has a capital letter
-        this._rawResources = <object>await fse.readJSON(path.join(templatesPath, 'resources', `Resources${language === english ? '' : '.' + language}.json`));
-        this._rawTemplates = <object[]>await fse.readJSON(path.join(templatesPath, 'templates', 'templates.json'));
-        this._rawBindings = <object>await fse.readJSON(path.join(templatesPath, 'bindings', 'bindings.json'));
-
+    protected async parseTemplates(rootPath: string): Promise<ITemplates> {
+        const paths: ITemplatePaths = this.getTemplatePaths(rootPath);
+        this._rawResources = <object>await fse.readJSON(paths.resources);
+        this._rawTemplates = <object[]>await fse.readJSON(paths.templates);
+        this._rawBindings = <object>await fse.readJSON(paths.bindings);
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
+
+    protected getResourcesLanguage(): string {
+        return this.resourcesLanguage || getScriptResourcesLanguage();
+    }
+
+    private getTemplatePaths(rootPath: string): ITemplatePaths {
+        const language: string = this.getResourcesLanguage();
+        // Unlike templates.json and bindings.json, Resources.json has a capital letter
+        const resources: string = path.join(rootPath, 'resources', `Resources${language === english ? '' : '.' + language}.json`);
+        const templates: string = path.join(rootPath, 'templates', 'templates.json');
+        const bindings: string = path.join(rootPath, 'bindings', 'bindings.json');
+        return { resources, templates, bindings };
+    }
+}
+
+interface ITemplatePaths {
+    resources: string;
+    templates: string;
+    bindings: string;
 }

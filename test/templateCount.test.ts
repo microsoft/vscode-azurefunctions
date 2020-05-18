@@ -4,12 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
-import * as path from 'path';
-import * as vscode from 'vscode';
-import { TestInput } from 'vscode-azureextensiondev';
 import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, longRunningTestsEnabled, runForTemplateSource, skipStagingTemplateSource, testUserInput, testWorkspacePath } from './global.test';
+import { createTestActionContext, longRunningTestsEnabled, runForTemplateSource, skipStagingTemplateSource, testWorkspacePath } from './global.test';
+import { javaUtils } from './utils/javaUtils';
 
 addSuite(undefined);
 addSuite(TemplateSource.Latest);
@@ -61,12 +58,5 @@ async function javaPreTest(testContext: Mocha.Context): Promise<void> {
     }
     testContext.timeout(120 * 1000);
 
-    // Java templates require you to have a project open, so create one here
-    if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // No need to create for every template source
-        const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
-        await cleanTestWorkspace();
-        await testUserInput.runWithInputs(inputs, async () => {
-            await vscode.commands.executeCommand('azureFunctions.createNewProject');
-        });
-    }
+    await javaUtils.addJavaProjectToWorkspace();
 }

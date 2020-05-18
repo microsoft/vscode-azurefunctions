@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
 import { CentralTemplateProvider, deploySubpathSetting, ext, FuncVersion, funcVersionSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, templateFilterSetting, TemplateSource, updateWorkspaceSetting } from '../extension.bundle';
+import { envUtils } from './utils/envUtils';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -22,6 +23,7 @@ export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRan
 export let testWorkspacePath: string;
 
 export let longRunningTestsEnabled: boolean;
+export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
@@ -44,19 +46,22 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
-    skipStagingTemplateSource = isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
+    skipStagingTemplateSource = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
-    await preLoadTemplates(ext.templateProvider);
-    templateProviderMap = new Map();
-    for (const source of Object.values(TemplateSource)) {
-        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
-            templateProviderMap.set(source, new CentralTemplateProvider(source));
+    updateBackupTemplates = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
+    if (!updateBackupTemplates) {
+        await preLoadTemplates(ext.templateProvider);
+        templateProviderMap = new Map();
+        for (const source of Object.values(TemplateSource)) {
+            if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
+                templateProviderMap.set(source, new CentralTemplateProvider(source));
+            }
         }
+
+        await runForAllTemplateSources(async (_source, provider) => await preLoadTemplates(provider));
     }
 
-    await runForAllTemplateSources(async (_source, provider) => await preLoadTemplates(provider));
-
-    longRunningTestsEnabled = isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
+    longRunningTestsEnabled = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
@@ -72,11 +77,6 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
         console.warn(`Failed to delete test folder path: ${parseError(error).message}`);
     }
 });
-
-function isEnvironmentVariableSet(val: string | undefined): boolean {
-    // tslint:disable-next-line: strict-boolean-expressions
-    return !/^(false|0)?$/i.test(val || '');
-}
 
 /**
  * Pre-load templates so that the first related unit test doesn't time out

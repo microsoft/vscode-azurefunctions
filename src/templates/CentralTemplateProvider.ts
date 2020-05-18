@@ -28,6 +28,26 @@ export class CentralTemplateProvider {
         this.templateSource = templateSource;
     }
 
+    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): TemplateProviderBase[] {
+        const providers: TemplateProviderBase[] = [];
+        switch (language) {
+            case ProjectLanguage.CSharp:
+            case ProjectLanguage.FSharp:
+                providers.push(new DotnetTemplateProvider(version, projectPath));
+                break;
+            case ProjectLanguage.Java:
+                providers.push(new JavaTemplateProvider(version, projectPath));
+                break;
+            default:
+                providers.push(new ScriptTemplateProvider(version, projectPath));
+                if (version !== FuncVersion.v1) {
+                    providers.push(new ScriptBundleTemplateProvider(version, projectPath));
+                }
+                break;
+        }
+        return providers;
+    }
+
     public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
         const functionTemplates: IFunctionTemplate[] = templates.functionTemplates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
@@ -52,22 +72,7 @@ export class CentralTemplateProvider {
      * Ensures we only have one task going at a time for refreshing templates
      */
     private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<ITemplates> {
-        const providers: TemplateProviderBase[] = [];
-        switch (language) {
-            case ProjectLanguage.CSharp:
-            case ProjectLanguage.FSharp:
-                providers.push(new DotnetTemplateProvider(version, projectPath));
-                break;
-            case ProjectLanguage.Java:
-                providers.push(new JavaTemplateProvider(version, projectPath));
-                break;
-            default:
-                providers.push(new ScriptTemplateProvider(version, projectPath));
-                if (version !== FuncVersion.v1) {
-                    providers.push(new ScriptBundleTemplateProvider(version, projectPath));
-                }
-                break;
-        }
+        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
 
         let key: string = version;
         for (const provider of providers) {
@@ -188,7 +193,7 @@ export class CentralTemplateProvider {
         if (!this.templateSource || this.templateSource === TemplateSource.Backup) {
             try {
                 context.telemetry.properties.templateSource = 'backup';
-                const backupTemplateVersion: string = provider.getBackupTemplateVersion();
+                const backupTemplateVersion: string = await provider.getBackupTemplateVersion();
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates(context);
                 await provider.updateCachedValue(TemplateProviderBase.templateVersionKey, backupTemplateVersion);
