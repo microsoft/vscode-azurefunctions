@@ -169,7 +169,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
     };
 }
 
-export function getJavaValidateOptions(_appName: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getJavaValidateOptions(appName: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.Java,
         version,
@@ -177,8 +177,7 @@ export function getJavaValidateOptions(_appName: string, version: FuncVersion = 
             'azureFunctions.projectLanguage': ProjectLanguage.Java,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'package',
-            // Can't check the exact value because of this issue: https://github.com/microsoft/azure-maven-archetypes/issues/136
-            'azureFunctions.deploySubpath': /^target\/azure-functions\/.*/,
+            'azureFunctions.deploySubpath': `target/azure-functions/${appName}`,
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
