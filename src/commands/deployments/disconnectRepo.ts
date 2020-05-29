@@ -7,14 +7,14 @@ import { DeploymentsTreeItem, disconnectRepo as disconnectRepository } from "vsc
 import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function disconnectRepo(context: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected, context);
     }
 
-    if (node.parent instanceof SlotTreeItem) {
+    if (node.parent instanceof SlotTreeItemBase) {
         await disconnectRepository(context, node.parent.client, node.parent.root);
     } else {
         throw Error(localize('actionNotSupported', 'Action not supported'));
