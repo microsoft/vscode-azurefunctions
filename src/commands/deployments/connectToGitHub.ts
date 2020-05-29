@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentsTreeItem } from "vscode-azureappservice";
+import { DeploymentsTreeItem, editScmType } from "vscode-azureappservice";
 import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
+import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
+import { localize } from "../../localize";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
+import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 
 export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
     let node: ProductionSlotTreeItem | DeploymentsTreeItem;
@@ -17,12 +20,17 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
         node = <DeploymentsTreeItem>target.parent;
     }
 
-    if (node instanceof DeploymentsTreeItem) {
-        // await editScmType(node.client, node.parent.root, context, ScmType.GitHub);
-        await node.parent?.refresh();
-    } else if (node instanceof ProductionSlotTreeItem) {
+    if (node?.parent instanceof SlotTreeItemBase) {
+        await editScmType(node.parent.root.client, node.parent.root, context, ScmType.GitHub);
+    } else {
+        throw Error(localize('actionNotSupported', 'Action not supported'));
+    }
+
+    if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
             await node.deploymentsNode.refresh();
         }
+    } else {
+        await node.parent?.refresh();
     }
 }
