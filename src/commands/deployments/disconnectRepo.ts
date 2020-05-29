@@ -16,6 +16,7 @@ export async function disconnectRepo(context: IActionContext, node?: Deployments
 
     if (node.parent instanceof SlotTreeItemBase) {
         await disconnectRepository(context, node.parent.client, node.parent.root);
+        await node.refresh();
     } else {
         throw Error(localize('actionNotSupported', 'Action not supported'));
     }
