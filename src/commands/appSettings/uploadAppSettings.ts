@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from "azure-arm-website";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, SiteClient } from "vscode-azureappservice";
+import { AppSettingsTreeItem, IAppSettingsClient } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -26,7 +26,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
-    const client: SiteClient = node.root.client;
+    const client: IAppSettingsClient = node.client;
 
     await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
         ext.outputChannel.show(true);

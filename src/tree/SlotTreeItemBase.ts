@@ -44,9 +44,9 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this.site = site;
         this._root = Object.assign({}, parent.root, { client });
         this._state = client.initialState;
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this);
-        this._siteFilesTreeItem = new SiteFilesTreeItem(this, true);
-        this._logFilesTreeItem = new LogFilesTreeItem(this);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(this, client);
+        this._siteFilesTreeItem = new SiteFilesTreeItem(this, client, true);
+        this._logFilesTreeItem = new LogFilesTreeItem(this, client);
     }
 
     // overrides ISubscriptionContext with an object that also has SiteClient
@@ -167,7 +167,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
         const sourceControl: WebSiteManagementModels.SiteSourceControl = await this.root.client.getSourceControl();
-        this.deploymentsNode = new DeploymentsTreeItem(this, siteConfig, sourceControl);
+        this.deploymentsNode = new DeploymentsTreeItem(this, this.root.client, siteConfig, sourceControl);
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(this);

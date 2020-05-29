@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentsTreeItem, editScmType } from "vscode-azureappservice";
+import { DeploymentsTreeItem } from "vscode-azureappservice";
 import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
-import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
 
@@ -18,12 +17,12 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
         node = <DeploymentsTreeItem>target.parent;
     }
 
-    await editScmType(node.root.client, node, context, ScmType.GitHub);
-    if (node instanceof ProductionSlotTreeItem) {
+    if (node instanceof DeploymentsTreeItem) {
+        // await editScmType(node.client, node.parent.root, context, ScmType.GitHub);
+        await node.parent?.refresh();
+    } else if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
             await node.deploymentsNode.refresh();
         }
-    } else {
-        await node.parent.refresh();
     }
 }
