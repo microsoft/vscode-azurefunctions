@@ -56,7 +56,8 @@ export namespace bundleFeedUtils {
     }
 
     export function isBundleTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
-        return (!template.isHttpTrigger && !template.isTimerTrigger) || isDurableTemplate(template);
+        const bundleTemplateTypes: string[] = ['durable', 'signalr'];
+        return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
     export async function getLatestVersionRange(): Promise<string> {
@@ -78,20 +79,22 @@ export namespace bundleFeedUtils {
         };
     }
 
-    function isDurableTemplate(template: Partial<IFunctionTemplate>): boolean {
-        return !!template.id?.toLowerCase().includes('durable');
+    function isTemplateOfType(template: Partial<IFunctionTemplate>, templateType: string): boolean {
+        return !!template.id?.toLowerCase().includes(templateType.toLowerCase());
     }
 
     async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
         const bundleId: string = bundleMetadata && bundleMetadata.id || defaultBundleId;
 
+        const envVarUri: string | undefined = process.env.FUNCTIONS_EXTENSIONBUNDLE_SOURCE_URI;
         // Only use an aka.ms link for the most common case, otherwise we will dynamically construct the url
         let url: string;
-        if (bundleId === defaultBundleId && ext.templateProvider.templateSource !== TemplateSource.Staging) {
+        if (!envVarUri && bundleId === defaultBundleId && ext.templateProvider.templateSource !== TemplateSource.Staging) {
             url = 'https://aka.ms/AA66i2x';
         } else {
             const suffix: string = ext.templateProvider.templateSource === TemplateSource.Staging ? 'staging' : '';
-            url = `https://functionscdn${suffix}.azureedge.net/public/ExtensionBundles/${bundleId}/index-v2.json`;
+            const baseUrl: string = envVarUri || `https://functionscdn${suffix}.azureedge.net/public`;
+            url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
         }
 
         return feedUtils.getJsonFeed(url);

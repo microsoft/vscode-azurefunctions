@@ -12,22 +12,39 @@ import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreTools
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
+import * as api from '../../vscode-azurefunctions.api';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
-export async function createFunction(
+/**
+ * @deprecated Use AzureFunctionsExtensionApi.createFunction instead
+ */
+export async function createFunctionFromCommand(
     context: IActionContext,
-    workspacePath?: string,
+    folderPath?: string,
     templateId?: string,
     functionName?: string,
-    triggerSettings?: { [key: string]: string | undefined },
+    functionSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     version?: FuncVersion): Promise<void> {
+
+    await createFunctionInternal(context, {
+        folderPath,
+        templateId,
+        functionName,
+        functionSettings,
+        language: <api.ProjectLanguage>language,
+        version: <api.ProjectVersion>version
+    });
+}
+
+export async function createFunctionInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
     addLocalFuncTelemetry(context);
 
     let workspaceFolder: WorkspaceFolder | undefined;
+    let workspacePath: string | undefined = options.folderPath;
     if (workspacePath === undefined) {
         workspaceFolder = await getWorkspaceFolder(context);
         workspacePath = workspaceFolder.uri.fsPath;
@@ -35,16 +52,16 @@ export async function createFunction(
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath);
+    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath, options);
     if (!projectPath) {
         return;
     }
 
-    [language, version] = await verifyInitForVSCode(context, projectPath, language, version);
+    const [language, version] = await verifyInitForVSCode(context, projectPath, options.language, options.version);
 
-    const wizardContext: IFunctionWizardContext = Object.assign(context, { projectPath, workspacePath, workspaceFolder, version, language, functionName });
+    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [await FunctionListStep.create(wizardContext, { templateId, triggerSettings, isProjectWizard: false })]
+        promptSteps: [await FunctionListStep.create(wizardContext, { templateId: options.templateId, functionSettings: options.functionSettings, isProjectWizard: false })]
     });
     await wizard.prompt();
     await wizard.execute();

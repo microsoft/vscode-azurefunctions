@@ -29,7 +29,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         const packagePath: string = path.join(context.projectPath, 'package.json');
         if (await confirmOverwriteFile(packagePath)) {
             await writeFormattedJson(packagePath, {
-                name: path.basename(context.projectPath),
+                name: convertToValidPackageName(path.basename(context.projectPath)),
                 version: '1.0.0',
                 description: '',
                 scripts: this.packageJsonScripts,
@@ -38,6 +38,21 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
             });
         }
     }
+}
+
+/**
+ * See https://github.com/microsoft/vscode-azurefunctions/issues/2030
+ * We really just want to avoid the red squiggly when users open up a package.json. Since an invalid name shouldn't block users, this is not meant to be an exhaustive validation
+ */
+export function convertToValidPackageName(name: string): string {
+    // convert to lowercase
+    return name.toLowerCase()
+        // remove leading/trailing whitespace
+        .trim()
+        // Replace any disallowed characters with a hyphen
+        .replace(/[^a-z0-9-\._~]/g, '-')
+        // Replace the first character with a hyphen if it's a period or underscore
+        .replace(/^(\.|_)/, '-');
 }
 
 // https://raw.githubusercontent.com/github/gitignore/master/Node.gitignore

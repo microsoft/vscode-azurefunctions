@@ -212,7 +212,7 @@ function addSuite(tester: FunctionTesterBase): void {
         }
 
         // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
-        test('createFunction API', async () => {
+        test('createFunction API (deprecated)', async () => {
             await runForAllTemplateSources(async (source) => {
                 const templateId: string = `HttpTrigger-${tester.language}`;
                 const functionName: string = 'createFunctionApi';

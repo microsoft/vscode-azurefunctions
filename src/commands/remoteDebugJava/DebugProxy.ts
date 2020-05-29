@@ -65,7 +65,9 @@ export class DebugProxy extends EventEmitter {
                         });
 
                         connection.on('message', (data: websocket.IMessage) => {
-                            socket.write(data.binaryData);
+                            if (data.binaryData) {
+                                socket.write(data.binaryData);
+                            }
                         });
                         socket.resume();
                     });

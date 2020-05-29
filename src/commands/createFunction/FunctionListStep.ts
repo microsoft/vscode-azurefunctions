@@ -30,13 +30,13 @@ import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCr
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
 
-    private readonly _triggerSettings: { [key: string]: string | undefined };
+    private readonly _functionSettings: { [key: string]: string | undefined };
     private readonly _isProjectWizard: boolean;
 
-    private constructor(triggerSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
+    private constructor(functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
         super();
         // tslint:disable-next-line: strict-boolean-expressions
-        this._triggerSettings = triggerSettings || {};
+        this._functionSettings = functionSettings || {};
         this._isProjectWizard = !!isProjectWizard;
     }
 
@@ -45,7 +45,16 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All);
-            const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => t.id === options.templateId);
+            const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
+                if (options.templateId) {
+                    const actualId: string = t.id.toLowerCase();
+                    const expectedId: string = options.templateId.toLowerCase();
+                    // Check for a match with or without the language in the id
+                    return actualId === expectedId || actualId === `${expectedId}-${language.toLowerCase()}`;
+                } else {
+                    return false;
+                }
+            });
             if (foundTemplate) {
                 context.functionTemplate = foundTemplate;
             } else {
@@ -53,7 +62,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             }
         }
 
-        return new FunctionListStep(options.triggerSettings, options.isProjectWizard);
+        return new FunctionListStep(options.functionSettings, options.isProjectWizard);
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
@@ -74,8 +83,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             }
 
             // Add settings to context that were programatically passed in
-            for (const key of Object.keys(this._triggerSettings)) {
-                context[key.toLowerCase()] = this._triggerSettings[key];
+            for (const key of Object.keys(this._functionSettings)) {
+                context[key.toLowerCase()] = this._functionSettings[key];
             }
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
@@ -169,7 +178,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 interface IFunctionListStepOptions {
     isProjectWizard: boolean;
     templateId: string | undefined;
-    triggerSettings: { [key: string]: string | undefined } | undefined;
+    functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
 type TemplatePromptResult = 'changeFilter' | 'skipForNow';

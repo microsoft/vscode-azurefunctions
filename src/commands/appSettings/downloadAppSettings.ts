@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
 import { AppSettingsTreeItem, IAppSettingsClient } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
-import { localSettingsFileName } from "../../constants";
+import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
@@ -28,43 +28,45 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
     const localSettingsPath: string = await getLocalSettingsFile(message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
-    await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
-        ext.outputChannel.show(true);
-        ext.outputChannel.appendLog(localize('downloadStart', 'Downloading settings from "{0}"...', client.fullName));
-        let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
+    let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
 
-        const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
-        if (localSettings.IsEncrypted) {
-            await decryptLocalSettings(context, localSettingsUri);
-            localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
+    const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
+    if (localSettings.IsEncrypted) {
+        await decryptLocalSettings(context, localSettingsUri);
+        localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
+    }
+
+    try {
+        if (!localSettings.Values) {
+            localSettings.Values = {};
         }
 
-        try {
-            if (!localSettings.Values) {
-                localSettings.Values = {};
-            }
+        const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
 
-            const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
-            if (remoteSettings.properties) {
-                await confirmOverwriteSettings(remoteSettings.properties, localSettings.Values, localSettingsFileName);
-            }
+        ext.outputChannel.appendLog(localize('downloadingSettings', 'Downloading settings...'), { resourceName: client.fullName });
+        if (remoteSettings.properties) {
+            await confirmOverwriteSettings(remoteSettings.properties, localSettings.Values, localSettingsFileName);
+        }
 
+        await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
             await fse.ensureFile(localSettingsPath);
             await fse.writeJson(localSettingsPath, localSettings, { spaces: 2 });
-        } finally {
-            if (isEncrypted) {
-                await encryptLocalSettings(context, localSettingsUri);
-            }
+        });
+    } finally {
+        if (isEncrypted) {
+            await encryptLocalSettings(context, localSettingsUri);
         }
-    });
+    }
 
-    const downloadedMessage: string = localize('downloadedSettings', `Successfully downloaded settings from "{0}".`, client.fullName);
+    ext.outputChannel.appendLog(localize('downloadedSettings', 'Successfully downloaded settings.'), { resourceName: client.fullName });
     const openFile: string = localize('openFile', 'Open File');
     // don't wait
-    vscode.window.showInformationMessage(downloadedMessage, openFile).then(async (result: string | undefined) => {
+    vscode.window.showInformationMessage(localize('downloadedSettingsFrom', 'Successfully downloaded settings from "{0}".', client.fullName), openFile, viewOutput).then(async result => {
         if (result === openFile) {
             const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
             await vscode.window.showTextDocument(doc);
+        } else if (result === viewOutput) {
+            ext.outputChannel.show();
         }
     });
 }
