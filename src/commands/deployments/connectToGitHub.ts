@@ -7,7 +7,6 @@ import { DeploymentsTreeItem, editScmType } from "vscode-azureappservice";
 import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
 import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { localize } from "../../localize";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
 import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 
@@ -23,7 +22,7 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
     if (node?.parent instanceof SlotTreeItemBase) {
         await editScmType(context, node.parent.root.client, node.parent.root, ScmType.GitHub);
     } else {
-        throw Error(localize('actionNotSupported', 'Action not supported'));
+        throw Error('Internal error: Action not supported.');
     }
 
     if (node instanceof ProductionSlotTreeItem) {

@@ -6,7 +6,6 @@
 import { DeploymentsTreeItem, disconnectRepo as disconnectRepository } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
-import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function disconnectRepo(context: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
@@ -18,6 +17,6 @@ export async function disconnectRepo(context: IActionContext, node?: Deployments
         await disconnectRepository(context, node.parent.client, node.parent.root);
         await node.refresh();
     } else {
-        throw Error(localize('actionNotSupported', 'Action not supported'));
+        throw Error('Internal error: Action not supported.');
     }
 }
