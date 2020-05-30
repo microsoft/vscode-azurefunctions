@@ -21,7 +21,7 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
     }
 
     if (node?.parent instanceof SlotTreeItemBase) {
-        await editScmType(node.parent.root.client, node.parent.root, context, ScmType.GitHub);
+        await editScmType(context, node.parent.root.client, node.parent.root, ScmType.GitHub);
     } else {
         throw Error(localize('actionNotSupported', 'Action not supported'));
     }
