@@ -26,7 +26,10 @@ interface IRawJavaTemplates {
  */
 export class JavaTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.Java;
-    protected readonly _backupSubpath: string = 'backupJavaTemplates';
+
+    protected get backupSubpath(): string {
+        return path.join('java', this.version);
+    }
 
     public async getLatestTemplateVersion(): Promise<string> {
         const pomPath: string = path.join(this.getProjectPath(), 'pom.xml');

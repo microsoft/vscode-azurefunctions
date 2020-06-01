@@ -16,12 +16,15 @@ import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateType } from '../TemplateProviderBase';
-import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';
 import { ScriptTemplateProvider } from './ScriptTemplateProvider';
 
 export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
     public templateType: TemplateType = TemplateType.ScriptBundle;
+
+    protected get backupSubpath(): string {
+        return bundleFeedUtils.defaultBundleId;
+    }
 
     public async getLatestTemplateVersion(): Promise<string> {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
@@ -34,7 +37,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
 
         const bindingsRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(release.bindings);
 
-        const language: string = getScriptResourcesLanguage();
+        const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
         const resourcesRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(resourcesUrl);
 

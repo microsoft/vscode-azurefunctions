@@ -6,6 +6,7 @@
 import * as glob from 'glob';
 import * as Mocha from 'mocha';
 import * as path from 'path';
+import { envUtils } from './utils/envUtils';
 
 // tslint:disable-next-line: export-name
 export async function run(): Promise<void> {
@@ -26,11 +27,16 @@ export async function run(): Promise<void> {
 
     const mocha = new Mocha(options);
 
-    const files: string[] = await new Promise((resolve, reject) => {
-        glob('**/**.test.js', { cwd: __dirname }, (err, result) => {
-            err ? reject(err) : resolve(result);
+    let files: string[];
+    if (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES)) {
+        files = ['updateBackupTemplates.js'];
+    } else {
+        files = await new Promise((resolve, reject) => {
+            glob('**/**.test.js', { cwd: __dirname }, (err, result) => {
+                err ? reject(err) : resolve(result);
+            });
         });
-    });
+    }
 
     files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));
 

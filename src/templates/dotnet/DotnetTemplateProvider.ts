@@ -6,17 +6,21 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
-import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 
 export class DotnetTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Dotnet;
+
+    protected get backupSubpath(): string {
+        return path.join('dotnet', this.version);
+    }
+
     private readonly _dotnetTemplatesKey: string = 'DotnetTemplates';
     private _rawTemplates: object[];
 
@@ -57,8 +61,20 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     }
 
     public async getBackupTemplates(context: IActionContext): Promise<ITemplates> {
-        await fse.copy(ext.context.asAbsolutePath(path.join('resources', 'backupDotnetTemplates')), getDotnetTemplatesPath(), { overwrite: true, recursive: false });
+        const backupPath: string = this.getBackupPath();
+        const files: string[] = [getDotnetProjectTemplatePath(this.version), getDotnetItemTemplatePath(this.version)];
+        for (const file of files) {
+            await fse.copy(path.join(backupPath, path.basename(file)), file);
+        }
         return await this.parseTemplates(context);
+    }
+
+    public async updateBackupTemplates(): Promise<void> {
+        const backupPath: string = this.getBackupPath();
+        const files: string[] = [getDotnetProjectTemplatePath(this.version), getDotnetItemTemplatePath(this.version)];
+        for (const file of files) {
+            await fse.copy(file, path.join(backupPath, path.basename(file)));
+        }
     }
 
     public async cacheTemplates(): Promise<void> {
