@@ -8,6 +8,7 @@ import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
 import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";
+import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 
 export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
     let node: ProductionSlotTreeItem | DeploymentsTreeItem;
@@ -18,12 +19,17 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
         node = <DeploymentsTreeItem>target.parent;
     }
 
-    await editScmType(node.root.client, node, context, ScmType.GitHub);
+    if (node?.parent instanceof SlotTreeItemBase) {
+        await editScmType(context, node.parent.root.client, node.parent.root, ScmType.GitHub);
+    } else {
+        throw Error('Internal error: Action not supported.');
+    }
+
     if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
             await node.deploymentsNode.refresh();
         }
     } else {
-        await node.parent.refresh();
+        await node.parent?.refresh();
     }
 }
