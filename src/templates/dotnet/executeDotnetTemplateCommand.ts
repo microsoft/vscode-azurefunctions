@@ -63,7 +63,7 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
 
         const majorVersions: string[] = ['3', '2'];
         for (const majorVersion of majorVersions) {
-            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`);
+            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
             if (regExp.test(versions)) {
                 cachedFramework = `netcoreapp${majorVersion}.0`;
                 break;
