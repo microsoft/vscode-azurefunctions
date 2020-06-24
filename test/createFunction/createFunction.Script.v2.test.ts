@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITestCallbackContext } from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, parseError, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
 import { runForAllTemplateSources } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -161,36 +160,34 @@ function addSuite(tester: FunctionTesterBase): void {
             );
         });
 
-        // For now - durable is only supported in these languaeges
-        if (tester.language === ProjectLanguage.TypeScript || tester.language === ProjectLanguage.JavaScript) {
-            const durableActivity: string = 'Durable Functions activity';
-            test(durableActivity, async () => {
-                await tester.testCreateFunction(
-                    durableActivity
-                );
-            });
-
-            const durableHttpStarter: string = 'Durable Functions HTTP starter';
-            test(durableHttpStarter, async function (this: ITestCallbackContext): Promise<void> {
-                try {
-                    await tester.testCreateFunction(
-                        durableHttpStarter,
-                        getRotatingAuthLevel()
-                    );
-                } catch (e) {
-                    // temporarily ignore errors until this is fixed: https://github.com/Azure/azure-functions-templates/pull/932
-                    console.log(parseError(e).message);
-                    this.skip();
-                }
-            });
-
-            const durableOrchestrator: string = 'Durable Functions orchestrator';
-            test(durableOrchestrator, async () => {
-                await tester.testCreateFunction(
-                    durableOrchestrator
-                );
-            });
+        function fixDurableLabel(label: string): string {
+            if (tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Python) {
+                label += ' (preview)';
+            }
+            return label;
         }
+
+        const durableActivity: string = 'Durable Functions activity';
+        test(durableActivity, async () => {
+            await tester.testCreateFunction(
+                fixDurableLabel(durableActivity)
+            );
+        });
+
+        const durableHttpStarter: string = 'Durable Functions HTTP starter';
+        test(durableHttpStarter, async () => {
+            await tester.testCreateFunction(
+                fixDurableLabel(durableHttpStarter),
+                getRotatingAuthLevel()
+            );
+        });
+
+        const durableOrchestrator: string = 'Durable Functions orchestrator';
+        test(durableOrchestrator, async () => {
+            await tester.testCreateFunction(
+                fixDurableLabel(durableOrchestrator)
+            );
+        });
 
         // For now - these are not supported in Python
         if (tester.language !== ProjectLanguage.Python) {
