@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, WorkspaceFolder } from 'vscode';
 import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
-import { deploySubpathSetting, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -41,7 +41,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         await fse.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath);
         await this.writeLaunchJson(context.workspaceFolder, vscodePath, version);
-        await this.writeSettingsJson(context.workspaceFolder, vscodePath, language, version);
+        await this.writeSettingsJson(context, vscodePath, language, version);
         await this.writeExtensionsJson(vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
@@ -189,7 +189,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return existingConfigs;
     }
 
-    private async writeSettingsJson(folder: WorkspaceFolder | undefined, vscodePath: string, language: string, version: FuncVersion): Promise<void> {
+    private async writeSettingsJson(context: IProjectWizardContext, vscodePath: string, language: string, version: FuncVersion): Promise<void> {
         const settings: ISettingToAdd[] = this.settings.concat(
             { key: projectLanguageSetting, value: language },
             { key: funcVersionSetting, value: version },
@@ -197,13 +197,21 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             { prefix: 'debug', key: 'internalConsoleOptions', value: 'neverOpen' }
         );
 
+        // Add "projectSubpath" setting if project is far enough down that we won't auto-detect it
+        if (path.posix.relative(context.projectPath, context.workspacePath).startsWith('../..')) {
+            settings.push({
+                key: projectSubpathSetting,
+                value: path.posix.relative(context.workspacePath, context.projectPath)
+            });
+        }
+
         if (this.preDeployTask) {
             settings.push({ key: preDeployTaskSetting, value: this.preDeployTask });
         }
 
-        if (folder) { // Use VS Code api to update config if folder is open
+        if (context.workspaceFolder) { // Use VS Code api to update config if folder is open
             for (const setting of settings) {
-                await updateWorkspaceSetting(setting.key, setting.value, folder.uri.fsPath, setting.prefix);
+                await updateWorkspaceSetting(setting.key, setting.value, context.workspacePath, setting.prefix);
             }
         } else { // otherwise manually edit json
             const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
