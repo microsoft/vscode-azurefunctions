@@ -7,14 +7,12 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem } from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { hostFileName } from '../../constants';
+import { hostFileName, projectSubpathSetting } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { createNewProjectInternal } from './createNewProject';
-
-const projectSubpathKey: string = 'projectSubpath';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -27,7 +25,7 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
  * If multiple projects are found, prompt to pick the project.
  */
 export async function tryGetFunctionProjectRoot(folderPath: string, suppressPrompt: boolean = false): Promise<string | undefined> {
-    let subpath: string | undefined = getWorkspaceSetting(projectSubpathKey, folderPath);
+    let subpath: string | undefined = getWorkspaceSetting(projectSubpathSetting, folderPath);
     if (!subpath) {
         if (!(await fse.pathExists(folderPath))) {
             return undefined;
@@ -65,7 +63,7 @@ async function promptForProjectSubpath(workspacePath: string, matchingSubpaths: 
     const picks: IAzureQuickPickItem<string>[] = matchingSubpaths.map(p => { return { label: p, description: workspacePath, data: p }; });
     const placeHolder: string = localize('selectProject', 'Select the default project subpath');
     const subpath: string = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
-    await updateWorkspaceSetting(projectSubpathKey, subpath, workspacePath);
+    await updateWorkspaceSetting(projectSubpathSetting, subpath, workspacePath);
 
     return subpath;
 }

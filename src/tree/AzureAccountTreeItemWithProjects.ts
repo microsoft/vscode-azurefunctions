@@ -8,7 +8,7 @@ import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
-import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -31,7 +31,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         super(undefined, testAccount);
         this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
         this.disposables.push(workspace.onDidChangeConfiguration(async e => {
-            const settings: string[] = [projectLanguageSetting, funcVersionSetting];
+            const settings: string[] = [projectLanguageSetting, funcVersionSetting, projectSubpathSetting];
             if (settings.some(s => e.affectsConfiguration(`${ext.prefix}.${s}`))) {
                 await this.refresh();
             }

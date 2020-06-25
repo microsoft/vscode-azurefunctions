@@ -7,6 +7,7 @@ import { localize } from "./localize";
 
 export const projectLanguageSetting: string = 'projectLanguage';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
+export const projectSubpathSetting: string = 'projectSubpath';
 export const templateFilterSetting: string = 'templateFilter';
 export const deploySubpathSetting: string = 'deploySubpath';
 export const templateVersionSetting: string = 'templateVersion';
