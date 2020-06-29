@@ -79,7 +79,15 @@ local.settings.json`));
             return {};
         } else {
             const hostJson: IHostJsonV2 = {
-                version: '2.0'
+                version: '2.0',
+                logging: {
+                    applicationInsights: {
+                        samplingSettings: {
+                            isEnabled: true,
+                            excludedTypes: 'Request'
+                        }
+                    }
+                }
             };
 
             await bundleFeedUtils.addDefaultBundle(hostJson);

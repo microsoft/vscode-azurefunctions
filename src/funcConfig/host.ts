@@ -7,6 +7,14 @@ import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
+    logging?: {
+        applicationInsights?: {
+            samplingSettings?: {
+                isEnabled?: boolean,
+                excludedTypes?: string
+            }
+        }
+    },
     managedDependency?: {
         enabled?: boolean;
     };
