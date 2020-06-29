@@ -10,11 +10,11 @@ export interface IHostJsonV2 {
     logging?: {
         applicationInsights?: {
             samplingSettings?: {
-                isEnabled?: boolean,
-                excludedTypes?: string
-            }
-        }
-    },
+                isEnabled?: boolean;
+                excludedTypes?: string;
+            };
+        };
+    };
     managedDependency?: {
         enabled?: boolean;
     };
