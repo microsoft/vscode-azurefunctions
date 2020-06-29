@@ -22,14 +22,16 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     }
 
     const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? node.parent.parent.root.client : undefined;
+    const triggerBindingType: string | undefined = node.config.triggerBinding?.type;
+    context.telemetry.properties.triggerBindingType = triggerBindingType;
 
     let functionInput: string | {} = '';
     if (!node.config.isTimerTrigger) {
         const prompt: string = localize('enterRequestBody', 'Enter request body');
         let value: string | undefined;
-        if (node.config.triggerBinding?.type) {
+        if (triggerBindingType) {
             const version: FuncVersion = await node.parent.parent.getVersion();
-            value = await ext.templateProvider.tryGetSampleData(context, version, node.config.triggerBinding?.type);
+            value = await ext.templateProvider.tryGetSampleData(context, version, triggerBindingType);
             if (value) {
                 // Clean up the whitespace to make it more friendly for a one-line input box
                 value = value.replace(/[\r\n\t]/g, ' ');
