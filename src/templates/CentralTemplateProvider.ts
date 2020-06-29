@@ -16,6 +16,7 @@ import { ITemplates } from './ITemplates';
 import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
 import { TemplateProviderBase } from './TemplateProviderBase';
@@ -66,6 +67,16 @@ export class CentralTemplateProvider {
     public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<IBindingTemplate[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
         return templates.bindingTemplates;
+    }
+
+    public async tryGetSampleData(context: IActionContext, version: FuncVersion, triggerBindingType: string): Promise<string | undefined> {
+        try {
+            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All);
+            const template: IScriptFunctionTemplate | undefined = templates.find(t => t.functionJson.triggerBinding?.type?.toLowerCase() === triggerBindingType.toLowerCase());
+            return template?.templateFiles['sample.dat'];
+        } catch {
+            return undefined;
+        }
     }
 
     /**
