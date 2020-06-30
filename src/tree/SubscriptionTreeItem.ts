@@ -105,8 +105,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         if (!context.advancedCreation) {
             wizardContext.useConsumptionPlan = true;
-            wizardContext.runtimeFilter = getFunctionsWorkerRuntime(language);
-            if (wizardContext.runtimeFilter) {
+            wizardContext.stackFilter = getFunctionsWorkerRuntime(language);
+            if (wizardContext.stackFilter) {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
                 setLocationsTask(wizardContext);
             }
@@ -142,8 +142,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await wizard.prompt();
         context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
-        context.telemetry.properties.os = wizardContext.newSiteOS;
-        context.telemetry.properties.runtime = wizardContext.newSiteRuntime;
         if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {

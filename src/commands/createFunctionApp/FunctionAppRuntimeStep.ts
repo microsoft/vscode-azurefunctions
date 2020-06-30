@@ -3,36 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as semver from 'semver';
 import { WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardPromptStep, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
-import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { IFunctionAppWizardContext } from './IFunctionAppWizardContext';
+import { getLinuxFunctionsStacks, getWindowsFunctionsStacks, IFunctionStack } from './functionStacks';
+import { IFunctionAppWizardContext, INewSiteStacks } from './IFunctionAppWizardContext';
 
+/**
+ * Todo rename this file/class to `FunctionAppStackStep` after PR review
+ */
 export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
-        const picks: IAzureQuickPickItem<string>[] = this.getPicks(context);
-        const placeHolder: string = localize('selectRuntime', 'Select a runtime');
-        context.newSiteRuntime = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        const picks: IAzureQuickPickItem<INewSiteStacks>[] = this.getPicks(context);
+        const placeHolder: string = localize('selectRuntime', 'Select a runtime stack');
+        context.newSiteStack = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
 
-        if (/^python/i.test(context.newSiteRuntime)) {
-            context.newSiteOS = WebsiteOS.linux;
-        } else if (/^powershell/i.test(context.newSiteRuntime)) {
+        if (!context.newSiteStack.linux) {
             context.newSiteOS = WebsiteOS.windows;
-        } else if (/^java/i.test(context.newSiteRuntime) && context.version === FuncVersion.v2) {
-            context.newSiteOS = WebsiteOS.windows; // v1 doesn't support java at all. v2 is windows-only. v3+ supports both OS's.
+        } else if (!context.newSiteStack.windows) {
+            context.newSiteOS = WebsiteOS.linux;
         }
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
         if (context.newSiteRuntime) {
             return false;
-        } else if (context.runtimeFilter) {
-            const picks: IAzureQuickPickItem<string>[] = this.getPicks(context);
+        } else if (context.stackFilter) {
+            const picks: IAzureQuickPickItem<INewSiteStacks>[] = this.getPicks(context);
             if (picks.length === 1) {
                 // This needs to be set in `shouldPrompt` instead of `prompt`, otherwise the back button won't work
-                context.newSiteRuntime = picks[0].data;
+                context.newSiteStack = picks[0].data;
                 return false;
             }
         }
@@ -40,47 +42,55 @@ export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWi
         return true;
     }
 
-    private getPicks(context: IFunctionAppWizardContext): IAzureQuickPickItem<string>[] {
-        const picks: IAzureQuickPickItem<string>[] = [];
+    private getPicks(context: IFunctionAppWizardContext): IAzureQuickPickItem<INewSiteStacks>[] {
+        const picks: IAzureQuickPickItem<INewSiteStacks>[] = [];
 
-        if (context.version === FuncVersion.v1) {
-            // v1 doesn't need a version in `data`
-            picks.push({ label: 'Node.js 6', data: 'node' });
-            picks.push({ label: '.NET Framework 4.7', data: 'dotnet' });
-        } else {
-            if (context.version !== FuncVersion.v2) {
-                picks.push({ label: 'Node.js 12', data: 'node|12' });
-            }
-            picks.push({ label: 'Node.js 10', data: 'node|10' });
-            if (context.version === FuncVersion.v2) {
-                picks.push({ label: 'Node.js 8', data: 'node|8' });
-            }
+        const allStacks: [WebsiteOS, IFunctionStack[]][] = [[WebsiteOS.windows, getWindowsFunctionsStacks()], [WebsiteOS.linux, getLinuxFunctionsStacks()]];
 
-            if (context.version === FuncVersion.v2) {
-                picks.push({ label: '.NET Core 2.2', data: 'dotnet|2.2' });
-            } else {
-                picks.push({ label: '.NET Core 3.1', data: 'dotnet|3.1' });
-            }
-
-            if (context.newSiteOS !== WebsiteOS.windows) {
-                if (context.version !== FuncVersion.v2) {
-                    picks.push({ label: 'Python 3.8', data: 'python|3.8' });
+        for (const [os, stacks] of allStacks) {
+            for (const stack of stacks) {
+                if (context.stackFilter && context.stackFilter?.toLowerCase() !== stack.name.toLowerCase()) {
+                    continue;
                 }
-                picks.push({ label: 'Python 3.7', data: 'python|3.7' });
-                picks.push({ label: 'Python 3.6', data: 'python|3.6' });
-            }
 
-            if (context.newSiteOS !== WebsiteOS.linux) {
-                picks.push({ label: 'PowerShell Core 6', data: 'powershell|6' });
-            }
+                for (const majorVersion of stack.majorVersions) {
+                    if (!majorVersion.supportedFunctionsExtensionVersions.includes(context.version) || majorVersion.isHidden) {
+                        continue;
+                    }
 
-            // v1 doesn't support java at all. v2 is windows-only. v3+ supports both OS's.
-            if (context.version !== FuncVersion.v2 || context.newSiteOS !== WebsiteOS.linux) {
-                picks.push({ label: 'Java 8', data: 'java|8' });
+                    const existingPick: IAzureQuickPickItem<INewSiteStacks> | undefined = picks.find(r => r.data.name === stack.name && r.data.displayVersion === majorVersion.displayVersion);
+
+                    let data: INewSiteStacks;
+                    if (existingPick) {
+                        data = existingPick.data;
+                    } else {
+                        data = { name: stack.name, displayVersion: majorVersion.displayVersion, };
+                        picks.push({
+                            label: `${stack.display} ${majorVersion.displayVersion}`,
+                            data
+                        });
+                    }
+                    data[os] = { ...majorVersion, name: stack.name };
+                }
             }
         }
 
-        const runtimeFilter: string | undefined = context.runtimeFilter;
-        return runtimeFilter ? picks.filter(r => r.data.startsWith(runtimeFilter)) : picks;
+        return picks.sort(sortStackPicks);
     }
+}
+
+function sortStackPicks(pick1: IAzureQuickPickItem<INewSiteStacks>, pick2: IAzureQuickPickItem<INewSiteStacks>): number {
+    try {
+        if (pick1.data.name === pick2.data.name) {
+            const version1: semver.SemVer | null = semver.coerce(pick1.data.displayVersion);
+            const version2: semver.SemVer | null = semver.coerce(pick2.data.displayVersion);
+            if (version1 && version2) {
+                return semver.rcompare(version1, version2);
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    return 0; // use default sorting
 }
