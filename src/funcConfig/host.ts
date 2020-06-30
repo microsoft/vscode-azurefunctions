@@ -7,6 +7,15 @@ import { FuncVersion } from "../FuncVersion";
 
 export interface IHostJsonV2 {
     version?: string;
+    // https://github.com/Azure/azure-functions-templates/issues/906
+    logging?: {
+        applicationInsights?: {
+            samplingSettings?: {
+                isEnabled?: boolean;
+                excludedTypes?: string;
+            };
+        };
+    };
     managedDependency?: {
         enabled?: boolean;
     };
