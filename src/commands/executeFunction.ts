@@ -55,6 +55,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         method = 'GET';
         body = functionInput;
     } else {
+        // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
         url = `${node.parent.parent.hostUrl}/admin/functions/${node.name}`;
         method = 'POST';
         body = { input: functionInput };
@@ -62,7 +63,6 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
 
     let response: string | undefined;
     await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
-        // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
         const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(url, undefined, method);
         if (client) {
             request.headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
