@@ -540,7 +540,7 @@
                 },
                 {
                     "command": "azureFunctions.executeFunction",
-                    "when": "view == azFuncTree && viewItem =~ /Function;Timer;/i",
+                    "when": "view == azFuncTree && viewItem =~ /Function;/i",
                     "group": "1@1"
                 },
                 {

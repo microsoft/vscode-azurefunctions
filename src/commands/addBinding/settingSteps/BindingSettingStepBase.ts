@@ -9,6 +9,8 @@ import { getBindingSetting, setBindingSetting } from "../../createFunction/IFunc
 import { IBindingWizardContext } from "../IBindingWizardContext";
 
 export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IBindingWizardContext> {
+    public supportsDuplicateSteps: boolean = true;
+
     protected readonly _setting: IBindingSetting;
 
     constructor(setting: IBindingSetting) {
