@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { dotnetPublishTaskLabel, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
@@ -17,6 +17,8 @@ import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
+const buildTaskName: string = 'build';
+
 export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = dotnetPublishTaskLabel;
 
@@ -24,10 +26,15 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
     protected getDebugConfiguration(version: FuncVersion): DebugConfiguration {
         return {
-            name: localize('attachToNetFunc', "Attach to .NET Functions"),
+            name: localize('launchNetFunctions', "Launch .NET Functions"),
             type: version === FuncVersion.v1 ? 'clr' : 'coreclr',
-            request: 'attach',
-            processId: '\${command:azureFunctions.pickProcess}'
+            request: 'launch',
+            preLaunchTask: buildTaskName,
+            program: 'func',
+            args: ['start'],
+            cwd: path.posix.join('\${workspaceFolder}', this._debugSubpath),
+            console: 'integratedTerminal',
+            internalConsoleOptions: 'neverOpen'
         };
     }
 
@@ -110,7 +117,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 problemMatcher: '$msCompile'
             },
             {
-                label: 'build',
+                label: buildTaskName,
                 command: 'dotnet',
                 args: [
                     'build',
@@ -146,16 +153,6 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 type: 'process',
                 dependsOn: 'clean release',
                 problemMatcher: '$msCompile'
-            },
-            {
-                type: func,
-                dependsOn: 'build',
-                options: {
-                    cwd: this._debugSubpath
-                },
-                command: hostStartCommand,
-                isBackground: true,
-                problemMatcher: funcWatchProblemMatcher
             }
         ];
     }
