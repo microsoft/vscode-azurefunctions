@@ -790,7 +790,7 @@
                 "background": {
                     "activeOnStart": true,
                     "beginsPattern": "^.*(Job host stopped|signaling restart).*$",
-                    "endsPattern": "^.*Host lock lease acquired by instance ID.*$"
+                    "endsPattern": "^.*(Worker process started and initialized|Host lock lease acquired by instance ID).*$"
                 },
                 "severity": "error"
             }
