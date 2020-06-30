@@ -7,24 +7,28 @@ import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '
 import { Progress } from 'vscode';
 import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, createAzureClient, parseError } from 'vscode-azureextensionui';
-import { extensionVersionKey, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { extensionVersionKey, ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getStorageConnectionString } from '../../utils/azure';
 import { getRandomHexString } from '../../utils/fs';
-import { nonNullOrEmptyValue, nonNullProp } from '../../utils/nonNull';
+import { nonNullProp } from '../../utils/nonNull';
 import { enableFileLogging } from '../logstream/enableFileLogging';
-import { IFunctionAppWizardContext } from './IFunctionAppWizardContext';
+import { IFunctionAppWizardContext, INewSiteStack } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
-        context.telemetry.properties.newSiteOS = context.newSiteOS;
-        context.telemetry.properties.newSiteRuntime = context.newSiteRuntime;
+        const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
+        const stack: INewSiteStack = nonNullProp(nonNullProp(context, 'newSiteStack'), os);
+
+        context.telemetry.properties.newSiteOS = os;
+        context.telemetry.properties.newSiteStack = stack.name;
+        context.telemetry.properties.newSiteStackVersion = stack.runtimeVersion;
         context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
 
         const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
@@ -42,8 +46,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             location: locationName,
             serverFarmId: context.plan?.id,
             clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context),
-            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+            siteConfig: await this.getNewSiteConfig(context, stack),
+            reserved: os === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
         });
 
         context.siteClient = new SiteClient(context.site, context);
@@ -63,28 +67,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return !context.site;
     }
 
-    private async getNewSiteConfig(context: IFunctionAppWizardContext): Promise<SiteModels.SiteConfig> {
-        const newSiteConfig: SiteModels.SiteConfig = {};
-        if (context.newSiteOS === WebsiteOS.linux) {
-            if (context.useConsumptionPlan) {
-                newSiteConfig.use32BitWorkerProcess = false; // Needs to be explicitly set to false per the platform team
-            }
-
-            // The platform currently requires a minor version to be specified, even though only the major version is respected for Node
-            let linuxFxVersion: string = nonNullProp(context, 'newSiteRuntime');
-            if (!linuxFxVersion.includes('.')) {
-                linuxFxVersion += '.0';
-            }
-            newSiteConfig.linuxFxVersion = linuxFxVersion;
-        }
-
-        newSiteConfig.appSettings = await this.getAppSettings(context);
-        return newSiteConfig;
-    }
-
-    private async getAppSettings(context: IFunctionAppWizardContext): Promise<SiteModels.NameValuePair[]> {
-        const runtime: string = nonNullProp(context, 'newSiteRuntime');
-        const runtimeWithoutVersion: string = getRuntimeWithoutVersion(runtime);
+    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: INewSiteStack): Promise<SiteModels.SiteConfig> {
+        const newSiteConfig: SiteModels.SiteConfig = stack.siteConfigPropertiesDictionary;
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
@@ -97,10 +81,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: extensionVersionKey,
                 value: '~' + getMajorVersion(context.version)
             },
-            {
-                name: workerRuntimeKey,
-                value: runtimeWithoutVersion
-            }
+            ...Object.entries(stack.appSettingsDictionary).map(([name, value]) => { return { name, value }; })
         ];
 
         // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
@@ -108,15 +89,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             appSettings.push({
                 name: 'AzureWebJobsDashboard',
                 value: storageConnectionString
-            });
-        }
-
-        if (context.newSiteOS === WebsiteOS.windows && runtimeWithoutVersion.toLowerCase() === 'node' && context.version !== FuncVersion.v1) {
-            // Linux doesn't need this because it uses linuxFxVersion
-            // v1 doesn't need this because it only supports one version of Node
-            appSettings.push({
-                name: 'WEBSITE_NODE_DEFAULT_VERSION',
-                value: '~' + getRuntimeVersion(runtime)
             });
         }
 
@@ -152,17 +124,10 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             });
         }
 
-        return appSettings;
+        newSiteConfig.appSettings = appSettings;
+
+        return newSiteConfig;
     }
-}
-
-const separator: string = '|';
-function getRuntimeWithoutVersion(runtime: string): string {
-    return runtime.split(separator)[0];
-}
-
-function getRuntimeVersion(runtime: string): string {
-    return nonNullOrEmptyValue(runtime.split(separator)[1], 'runtimeVersion');
 }
 
 function getNewFileShareName(siteName: string): string {
