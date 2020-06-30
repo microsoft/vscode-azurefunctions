@@ -11,10 +11,7 @@ import { localize } from '../../localize';
 import { getLinuxFunctionsStacks, getWindowsFunctionsStacks, IFunctionStack } from './functionStacks';
 import { IFunctionAppWizardContext, INewSiteStacks } from './IFunctionAppWizardContext';
 
-/**
- * Todo rename this file/class to `FunctionAppStackStep` after PR review
- */
-export class FunctionAppRuntimeStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
+export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<INewSiteStacks>[] = this.getPicks(context);
         const placeHolder: string = localize('selectRuntime', 'Select a runtime stack');
