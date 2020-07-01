@@ -986,6 +986,11 @@
                         "type": "number",
                         "description": "%azureFunctions.requestTimeout%",
                         "default": 15
+                    },
+                    "azureFunctions.defaultFunctionAppToDeploy": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "The default function app to use when deploying, represented by its full Azure id.  Every subsequent deployment of this workspace will deploy to this function app or slot."
                     }
                 }
             }
@@ -1061,7 +1066,7 @@
         "ps-tree": "^1.1.1",
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.61.5",
+        "vscode-azureappservice": "^0.63.0",
         "vscode-azureextensionui": "^0.33.5",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",
