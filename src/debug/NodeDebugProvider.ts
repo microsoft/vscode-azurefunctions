@@ -6,7 +6,7 @@
 import { DebugConfiguration, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { localize } from '../localize';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { FuncAttachDebugProviderBase } from './FuncAttachDebugProviderBase';
 
 export const defaultNodeDebugPort: number = 9229;
 
@@ -18,7 +18,7 @@ export const nodeDebugConfig: DebugConfiguration = {
     preLaunchTask: hostStartTaskName
 };
 
-export class NodeDebugProvider extends FuncDebugProviderBase {
+export class NodeDebugProvider extends FuncAttachDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultNodeDebugPort;
     protected readonly debugConfig: DebugConfiguration = nodeDebugConfig;
 

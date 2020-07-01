@@ -6,7 +6,7 @@
 import { DebugConfiguration, Extension, extensions, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { FuncAttachDebugProviderBase } from './FuncAttachDebugProviderBase';
 
 export const defaultPythonDebugPort: number = 9091;
 
@@ -18,7 +18,7 @@ export const pythonDebugConfig: DebugConfiguration = {
     preLaunchTask: hostStartTaskName
 };
 
-export class PythonDebugProvider extends FuncDebugProviderBase {
+export class PythonDebugProvider extends FuncAttachDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultPythonDebugPort;
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 

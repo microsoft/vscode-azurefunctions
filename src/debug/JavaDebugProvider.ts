@@ -6,7 +6,7 @@
 import { DebugConfiguration, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { FuncAttachDebugProviderBase } from './FuncAttachDebugProviderBase';
 
 export const defaultJavaDebugPort: number = 5005;
 
@@ -19,7 +19,7 @@ export const javaDebugConfig: DebugConfiguration = {
     preLaunchTask: hostStartTaskName
 };
 
-export class JavaDebugProvider extends FuncDebugProviderBase {
+export class JavaDebugProvider extends FuncAttachDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
     protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
 

@@ -6,7 +6,7 @@
 import { DebugConfiguration, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName } from '../constants';
 import { localize } from '../localize';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { FuncAttachDebugProviderBase } from './FuncAttachDebugProviderBase';
 
 export const defaultCustomPipeName: string = 'AzureFunctionsPSWorker';
 
@@ -19,7 +19,7 @@ export const powershellDebugConfig: DebugConfiguration = {
     preLaunchTask: hostStartTaskName
 };
 
-export class PowerShellDebugProvider extends FuncDebugProviderBase {
+export class PowerShellDebugProvider extends FuncAttachDebugProviderBase {
     protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
     protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 

@@ -12,7 +12,7 @@ import { ext } from '../extensionVariables';
 import { venvUtils } from '../utils/venvUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
-import { FuncDebugProviderBase } from './FuncDebugProviderBase';
+import { FuncAttachDebugProviderBase } from './FuncAttachDebugProviderBase';
 import { JavaDebugProvider } from './JavaDebugProvider';
 import { NodeDebugProvider } from './NodeDebugProvider';
 import { PowerShellDebugProvider } from './PowerShellDebugProvider';
@@ -123,7 +123,7 @@ export class FuncTaskProvider implements TaskProvider {
     }
 
     private async getHostStartOptions(folder: WorkspaceFolder, language: string | undefined): Promise<ShellExecutionOptions | undefined> {
-        let debugProvider: FuncDebugProviderBase;
+        let debugProvider: FuncAttachDebugProviderBase;
         switch (language) {
             case ProjectLanguage.Python:
                 debugProvider = this._pythonDebugProvider;

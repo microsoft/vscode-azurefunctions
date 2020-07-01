@@ -15,6 +15,7 @@ import { revealTreeItem } from './commands/api/revealTreeItem';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
+import { FuncDebugProvider } from './debug/FuncDebugProvider';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -70,12 +71,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const nodeDebugProvider: NodeDebugProvider = new NodeDebugProvider();
         const pythonDebugProvider: PythonDebugProvider = new PythonDebugProvider();
+        const dotnetDebugProvider: FuncDebugProvider = new FuncDebugProvider();
         const javaDebugProvider: JavaDebugProvider = new JavaDebugProvider();
         const powershellDebugProvider: PowerShellDebugProvider = new PowerShellDebugProvider();
 
         // These don't actually overwrite "node", "python", etc. - they just add to it
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', nodeDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('python', pythonDebugProvider));
+        context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('coreclr', dotnetDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, powershellDebugProvider)));
