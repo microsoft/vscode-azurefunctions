@@ -5,8 +5,8 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
-import * as appservice from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
+import { IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -18,7 +18,6 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import { getDeployNode, IDeployNode } from './getDeployNode';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { validateRemoteBuild } from './validateRemoteBuild';
@@ -32,13 +31,14 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
     await deploy(context, target, functionAppId, SlotTreeItem.contextValue);
 }
 
-async function deploy(context: IActionContext, target: vscode.Uri | string | SlotTreeItemBase | undefined, functionAppId: string | {} | undefined, expectedContextValue: string): Promise<void> {
-    addLocalFuncTelemetry(context);
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItemBase | undefined, arg2: string | {} | undefined, expectedContextValue: string): Promise<void> {
+    addLocalFuncTelemetry(actionContext);
 
-    const { originalDeployFsPath, effectiveDeployFsPath, workspaceFolder } = await appservice.getDeployFsPath(context, target);
-    const { node, isNewFunctionApp }: IDeployNode = await getDeployNode(context, target, functionAppId, expectedContextValue);
+    const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
+    const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
+    const node: SlotTreeItemBase = await getDeployNode(context, arg1, arg2, expectedContextValue);
 
-    const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, effectiveDeployFsPath);
+    const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
 
@@ -47,23 +47,20 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    await validateRemoteBuild(context, node.root.client, workspaceFolder.uri.fsPath, language);
+    await validateRemoteBuild(context, node.root.client, context.workspaceFolder.uri.fsPath, language);
 
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
-    if (getWorkspaceSetting<boolean>('showDeployConfirmation', workspaceFolder.uri.fsPath) && !isNewFunctionApp && isZipDeploy) {
-        const warning: string = localize('confirmDeploy', 'Are you sure you want to deploy to "{0}"? This will overwrite any previous deployment and cannot be undone.', node.root.client.fullName);
-        context.telemetry.properties.cancelStep = 'confirmDestructiveDeployment';
-        const deployButton: vscode.MessageItem = { title: localize('deploy', 'Deploy') };
-        await ext.ui.showWarningMessage(warning, { modal: true }, deployButton, DialogResponses.cancel);
-        context.telemetry.properties.cancelStep = '';
+
+    if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
+        await showDeployConfirmation(context, node.root.client, 'azureFunctions.deploy');
     }
 
-    await runPreDeployTask(context, effectiveDeployFsPath, siteConfig.scmType);
+    await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises
-        validateGlobSettings(context, effectiveDeployFsPath);
+        validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
     await verifyAppSettings(context, node, version, language);
@@ -73,22 +70,22 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         async () => {
             // Stop function app here to avoid *.jar file in use on server side.
             // More details can be found: https://github.com/Microsoft/vscode-azurefunctions/issues/106
-            (<appservice.IDeployContext>context).stopAppBeforeDeploy = language === ProjectLanguage.Java;
+            context.stopAppBeforeDeploy = language === ProjectLanguage.Java;
 
             // preDeploy tasks are only required for zipdeploy so subpath may not exist
-            let deployFsPath: string = effectiveDeployFsPath;
+            let deployFsPath: string = context.effectiveDeployFsPath;
 
-            if (!isZipDeploy && !isPathEqual(effectiveDeployFsPath, originalDeployFsPath)) {
-                deployFsPath = originalDeployFsPath;
-                const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, originalDeployFsPath)}" for non-zip deploy.`;
+            if (!isZipDeploy && !isPathEqual(context.effectiveDeployFsPath, context.originalDeployFsPath)) {
+                deployFsPath = context.originalDeployFsPath;
+                const noSubpathWarning: string = `WARNING: Ignoring deploySubPath "${getWorkspaceSetting(deploySubpathSetting, context.originalDeployFsPath)}" for non-zip deploy.`;
                 ext.outputChannel.appendLog(noSubpathWarning);
             }
 
-            await appservice.deploy(node.root.client, deployFsPath, context);
+            await innerDeploy(node.root.client, deployFsPath, context);
         }
     );
 
-    await notifyDeployComplete(context, node, workspaceFolder.uri.fsPath);
+    await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
 }
 
 async function validateGlobSettings(context: IActionContext, fsPath: string): Promise<void> {
