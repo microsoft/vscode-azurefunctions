@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from 'azure-arm-website';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
-import { KuduClient } from 'vscode-azurekudu';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { treeUtils } from '../utils/treeUtils';
@@ -118,8 +117,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             // tslint:disable-next-line: no-any
             let data: any;
             try {
-                const kuduClient: KuduClient = await this.root.client.getKuduClient();
-                data = await kuduClient.functionModel.getHostSettings();
+                data = JSON.parse((await getFile(this.client, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
             }
