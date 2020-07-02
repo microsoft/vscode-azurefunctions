@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getFile, IFileResult, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
+import { getFile, ISiteFile, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -63,7 +63,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public async loadMoreChildrenImpl(): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
         let proxiesJson: string;
         try {
-            const result: IFileResult = await getFile(this.root.client, this._proxiesJsonPath);
+            const result: ISiteFile = await getFile(this.root.client, this._proxiesJsonPath);
             proxiesJson = result.data;
             this._etag = result.etag;
         } catch (err) {
