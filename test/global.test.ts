@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, deploySubpathSetting, ext, FuncVersion, funcVersionSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, templateFilterSetting, TemplateSource, updateWorkspaceSetting } from '../extension.bundle';
+import { CentralTemplateProvider, deploySubpathSetting, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
 import { envUtils } from './utils/envUtils';
 
 /**
@@ -33,9 +33,14 @@ export function createTestActionContext(): IActionContext {
 
 let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
 
+const requestTimeoutKey: string = 'requestTimeout';
+let oldRequestTimeout: number | undefined;
+
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
+    oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
+    await updateGlobalSetting(requestTimeoutKey, 45);
 
     await fse.ensureDir(testFolderPath);
     testWorkspacePath = await initTestWorkspacePath();
@@ -76,6 +81,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
         // Build machines fail pretty often with an EPERM error on Windows, but removing the temp test folder isn't worth failing the build
         console.warn(`Failed to delete test folder path: ${parseError(error).message}`);
     }
+    await updateGlobalSetting(requestTimeoutKey, oldRequestTimeout);
 });
 
 /**
