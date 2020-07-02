@@ -7,7 +7,7 @@ import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '
 import { Progress } from 'vscode';
 import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, createAzureClient, parseError } from 'vscode-azureextensionui';
-import { extensionVersionKey, ProjectLanguage } from '../../constants';
+import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -98,11 +98,11 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             // Windows: https://github.com/Microsoft/vscode-azurefunctions/issues/625
             // Linux Elastic Premium: https://github.com/microsoft/vscode-azurefunctions/issues/1682
             appSettings.push({
-                name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING',
+                name: contentConnectionStringKey,
                 value: storageConnectionString
             });
             appSettings.push({
-                name: 'WEBSITE_CONTENTSHARE',
+                name: contentShareKey,
                 value: getNewFileShareName(nonNullProp(context, 'newSiteName'))
             });
         }
@@ -112,7 +112,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         // It also doesn't apply for Linux
         if (context.newSiteOS === WebsiteOS.windows && !(context.language === ProjectLanguage.CSharpScript && context.version === FuncVersion.v1)) {
             appSettings.push({
-                name: 'WEBSITE_RUN_FROM_PACKAGE',
+                name: runFromPackageKey,
                 value: '1'
             });
         }

@@ -49,8 +49,6 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
 
     await validateRemoteBuild(context, node.root.client, workspaceFolder.uri.fsPath, language);
 
-    await verifyAppSettings(context, node, version, language);
-
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
     const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', workspaceFolder.uri.fsPath) && !isNewFunctionApp && isZipDeploy) {
@@ -67,6 +65,8 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         // tslint:disable-next-line:no-floating-promises
         validateGlobSettings(context, effectiveDeployFsPath);
     }
+
+    await verifyAppSettings(context, node, version, language);
 
     await node.runWithTemporaryDescription(
         localize('deploying', 'Deploying...'),
