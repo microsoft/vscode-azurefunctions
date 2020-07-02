@@ -6,8 +6,10 @@
 import { WebSiteManagementModels } from 'azure-arm-website';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { runFromPackageKey } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
+import { envUtils } from '../utils/envUtils';
 import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
@@ -210,7 +212,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async isReadOnly(): Promise<boolean> {
         const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-        return !!appSettings.properties && !!(appSettings.properties.WEBSITE_RUN_FROM_PACKAGE || appSettings.properties.WEBSITE_RUN_FROM_ZIP);
+        return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 
     public async deleteTreeItemImpl(): Promise<void> {

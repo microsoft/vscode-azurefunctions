@@ -5,8 +5,9 @@
 
 import { WebSiteManagementModels } from 'azure-arm-website';
 import * as vscode from 'vscode';
+import { SiteClient } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { extensionVersionKey, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -18,7 +19,16 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     if (appSettings.properties) {
         await verifyVersionAndLanguage(context, node.root.client.fullName, version, language, appSettings.properties);
 
-        const updateAppSettings: boolean = await verifyWebContentSettings(node, context, appSettings.properties);
+        let updateAppSettings: boolean = false;
+        if (node.root.client.isLinux) {
+            const isConsumption: boolean = await node.getIsConsumption();
+            if (isConsumption) {
+                updateAppSettings = await verifyWebContentSettings(context, appSettings.properties);
+            }
+        } else {
+            updateAppSettings = await verifyRunFromPackage(context, node.root.client, appSettings.properties);
+        }
+
         if (updateAppSettings) {
             await node.root.client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
@@ -51,28 +61,33 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
 }
 
 /**
+ * Automatically set to 1 on windows plans because it has significant perf improvements
+ * https://github.com/microsoft/vscode-azurefunctions/issues/1465
+ */
+async function verifyRunFromPackage(context: IActionContext, client: SiteClient, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+    const shouldAddSetting: boolean = !remoteProperties[runFromPackageKey];
+    if (shouldAddSetting) {
+        remoteProperties[runFromPackageKey] = '1';
+        ext.outputChannel.appendLog(localize('addedRunFromPackage', 'Added app setting "{0}" to improve performance of function app. Learn more here: https://aka.ms/AA8vxc0', runFromPackageKey), { resourceName: client.fullName });
+    }
+
+    context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
+    return shouldAddSetting;
+}
+
+/**
  * We need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
  * Only applies to Linux Consumption apps
  */
-async function verifyWebContentSettings(node: SlotTreeItemBase, context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    const isConsumption: boolean = await node.getIsConsumption();
-    if (node.root.client.isLinux && isConsumption) {
-        const WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
-        const WEBSITE_CONTENTSHARE: string = 'WEBSITE_CONTENTSHARE';
-        if (remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING] || remoteProperties[WEBSITE_CONTENTSHARE]) {
-            context.telemetry.properties.webContentSettingsRemoved = 'false';
-            await ext.ui.showWarningMessage(
-                localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', WEBSITE_CONTENTAZUREFILECONNECTIONSTRING, WEBSITE_CONTENTSHARE),
-                { modal: true },
-                DialogResponses.yes,
-                DialogResponses.cancel
-            );
-            delete remoteProperties[WEBSITE_CONTENTAZUREFILECONNECTIONSTRING];
-            delete remoteProperties[WEBSITE_CONTENTSHARE];
-            context.telemetry.properties.webContentSettingsRemoved = 'true';
-            return true;
-        }
+async function verifyWebContentSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+    const shouldRemoveSettings: boolean = !!(remoteProperties[contentConnectionStringKey] || remoteProperties[contentShareKey]);
+    if (shouldRemoveSettings) {
+        const message: string = localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', contentConnectionStringKey, contentShareKey);
+        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        delete remoteProperties[contentConnectionStringKey];
+        delete remoteProperties[contentShareKey];
     }
 
-    return false;
+    context.telemetry.properties.webContentSettingsRemoved = String(shouldRemoveSettings);
+    return shouldRemoveSettings;
 }

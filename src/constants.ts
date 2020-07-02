@@ -82,5 +82,8 @@ export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
+export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
+export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
+export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 
 export const viewOutput: string = localize('viewOutput', 'View Output');

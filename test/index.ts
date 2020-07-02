@@ -6,7 +6,7 @@
 import * as glob from 'glob';
 import * as Mocha from 'mocha';
 import * as path from 'path';
-import { envUtils } from './utils/envUtils';
+import { envUtils } from '../extension.bundle';
 
 // tslint:disable-next-line: export-name
 export async function run(): Promise<void> {

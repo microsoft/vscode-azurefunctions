@@ -35,6 +35,7 @@ export * from './src/templates/TemplateProviderBase';
 export * from './src/tree/AzureAccountTreeItemWithProjects';
 export * from './src/utils/cpUtils';
 export * from './src/utils/delay';
+export * from './src/utils/envUtils';
 export * from './src/utils/fs';
 export * from './src/utils/nonNull';
 export * from './src/utils/nugetUtils';
