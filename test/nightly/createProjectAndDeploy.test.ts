@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import * as fse from 'fs-extra';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { getRandomHexString, requestUtils } from '../../extension.bundle';
@@ -80,16 +82,30 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     options.excludedPaths.push('.git'); // Since the workspace is already in a git repo
     await validateProject(testWorkspacePath, options);
 
+    const routePrefix: string = getRandomHexString();
+    await addRoutePrefixToProject(routePrefix);
+
     const appName: string = 'funcBasic' + getRandomHexString();
     resourceGroupsToDelete.push(appName);
     await testUserInput.runWithInputs([/create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
         await vscode.commands.executeCommand('azureFunctions.deploy');
     });
 
-    await validateFunctionUrl(appName, functionName);
+    await validateFunctionUrl(appName, functionName, routePrefix);
 }
 
-async function validateFunctionUrl(appName: string, functionName: string): Promise<void> {
+async function addRoutePrefixToProject(routePrefix: string): Promise<void> {
+    const hostPath: string = path.join(testWorkspacePath, 'host.json');
+    const hostJson: any = await fse.readJSON(hostPath);
+    hostJson.extensions = {
+        http: {
+            routePrefix
+        }
+    };
+    await fse.writeJSON(hostPath, hostJson);
+}
+
+async function validateFunctionUrl(appName: string, functionName: string, routePrefix: string): Promise<void> {
     // first input matches any item except local project (aka it should match the test subscription)
     const inputs: (string | RegExp)[] = [/^((?!Local Project).)*$/i, appName, functionName];
 
@@ -98,6 +114,8 @@ async function validateFunctionUrl(appName: string, functionName: string): Promi
         await vscode.commands.executeCommand('azureFunctions.copyFunctionUrl');
     });
     const functionUrl: string = await vscode.env.clipboard.readText();
+
+    assert.ok(functionUrl.includes(routePrefix), 'Function url did not include routePrefix.');
 
     const request: requestUtils.Request = await requestUtils.getDefaultRequest(functionUrl);
     request.body = { name: "World" };
