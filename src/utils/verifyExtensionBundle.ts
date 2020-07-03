@@ -29,7 +29,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         return;
     }
 
-    // Old projects setup to use "func extensions install" shouldn't use a bundle because it could lead to duplicate or conflicting binaries
+    // Don't use bundle if set up to use "extensions.csproj". More discussion here: https://github.com/microsoft/vscode-azurefunctions/issues/1698
     if (await hasExtensionsVSCodeConfig(context, context.workspacePath) || await hasExtensionsCsproj(context, context.projectPath)) {
         context.telemetry.properties.bundleResult = 'hasExtensionsConfig';
     } else {
