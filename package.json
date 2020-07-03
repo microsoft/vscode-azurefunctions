@@ -919,6 +919,11 @@
                         "description": "%azureFunctions.showTargetFrameworkWarning%",
                         "default": true
                     },
+                    "azureFunctions.showExtensionsCsprojWarning": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showExtensionsCsprojWarning%",
+                        "default": true
+                    },
                     "azureFunctions.pickProcessTimeout": {
                         "type": "integer",
                         "description": "%azureFunctions.pickProcessTimeout%",

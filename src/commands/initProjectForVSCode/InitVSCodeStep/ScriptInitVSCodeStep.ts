@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
+import { extensionsCsprojFileName, extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../../FuncVersion';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -33,7 +33,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         try {
-            const extensionsCsprojPath: string = path.join(context.projectPath, 'extensions.csproj');
+            const extensionsCsprojPath: string = path.join(context.projectPath, extensionsCsprojFileName);
             if (await fse.pathExists(extensionsCsprojPath)) {
                 this.useFuncExtensionsInstall = true;
                 context.telemetry.properties.hasExtensionsCsproj = 'true';

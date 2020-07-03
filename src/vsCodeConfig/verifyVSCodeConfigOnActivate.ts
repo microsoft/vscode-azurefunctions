@@ -12,6 +12,7 @@ import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { verifyExtensionsConfig } from '../utils/verifyExtensionBundle';
 import { getWorkspaceSetting, updateGlobalSetting } from './settings';
 import { verifyPythonVenv } from './verifyPythonVenv';
 import { verifyTargetFramework } from './verifyTargetFramework';
@@ -39,6 +40,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                         await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version);
                     });
 
+                    let isDotnet: boolean = false;
                     const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, workspacePath);
                     context.telemetry.properties.projectLanguage = projectLanguage;
                     switch (projectLanguage) {
@@ -47,9 +49,14 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                             break;
                         case ProjectLanguage.CSharp:
                         case ProjectLanguage.FSharp:
+                            isDotnet = true;
                             await verifyTargetFramework(projectLanguage, folder, projectPath, context);
                             break;
                         default:
+                    }
+
+                    if (!isDotnet) {
+                        await verifyExtensionsConfig(context, workspacePath, projectPath);
                     }
                 } else {
                     await promptToInitializeProject(workspacePath, context);

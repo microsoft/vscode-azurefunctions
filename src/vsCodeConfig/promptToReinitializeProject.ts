@@ -5,11 +5,12 @@
 
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
 
-export async function promptToReinitializeProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string, context: IActionContext): Promise<boolean> {
+export async function promptToReinitializeProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string, context: IActionContext): Promise<void> {
     if (getWorkspaceSetting<boolean>(settingKey)) {
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
         const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, updateConfig, DialogResponses.dontWarnAgain);
@@ -18,11 +19,9 @@ export async function promptToReinitializeProject(fsPath: string, settingKey: st
             await updateWorkspaceSetting(settingKey, false, fsPath);
         } else {
             context.telemetry.properties.verifyConfigResult = 'update';
-            return true;
+            await initProjectForVSCode(context, fsPath);
         }
     } else {
         context.telemetry.properties.verifyConfigResult = 'suppressed';
     }
-
-    return false;
 }
