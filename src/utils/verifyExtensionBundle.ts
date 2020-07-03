@@ -5,20 +5,34 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { parseError } from 'vscode-azureextensionui';
+import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
-import { extInstallCommand, hostFileName, ProjectLanguage, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
+import { extensionsCsprojFileName, extInstallCommand, hostFileName, ProjectLanguage, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
 import { IHostJsonV2 } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
+import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
 import { writeFormattedJson } from './fs';
 
 export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<void> {
-    if (await shouldUseExtensionBundle(context, template)) {
+    // v1 doesn't support bundles
+    // http and timer triggers don't need a bundle
+    // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
+    if (context.version === FuncVersion.v1 ||
+        !bundleFeedUtils.isBundleTemplate(template) ||
+        context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
+        context.telemetry.properties.bundleResult = 'n/a';
+        return;
+    }
+
+    // Don't use bundle if set up to use "extensions.csproj". More discussion here: https://github.com/microsoft/vscode-azurefunctions/issues/1698
+    if (await hasExtensionsVSCodeConfig(context, context.workspacePath) || await hasExtensionsCsproj(context, context.projectPath)) {
+        context.telemetry.properties.bundleResult = 'hasExtensionsConfig';
+    } else {
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
         let hostJson: IHostJsonV2;
         try {
@@ -28,37 +42,52 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         }
 
         if (!hostJson.extensionBundle) {
+            context.telemetry.properties.bundleResult = 'addedBundle';
             await bundleFeedUtils.addDefaultBundle(hostJson);
             await writeFormattedJson(hostFilePath, hostJson);
+        } else {
+            context.telemetry.properties.bundleResult = 'alreadyHasBundle';
         }
     }
 }
 
-async function shouldUseExtensionBundle(context: IFunctionWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<boolean> {
-    // v1 doesn't support bundles
-    // http and timer triggers don't need a bundle
-    // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
-    if (context.version === FuncVersion.v1 ||
-        !bundleFeedUtils.isBundleTemplate(template) ||
-        context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
-        return false;
+export async function verifyExtensionsConfig(context: IActionContext, workspacePath: string, projectPath: string): Promise<void> {
+    if (await hasExtensionsCsproj(context, projectPath) && !await hasExtensionsVSCodeConfig(context, workspacePath)) {
+        const message: string = localize('mismatchExtensionsCsproj', 'Your project is not configured to work with "extensions.csproj".');
+        await promptToReinitializeProject(projectPath, 'showExtensionsCsprojWarning', message, 'https://aka.ms/AA8wo2c', context);
     }
+}
 
-    // Old projects setup to use "func extensions install" shouldn't use a bundle because it could lead to duplicate or conflicting binaries
+async function hasExtensionsVSCodeConfig(context: IActionContext, workspacePath: string): Promise<boolean> {
+    let result: boolean = false;
     try {
         const filesToCheck: string[] = [tasksFileName, settingsFileName];
         for (const file of filesToCheck) {
-            const filePath: string = path.join(context.workspacePath, vscodeFolderName, file);
+            const filePath: string = path.join(workspacePath, vscodeFolderName, file);
             if (await fse.pathExists(filePath)) {
                 const contents: string = (await fse.readFile(filePath)).toString();
                 if (contents.includes(extInstallCommand)) {
-                    return false;
+                    result = true;
+                    break;
                 }
             }
         }
     } catch {
-        // ignore and use bundles (the default for new projects)
+        // ignore and use default
     }
 
-    return true;
+    context.telemetry.properties.hasExtensionsVSCodeConfig = String(result);
+    return result;
+}
+
+async function hasExtensionsCsproj(context: IActionContext, projectPath: string): Promise<boolean> {
+    let result: boolean = false;
+    try {
+        result = await fse.pathExists(path.join(projectPath, extensionsCsprojFileName));
+    } catch {
+        // ignore and use default
+    }
+
+    context.telemetry.properties.hasExtensionsCsproj = String(result);
+    return result;
 }
