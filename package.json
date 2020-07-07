@@ -1072,7 +1072,7 @@
         "request-promise": "^4.2.4",
         "semver": "^5.7.1",
         "vscode-azureappservice": "^0.63.0",
-        "vscode-azureextensionui": "^0.33.5",
+        "vscode-azureextensionui": "^0.33.8",
         "vscode-azurekudu": "^0.1.8",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
