@@ -1,5 +1,17 @@
 # Change Log
 
+## 0.23.0 - 2020-07-08
+
+### Added
+- Added "Execute Function Now" for all trigger types
+- Support viewing remote files on Linux consumption plans
+
+### Changed
+- To improve performance, "WEBSITE_RUN_FROM_PACKAGE" will automatically be added to all Windows plans when deploying. Set "WEBSITE_RUN_FROM_PACKAGE" to "0" to override this behavior
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.23.0%22+is%3Aclosed)
+
 ## 0.22.1 - 2020-05-15
 
 ### Added
