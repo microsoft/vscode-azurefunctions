@@ -1,6 +1,7 @@
 variables:
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
     ENABLE_LONG_RUNNING_TESTS: true
+    ENABLE_COMPLIANCE: true
 
 jobs:
 - job: Windows
@@ -9,6 +10,7 @@ jobs:
   steps:
   - template: common/build.yml
   - template: common/lint.yml
+  - template: compliance/compliance.yml # Only works on Windows
   - template: common/test.yml
 
 - job: Linux
