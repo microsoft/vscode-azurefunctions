@@ -36,7 +36,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
-    const node: SlotTreeItemBase = await getDeployNode(context, arg1, arg2, expectedContextValue);
+    const node: SlotTreeItemBase = await getDeployNode(context, ext.tree, arg1, arg2, expectedContextValue);
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
