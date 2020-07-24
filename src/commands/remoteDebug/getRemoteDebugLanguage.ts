@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from 'azure-arm-website';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { RemoteDebugLanguage } from 'vscode-azureappservice';
 
 export function getRemoteDebugLanguage(siteConfig: WebSiteManagementModels.SiteConfig): RemoteDebugLanguage {

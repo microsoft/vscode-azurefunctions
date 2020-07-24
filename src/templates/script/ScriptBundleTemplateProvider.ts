@@ -10,7 +10,6 @@ import { hostFileName } from '../../constants';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
-import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
@@ -35,17 +34,13 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
         const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(bundleMetadata, latestTemplateVersion);
 
-        const bindingsRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(release.bindings);
-
         const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
-        const resourcesRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(resourcesUrl);
-
-        const templatesRequest: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(release.functions);
 
         [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>(
-            await Promise.all([bindingsRequest, resourcesRequest, templatesRequest].map(requestUtils.sendRequest))
-        ).map(parseJson);
+            await Promise.all([release.bindings, resourcesUrl, release.functions].map(url => requestUtils.sendRequestWithTimeout({ method: 'GET', url })))
+            // tslint:disable-next-line: no-unsafe-any
+        ).map(r => r.parsedBody);
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }

@@ -19,7 +19,8 @@
                 "node_modules/@types/*",
                 "*"
             ]
-        }
+        },
+        "skipLibCheck": true // https://github.com/Azure/ms-rest-js/issues/367
     },
     "exclude": [
         "node_modules",

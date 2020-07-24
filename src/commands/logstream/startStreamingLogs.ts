@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels as AIModels } from 'azure-arm-appinsights';
-import { WebSiteManagementModels } from 'azure-arm-website';
+import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels as AIModels } from '@azure/arm-appinsights';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as appservice from 'vscode-azureappservice';
 import { createAzureClient, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';

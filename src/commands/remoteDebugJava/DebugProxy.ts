@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from 'azure-arm-website';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as EventEmitter from 'events';
 import { createServer, Server, Socket } from 'net';
 import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';

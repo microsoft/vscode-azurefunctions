@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { WebSiteManagementModels as Models } from 'azure-arm-website';
+import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';

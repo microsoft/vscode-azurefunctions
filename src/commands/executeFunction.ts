@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpMethods } from 'ms-rest';
 import { window } from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
@@ -48,30 +47,24 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     }
 
     let url: string;
-    let method: HttpMethods;
     let body: {};
     if (node.config.isHttpTrigger) {
         url = nonNullProp(node, 'triggerUrl');
-        method = 'GET';
         body = functionInput;
     } else {
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
         url = `${node.parent.parent.hostUrl}/admin/functions/${node.name}`;
-        method = 'POST';
         body = { input: functionInput };
     }
 
-    let response: string | undefined;
+    let responseText: string | null | undefined;
     await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
-        const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(url, undefined, method);
+        const headers: { [name: string]: string | undefined } = {};
         if (client) {
-            request.headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
+            headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }
-        request.headers['Content-Type'] = 'application/json';
-        request.body = body;
-        request.json = true;
         try {
-            response = await requestUtils.sendRequest(request);
+            responseText = (await requestUtils.sendRequestWithTimeout({ method: 'POST', url, headers, body })).bodyAsText;
         } catch (error) {
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;
@@ -82,6 +75,6 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         }
     });
 
-    const message: string = response ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.name, response) : localize('executed', 'Executed function "{0}"', node.name);
+    const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.name, responseText) : localize('executed', 'Executed function "{0}"', node.name);
     window.showInformationMessage(message);
 }

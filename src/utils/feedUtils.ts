@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseJson } from './parseJson';
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import { requestUtils } from './requestUtils';
 
 export namespace feedUtils {
@@ -22,10 +22,8 @@ export namespace feedUtils {
     export async function getJsonFeed<T extends {}>(url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(url);
-
-            const response: string = await requestUtils.sendRequest(request);
-            cachedFeed = { data: parseJson(response), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url });
+            cachedFeed = { data: <T>response.parsedBody, nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);
         }
 

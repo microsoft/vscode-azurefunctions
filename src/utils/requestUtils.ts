@@ -3,62 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource, WebResourceLike } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
-import { HttpMethods, ServiceClientCredentials, WebResource } from "ms-rest";
 import * as path from 'path';
-import * as requestP from 'request-promise';
-import { appendExtensionUserAgent, ISubscriptionContext, parseError } from "vscode-azureextensionui";
+import { createGenericClient, parseError } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
+import { nonNullProp } from "./nonNull";
 
 export namespace requestUtils {
-    export type Request = WebResource & requestP.RequestPromiseOptions;
-
     const timeoutKey: string = 'requestTimeout';
 
-    export async function getDefaultRequestWithTimeout(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
-        const request: Request = await getDefaultRequest(url, credentials, method);
+    export async function sendRequest(request: WebResourceLike | RequestPrepareOptions): Promise<HttpOperationResponse> {
+        const client: ServiceClient = createGenericClient();
+        return await client.sendRequest(request);
+    }
+
+    export async function sendRequestWithTimeout(options: RequestPrepareOptions): Promise<HttpOperationResponse> {
+        let request: WebResource = new WebResource();
+        request = request.prepare(options);
+
         const timeoutSeconds: number | undefined = getWorkspaceSetting(timeoutKey);
         if (timeoutSeconds !== undefined) {
             request.timeout = timeoutSeconds * 1000;
         }
-        return request;
-    }
 
-    export async function getDefaultRequest(url: string, credentials?: ServiceClientCredentials, method: HttpMethods = 'GET'): Promise<Request> {
-        const request: WebResource = new WebResource();
-        request.url = url;
-        request.method = method;
-        request.headers = {
-            ['User-Agent']: appendExtensionUserAgent()
-        };
-
-        if (credentials) {
-            await signRequest(request, credentials);
-        }
-
-        return request;
-    }
-
-    export async function getDefaultAzureRequest(urlPath: string, context: ISubscriptionContext, method: HttpMethods = 'GET'): Promise<Request> {
-        let baseUrl: string = context.environment.resourceManagerEndpointUrl;
-        if (baseUrl.endsWith('/')) {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-
-        if (!urlPath.startsWith('/')) {
-            urlPath = `/${urlPath}`;
-        }
-
-        return getDefaultRequest(baseUrl + urlPath, context.credentials, method);
-    }
-
-    export async function sendRequest(request: Request): Promise<string> {
         try {
-            return await <Thenable<string>>requestP(request).promise();
+            return await sendRequest(request);
         } catch (error) {
-            if (parseError(error).errorType === 'ETIMEDOUT') {
+            if (parseError(error).errorType === 'REQUEST_ABORTED_ERROR') {
                 throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
             } else {
                 throw error;
@@ -66,27 +40,16 @@ export namespace requestUtils {
         }
     }
 
-    export async function signRequest(request: Request, cred: ServiceClientCredentials): Promise<void> {
-        await new Promise((resolve, reject): void => {
-            cred.signRequest(request, (err: Error | undefined) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
-    }
-
     export async function downloadFile(url: string, filePath: string): Promise<void> {
-        const request: Request = await getDefaultRequestWithTimeout(url);
         await fse.ensureDir(path.dirname(filePath));
+        const response: HttpOperationResponse = await sendRequest({
+            method: 'GET',
+            url,
+            streamResponseBody: true
+        });
+        const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise(async (resolve, reject): Promise<void> => {
-            requestP(request, err => {
-                if (err) {
-                    reject(err);
-                }
-            }).pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
+            stream.pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
         });
     }
 }

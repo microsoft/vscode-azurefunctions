@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient } from 'azure-arm-resource';
-import { WebSiteManagementClient } from 'azure-arm-website';
+import { WebSiteManagementClient } from '@azure/arm-appservice';
+import { ResourceManagementClient } from '@azure/arm-resources';
 import * as vscode from 'vscode';
 import { TestAzureAccount } from 'vscode-azureextensiondev';
 import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
