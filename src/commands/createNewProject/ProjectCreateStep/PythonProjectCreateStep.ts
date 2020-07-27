@@ -23,7 +23,12 @@ protobuf==3.7.1
 six==1.12.0
 `;
 
-const defaultRequirements: string = 'azure-functions';
+const defaultRequirements: string = `# DO NOT include azure-functions-worker in this file
+# The Python Worker is managed by Azure Functions platform
+# Manually managing azure-functions-worker may cause unexpected issues
+
+azure-functions
+`;
 
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
