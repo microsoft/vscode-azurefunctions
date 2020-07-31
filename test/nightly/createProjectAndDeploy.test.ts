@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { getRandomHexString, requestUtils } from '../../extension.bundle';
+import { createGenericClient, getRandomHexString } from '../../extension.bundle';
 import { nonNullProp } from '../../src/utils/nonNull';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
@@ -118,7 +118,8 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
 
     assert.ok(functionUrl.includes(routePrefix), 'Function url did not include routePrefix.');
 
-    const response: HttpOperationResponse = await requestUtils.sendRequest({ method: 'GET', url: functionUrl, body: { name: "World" } });
+    const client: ServiceClient = createGenericClient();
+    const response: HttpOperationResponse = await client.sendRequest({ method: 'GET', url: functionUrl, body: { name: "World" } });
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok(body.includes('Hello') && body.includes('World'), 'Expected function response to include "Hello" and "World"');
 }

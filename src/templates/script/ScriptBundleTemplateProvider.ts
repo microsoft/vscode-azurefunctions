@@ -10,6 +10,8 @@ import { hostFileName } from '../../constants';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
+import { nonNullProp } from '../../utils/nonNull';
+import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
@@ -39,8 +41,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
 
         [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>(
             await Promise.all([release.bindings, resourcesUrl, release.functions].map(url => requestUtils.sendRequestWithTimeout({ method: 'GET', url })))
-            // tslint:disable-next-line: no-unsafe-any
-        ).map(r => r.parsedBody);
+        ).map(r => parseJson(nonNullProp(r, 'bodyAsText'))); // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
