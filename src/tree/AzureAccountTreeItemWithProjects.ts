@@ -55,7 +55,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
         this._projectDisposables = [];
 
         // tslint:disable-next-line: strict-boolean-expressions
-        const folders: WorkspaceFolder[] = workspace.workspaceFolders || [];
+        const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {
             const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
             if (projectPath) {
