@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
 import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
+import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
