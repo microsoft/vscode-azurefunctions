@@ -34,7 +34,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return this._nextLink !== undefined;
+        return !!this._nextLink;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
@@ -43,9 +43,9 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         }
 
         const client: WebSiteManagementClient = createAzureClient(this.root, WebSiteManagementClient);
-        const webAppCollection: WebSiteManagementModels.WebAppCollection = this._nextLink === undefined ?
-            await client.webApps.listSlots(this.root.client.resourceGroup, this.root.client.siteName) :
-            await client.webApps.listSlotsNext(this._nextLink);
+        const webAppCollection: WebSiteManagementModels.WebAppCollection = this._nextLink ?
+            await client.webApps.listSlotsNext(this._nextLink) :
+            await client.webApps.listSlots(this.root.client.resourceGroup, this.root.client.siteName);
 
         this._nextLink = webAppCollection.nextLink;
 

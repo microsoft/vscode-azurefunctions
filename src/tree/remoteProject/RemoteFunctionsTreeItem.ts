@@ -33,7 +33,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return this._nextLink !== undefined;
+        return !!this._nextLink;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
@@ -41,7 +41,9 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             this._nextLink = undefined;
         }
 
-        const funcs: WebSiteManagementModels.FunctionEnvelopeCollection = this._nextLink ? await this.parent.client.listFunctionsNext(this._nextLink) : await this.parent.client.listFunctions();
+        const funcs: WebSiteManagementModels.FunctionEnvelopeCollection = this._nextLink ?
+            await this.parent.client.listFunctionsNext(this._nextLink) :
+            await this.parent.client.listFunctions();
 
         // https://github.com/Azure/azure-functions-host/issues/3502
         if (!isArray(funcs)) {
