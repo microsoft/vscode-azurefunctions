@@ -98,7 +98,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
         try {
             const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url: this.azModuleGalleryUrl });
-            const versionResult: string = await this.parseLatestAzModuleVersion(response);
+            const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);
         } catch {
@@ -106,7 +106,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private async parseLatestAzModuleVersion(response: HttpOperationResponse): Promise<string> {
+    private parseLatestAzModuleVersion(response: HttpOperationResponse): string {
         // tslint:disable-next-line: no-any
         const moduleInfo: any = response.parsedBody;
         // tslint:disable: no-unsafe-any

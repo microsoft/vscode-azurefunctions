@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
@@ -39,9 +40,10 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);
 
-        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>(
-            await Promise.all([release.bindings, resourcesUrl, release.functions].map(url => requestUtils.sendRequestWithTimeout({ method: 'GET', url })))
-        ).map(r => parseJson(nonNullProp(r, 'bodyAsText'))); // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
+        const urls: string[] = [release.bindings, resourcesUrl, release.functions];
+        const responses: HttpOperationResponse[] = await Promise.all(urls.map(url => requestUtils.sendRequestWithTimeout({ method: 'GET', url })));
+        // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
+        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>responses.map(r => parseJson(nonNullProp(r, 'bodyAsText')));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
