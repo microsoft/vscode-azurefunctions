@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CosmosDBManagementClient, CosmosDBManagementModels } from 'azure-arm-cosmosdb';
+import { CosmosDBManagementClient, CosmosDBManagementModels } from '@azure/arm-cosmosdb';
 import { createAzureClient } from 'vscode-azureextensionui';
 import { getResourceGroupFromId } from '../../../../utils/azure';
 import { nonNullProp } from '../../../../utils/nonNull';
@@ -13,7 +13,7 @@ import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';
 
 export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<IBindingWizardContext & ICosmosDBWizardContext> {
     public async getConnection(context: ICosmosDBWizardContext): Promise<IConnection> {
-        const databaseAccount: CosmosDBManagementModels.DatabaseAccount = nonNullProp(context, 'databaseAccount');
+        const databaseAccount: CosmosDBManagementModels.DatabaseAccountGetResults = nonNullProp(context, 'databaseAccount');
         const name: string = nonNullProp(databaseAccount, 'name');
 
         const client: CosmosDBManagementClient = createAzureClient(context, CosmosDBManagementClient);

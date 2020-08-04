@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from 'azure-arm-website';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';

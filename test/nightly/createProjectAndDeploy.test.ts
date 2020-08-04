@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { getRandomHexString, requestUtils } from '../../extension.bundle';
+import { createGenericClient, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -46,7 +47,6 @@ suite('Create Project and Deploy', async function (this: Mocha.Suite): Promise<v
         // Skipping until we fix this: https://github.com/microsoft/vscode-azurefunctions/issues/1659
         this.skip();
 
-        await testCreateProjectAndDeploy({ ...getPowerShellValidateOptions() });
     });
 
     test('Python', async function (this: Mocha.Context): Promise<void> {
@@ -117,9 +117,8 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
 
     assert.ok(functionUrl.includes(routePrefix), 'Function url did not include routePrefix.');
 
-    const request: requestUtils.Request = await requestUtils.getDefaultRequest(functionUrl);
-    request.body = { name: "World" };
-    request.json = true;
-    const response: string = await requestUtils.sendRequest(request);
-    assert.ok(response.includes('Hello') && response.includes('World'), 'Expected function response to include "Hello" and "World"');
+    const client: ServiceClient = createGenericClient();
+    const response: HttpOperationResponse = await client.sendRequest({ method: 'GET', url: functionUrl, body: { name: "World" } });
+    const body: string = nonNullProp(response, 'bodyAsText');
+    assert.ok(body.includes('Hello') && body.includes('World'), 'Expected function response to include "Hello" and "World"');
 }

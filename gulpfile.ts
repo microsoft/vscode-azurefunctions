@@ -10,6 +10,7 @@
 // tslint:disable:typedef
 // tslint:disable:no-unsafe-any
 
+import * as msRest from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as chmod from 'gulp-chmod';
@@ -18,10 +19,9 @@ import * as filter from 'gulp-filter';
 import * as os from 'os';
 import * as path from 'path';
 import * as request from 'request';
-import * as requestP from 'request-promise';
 import * as buffer from 'vinyl-buffer';
 import * as source from 'vinyl-source-stream';
-import { gulp_installAzureAccount, gulp_installVSCodeExtension, gulp_webpack } from 'vscode-azureextensiondev';
+import { gulp_installVSCodeExtension, gulp_webpack } from 'vscode-azureextensiondev';
 
 async function prepareForWebpack(): Promise<void> {
     const mainJsPath: string = path.join(__dirname, 'main.js');
@@ -34,9 +34,8 @@ async function prepareForWebpack(): Promise<void> {
 
 let downloadLink;
 async function getFuncLink() {
-    // tslint:disable-next-line:no-any
-    const body = await <any>requestP('https://aka.ms/V00v5v');
-    const cliFeed = JSON.parse(body);
+    const client = new msRest.ServiceClient();
+    const cliFeed = (await client.sendRequest({ method: 'GET', url: 'https://aka.ms/V00v5v' })).parsedBody;
     const version = cliFeed.tags['v3-prerelease'].release;
     console.log(`Func cli feed version: ${version}`);
     const cliRelease = cliFeed.releases[version].standaloneCli.find((rel) => {
@@ -80,9 +79,13 @@ function installFuncCli() {
 }
 
 async function gulp_installPythonExtension() {
-    return gulp_installVSCodeExtension('ms-python', 'python');
+    return gulp_installVSCodeExtension('ms-python', 'python', true);
+}
+
+async function gulp_installInsidersAzureAccount(): Promise<void> {
+    return gulp_installVSCodeExtension('ms-vscode', 'azure-account', true);
 }
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli);
+exports.preTest = gulp.series(gulp_installInsidersAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli);

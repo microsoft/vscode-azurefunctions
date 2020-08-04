@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient } from 'azure-arm-resource';
-import { WebSiteManagementClient } from 'azure-arm-website';
+import { WebSiteManagementClient } from '@azure/arm-appservice';
+import { ResourceManagementClient } from '@azure/arm-resources';
 import * as vscode from 'vscode';
 import { TestAzureAccount } from 'vscode-azureextensiondev';
 import { AzExtTreeDataProvider, AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
@@ -39,7 +39,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 async function deleteResourceGroups(): Promise<void> {
     const rgClient: ResourceManagementClient = createAzureClient(testAccount.getSubscriptionContext(), ResourceManagementClient);
     await Promise.all(resourceGroupsToDelete.map(async resourceGroup => {
-        if (await rgClient.resourceGroups.checkExistence(resourceGroup)) {
+        if ((await rgClient.resourceGroups.checkExistence(resourceGroup)).body) {
             console.log(`Started delete of resource group "${resourceGroup}"...`);
             await rgClient.resourceGroups.beginDeleteMethod(resourceGroup);
             console.log(`Successfully started delete of resource group "${resourceGroup}".`);

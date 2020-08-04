@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from 'azure-arm-website';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { ProgressLocation, window } from 'vscode';
-import { IFunctionKeys, IHostKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
+import { IFunctionKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
 import { DialogResponses } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -62,7 +62,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public async getKey(): Promise<string | undefined> {
         switch (this.config.authLevel) {
             case HttpAuthLevel.admin:
-                const hostKeys: IHostKeys = await this.client.listHostKeys();
+                const hostKeys: WebSiteManagementModels.HostKeys = await this.client.listHostKeys();
                 return nonNullProp(hostKeys, 'masterKey');
             case HttpAuthLevel.function:
                 const functionKeys: IFunctionKeys = await this.client.listFunctionKeys(this.name);

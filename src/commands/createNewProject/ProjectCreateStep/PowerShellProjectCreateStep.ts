@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import * as xml2js from 'xml2js';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { requestUtils } from '../../../utils/requestUtils';
@@ -97,8 +97,8 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         });
 
         try {
-            const xmlResult: string = await this.getPSGalleryAzModuleInfo();
-            const versionResult: string = await this.parseLatestAzModuleVersion(xmlResult);
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url: this.azModuleGalleryUrl });
+            const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);
         } catch {
@@ -106,34 +106,15 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    private async getPSGalleryAzModuleInfo(): Promise<string> {
-        const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(this.azModuleGalleryUrl, undefined, 'GET');
-        return await requestUtils.sendRequest(request);
-    }
-
-    private async parseLatestAzModuleVersion(azModuleInfo: string): Promise<string> {
-        const moduleInfo: string = await new Promise((
-            resolve: (ret: string) => void,
-            // tslint:disable-next-line:no-any
-            rejects: (reason: any) => void): void => {
-            // tslint:disable-next-line:no-any
-            xml2js.parseString(azModuleInfo, { explicitArray: false }, (err: any, result: string): void => {
-                if (err) {
-                    rejects(err);
-                } else {
-                    resolve(result);
-                }
-            });
-        });
-
-        // tslint:disable-next-line:no-string-literal no-unsafe-any
-        if (moduleInfo['feed'] && moduleInfo['feed']['entry'] && Array.isArray(moduleInfo['feed']['entry'])) {
-            // tslint:disable-next-line:no-string-literal no-unsafe-any
-            const releasedVersions: string[] = moduleInfo['feed']['entry']
-                // tslint:disable-next-line:no-string-literal no-unsafe-any
-                .filter(entry => entry['m:properties']['d:IsPrerelease']['_'] === 'false')
-                // tslint:disable-next-line:no-string-literal no-unsafe-any
+    private parseLatestAzModuleVersion(response: HttpOperationResponse): string {
+        // tslint:disable-next-line: no-any
+        const moduleInfo: any = response.parsedBody;
+        // tslint:disable: no-unsafe-any
+        if (moduleInfo?.entry && Array.isArray(moduleInfo.entry)) {
+            const releasedVersions: string[] = moduleInfo.entry
+                .filter(entry => entry['m:properties']['d:IsPrerelease']._ === 'false')
                 .map(entry => entry['m:properties']['d:Version']);
+            // tslint:enable: no-unsafe-any
 
             // Select the latest version
             if (releasedVersions.length > 0) {
@@ -143,6 +124,6 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
 
         // If no version is found, throw exception
-        throw new Error(`Failed to parse latest Az module version ${azModuleInfo}`);
+        throw new Error(`Failed to parse latest Az module version ${response.bodyAsText}`);
     }
 }

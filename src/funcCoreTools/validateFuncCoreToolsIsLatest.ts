@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
@@ -10,6 +11,7 @@ import { PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { nonNullProp } from '../utils/nonNull';
 import { openUrl } from '../utils/openUrl';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
@@ -106,9 +108,9 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
     try {
         if (packageManager === PackageManager.brew) {
             const packageName: string = getBrewPackageName(versionFromSetting);
-            const brewRegistryUri: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
-            const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(brewRegistryUri);
-            const brewInfo: string = await requestUtils.sendRequest(request);
+            const url: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url });
+            const brewInfo: string = nonNullProp(response, 'bodyAsText');
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
             if (matches && matches.length > 1) {
                 return matches[1];

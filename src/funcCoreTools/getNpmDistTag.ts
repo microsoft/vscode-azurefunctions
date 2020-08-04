@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as semver from 'semver';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { parseJson } from '../utils/parseJson';
 import { requestUtils } from '../utils/requestUtils';
 
 const npmRegistryUri: string = 'https://aka.ms/AA2qmnu';
@@ -18,8 +18,8 @@ interface IPackageMetadata {
 }
 
 export async function getNpmDistTag(version: FuncVersion): Promise<INpmDistTag> {
-    const request: requestUtils.Request = await requestUtils.getDefaultRequestWithTimeout(npmRegistryUri);
-    const packageMetadata: IPackageMetadata = parseJson(await requestUtils.sendRequest(request));
+    const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url: npmRegistryUri });
+    const packageMetadata: IPackageMetadata = <IPackageMetadata>response.parsedBody;
     const majorVersion: string = getMajorVersion(version);
 
     const validVersions: string[] = Object.keys(packageMetadata.versions).filter((v: string) => !!semver.valid(v));

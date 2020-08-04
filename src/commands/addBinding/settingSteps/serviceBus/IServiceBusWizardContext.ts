@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceBusManagementModels } from 'azure-arm-sb';
+import { ServiceBusManagementModels } from '@azure/arm-servicebus';
 import { ISubscriptionWizardContext } from 'vscode-azureextensionui';
 
 export interface IServiceBusWizardContext extends ISubscriptionWizardContext {

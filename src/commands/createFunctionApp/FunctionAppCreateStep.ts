@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from 'azure-arm-website';
+import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
 import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, createAzureClient, parseError } from 'vscode-azureextensionui';

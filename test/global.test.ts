@@ -147,7 +147,7 @@ export async function cleanTestWorkspace(): Promise<void> {
 }
 
 async function initTestWorkspacePath(): Promise<string> {
-    const workspaceFolders: vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
+    const workspaceFolders: readonly vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         throw new Error("No workspace is open");
     } else {

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageManagementClient, StorageManagementModels } from 'azure-arm-storage';
-import { BaseResource } from 'ms-rest-azure';
+import { StorageManagementClient, StorageManagementModels } from '@azure/arm-storage';
 import { isArray } from 'util';
 import { createAzureClient, IAzureQuickPickItem, IStorageAccountWizardContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
@@ -33,7 +32,7 @@ export function getNameFromId(id: string): string {
     return parseResourceId(id)[4];
 }
 
-export interface IBaseResourceWithName extends BaseResource {
+export interface IBaseResourceWithName {
     name?: string;
     _description?: string;
 }
@@ -61,7 +60,7 @@ export interface IResourceResult {
 
 export async function getStorageConnectionString(context: IStorageAccountWizardContext): Promise<IResourceResult> {
     const client: StorageManagementClient = createAzureClient(context, StorageManagementClient);
-    const storageAccount: StorageManagementModels.StorageAccount = <StorageManagementModels.StorageAccount>nonNullProp(context, 'storageAccount');
+    const storageAccount: StorageManagementModels.StorageAccount = nonNullProp(context, 'storageAccount');
     const name: string = nonNullProp(storageAccount, 'name');
 
     const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceBusManagementClient } from 'azure-arm-sb';
+import { ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
 import { localize } from '../../../../localize';
 import { promptForResource } from '../../../../utils/azure';

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient, EventHubManagementModels } from 'azure-arm-eventhub';
+import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
 import { createAzureClient } from 'vscode-azureextensionui';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';

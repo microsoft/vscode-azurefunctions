@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementModels } from 'azure-arm-website';
+import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
@@ -30,7 +30,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _nextLink: string | undefined;
 
     public hasMoreChildrenImpl(): boolean {
-        return this._nextLink !== undefined;
+        return !!this._nextLink;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
@@ -41,9 +41,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const client: WebSiteManagementClient = createAzureClient(this.root, WebSiteManagementClient);
         let webAppCollection: WebSiteManagementModels.WebAppCollection;
         try {
-            webAppCollection = this._nextLink === undefined ?
-                await client.webApps.list() :
-                await client.webApps.listNext(this._nextLink);
+            webAppCollection = this._nextLink ?
+                await client.webApps.listNext(this._nextLink) :
+                await client.webApps.list();
         } catch (error) {
             if (parseError(error).errorType.toLowerCase() === 'notfound') {
                 // This error type means the 'Microsoft.Web' provider has not been registered in this subscription
