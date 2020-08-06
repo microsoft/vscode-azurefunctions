@@ -34,8 +34,7 @@ suite('Add Binding', async () => {
     test('Command Palette', async () => {
         const userInputs: string[] = [functionName];
         // https://github.com/microsoft/vscode-azurefunctions/issues/1586
-        const isLoggedOut: boolean = (await ext.azureAccountTreeItem.getCachedChildren(createTestActionContext())).some(s => /(sign in|azure account)/i.test(s.label));
-        if (isLoggedOut) {
+        if (!await ext.azureAccountTreeItem.getIsLoggedIn()) {
             userInputs.unshift('Local Project');
         }
         await validateAddBinding([], userInputs);
