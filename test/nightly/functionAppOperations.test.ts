@@ -6,7 +6,7 @@
 import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
+import { DialogResponses, getRandomHexString, parseError, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
@@ -105,15 +105,19 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
         await testUserInput.runWithInputs([appName, DialogResponses.deleteResponse.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
-        const deletedApp: Models.Site | undefined = await testClient.webApps.get(rgName, appName);
-        assert.ifError(deletedApp);
+        await validateAppDeleted(rgName, appName);
     });
 
     test('Delete - Last App on Plan', async () => {
         await testUserInput.runWithInputs([app2Name, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
-        const deletedApp: Models.Site | undefined = await testClient.webApps.get(rgName, app2Name);
-        assert.ifError(deletedApp);
+        await validateAppDeleted(rgName, app2Name);
     });
 });
+
+async function validateAppDeleted(rg: string, app: string): Promise<void> {
+    const response: Models.WebAppsGetResponse = await testClient.webApps.get(rg, app);
+    // https://github.com/Azure/azure-sdk-for-js/issues/10457
+    assert.equal(parseError((<Models.DefaultErrorResponse>response).error).errorType, 'ResourceNotFound');
+}
