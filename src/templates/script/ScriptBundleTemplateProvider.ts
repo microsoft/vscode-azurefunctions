@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
@@ -11,9 +10,7 @@ import { hostFileName } from '../../constants';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { bundleFeedUtils } from '../../utils/bundleFeedUtils';
-import { nonNullProp } from '../../utils/nonNull';
-import { parseJson } from '../../utils/parseJson';
-import { requestUtils } from '../../utils/requestUtils';
+import { feedUtils } from '../../utils/feedUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
@@ -41,9 +38,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const resourcesUrl: string = release.resources.replace('{locale}', language);
 
         const urls: string[] = [release.bindings, resourcesUrl, release.functions];
-        const responses: HttpOperationResponse[] = await Promise.all(urls.map(url => requestUtils.sendRequestWithTimeout({ method: 'GET', url })));
-        // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
-        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>responses.map(r => parseJson(nonNullProp(r, 'bodyAsText')));
+        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(url)));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
