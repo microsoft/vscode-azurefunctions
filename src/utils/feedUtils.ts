@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { nonNullProp } from './nonNull';
+import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
 
 export namespace feedUtils {
@@ -23,7 +25,8 @@ export namespace feedUtils {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
             const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url });
-            cachedFeed = { data: <T>response.parsedBody, nextRefreshTime: Date.now() + 10 * 60 * 1000 };
+            // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
+            cachedFeed = { data: parseJson(nonNullProp(response, 'bodyAsText')), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);
         }
 

@@ -26,7 +26,7 @@ export namespace requestUtils {
 
         try {
             const client: ServiceClient = createGenericClient();
-            return await client.sendRequest(options);
+            return await client.sendRequest(request);
         } catch (error) {
             if (parseError(error).errorType === 'REQUEST_ABORTED_ERROR') {
                 throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
