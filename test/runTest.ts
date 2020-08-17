@@ -18,8 +18,7 @@ async function main(): Promise<void> {
             extensionTestsEnv: {
                 DEBUGTELEMETRY: 'v',
                 MOCHA_timeout: '20000'
-            },
-            version: 'insiders'
+            }
         });
     } catch (err) {
         console.error('Failed to run tests');
