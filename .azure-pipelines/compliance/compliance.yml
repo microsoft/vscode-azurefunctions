@@ -7,6 +7,16 @@ steps:
   continueOnError: true
   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-credscan.CredScan@2
+  displayName: 'Run CredScan'
+  inputs:
+    toolMajorVersion: V2
+    suppressionsFile: '$(Build.SourcesDirectory)/.azure-pipelines/compliance/CredScanSuppressions.json'
+    debugMode: true # Needed to suppress folders
+    folderSuppression: true
+  continueOnError: true
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
 - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
   displayName: 'Publish Security Analysis Logs'
   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
