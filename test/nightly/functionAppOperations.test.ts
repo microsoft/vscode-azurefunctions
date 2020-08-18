@@ -6,7 +6,8 @@
 import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { DialogResponses, getRandomHexString, parseError, ProjectLanguage } from '../../extension.bundle';
+import { tryGetWebApp } from 'vscode-azureappservice';
+import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
@@ -43,7 +44,7 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
-        const createdApp: Models.Site = await testClient.webApps.get(rgName, appName);
+        const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         assert.ok(createdApp);
     });
 
@@ -52,7 +53,7 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
-        const createdApp: Models.Site = await testClient.webApps.get(rgName, app2Name);
+        const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.ok(createdApp);
     });
 
@@ -64,7 +65,7 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
             await testUserInput.runWithInputs([apiAppName, getRotatingNodeVersion(), getRotatingLocation()], async () => {
                 const actualFuncAppId: string = <string>await vscode.commands.executeCommand('azureFunctions.createFunctionApp', testAccount.getSubscriptionContext().subscriptionId, apiRgName);
-                const site: Models.Site = await testClient.webApps.get(apiRgName, apiAppName);
+                const site: Models.Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
                 assert.ok(site);
                 assert.equal(actualFuncAppId, site.id);
             });
@@ -72,52 +73,48 @@ suite('Function App Operations', async function (this: Mocha.Suite): Promise<voi
     });
 
     test('Stop', async () => {
-        let site: Models.Site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Running');
+        let site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Running');
         await testUserInput.runWithInputs([appName], async () => {
             await vscode.commands.executeCommand('azureFunctions.stopFunctionApp');
         });
-        site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Stopped');
+        site = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Stopped');
     });
 
     test('Start', async () => {
-        let site: Models.Site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Stopped');
+        let site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Stopped');
         await testUserInput.runWithInputs([appName], async () => {
             await vscode.commands.executeCommand('azureFunctions.startFunctionApp');
         });
-        site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Running');
+        site = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Running');
     });
 
     test('Restart', async () => {
-        let site: Models.Site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Running');
+        let site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Running');
         await testUserInput.runWithInputs([appName], async () => {
             await vscode.commands.executeCommand('azureFunctions.restartFunctionApp');
         });
-        site = await testClient.webApps.get(rgName, appName);
-        assert.equal(site.state, 'Running');
+        site = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site?.state, 'Running');
     });
 
     test('Delete', async () => {
         await testUserInput.runWithInputs([appName, DialogResponses.deleteResponse.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
-        await validateAppDeleted(rgName, appName);
+        const site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        assert.equal(site, undefined);
     });
 
     test('Delete - Last App on Plan', async () => {
         await testUserInput.runWithInputs([app2Name, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
-        await validateAppDeleted(rgName, app2Name);
+        const site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
+        assert.equal(site, undefined);
     });
 });
-
-async function validateAppDeleted(rg: string, app: string): Promise<void> {
-    const response: Models.WebAppsGetResponse = await testClient.webApps.get(rg, app);
-    // https://github.com/Azure/azure-sdk-for-js/issues/10457
-    assert.equal(parseError((<Models.DefaultErrorResponse>response).error).errorType, 'ResourceNotFound');
-}
