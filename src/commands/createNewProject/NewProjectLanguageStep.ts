@@ -39,7 +39,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
     }
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
-        const previewDescription: string = localize('previewDescription', '(Preview)');
         // Only display 'supported' languages that can be debugged in VS Code
         let languagePicks: IAzureQuickPickItem<ProjectLanguage | undefined>[] = [
             { label: ProjectLanguage.JavaScript, data: ProjectLanguage.JavaScript },
@@ -47,7 +46,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
             { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
             { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
-            { label: ProjectLanguage.PowerShell, description: previewDescription, data: ProjectLanguage.PowerShell }
+            { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell }
         ];
 
         languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });

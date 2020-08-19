@@ -22,6 +22,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
     protected gitignore: string = '';
     protected supportsManagedDependencies: boolean = false;
+    protected localSettingsJson: ILocalSettingsJson = {
+        IsEncrypted: false,
+        Values: {
+            AzureWebJobsStorage: ''
+        }
+    };
 
     public async executeCore(context: IProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const version: FuncVersion = nonNullProp(context, 'version');
@@ -33,20 +39,13 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
 
         const localSettingsJsonPath: string = path.join(context.projectPath, localSettingsFileName);
         if (await confirmOverwriteFile(localSettingsJsonPath)) {
-            const localSettingsJson: ILocalSettingsJson = {
-                IsEncrypted: false,
-                Values: {
-                    AzureWebJobsStorage: ''
-                }
-            };
-
             const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
                 // tslint:disable-next-line:no-non-null-assertion
-                localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
+                this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
-            await writeFormattedJson(localSettingsJsonPath, localSettingsJson);
+            await writeFormattedJson(localSettingsJsonPath, this.localSettingsJson);
         }
 
         const proxiesJsonPath: string = path.join(context.projectPath, proxiesFileName);

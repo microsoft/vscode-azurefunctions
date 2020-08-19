@@ -22,7 +22,6 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
     public hideStepCount: boolean = true;
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
-        const previewDescription: string = localize('previewDescription', '(Preview)');
         // Display all languages, even if we don't have full support for them
         const languagePicks: QuickPickItem[] = [
             { label: ProjectLanguage.CSharp },
@@ -31,7 +30,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.FSharpScript },
             { label: ProjectLanguage.Java },
             { label: ProjectLanguage.JavaScript },
-            { label: ProjectLanguage.PowerShell, description: previewDescription },
+            { label: ProjectLanguage.PowerShell },
             { label: ProjectLanguage.Python },
             { label: ProjectLanguage.TypeScript }
         ];
