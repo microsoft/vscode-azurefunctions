@@ -36,9 +36,8 @@ function filterFunctionStacks(stacks: IFunctionStack[]): IFunctionStack[] {
     for (const stack of stacks) {
         // Not quite ready to display these new stacks - need to do more verification that it actually works end-to-end from our extension
         // Java 11: https://github.com/microsoft/vscode-azurefunctions/issues/2033
-        // PowerShell 7: https://github.com/microsoft/vscode-azurefunctions/issues/1866
         stack.majorVersions = stack.majorVersions.filter(mv => {
-            return !((/powershell/i.test(stack.name) && /7/.test(mv.displayVersion)) || (/java/i.test(stack.name) && /11/.test(mv.displayVersion)));
+            return !(/java/i.test(stack.name) && /11/.test(mv.displayVersion));
         });
     }
     return stacks;
