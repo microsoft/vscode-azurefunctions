@@ -57,13 +57,21 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
 
                     const existingPick: IAzureQuickPickItem<INewSiteStacks> | undefined = picks.find(r => r.data.name === stack.name && r.data.displayVersion === majorVersion.displayVersion);
 
+                    function getDescription(): string | undefined {
+                        return majorVersion.isPreview ? localize('preview', '(Preview)') : majorVersion.isDeprecated ? localize('deprecated', '(Deprecated)') : undefined;
+                    }
+
                     let data: INewSiteStacks;
                     if (existingPick) {
                         data = existingPick.data;
+                        existingPick.description = existingPick.description || getDescription();
                     } else {
+                        // Custom handlers are a bit weird with the labeling because there's no "version"
+                        const label: string = stack.name.toLowerCase() === 'custom' ? majorVersion.displayVersion : `${stack.display} ${majorVersion.displayVersion}`;
                         data = { name: stack.name, displayVersion: majorVersion.displayVersion, };
                         picks.push({
-                            label: `${stack.display} ${majorVersion.displayVersion}`,
+                            label,
+                            description: getDescription(),
                             data
                         });
                     }
@@ -78,7 +86,13 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
 
 function sortStackPicks(pick1: IAzureQuickPickItem<INewSiteStacks>, pick2: IAzureQuickPickItem<INewSiteStacks>): number {
     try {
-        if (pick1.data.name === pick2.data.name) {
+        // Move all picks with a description to the bottom (This should be any preview/deprecated stacks)
+        if (pick1.description && !pick2.description) {
+            return 1;
+        } else if (!pick1.description && pick2.description) {
+            return -1;
+        } else if (pick1.data.name === pick2.data.name) {
+            // If the stack is the same, sort by version
             const version1: semver.SemVer | null = semver.coerce(pick1.data.displayVersion);
             const version2: semver.SemVer | null = semver.coerce(pick2.data.displayVersion);
             if (version1 && version2) {
