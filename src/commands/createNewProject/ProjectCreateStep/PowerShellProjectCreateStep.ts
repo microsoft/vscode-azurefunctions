@@ -6,14 +6,11 @@
 import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as semver from 'semver';
 import { Progress } from 'vscode';
 import { workerRuntimeVersionKey } from '../../../constants';
-import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { FuncVersion } from '../../../FuncVersion';
+import { hasMinFuncCliVersion } from '../../../funcCoreTools/hasMinFuncCliVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from "../../../utils/fs";
-import { nonNullProp } from '../../../utils/nonNull';
 import { requestUtils } from '../../../utils/requestUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
@@ -68,7 +65,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     private readonly azModuleGalleryUrl: string = `https://aka.ms/PwshPackageInfo?id='${this.azModuleName}'`;
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        if (await this.supportsPowerShell7(context)) {
+        if (await hasMinFuncCliVersion('3.0.2534', context.version)) {
             // tslint:disable-next-line:no-non-null-assertion
             this.localSettingsJson.Values![workerRuntimeVersionKey] = '~7';
         }
@@ -135,24 +132,5 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
         // If no version is found, throw exception
         throw new Error(`Failed to parse latest Az module version ${response.bodyAsText}`);
-    }
-
-    private async supportsPowerShell7(context: IProjectWizardContext): Promise<boolean> {
-        const version: FuncVersion = nonNullProp(context, 'version');
-        let supportsPs7: boolean = true;
-        if (version === FuncVersion.v1 || version === FuncVersion.v2) {
-            supportsPs7 = false;
-        } else if (version === FuncVersion.v3) {
-            try {
-                const localCliVersion: string | null = await getLocalFuncCoreToolsVersion();
-                if (localCliVersion) {
-                    supportsPs7 = semver.gte(localCliVersion, '3.0.2534');
-                }
-            } catch {
-                // use default
-            }
-        }
-
-        return supportsPs7;
     }
 }

@@ -8,7 +8,7 @@ import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
-import { funcVersionSetting, hostFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
+import { funcVersionSetting, hostFileName, pomXmlFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -143,7 +143,7 @@ async function getCompiledProjectPath(projectPath: string, projectLanguage: Proj
             throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
         }
     } else if (projectLanguage === ProjectLanguage.Java) {
-        const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(path.join(projectPath, 'pom.xml'));
+        const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(path.join(projectPath, pomXmlFileName));
         if (!functionAppName) {
             throw new Error(localize('unableToGetFunctionAppName', 'Unable to detect property "functionAppName" in pom.xml.'));
         } else {

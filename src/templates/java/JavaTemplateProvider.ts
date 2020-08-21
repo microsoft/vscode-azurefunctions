@@ -6,6 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
+import { pomXmlFileName } from '../../constants';
 import { localize } from '../../localize';
 import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
@@ -32,7 +33,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplateVersion(): Promise<string> {
-        const pomPath: string = path.join(this.getProjectPath(), 'pom.xml');
+        const pomPath: string = path.join(this.getProjectPath(), pomXmlFileName);
         const pomContents: string = (await fse.readFile(pomPath)).toString();
         const match: RegExpMatchArray | null = pomContents.match(/<azure.functions.maven.plugin.version>(.*)<\/azure.functions.maven.plugin.version>/i);
         if (!match) {

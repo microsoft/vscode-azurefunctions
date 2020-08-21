@@ -14,7 +14,7 @@ export namespace javaUtils {
     export async function addJavaProjectToWorkspace(): Promise<void> {
         // Java templates require you to have a project open, so create one here
         if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // no need if the project is already created
-            const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
+            const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, 'javaAppName'];
             await cleanTestWorkspace();
             await testUserInput.runWithInputs(inputs, async () => {
                 await vscode.commands.executeCommand('azureFunctions.createNewProject');

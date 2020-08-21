@@ -8,6 +8,7 @@ import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../IProjectWizardContext";
 
 export interface IJavaProjectWizardContext extends IProjectWizardContext {
+    javaVersion?: string;
     javaGroupId?: string;
     javaArtifactId?: string;
     javaProjectVersion?: string;

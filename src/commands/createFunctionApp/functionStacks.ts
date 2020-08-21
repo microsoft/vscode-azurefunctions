@@ -27,22 +27,11 @@ export interface IFunctionStackMajorVersion {
 }
 
 export function getLinuxFunctionsStacks(): IFunctionStack[] {
-    return filterFunctionStacks(getFunctionStacks(linuxFunctionsStacks));
+    return getFunctionStacks(linuxFunctionsStacks);
 }
 
 export function getWindowsFunctionsStacks(): IFunctionStack[] {
-    return filterFunctionStacks(getFunctionStacks(windowsFunctionsStacks));
-}
-
-function filterFunctionStacks(stacks: IFunctionStack[]): IFunctionStack[] {
-    for (const stack of stacks) {
-        // Not quite ready to display these new stacks - need to do more verification that it actually works end-to-end from our extension
-        // Java 11: https://github.com/microsoft/vscode-azurefunctions/issues/2033
-        stack.majorVersions = stack.majorVersions.filter(mv => {
-            return !(/java/i.test(stack.name) && /11/.test(mv.displayVersion));
-        });
-    }
-    return stacks;
+    return getFunctionStacks(windowsFunctionsStacks);
 }
 
 function getFunctionStacks(data: string): IFunctionStack[] {
