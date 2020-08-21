@@ -10,7 +10,7 @@ import { IProjectWizardContext } from "../IProjectWizardContext";
 export interface IJavaProjectWizardContext extends IProjectWizardContext {
     javaGroupId?: string;
     javaArtifactId?: string;
-    javaVersion?: string;
+    javaProjectVersion?: string;
     javaPackageName?: string;
     javaAppName?: string;
 }
