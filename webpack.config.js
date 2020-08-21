@@ -33,10 +33,12 @@ let config = dev.getDefaultWebpackConfig({
     },
     plugins: [
         // Copy files to dist folder where the runtime can find them
-        new CopyWebpackPlugin([
-            // getCoreNodeModule.js -> dist/node_modules/getCoreNodeModule.js
-            { from: './out/src/utils/getCoreNodeModule.js', to: 'node_modules' }
-        ])
+        new CopyWebpackPlugin({
+            patterns: [
+                // getCoreNodeModule.js -> dist/node_modules/getCoreNodeModule.js
+                { from: './out/src/utils/getCoreNodeModule.js', to: 'node_modules' }
+            ]
+        })
     ]
 });
 
