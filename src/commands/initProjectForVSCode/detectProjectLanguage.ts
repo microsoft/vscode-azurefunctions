@@ -5,7 +5,8 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ProjectLanguage } from '../../constants';
+import { localSettingsFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
 
@@ -13,7 +14,7 @@ import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/Scr
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(projectPath: string): Promise<ProjectLanguage | undefined> {
-    const detectedLangs: ProjectLanguage[] = await detectScriptLanguages(projectPath);
+    let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(projectPath);
 
     if (await isJavaProject(projectPath)) {
         detectedLangs.push(ProjectLanguage.Java);
@@ -27,6 +28,10 @@ export async function detectProjectLanguage(projectPath: string): Promise<Projec
         detectedLangs.push(ProjectLanguage.FSharp);
     }
 
+    await detectLanguageFromLocalSettings(detectedLangs, projectPath);
+
+    // de-dupe
+    detectedLangs = detectedLangs.filter((pl, index) => detectedLangs.indexOf(pl) === index);
     return detectedLangs.length === 1 ? detectedLangs[0] : undefined;
 }
 
@@ -40,6 +45,33 @@ async function isCSharpProject(projectPath: string): Promise<boolean> {
 
 async function isFSharpProject(projectPath: string): Promise<boolean> {
     return (await dotnetUtils.getProjFiles(ProjectLanguage.FSharp, projectPath)).length === 1;
+}
+
+/**
+ * If the user has a "local.settings.json" file, we may be able to infer the langauge from the setting "FUNCTIONS_WORKER_RUNTIME"
+ */
+async function detectLanguageFromLocalSettings(detectedLangs: ProjectLanguage[], projectPath: string): Promise<void> {
+    try {
+        const settings: ILocalSettingsJson = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+        switch (settings.Values?.[workerRuntimeKey]?.toLowerCase()) {
+            case 'java':
+                detectedLangs.push(ProjectLanguage.Java);
+                break;
+            case 'python':
+                detectedLangs.push(ProjectLanguage.Python);
+                break;
+            case 'powershell':
+                detectedLangs.push(ProjectLanguage.PowerShell);
+                break;
+            case 'custom':
+                detectedLangs.push(ProjectLanguage.Custom);
+                break;
+            default:
+            // setting doesn't exist or it could be multiple different languages (aka "node" could by JavaScript or TypeScript)
+        }
+    } catch {
+        // ignore
+    }
 }
 
 /**

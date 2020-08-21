@@ -849,7 +849,8 @@
                             "JavaScript",
                             "PowerShell",
                             "Python",
-                            "TypeScript"
+                            "TypeScript",
+                            "Custom"
                         ],
                         "description": "%azureFunctions.projectLanguage%",
                         "enumDescriptions": [
@@ -861,7 +862,8 @@
                             "",
                             "",
                             "",
-                            ""
+                            "",
+                            "%azureFunctions.projectLanguage.preview%"
                         ]
                     },
                     "azureFunctions.deploySubpath": {

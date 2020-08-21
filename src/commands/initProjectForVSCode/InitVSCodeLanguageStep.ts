@@ -32,7 +32,8 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript },
             { label: ProjectLanguage.PowerShell },
             { label: ProjectLanguage.Python },
-            { label: ProjectLanguage.TypeScript }
+            { label: ProjectLanguage.TypeScript },
+            { label: ProjectLanguage.Custom }
         ];
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', "Select your project's language") };

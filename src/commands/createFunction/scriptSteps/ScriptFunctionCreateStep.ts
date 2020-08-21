@@ -7,7 +7,6 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
-import { localize } from '../../../localize';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -53,14 +52,12 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
             await this.editFunctionJson(context, functionJson);
         }
 
-        await fsUtil.writeFormattedJson(path.join(functionPath, functionJsonFileName), functionJson);
+        const functionJsonPath: string = path.join(functionPath, functionJsonFileName);
+        await fsUtil.writeFormattedJson(functionJsonPath, functionJson);
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
-        if (!fileName) {
-            throw new RangeError(localize('invalidLanguage', 'Invalid language "{0}".', language));
-        }
-        return path.join(functionPath, fileName);
+        return fileName ? path.join(functionPath, fileName) : functionJsonPath;
     }
 
     protected editFunctionJson?(context: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;

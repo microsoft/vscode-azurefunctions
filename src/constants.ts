@@ -24,7 +24,8 @@ export enum ProjectLanguage {
     JavaScript = 'JavaScript',
     PowerShell = 'PowerShell',
     Python = 'Python',
-    TypeScript = 'TypeScript'
+    TypeScript = 'TypeScript',
+    Custom = 'Custom'
 }
 
 export enum TemplateFilter {

@@ -76,6 +76,8 @@ export function getFunctionsWorkerRuntime(language: string | undefined): string 
             return 'python';
         case ProjectLanguage.PowerShell:
             return 'powershell';
+        case ProjectLanguage.Custom:
+            return 'custom';
         default:
             return undefined;
     }

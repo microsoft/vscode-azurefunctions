@@ -21,6 +21,8 @@ export interface IFunctionStackMajorVersion {
     runtimeVersion: string | undefined;
     appSettingsDictionary: { [key: string]: string };
     siteConfigPropertiesDictionary: {};
+    isDeprecated: boolean;
+    isPreview: boolean;
     isHidden: boolean;
 }
 
@@ -226,6 +228,41 @@ const linuxFunctionsStacks: string = `{
                             "linuxFxVersion": "Python|3.8"
                         },
                         "isPreview": false,
+                        "isDeprecated": false,
+                        "isHidden": false
+                    }
+                ],
+                "frameworks": [],
+                "isDeprecated": null
+            }
+        },
+        {
+            "id": null,
+            "name": "Custom",
+            "type": "Microsoft.Web/availableStacks?osTypeSelected=LinuxFunctions",
+            "properties": {
+                "name": "Custom",
+                "display": "Custom",
+                "dependency": null,
+                "majorVersions": [
+                    {
+                        "displayVersion": "Custom Handler",
+                        "runtimeVersion": "",
+                        "supportedFunctionsExtensionVersions": [
+                            "~2",
+                            "~3"
+                        ],
+                        "isDefault": false,
+                        "minorVersions": [],
+                        "applicationInsights": true,
+                        "appSettingsDictionary": {
+                            "FUNCTIONS_WORKER_RUNTIME": "custom"
+                        },
+                        "siteConfigPropertiesDictionary": {
+                            "use32BitWorkerProcess": false,
+                            "linuxFxVersion": ""
+                        },
+                        "isPreview": true,
                         "isDeprecated": false,
                         "isHidden": false
                     }
@@ -474,6 +511,39 @@ const windowsFunctionsStacks: string = `{
         },
         {
             "id": null,
+            "name": "custom",
+            "type": "Microsoft.Web/availableStacks?osTypeSelected=WindowsFunctions",
+            "properties": {
+                "name": "Custom",
+                "display": "Custom",
+                "dependency": null,
+                "majorVersions": [
+                    {
+                        "displayVersion": "Custom Handler",
+                        "runtimeVersion": "Custom",
+                        "supportedFunctionsExtensionVersions": [
+                            "~3", "~2"
+                        ],
+                        "isDefault": true,
+                        "minorVersions": [],
+                        "applicationInsights": true,
+                        "appSettingsDictionary": {
+                            "FUNCTIONS_WORKER_RUNTIME": "custom"
+                        },
+                        "siteConfigPropertiesDictionary": {
+                            "use32BitWorkerProcess": true
+                        },
+                        "isPreview": true,
+                        "isDeprecated": false,
+                        "isHidden": false
+                    }
+                ],
+                "frameworks": [],
+                "isDeprecated": null
+            }
+        },
+        {
+            "id": null,
             "name": "java",
             "type": "Microsoft.Web/availableStacks?osTypeSelected=WindowsFunctions",
             "properties": {
@@ -554,7 +624,7 @@ const windowsFunctionsStacks: string = `{
                             "use32BitWorkerProcess": true
                         },
                         "isPreview": false,
-                        "isDeprecated": false,
+                        "isDeprecated": true,
                         "isHidden": false
                     },
                     {
