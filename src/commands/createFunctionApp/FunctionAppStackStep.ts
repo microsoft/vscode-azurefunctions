@@ -66,7 +66,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                         data = existingPick.data;
                         existingPick.description = existingPick.description || getDescription();
                     } else {
-                        // Custom handlers are a bit weird with the labeling because there's no "version"
+                        // Custom handlers's `stack.display` and `majorVersion.displayVersion` values are not actually "versions" so we have to customize the label accordingly
                         const label: string = stack.name.toLowerCase() === 'custom' ? majorVersion.displayVersion : `${stack.display} ${majorVersion.displayVersion}`;
                         data = { name: stack.name, displayVersion: majorVersion.displayVersion, };
                         picks.push({
