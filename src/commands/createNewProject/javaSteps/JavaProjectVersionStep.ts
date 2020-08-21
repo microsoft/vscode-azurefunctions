@@ -9,17 +9,17 @@ import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
-export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
+export class JavaProjectVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
     public async prompt(context: IJavaProjectWizardContext): Promise<void> {
         const options: InputBoxOptions = {
             placeHolder: localize('versionPlaceHolder', 'Version'),
-            prompt: localize('versionPrompt', 'Provide a version'),
+            prompt: localize('versionPrompt', 'Provide a version for your project'),
             value: '1.0-SNAPSHOT'
         };
-        context.javaVersion = await ext.ui.showInputBox(options);
+        context.javaProjectVersion = await ext.ui.showInputBox(options);
     }
 
     public shouldPrompt(context: IJavaProjectWizardContext): boolean {
-        return !context.javaVersion;
+        return !context.javaProjectVersion;
     }
 }

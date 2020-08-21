@@ -40,7 +40,7 @@ export class JavaProjectCreateStep extends ProjectCreateStepBase {
                 mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype'),
                 mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId')),
                 mavenUtils.formatMavenArg('DartifactId', artifactId),
-                mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaVersion')),
+                mavenUtils.formatMavenArg('Dversion', nonNullProp(context, 'javaProjectVersion')),
                 mavenUtils.formatMavenArg('Dpackage', nonNullProp(context, 'javaPackageName')),
                 mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName')),
                 '-B' // in Batch Mode

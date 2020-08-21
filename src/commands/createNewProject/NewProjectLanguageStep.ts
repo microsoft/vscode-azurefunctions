@@ -17,7 +17,7 @@ import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
 import { JavaArtifactIdStep } from './javaSteps/JavaArtifactIdStep';
 import { JavaGroupIdStep } from './javaSteps/JavaGroupIdStep';
 import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
-import { JavaVersionStep } from './javaSteps/JavaVersionStep';
+import { JavaProjectVersionStep } from './javaSteps/JavaProjectVersionStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaProjectCreateStep } from './ProjectCreateStep/JavaProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -95,7 +95,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(new PowerShellProjectCreateStep());
                 break;
             case ProjectLanguage.Java:
-                promptSteps.push(new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
+                promptSteps.push(new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
                 executeSteps.push(await JavaProjectCreateStep.createStep(context));
                 break;
             default:
