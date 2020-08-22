@@ -45,6 +45,7 @@ export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
+export const pomXmlFileName: string = 'pom.xml';
 
 export enum PackageManager {
     npm = 'npm',
@@ -90,3 +91,4 @@ export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNE
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 
 export const viewOutput: string = localize('viewOutput', 'View Output');
+export const previewDescription: string = localize('preview', '(Preview)');

@@ -27,6 +27,7 @@ export * from './src/constants';
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
 export * from './src/funcConfig/function';
+export * from './src/funcCoreTools/hasMinFuncCliVersion';
 export * from './src/FuncVersion';
 export * from './src/templates/CentralTemplateProvider';
 export * from './src/templates/IFunctionTemplate';

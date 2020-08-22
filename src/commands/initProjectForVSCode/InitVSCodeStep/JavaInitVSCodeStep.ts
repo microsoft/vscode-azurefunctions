@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { func, funcWatchProblemMatcher, hostStartCommand, javaPackageTaskLabel } from '../../../constants';
+import { func, funcWatchProblemMatcher, hostStartCommand, javaPackageTaskLabel, pomXmlFileName } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
 import { mavenUtils } from '../../../utils/mavenUtils';
@@ -19,7 +19,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
     private _debugSubpath: string;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
-        const pomFilePath: string = path.join(context.projectPath, 'pom.xml');
+        const pomFilePath: string = path.join(context.projectPath, pomXmlFileName);
         if (!await fse.pathExists(pomFilePath)) {
             throw new Error(localize('pomNotFound', 'Cannot find pom.xml file in current project, please make sure the language setting is correct.'));
         }

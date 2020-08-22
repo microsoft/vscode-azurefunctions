@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { localSettingsFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
@@ -36,7 +36,7 @@ export async function detectProjectLanguage(projectPath: string): Promise<Projec
 }
 
 async function isJavaProject(projectPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(projectPath, 'pom.xml'));
+    return await fse.pathExists(path.join(projectPath, pomXmlFileName));
 }
 
 async function isCSharpProject(projectPath: string): Promise<boolean> {

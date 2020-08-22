@@ -6,6 +6,7 @@
 import * as semver from 'semver';
 import { WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardPromptStep, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { previewDescription } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getLinuxFunctionsStacks, getWindowsFunctionsStacks, IFunctionStack } from './functionStacks';
@@ -58,7 +59,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                     const existingPick: IAzureQuickPickItem<INewSiteStacks> | undefined = picks.find(r => r.data.name === stack.name && r.data.displayVersion === majorVersion.displayVersion);
 
                     function getDescription(): string | undefined {
-                        return majorVersion.isPreview ? localize('preview', '(Preview)') : majorVersion.isDeprecated ? localize('deprecated', '(Deprecated)') : undefined;
+                        return majorVersion.isPreview ? previewDescription : majorVersion.isDeprecated ? localize('deprecated', '(Deprecated)') : undefined;
                     }
 
                     let data: INewSiteStacks;
