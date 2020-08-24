@@ -1,5 +1,19 @@
 # Change Log
 
+## 0.24.0 - 2020-08-25
+
+### Added
+- Create, debug, and deploy PowerShell 7 and Java 11 projects
+- Preview support to deploy [custom handler](https://docs.microsoft.com/azure/azure-functions/functions-custom-handlers) projects
+- Improved extension activation time (by switching to the [azure-sdk-for-js](https://github.com/Azure/azure-sdk-for-js))
+
+### Changed
+- Minimum version of VS Code is now 1.48.0
+- Support for PowerShell 6 projects has been deprecated
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.24.0%22+is%3Aclosed)
+
 ## 0.23.0 - 2020-07-08
 
 ### Added
