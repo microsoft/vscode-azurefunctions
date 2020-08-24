@@ -34,10 +34,14 @@ suite('Create New Project', async () => {
         });
 
         const appName: string = 'javaApp';
+        const javaInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
+        if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
+            javaInputs.unshift(/11/);
+        }
         testCases.push({
             ...getJavaValidateOptions(appName, version),
             timeout: 5 * 60 * 1000,
-            inputs: [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName]
+            inputs: javaInputs
         });
     }
 
