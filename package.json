@@ -1007,6 +1007,7 @@
         "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc",
         "compile": "tsc -watch",
+        "cleanReadme": "gulp cleanReadme",
         "package": "vsce package",
         "lint": "tslint --project tsconfig.json -t verbose",
         "lint-fix": "tslint --project tsconfig.json -t verbose --fix",

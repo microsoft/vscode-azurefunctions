@@ -1,6 +1,10 @@
 # Azure Functions for Visual Studio Code (Preview)
 
+<!-- region exclude-from-marketplace -->
+
 [![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azurefunctions.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azurefunctions)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=2)
+
+<!-- endregion exclude-from-marketplace -->
 
 Use the Azure Functions extension to quickly create, debug, manage, and deploy serverless apps directly from VS Code. Check out the [Azure serverless community library](https://aka.ms/AA4ul9b) to view sample projects.
 
@@ -67,6 +71,8 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
     > TIP: Your url should look like this: `https://<function app name>.azurewebsites.net/api/HttpTrigger1?name=world`
 1. A response of "Hello world" is returned in the browser and you know your function worked!
 
+<!-- region exclude-from-marketplace -->
+
 ## Contributing
 
 There are a couple of ways you can contribute to this repo:
@@ -87,6 +93,8 @@ Before we can accept your pull request you will need to sign a **Contribution Li
 ### Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+<!-- endregion exclude-from-marketplace -->
 
 ## Telemetry
 

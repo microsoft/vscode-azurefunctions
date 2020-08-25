@@ -82,6 +82,14 @@ async function gulp_installPythonExtension() {
     return gulp_installVSCodeExtension('ms-python', 'python');
 }
 
+async function cleanReadme() {
+    const readmePath: string = path.join(__dirname, 'README.md');
+    let data: string = (await fse.readFile(readmePath)).toString();
+    data = data.replace(/<!-- region exclude-from-marketplace -->.*?<!-- endregion exclude-from-marketplace -->/gis, '');
+    await fse.writeFile(readmePath, data);
+}
+
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
 exports.preTest = gulp.series(gulp_installAzureAccount, gulp_installPythonExtension, getFuncLink, installFuncCli);
+exports.cleanReadme = cleanReadme;
