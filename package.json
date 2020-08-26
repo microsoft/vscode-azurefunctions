@@ -799,7 +799,8 @@
             {
                 "command": "workbench.view.extension.azure",
                 "key": "ctrl+shift+a",
-                "mac": "cmd+shift+a"
+                "mac": "cmd+shift+a",
+                "linux": "shift+alt+a"
             }
         ],
         "configuration": [
