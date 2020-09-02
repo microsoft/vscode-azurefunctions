@@ -46,4 +46,4 @@ schedules:
   always: true # Run even when there are no code changes
   branches:
     include:
-    - master
+    - main

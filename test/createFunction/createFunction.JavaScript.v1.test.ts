@@ -94,7 +94,7 @@ suite('Create Function JavaScript ~1', async function (this: Mocha.Suite): Promi
         );
     });
 
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
     test('createFunction API (deprecated)', async () => {
         await runForAllTemplateSources(async (source) => {
             const templateId: string = 'HttpTrigger-JavaScript';

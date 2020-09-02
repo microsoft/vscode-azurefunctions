@@ -10,7 +10,7 @@ import { longRunningTestsEnabled, testFolderPath, testUserInput } from '../globa
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
 suite('Create New Project API (deprecated)', async () => {
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-new-project
     test('JavaScript', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');
         await testUserInput.runWithInputs([/skip for now/i], async () => {
@@ -19,7 +19,7 @@ suite('Create New Project API (deprecated)', async () => {
         await validateProject(projectPath, getJavaScriptValidateOptions(true /* hasPackageJson */, FuncVersion.v2));
     });
 
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-new-project
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-new-project
     test('C# Script IoT', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
