@@ -7,7 +7,6 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { pomXmlFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import * as fsUtil from '../../../utils/fs';
 import { mavenUtils } from '../../../utils/mavenUtils';
@@ -52,14 +51,5 @@ export class JavaProjectCreateStep extends ProjectCreateStepBase {
         } finally {
             await fse.remove(tempFolder);
         }
-
-        // the "javaVersion" parameter doesn't completely work, so we have to manually edit pom.xml
-        // https://github.com/microsoft/azure-maven-archetypes/issues/154
-        const pomXmlPath: string = path.join(context.projectPath, pomXmlFileName);
-        let pomXml: string = (await fse.readFile(pomXmlPath)).toString();
-        // Mirroring the logic here: https://github.com/microsoft/azure-maven-archetypes/blob/87ebf220781c0dc80ab948afcfbeecdd7a362b82/azure-functions-archetype/src/main/resources/META-INF/archetype-post-generate.groovy#L32
-        const pomJavaVersion: string = javaVersion === '8' ? '1.8' : '11';
-        pomXml = pomXml.replace(/<java.version>.*<\/java.version>/i, `<java.version>${pomJavaVersion}</java.version>`);
-        await fse.writeFile(pomXmlPath, pomXml);
     }
 }
