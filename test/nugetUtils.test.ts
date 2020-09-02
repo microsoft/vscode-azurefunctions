@@ -15,7 +15,7 @@ suite('nugetUtils.tryGetMaxInRange', () => {
     const versions: string[] = ['0.6.0', '1.0.0', '1.0.1', '1.1.0', '2.0.0-alpha', '2.1.0-beta', '2.0.0', '3.0.0'];
 
     const testCases: ITestCase[] = [
-        // Ranges examples from https://github.com/NuGetArchive/NuGet.Versioning/blob/main/src/NuGet.Versioning/VersionRangeFactory.cs#L38
+        // Ranges examples from https://github.com/NuGetArchive/NuGet.Versioning/blob/master/src/NuGet.Versioning/VersionRangeFactory.cs#L38
         { range: '1.0', expected: '3.0.0' }, // 1.0 ≤ x
         { range: '(,1.0]', expected: '1.0.0' }, // x <= 1.0
         { range: '(,1.0)', expected: '0.6.0' }, // x < 1.0
