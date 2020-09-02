@@ -50,7 +50,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     const actualId: string = t.id.toLowerCase();
                     const expectedId: string = options.templateId.toLowerCase();
                     // Check for a match with or without the language in the id
-                    return actualId === expectedId || actualId === `${expectedId}-${language.toLowerCase()}`;
+                    // The id for C# triggers include "CSharp" rather than "C#", so we'll have to search for that instead
+                    return actualId === expectedId || actualId.includes(expectedId) && actualId.includes((language === ProjectLanguage.CSharp ? 'CSharp' : language).toLowerCase());
                 } else {
                     return false;
                 }
