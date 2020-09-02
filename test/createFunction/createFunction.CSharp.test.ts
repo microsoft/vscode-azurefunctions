@@ -137,7 +137,7 @@ function addSuite(version: FuncVersion): void {
             );
         });
 
-        // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
+        // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
         test('createFunction API (deprecated)', async () => {
             await runForAllTemplateSources(async (source) => {
                 // Intentionally testing IoTHub trigger since a partner team plans to use that

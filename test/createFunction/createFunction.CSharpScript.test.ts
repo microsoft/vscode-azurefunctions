@@ -47,7 +47,7 @@ suite('Create Function C# Script ~1', async () => {
     const iotTriggerSettings: {} = { connection: iotConnection, path: iotPath, consumerGroup: iotConsumerGroup };
     const iotExpectedContents: string[] = [iotConnection, iotPath, iotConsumerGroup];
 
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/master/docs/api.md#create-local-function
+    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
     test('createFunction API (deprecated)', async () => {
         await runForAllTemplateSources(async (source) => {
             // Intentionally testing IoTHub trigger since a partner team plans to use that
