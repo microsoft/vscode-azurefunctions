@@ -1,0 +1,56 @@
+jobs:
+- job: Windows
+  pool:
+    name: VSEng-MicroBuildVS2019
+  variables:
+    ProjectPath: 'tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj'
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core sdk 2.0.x'
+    inputs:
+      version: 2.0.x
+
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core sdk 3.0.x'
+    inputs:
+      version: 3.0.x
+
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet publish 2.0'
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: '$(ProjectPath)'
+      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp2.0'
+      zipAfterPublish: false
+      modifyOutputPath: false
+
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet publish 3.0'
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: '$(ProjectPath)'
+      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp3.0'
+      zipAfterPublish: false
+      modifyOutputPath: false
+
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+    inputs:
+      SourceFolder: '$(system.defaultworkingdirectory)/tools/JsonCli/src/'
+      Contents: 'bin/**/publish/**'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
+    condition: succeededOrFailed()
+
+  - template: compliance.yml
+
+trigger: none
+
+pr: none

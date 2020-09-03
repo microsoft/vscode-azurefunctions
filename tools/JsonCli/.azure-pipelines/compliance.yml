@@ -1,0 +1,30 @@
+steps:
+- task: MSBuild@1
+  displayName: 'build (needed for roslyn)'
+  inputs:
+    solution: '$(ProjectPath)'
+    configuration: '$(BuildConfiguration)'
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
+  displayName: 'Run BinSkim'
+  inputs:
+    InputType: Basic
+    AnalyzeTarget: '$(Build.ArtifactStagingDirectory)\*.dll;$(Build.ArtifactStagingDirectory)\*.exe'
+  continueOnError: true
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-roslynanalyzers.RoslynAnalyzers@2
+  displayName: 'Run Roslyn Analyzers'
+  continueOnError: true
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
+  displayName: 'Publish Security Analysis Logs'
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+  displayName: 'Post Analysis'
+  inputs:
+    AllTools: true
+  condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
