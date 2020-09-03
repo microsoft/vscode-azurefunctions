@@ -1,5 +1,7 @@
 # .NET Template JSON CLI
 
+[![Build Status](https://devdiv.visualstudio.com/DevDiv/_apis/build/status/Azure%20Tools/vscode-azurefunctions-jsoncli?branchName=main)](https://devdiv.visualstudio.com/DevDiv/_build/latest?definitionId=13600&branchName=main)
+
 This tool is leveraged by the Functions extension at the root of this repo. It provides a JSON-based way to interact with .NET Templates. It also allows us to use templates directly from a nuget package, rather than forcing the user to install the templates machine-wide.
 
 ## Prerequisites
