@@ -31,7 +31,7 @@ const profileps1: string = `# Azure Functions profile.ps1
 # Authenticate with Azure PowerShell using MSI.
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 if ($env:MSI_SECRET) {
-    Disable-AzContextAutosave
+    Disable-AzContextAutosave -Scope Process | Out-Null
     Connect-AzAccount -Identity
 }
 
