@@ -47,11 +47,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
                 if (options.templateId) {
-                    const actualId: string = t.id.toLowerCase();
-                    const expectedId: string = options.templateId.toLowerCase();
-                    // Check for a match with or without the language in the id
-                    // The id for C# triggers include "CSharp" rather than "C#", so we'll have to search for that instead
-                    return actualId === expectedId || actualId.includes(expectedId) && actualId.includes((language === ProjectLanguage.CSharp ? 'CSharp' : language).toLowerCase());
+                    const actualName: string = t.name.toLowerCase().replace(/\s/, '');
+                    const expectedName: string = options.templateId.toLowerCase();
+                    return actualName === expectedName;
                 } else {
                     return false;
                 }
