@@ -47,9 +47,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
                 if (options.templateId) {
-                    const actualName: string = t.name.toLowerCase().replace(/\s/, '');
-                    const expectedName: string = options.templateId.toLowerCase();
-                    return actualName === expectedName;
+                    const actualId: string = t.id.toLowerCase();
+                    const expectedId: string = options.templateId.toLowerCase();
+                    // check for only whole word matches and escape the "\b" since it's in a string, not a RegExp expression
+                    return new RegExp(`\\b${expectedId}\\b`, 'gmi').test(actualId);
                 } else {
                     return false;
                 }
