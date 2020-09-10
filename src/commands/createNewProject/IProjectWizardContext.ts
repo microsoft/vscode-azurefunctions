@@ -17,6 +17,8 @@ export interface IProjectWizardContext extends IActionContext {
     languageFilter?: RegExp;
     version: FuncVersion;
     openBehavior?: OpenBehavior;
+
+    generataFromOpenAPI?: boolean;
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';

@@ -17,6 +17,7 @@ import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSet
 import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
+import { OpenAPICreateStep } from '../createNewProject/openAPISteps/OpenAPICreateStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
@@ -114,7 +115,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const title: string = localize('createFunction', 'Create new {0}', template.name);
             return { promptSteps, executeSteps, title };
         } else {
-            return undefined;
+            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
+            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
+
+            executeSteps.push(new OpenAPICreateStep());
+
+            const title: string = localize('createFunction', 'Create new {0}', '');
+            return { promptSteps, executeSteps, title };
         }
     }
 
@@ -136,6 +143,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
                     await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
                 }
+            } else if (result === 'openAPI') {
+                context.generataFromOpenAPI = true;
+                break;
             } else {
                 context.functionTemplate = result;
             }
@@ -162,6 +172,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: 'skipForNow',
                 suppressPersistence: true
             });
+            if (language == ProjectLanguage.CSharp || language == ProjectLanguage.Java || language == ProjectLanguage.Python || language == ProjectLanguage.TypeScript) {
+                picks.unshift({
+                    label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
+                    data: 'openAPI',
+                    suppressPersistence: true
+                });
+            }
         }
 
         picks.push({
@@ -181,7 +198,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'changeFilter' | 'skipForNow';
+type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI';
 
 async function promptForTemplateFilter(): Promise<TemplateFilter> {
     const picks: IAzureQuickPickItem<TemplateFilter>[] = [
