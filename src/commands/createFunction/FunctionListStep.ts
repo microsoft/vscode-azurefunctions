@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as escape from 'escape-string-regexp';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
@@ -49,8 +50,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 if (options.templateId) {
                     const actualId: string = t.id.toLowerCase();
                     const expectedId: string = options.templateId.toLowerCase();
-                    // Check for a match with or without the language in the id
-                    return actualId === expectedId || actualId === `${expectedId}-${language.toLowerCase()}`;
+                    // check for an exact match or only whole word matches and escape the "\b" since it's in a string, not a RegExp expression
+                    return actualId === expectedId || new RegExp(`\\b${escape(expectedId)}\\b`, 'gmi').test(actualId);
                 } else {
                     return false;
                 }
