@@ -92,7 +92,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     return createApiProvider([<AzureFunctionsExtensionApi>{
         revealTreeItem,
         createFunction: createFunctionFromApi,
-        apiVersion: '1.1.0'
+        apiVersion: '1.2.0'
     }]);
 }
 
