@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.24.1 - 2020-09-21
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.24.1%22+is%3Aclosed)
+
+- Deploy error when `AzureWebJobsStorage` app setting doesn't have EndpointSuffix
+- createFunction API call fails to create C# triggers
+
 ## 0.24.0 - 2020-08-25
 
 ### Added
