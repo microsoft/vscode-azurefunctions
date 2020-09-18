@@ -172,7 +172,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: 'skipForNow',
                 suppressPersistence: true
             });
-            if (language == ProjectLanguage.CSharp || language == ProjectLanguage.Java || language == ProjectLanguage.Python || language == ProjectLanguage.TypeScript) {
+            if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || language === ProjectLanguage.Python || language === ProjectLanguage.TypeScript) {
                 picks.unshift({
                     label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
                     data: 'openAPI',

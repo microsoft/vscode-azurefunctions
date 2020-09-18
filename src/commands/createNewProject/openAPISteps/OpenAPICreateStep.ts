@@ -6,13 +6,12 @@ import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 import { IFunctionWizardContext } from "../../createFunction/IFunctionWizardContext";
 
-
 export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
     public priority: number;
 
     public async execute(wizardContext: IFunctionWizardContext): Promise<void> {
-        const uris = await this.askDocument();
-        const uri = uris[0];
+        const uris: Uri[] = await this.askDocument();
+        const uri: Uri = uris[0];
 
         const args: string[] = [];
         args.push(`--input-file:${uri.fsPath} --version:3.0.6314`);
@@ -51,12 +50,12 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             canSelectFiles: true,
             canSelectFolders: false,
             canSelectMany: false,
-            openLabel: "Select OpenAPI Specification (V2 or V3) File",
+            openLabel: 'Select OpenAPI Specification (V2 or V3) File',
             filters: {
-                JSON: ["json"]
+                JSON: ['json']
             }
         };
-        const rootPath = workspace.rootPath;
+        const rootPath: string | undefined = workspace.rootPath;
         if (rootPath) {
             openDialogOptions.defaultUri = Uri.file(rootPath);
         }
