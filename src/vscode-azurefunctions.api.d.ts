@@ -3,12 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AppSettingsTreeItem } from "vscode-azureappservice";
+
 export interface AzureFunctionsExtensionApi {
     apiVersion: string;
 
     revealTreeItem(resourceId: string): Promise<void>;
 
     createFunction(options: ICreateFunctionOptions): Promise<void>;
+    downloadAppSettings(node?: AppSettingsTreeItem): Promise<void>;
+    uploadAppSettings(node?: AppSettingsTreeItem): Promise<void>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
