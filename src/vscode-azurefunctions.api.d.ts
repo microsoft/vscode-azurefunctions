@@ -12,7 +12,7 @@ export interface AzureFunctionsExtensionApi {
 
     createFunction(options: ICreateFunctionOptions): Promise<void>;
     downloadAppSettings(node?: AppSettingsTreeItem): Promise<void>;
-    uploadAppSettings(node?: AppSettingsTreeItem): Promise<void>;
+    uploadAppSettings(client: ISimpleAppSettingsClient, outputChannel: OutputChannel, workspacePath?: string): Promise<void>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
