@@ -3,8 +3,19 @@ jobs:
   pool:
     name: VSEng-MicroBuildVS2019
   variables:
-    ProjectPath: 'tools/JsonCli/src/Microsoft.TemplateEngine.JsonCli.csproj'
+    SrcPath: 'tools/JsonCli/src'
+    ProjectPath: '$(SrcPath)/Microsoft.TemplateEngine.JsonCli.csproj'
+    SigningProjectPath: '$(SrcPath)/Signing.csproj'
+    NugetConfigPath: '$(SrcPath)/nuget.config'
+    DropPath: '$(build.artifactstagingdirectory)/drop'
   steps:
+  - task: ms-vseng.MicroBuildTasks.30666190-6959-11e5-9f96-f56098202fef.MicroBuildSigningPlugin@2
+    displayName: 'Install Signing Plugin'
+    inputs:
+      signType: '$(SignType)'
+    env:
+      TeamName: 'AzureTools'
+
   - task: UseDotNet@2
     displayName: 'Use .NET Core sdk 2.0.x'
     inputs:
@@ -15,13 +26,26 @@ jobs:
     inputs:
       version: 3.0.x
 
+  - task: NuGetCommand@2
+    displayName: 'restore'
+    inputs:
+      restoreSolution: '$(ProjectPath)'
+      feedsToUse: config
+      nugetConfigPath: '$(NugetConfigPath)'
+
+  - task: MSBuild@1
+    displayName: 'build'
+    inputs:
+      solution: '$(ProjectPath)'
+      configuration: '$(BuildConfiguration)'
+
   - task: DotNetCoreCLI@2
     displayName: 'dotnet publish 2.0'
     inputs:
       command: publish
       publishWebProjects: false
       projects: '$(ProjectPath)'
-      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp2.0'
+      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp2.0 --no-build'
       zipAfterPublish: false
       modifyOutputPath: false
 
@@ -31,25 +55,73 @@ jobs:
       command: publish
       publishWebProjects: false
       projects: '$(ProjectPath)'
-      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp3.0'
+      arguments: '--configuration $(BuildConfiguration) --framework netcoreapp3.0 --no-build'
       zipAfterPublish: false
       modifyOutputPath: false
 
+  - task: DeleteFiles@1
+    displayName: 'Delete unneeded publish files'
+    inputs:
+      SourceFolder: '$(SrcPath)'
+      Contents: |
+        bin/**/publish/**/*.exe
+        bin/**/publish/**/*.pdb
+
+  # Run before we build the signing project, because we don't want to analyze that
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-roslynanalyzers.RoslynAnalyzers@2
+    displayName: 'Run Roslyn Analyzers'
+    continueOnError: true
+    condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+  - task: NuGetCommand@2
+    displayName: 'restore signing project'
+    inputs:
+      restoreSolution: '$(SigningProjectPath)'
+      feedsToUse: config
+      nugetConfigPath: '$(NugetConfigPath)'
+
+  - task: MSBuild@1
+    displayName: 'build signing project'
+    inputs:
+      solution: '$(SigningProjectPath)'
+      configuration: '$(BuildConfiguration)'
+
   - task: CopyFiles@2
-    displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+    displayName: 'Copy Files to Staging'
     inputs:
       SourceFolder: '$(system.defaultworkingdirectory)/tools/JsonCli/src/'
       Contents: 'bin/**/publish/**'
-      TargetFolder: '$(build.artifactstagingdirectory)'
+      TargetFolder: '$(DropPath)'
     condition: succeededOrFailed()
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact: drop'
     inputs:
-      PathtoPublish: '$(build.artifactstagingdirectory)'
+      PathtoPublish: '$(DropPath)'
     condition: succeededOrFailed()
 
-  - template: compliance.yml
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@3
+    displayName: 'Run BinSkim'
+    inputs:
+      InputType: Basic
+      AnalyzeTarget: '$(DropPath)\*.dll;$(DropPath)\*.exe'
+    continueOnError: true
+    condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+  - task: ms-vseng.MicroBuildShipTasks.7c429315-71ba-4cb3-94bb-f829c95f7915.MicroBuildCodesignVerify@2
+    displayName: 'Verify Signed Files'
+    inputs:
+      TargetFolders: '$(DropPath)'
+
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@2
+    displayName: 'Publish Security Analysis Logs'
+    condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+    displayName: 'Post Analysis'
+    inputs:
+      AllTools: true
+    condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
 trigger: none
 

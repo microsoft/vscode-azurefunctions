@@ -144,7 +144,7 @@ namespace Microsoft.TemplateEngine.JsonCli
                 TemplateCreationResult result = _templateCreator.InstantiateAsync(info, null, null, null, templateArgs, true, false, null).Result;
                 if (result.Status == CreationResultStatus.Success)
                 {
-                    PostActionDispatcher postActionDispatcher = new PostActionDispatcher(EnvironmentSettings, result, AllowPostActionsSetting.Yes, false);
+                    PostActionDispatcher postActionDispatcher = new PostActionDispatcher(EnvironmentSettings, new New3Callbacks(), result, AllowPostActionsSetting.Yes, false);
                     postActionDispatcher.Process(null);
                 }
 
