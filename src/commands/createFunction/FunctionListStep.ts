@@ -114,7 +114,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);
             return { promptSteps, executeSteps, title };
-        } else {
+        } else if (context.generateFromOpenAPI) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
 
@@ -122,6 +122,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             const title: string = localize('createFunction', 'Create new {0}', '');
             return { promptSteps, executeSteps, title };
+        } else {
+            return undefined;
         }
     }
 
@@ -144,7 +146,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
                 }
             } else if (result === 'openAPI') {
-                context.generataFromOpenAPI = true;
+                context.generateFromOpenAPI = true;
                 break;
             } else {
                 context.functionTemplate = result;
@@ -173,7 +175,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 suppressPersistence: true
             });
             if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || language === ProjectLanguage.Python || language === ProjectLanguage.TypeScript) {
-                picks.unshift({
+                picks.push({
                     label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
                     data: 'openAPI',
                     suppressPersistence: true
