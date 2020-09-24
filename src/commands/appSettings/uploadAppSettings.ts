@@ -25,9 +25,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
 
     const client: IAppSettingsClient = node.client;
     await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
-        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
-            await uploadAppSettingsInternal(context, client, workspacePath);
-        });
+        await uploadAppSettingsInternal(context, client, workspacePath);
     });
 }
 
@@ -56,7 +54,9 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
         await confirmOverwriteSettings(localSettings.Values, remoteSettings.properties, client.fullName);
 
-        await client.updateApplicationSettings(remoteSettings);
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
+            await client.updateApplicationSettings(remoteSettings);
+        });
 
         ext.outputChannel.appendLog(localize('uploadedSettings', 'Successfully uploaded settings.'), { resourceName: client.fullName });
         // don't wait
