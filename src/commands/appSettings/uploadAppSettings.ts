@@ -12,6 +12,7 @@ import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
+import { ISimpleAppSettingsClient } from "../../vscode-azurefunctions.api";
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
@@ -25,12 +26,12 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
     const client: IAppSettingsClient = node.client;
     await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
-            await uploadAppSettingsInternal(context, client, ext.outputChannel, workspacePath);
+            await uploadAppSettingsInternal(context, client, workspacePath);
         });
     });
 }
 
-export async function uploadAppSettingsInternal(context: IActionContext, client: ISimpleAppSettingsClient, outputChannel: vscode.OutputChannel, workspacePath?: string): Promise<void> {
+export async function uploadAppSettingsInternal(context: IActionContext, client: ISimpleAppSettingsClient, workspacePath?: string): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
     const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
@@ -52,8 +53,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         }
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
-        // tslint:disable-next-line: no-unsafe-any
-        hasOwnProperty(outputChannel, 'appendLog') ? outputChannel.appendLog(uploadSettings, { resourceName: client.fullName }) : outputChannel.appendLine(uploadSettings);
+        ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
         await confirmOverwriteSettings(localSettings.Values, remoteSettings.properties, client.fullName);
 
         await client.updateApplicationSettings(remoteSettings);
@@ -68,21 +68,4 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
     } else {
         throw new Error(localize('noSettings', 'No settings found in "{0}".', localSettingsFileName));
     }
-
-}
-
-export interface ISimpleAppSettingsClient {
-    fullName: string;
-    listApplicationSettings(): Promise<IStringDictionary>;
-    updateApplicationSettings(appSettings: IStringDictionary): Promise<IStringDictionary>;
-}
-
-export interface IStringDictionary {
-    properties?: { [propertyName: string]: string };
-}
-
-function hasOwnProperty<X extends {}, Y extends PropertyKey>
-    // tslint:disable-next-line:no-any
-    (obj: X, prop: Y): obj is X & Record<Y, any> {
-    return obj.hasOwnProperty(prop);
 }

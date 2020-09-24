@@ -3,21 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AppSettingsTreeItem } from "vscode-azureappservice";
-
 export interface AzureFunctionsExtensionApi {
     apiVersion: string;
 
     revealTreeItem(resourceId: string): Promise<void>;
 
     createFunction(options: ICreateFunctionOptions): Promise<void>;
-    downloadAppSettings(node?: AppSettingsTreeItem): Promise<void>;
-    uploadAppSettings(client: ISimpleAppSettingsClient, outputChannel: OutputChannel, workspacePath?: string): Promise<void>;
+    downloadAppSettings(client: ISimpleAppSettingsClient): Promise<void>;
+    uploadAppSettings(client: ISimpleAppSettingsClient, workspacePath?: string): Promise<void>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
-
 export type ProjectVersion = '~1' | '~2' | '~3';
+
+export interface ISimpleAppSettingsClient {
+    fullName: string;
+    listApplicationSettings(): Promise<IStringDictionary>;
+    updateApplicationSettings(appSettings: IStringDictionary): Promise<IStringDictionary>;
+}
+
+interface IStringDictionary {
+    properties?: { [propertyName: string]: string };
+}
+
 
 /**
  * The options to use when creating a function. If an option is not specified, the default will be used or the user will be prompted
