@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import * as EventEmitter from 'events';
+import { EventEmitter } from 'events';
 import { createServer, Server, Socket } from 'net';
 import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
 import * as websocket from 'websocket';
