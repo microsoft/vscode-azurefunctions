@@ -46,7 +46,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     addLocalFuncTelemetry(context);
 
     // tslint:disable-next-line: strict-boolean-expressions
-    const language: string | undefined = options.language || getGlobalSetting(projectLanguageSetting);
+    const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
     // tslint:disable-next-line: strict-boolean-expressions
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
 

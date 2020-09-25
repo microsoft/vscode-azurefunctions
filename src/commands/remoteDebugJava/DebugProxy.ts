@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import * as EventEmitter from 'events';
+import { EventEmitter } from 'events';
 import { createServer, Server, Socket } from 'net';
 import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
 import * as websocket from 'websocket';
@@ -37,8 +37,8 @@ export class DebugProxy extends EventEmitter {
 
             this._server.on('connection', (socket: Socket) => {
                 if (this._wsclient) {
-                    ext.outputChannel.appendLog(`[Proxy Server] The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
-                    this.emit('error', new Error(`[Proxy Server]  The server is already connected to "${this._wsclient.url.hostname}". Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
+                    ext.outputChannel.appendLog(`[Proxy Server] The server is already connected. Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`);
+                    this.emit('error', new Error(`[Proxy Server]  The server is already connected. Rejected connection to "${socket.remoteAddress}:${socket.remotePort}"`));
                     socket.destroy();
                 } else {
                     ext.outputChannel.appendLog(`[Proxy Server] client connected ${socket.remoteAddress}:${socket.remotePort}`);
