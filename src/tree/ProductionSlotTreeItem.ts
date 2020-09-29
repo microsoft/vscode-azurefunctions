@@ -6,7 +6,6 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { SiteClient } from 'vscode-azureappservice';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
-import { localize } from '../localize';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -29,9 +28,7 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
         const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
-        if (await this.supportsSlots()) {
-            children.push(this._slotsTreeItem);
-        }
+        children.push(this._slotsTreeItem);
         return children;
     }
 
@@ -40,20 +37,11 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
             switch (expectedContextValue) {
                 case SlotsTreeItem.contextValue:
                 case SlotTreeItem.contextValue:
-                    if (await this.supportsSlots()) {
-                        return this._slotsTreeItem;
-                    } else {
-                        throw new Error(localize('slotNotSupported', 'Linux Consumption apps do not support slots.'));
-                    }
+                    return this._slotsTreeItem;
                 default:
             }
         }
 
         return super.pickTreeItemImpl(expectedContextValues);
-    }
-
-    private async supportsSlots(): Promise<boolean> {
-        // Slots are not yet supported for Linux Consumption
-        return !this.root.client.isLinux || !await this.getIsConsumption();
     }
 }
