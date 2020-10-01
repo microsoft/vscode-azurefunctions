@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
@@ -15,6 +16,7 @@ import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -61,6 +63,19 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises
         validateGlobSettings(context, context.effectiveDeployFsPath);
+    }
+
+    if (language === ProjectLanguage.CSharp) {
+        const projFiles: string[] = await dotnetUtils.getProjFiles(language, context.workspaceFolder.uri.fsPath);
+        const mainProject: string = path.join(context.workspaceFolder.uri.fsPath, projFiles[0]);
+        const platformTarget: string | undefined = await dotnetUtils.getPlatformTarget(mainProject);
+        if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
+            const config: WebSiteManagementModels.SiteConfigResource = {
+                use32BitWorkerProcess: false
+            };
+            context.stopAppBeforeDeploy = true;
+            await node.root.client.updateConfiguration(config);
+        }
     }
 
     await verifyAppSettings(context, node, version, language);

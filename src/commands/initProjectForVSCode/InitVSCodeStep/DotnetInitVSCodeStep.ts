@@ -8,7 +8,7 @@ import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
-import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
+import { FuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -63,11 +63,11 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
         const projFilePath: string = path.join(projectPath, projFileName);
 
-        const versionInProjFile: string = await dotnetUtils.getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+        const versionInProjFile: FuncVersion | undefined = await dotnetUtils.getFuncVersion(projFilePath);
         context.telemetry.properties.versionInProjFile = versionInProjFile;
         // The version from the proj file takes precedence over whatever was set in `context` before this
         // tslint:disable-next-line: strict-boolean-expressions
-        context.version = tryParseFuncVersion(versionInProjFile) || context.version;
+        context.version = versionInProjFile || context.version;
 
         if (context.version === FuncVersion.v1) {
             const settingKey: string = 'show64BitWarning';
