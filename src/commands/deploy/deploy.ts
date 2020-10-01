@@ -66,16 +66,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (language === ProjectLanguage.CSharp) {
-        const projFiles: string[] = await dotnetUtils.getProjFiles(language, context.workspaceFolder.uri.fsPath);
-        const mainProject: string = path.join(context.workspaceFolder.uri.fsPath, projFiles[0]);
-        const platformTarget: string | undefined = await dotnetUtils.getPlatformTarget(mainProject);
-        if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
-            const config: WebSiteManagementModels.SiteConfigResource = {
-                use32BitWorkerProcess: false
-            };
-            context.stopAppBeforeDeploy = true;
-            await node.root.client.updateConfiguration(config);
-        }
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
     }
 
     await verifyAppSettings(context, node, version, language);
@@ -101,6 +92,19 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     );
 
     await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
+}
+
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
+    const projFiles: string[] = await dotnetUtils.getProjFiles(language, context.workspaceFolder.uri.fsPath);
+    const mainProject: string = path.join(context.workspaceFolder.uri.fsPath, projFiles[0]);
+    const platformTarget: string | undefined = await dotnetUtils.getPlatformTarget(mainProject);
+    if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
+        const config: WebSiteManagementModels.SiteConfigResource = {
+            use32BitWorkerProcess: false
+        };
+        context.stopAppBeforeDeploy = true;
+        await node.root.client.updateConfiguration(config);
+    }
 }
 
 async function validateGlobSettings(context: IActionContext, fsPath: string): Promise<void> {
