@@ -1,7 +1,8 @@
-﻿/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+﻿// Copyright (c) .NET Foundation and contributors. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// Copied from https://github.com/dotnet/templating/blob/3ec3eddbce3bf78bfec680be1e3178885bc413a3/src/Microsoft.TemplateEngine.Cli/Installer.cs
+// Only change is to use our namespace (Microsoft.TemplateEngine.JsonCli) and import theirs (Microsoft.TemplateEngine.Cli)
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Text;
 using Microsoft.TemplateEngine.Abstractions;
 using Microsoft.TemplateEngine.Abstractions.Mount;
 using Microsoft.TemplateEngine.Cli;
+using Microsoft.TemplateEngine.Abstractions.TemplateUpdates;
 using Microsoft.TemplateEngine.Edge;
 using Microsoft.TemplateEngine.Edge.Settings;
 
@@ -27,16 +29,18 @@ namespace Microsoft.TemplateEngine.JsonCli
             _paths = new Paths(environmentSettings);
         }
 
-        public void AddInstallDescriptorForLocation(Guid mountPointId)
+        public void AddInstallDescriptorForLocation(Guid mountPointId, out IReadOnlyList<IInstallUnitDescriptor> descriptorList)
         {
-            ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.TryAddDescriptorForLocation(mountPointId);
+            ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.TryAddDescriptorForLocation(mountPointId, out descriptorList);
         }
 
-        public void InstallPackages(IEnumerable<string> installationRequests) => InstallPackages(installationRequests, null);
+        public void InstallPackages(IEnumerable<string> installationRequests) => InstallPackages(installationRequests, null, false, false);
 
-        public void InstallPackages(IEnumerable<string> installationRequests, IList<string> nuGetSources, bool allowDevInstall) => InstallPackages(installationRequests, nuGetSources);
+        public void InstallPackages(IEnumerable<string> installationRequests, IList<string> nuGetSources) => InstallPackages(installationRequests, nuGetSources, false, false);
 
-        public void InstallPackages(IEnumerable<string> installationRequests, IList<string> nuGetSources)
+        public void InstallPackages(IEnumerable<string> installationRequests, IList<string> nuGetSources, bool debugAllowDevInstall) => InstallPackages(installationRequests, nuGetSources, debugAllowDevInstall, false);
+
+        public void InstallPackages(IEnumerable<string> installationRequests, IList<string> nuGetSources, bool debugAllowDevInstall, bool interactive)
         {
             List<string> localSources = new List<string>();
             List<Package> packages = new List<Package>();
@@ -65,12 +69,13 @@ namespace Microsoft.TemplateEngine.JsonCli
 
             if (localSources.Count > 0)
             {
-                InstallLocalPackages(localSources);
+                InstallLocalPackages(localSources, debugAllowDevInstall);
             }
 
             if (packages.Count > 0)
             {
-                InstallRemotePackages(packages, nuGetSources);
+                IList<string> additionalDotNetArguments = (interactive) ? new string[] { "--interactive" } : null;
+                InstallRemotePackages(packages, nuGetSources, additionalDotNetArguments);
             }
 
             _environmentSettings.SettingsLoader.Save();
@@ -97,91 +102,106 @@ namespace Microsoft.TemplateEngine.JsonCli
             return false;
         }
 
-        public IEnumerable<string> Uninstall(IEnumerable<string> uninstallRequests)
+        private void UninstallOtherVersionsOfSamePackage(IInstallUnitDescriptor descriptor)
+        {
+            IReadOnlyList<IInstallUnitDescriptor> allDescriptors = ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.Descriptors.Values.ToList();
+
+            foreach (IInstallUnitDescriptor testDescriptor in allDescriptors)
+            {
+                if (string.Equals(descriptor.Identifier, testDescriptor.Identifier, StringComparison.OrdinalIgnoreCase)
+                    && descriptor.FactoryId == testDescriptor.FactoryId
+                    && descriptor.DescriptorId != testDescriptor.DescriptorId)
+                {
+                    if (descriptor.MountPointId != testDescriptor.MountPointId)
+                    {
+                        // Uninstalls the mount point and the descriptor(s) for packs that were installed under that mount point.
+                        UninstallMountPoint(testDescriptor.MountPointId);
+                    }
+                    else
+                    {
+                        // The new install is in the same place as the old install. Don't remove the mount point, just the old descriptor.
+                        // This is for when the exact same pack is installed over-the-top of an existing install of it.
+                        // Works for both zip/nupkg and for local file sources.
+                        ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.RemoveDescriptor(testDescriptor);
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<string> Uninstall(IEnumerable<string> uninstallRequestList)
         {
             List<string> uninstallFailures = new List<string>();
-            foreach (string uninstall in uninstallRequests)
+
+            Dictionary<string, IInstallUnitDescriptor> descriptorsById = ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.Descriptors
+                                                                                .ToDictionary(x => x.Value.Identifier, x => x.Value);
+
+            foreach (string uninstallRequest in uninstallRequestList)
             {
-                string prefix = Path.Combine(_paths.User.Packages, uninstall);
-                IReadOnlyList<MountPointInfo> rootMountPoints = _environmentSettings.SettingsLoader.MountPoints.Where(x =>
+                // TODO - possible match on other than the exact identifier
+                if (descriptorsById.TryGetValue(uninstallRequest, out IInstallUnitDescriptor installDescriptor))
                 {
-                    if (x.ParentMountPointId != Guid.Empty)
-                    {
-                        return false;
-                    }
-
-                    if (uninstall.IndexOfAny(new[] { '/', '\\' }) < 0)
-                    {
-                        if (x.Place.StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase) && x.Place.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
-
-                    if (string.Equals(x.Place, uninstall, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                    else if (x.Place.Length > uninstall.Length)
-                    {
-                        string place = x.Place.Replace('\\', '/');
-                        string match = uninstall.Replace('\\', '/');
-
-                        if (match[match.Length - 1] != '/')
-                        {
-                            match += "/";
-                        }
-
-                        return place.StartsWith(match, StringComparison.OrdinalIgnoreCase);
-                    }
-
-                    return false;
-                }).ToList();
-
-                if (rootMountPoints.Count == 0)
-                {
-                    uninstallFailures.Add(uninstall);
-                    continue;
+                    UninstallMountPoint(installDescriptor.MountPointId);
                 }
-
-                HashSet<Guid> mountPoints = new HashSet<Guid>(rootMountPoints.Select(x => x.MountPointId));
-                bool isSearchComplete = false;
-                while (!isSearchComplete)
+                else
                 {
-                    isSearchComplete = true;
-                    foreach (MountPointInfo possibleChild in _environmentSettings.SettingsLoader.MountPoints)
-                    {
-                        if (mountPoints.Contains(possibleChild.ParentMountPointId))
-                        {
-                            isSearchComplete &= !mountPoints.Add(possibleChild.MountPointId);
-                        }
-                    }
-                }
-
-                //Find all of the things that refer to any of the mount points we've got
-                _environmentSettings.SettingsLoader.RemoveMountPoints(mountPoints);
-                ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.RemoveDescriptorsForLocationList(mountPoints);
-                _environmentSettings.SettingsLoader.Save();
-
-                foreach (MountPointInfo mountPoint in rootMountPoints)
-                {
-                    if (mountPoint.Place.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
-                        {
-                            _environmentSettings.Host.FileSystem.FileDelete(mountPoint.Place);
-                        }
-                        catch
-                        {
-                        }
-                    }
+                    uninstallFailures.Add(uninstallRequest);
                 }
             }
 
             return uninstallFailures;
         }
 
-        private void InstallRemotePackages(IEnumerable<Package> packages, IList<string> nuGetSources)
+        private bool UninstallMountPoint(Guid mountPointId)
+        {
+            if (!_environmentSettings.SettingsLoader.TryGetMountPointInfo(mountPointId, out MountPointInfo mountPoint))
+            {
+                return false;
+            }
+
+            IReadOnlyCollection<Guid> mountPointFamily = GetDescendantMountPointsFromParent(mountPointId);
+
+            //Find all of the things that refer to any of the mount points we've got
+            _environmentSettings.SettingsLoader.RemoveMountPoints(mountPointFamily);
+            ((SettingsLoader)(_environmentSettings.SettingsLoader)).InstallUnitDescriptorCache.RemoveDescriptorsForLocationList(mountPointFamily);
+            _environmentSettings.SettingsLoader.Save();
+
+            if (mountPoint.Place.StartsWith(_paths.User.Packages, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    _environmentSettings.Host.FileSystem.FileDelete(mountPoint.Place);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private IReadOnlyCollection<Guid> GetDescendantMountPointsFromParent(Guid parent)
+        {
+            HashSet<Guid> mountPoints = new HashSet<Guid> { parent };
+            bool anyFound = true;
+
+            while (anyFound)
+            {
+                anyFound = false;
+
+                foreach (MountPointInfo possibleChild in _environmentSettings.SettingsLoader.MountPoints)
+                {
+                    if (mountPoints.Contains(possibleChild.ParentMountPointId))
+                    {
+                        anyFound |= mountPoints.Add(possibleChild.MountPointId);
+                    }
+                }
+            }
+
+            return mountPoints;
+        }
+
+        private void InstallRemotePackages(List<Package> packages, IList<string> nuGetSources, IList<string> additionalDotNetArguments)
         {
             const string packageRef = @"    <PackageReference Include=""{0}"" Version=""{1}"" />";
             const string projectFile = @"<Project ToolsVersion=""15.0"" Sdk=""Microsoft.NET.Sdk"">
@@ -207,40 +227,46 @@ namespace Microsoft.TemplateEngine.JsonCli
             string content = string.Format(projectFile, references.ToString());
             _paths.WriteAllText(proj, content);
 
-            _paths.CreateDirectory(_paths.User.Packages);
             string restored = Path.Combine(_paths.User.ScratchDir, "Packages");
 
-            int additionalSlots = nuGetSources?.Count * 2 ?? 0;
-
-            string[] restoreArgs = new string[3 + additionalSlots];
-            restoreArgs[0] = proj;
-            restoreArgs[1] = "--packages";
-            restoreArgs[2] = restored;
+            List<string> restoreArgsList = new List<string>();
+            restoreArgsList.Add(proj);
+            restoreArgsList.Add("--packages");
+            restoreArgsList.Add(restored);
 
             if (nuGetSources != null)
             {
-                for (int i = 0; i < nuGetSources.Count; ++i)
+                foreach (string nuGetSource in nuGetSources)
                 {
-                    restoreArgs[3 + 2 * i] = "--source";
-                    restoreArgs[4 + 2 * i] = nuGetSources[i];
+                    restoreArgsList.Add("--source");
+                    restoreArgsList.Add(nuGetSource);
                 }
             }
 
+            if (additionalDotNetArguments != null)
+            {
+                restoreArgsList.AddRange(additionalDotNetArguments);
+            }
+
+            var restoreArgs = restoreArgsList.ToArray();
+
             Dotnet.Restore(restoreArgs).ForwardStdOut().ForwardStdErr().Execute();
+            string stagingDir = Path.Combine(_paths.User.ScratchDir, "Staging");
+            _paths.CreateDirectory(stagingDir);
 
             List<string> newLocalPackages = new List<string>();
             foreach (string packagePath in _paths.EnumerateFiles(restored, "*.nupkg", SearchOption.AllDirectories))
             {
-                string path = Path.Combine(_paths.User.Packages, Path.GetFileName(packagePath));
-                _paths.Copy(packagePath, path);
-                newLocalPackages.Add(path);
+                string stagingPathForPackage = Path.Combine(stagingDir, Path.GetFileName(packagePath));
+                _paths.Copy(packagePath, stagingPathForPackage);
+                newLocalPackages.Add(stagingPathForPackage);
             }
 
+            InstallLocalPackages(newLocalPackages, false);
             _paths.DeleteDirectory(_paths.User.ScratchDir);
-            InstallLocalPackages(newLocalPackages);
         }
 
-        private void InstallLocalPackages(IEnumerable<string> packageNames)
+        private void InstallLocalPackages(IReadOnlyList<string> packageNames, bool debugAllowDevInstall)
         {
             foreach (string package in packageNames)
             {
@@ -267,39 +293,49 @@ namespace Microsoft.TemplateEngine.JsonCli
 
                 try
                 {
+                    string installString = null;
+
                     if (pattern != null)
                     {
                         string fullDirectory = new DirectoryInfo(pkg).FullName;
-                        string fullPathGlob = Path.Combine(fullDirectory, pattern);
-                        ((SettingsLoader)(_environmentSettings.SettingsLoader)).UserTemplateCache.Scan(fullPathGlob, out IReadOnlyList<Guid> contentMountPointIds);
-
-                        foreach (Guid mountPointId in contentMountPointIds)
-                        {
-                            AddInstallDescriptorForLocation(mountPointId);
-                        }
+                        installString = Path.Combine(fullDirectory, pattern);
                     }
                     else if (_environmentSettings.Host.FileSystem.DirectoryExists(pkg) || _environmentSettings.Host.FileSystem.FileExists(pkg))
                     {
-                        string packageLocation = new DirectoryInfo(pkg).FullName;
-                        ((SettingsLoader)(_environmentSettings.SettingsLoader)).UserTemplateCache.Scan(packageLocation, out IReadOnlyList<Guid> contentMountPointIds);
-
-                        foreach (Guid mountPointId in contentMountPointIds)
-                        {
-                            AddInstallDescriptorForLocation(mountPointId);
-                        }
+                        installString = new DirectoryInfo(pkg).FullName;
                     }
                     else
                     {
                         _environmentSettings.Host.OnNonCriticalError("InvalidPackageSpecification", string.Format(LocalizableStrings.CouldNotFindItemToInstall, pkg), null, 0);
+                    }
+
+                    if (installString != null)
+                    {
+                        ((SettingsLoader)(_environmentSettings.SettingsLoader)).UserTemplateCache.Scan(installString, out IReadOnlyList<Guid> contentMountPointIds, debugAllowDevInstall);
+
+                        foreach (Guid mountPointId in contentMountPointIds)
+                        {
+                            AddInstallDescriptorForLocation(mountPointId, out IReadOnlyList<IInstallUnitDescriptor> descriptorList);
+
+                            foreach (IInstallUnitDescriptor descriptor in descriptorList)
+                            {
+                                UninstallOtherVersionsOfSamePackage(descriptor);
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     _environmentSettings.Host.OnNonCriticalError("InvalidPackageSpecification", string.Format(LocalizableStrings.BadPackageSpec, pkg), null, 0);
 
-                    _environmentSettings.Host.OnNonCriticalError("InvalidPackageSpecificationDetails", !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_NEW_DEBUG"))
-                        ? ex.ToString()
-                        : ex.Message, null, 0);
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_NEW_DEBUG")))
+                    {
+                        _environmentSettings.Host.OnNonCriticalError("InvalidPackageSpecificationDetails", ex.ToString(), null, 0);
+                    }
+                    else
+                    {
+                        _environmentSettings.Host.OnNonCriticalError("InvalidPackageSpecificationDetails", ex.Message, null, 0);
+                    }
                 }
             }
         }
