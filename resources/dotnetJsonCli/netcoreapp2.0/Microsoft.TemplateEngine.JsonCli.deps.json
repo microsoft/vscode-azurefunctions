@@ -8,8 +8,8 @@
     ".NETCoreApp,Version=v2.0": {
       "Microsoft.TemplateEngine.JsonCli/1.0.0": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Cli": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Orchestrator.RunnableProjects": "1.0.2-beta4-20181001-2078020"
+          "Microsoft.TemplateEngine.Cli": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Orchestrator.RunnableProjects": "5.0.0-preview.6.20304.1"
         },
         "runtime": {
           "Microsoft.TemplateEngine.JsonCli.dll": {}
@@ -35,103 +35,117 @@
           "System.Threading": "4.3.0"
         }
       },
-      "Microsoft.DotNet.Cli.CommandLine/0.1.1-alpha-167": {
+      "Microsoft.DotNet.Cli.CommandLine/1.0.0-preview.19208.1": {
         "runtime": {
           "lib/netstandard1.5/Microsoft.DotNet.Cli.CommandLine.dll": {
-            "assemblyVersion": "0.1.1.0",
-            "fileVersion": "0.1.1.0"
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.19.20801"
           }
         }
       },
       "Microsoft.NETCore.Targets/1.1.0": {},
-      "Microsoft.TemplateEngine.Abstractions/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Abstractions/5.0.0-preview.6.20304.1": {
         "runtime": {
-          "lib/netstandard1.3/Microsoft.TemplateEngine.Abstractions.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Abstractions.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Cli/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Cli/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.DotNet.Cli.CommandLine": "0.1.1-alpha-167",
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Edge": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Utils": "1.0.2-beta4-20181001-2078020",
+          "Microsoft.DotNet.Cli.CommandLine": "1.0.0-preview.19208.1",
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Edge": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Utils": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateSearch.Common": "5.0.0-preview.6.20304.1",
           "Newtonsoft.Json": "10.0.3",
           "System.Diagnostics.Process": "4.3.0"
         },
         "runtime": {
-          "lib/netstandard1.5/Microsoft.TemplateEngine.Cli.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Cli.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Core/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Core/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Core.Contracts": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Utils": "1.0.2-beta4-20181001-2078020",
-          "System.Runtime.InteropServices.RuntimeInformation": "4.3.0"
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Core.Contracts": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Utils": "5.0.0-preview.6.20304.1"
         },
         "runtime": {
-          "lib/netstandard1.3/Microsoft.TemplateEngine.Core.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Core.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Core.Contracts/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Core.Contracts/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020"
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1"
         },
         "runtime": {
-          "lib/netstandard1.3/Microsoft.TemplateEngine.Core.Contracts.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Core.Contracts.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Edge/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Edge/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Utils": "1.0.2-beta4-20181001-2078020",
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Utils": "5.0.0-preview.6.20304.1",
           "Newtonsoft.Json": "10.0.3",
           "System.IO.Compression": "4.3.0",
           "System.Runtime.Loader": "4.3.0"
         },
         "runtime": {
-          "lib/netstandard1.5/Microsoft.TemplateEngine.Edge.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Edge.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Orchestrator.RunnableProjects/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Orchestrator.RunnableProjects/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Core": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Core.Contracts": "1.0.2-beta4-20181001-2078020",
-          "Microsoft.TemplateEngine.Utils": "1.0.2-beta4-20181001-2078020",
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Core": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Core.Contracts": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Utils": "5.0.0-preview.6.20304.1",
           "Newtonsoft.Json": "10.0.3"
         },
         "runtime": {
-          "lib/netstandard1.3/Microsoft.TemplateEngine.Orchestrator.RunnableProjects.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Orchestrator.RunnableProjects.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
-      "Microsoft.TemplateEngine.Utils/1.0.2-beta4-20181001-2078020": {
+      "Microsoft.TemplateEngine.Utils/5.0.0-preview.6.20304.1": {
         "dependencies": {
-          "Microsoft.TemplateEngine.Abstractions": "1.0.2-beta4-20181001-2078020",
-          "System.Runtime.InteropServices.RuntimeInformation": "4.3.0"
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1"
         },
         "runtime": {
-          "lib/netstandard1.3/Microsoft.TemplateEngine.Utils.dll": {
-            "assemblyVersion": "1.0.2.0",
-            "fileVersion": "1.0.2.0"
+          "lib/netstandard2.0/Microsoft.TemplateEngine.Utils.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
+          }
+        }
+      },
+      "Microsoft.TemplateSearch.Common/5.0.0-preview.6.20304.1": {
+        "dependencies": {
+          "Microsoft.TemplateEngine.Abstractions": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Edge": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Orchestrator.RunnableProjects": "5.0.0-preview.6.20304.1",
+          "Microsoft.TemplateEngine.Utils": "5.0.0-preview.6.20304.1",
+          "Newtonsoft.Json": "10.0.3"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.TemplateSearch.Common.dll": {
+            "assemblyVersion": "5.0.0.0",
+            "fileVersion": "5.0.20.30401"
           }
         }
       },
@@ -479,17 +493,6 @@
           "System.Runtime.Handles": "4.3.0"
         }
       },
-      "System.Runtime.InteropServices.RuntimeInformation/4.3.0": {
-        "dependencies": {
-          "System.Reflection": "4.3.0",
-          "System.Reflection.Extensions": "4.3.0",
-          "System.Resources.ResourceManager": "4.3.0",
-          "System.Runtime": "4.3.0",
-          "System.Runtime.InteropServices": "4.3.0",
-          "System.Threading": "4.3.0",
-          "runtime.native.System": "4.3.0"
-        }
-      },
       "System.Runtime.Loader/4.3.0": {
         "dependencies": {
           "System.IO": "4.3.0",
@@ -608,12 +611,12 @@
       "path": "microsoft.csharp/4.3.0",
       "hashPath": "microsoft.csharp.4.3.0.nupkg.sha512"
     },
-    "Microsoft.DotNet.Cli.CommandLine/0.1.1-alpha-167": {
+    "Microsoft.DotNet.Cli.CommandLine/1.0.0-preview.19208.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-KSIUf4B/yzRvtsf/38z9po8JyZYQY1xNKJbjGTwlQQFRU7Q50xfdGffQchiJ0wge0RegMAMrL5z32V0S7h58Ig==",
-      "path": "microsoft.dotnet.cli.commandline/0.1.1-alpha-167",
-      "hashPath": "microsoft.dotnet.cli.commandline.0.1.1-alpha-167.nupkg.sha512"
+      "sha512": "sha512-BR5gKy+zFLgDdDbrb+YwUYSF7Rk9YLq6nxyUHeWh42y6hgVLNHUhR+8td2V69BVoxdOCx2GlWsESQ6kd/fYyiw==",
+      "path": "microsoft.dotnet.cli.commandline/1.0.0-preview.19208.1",
+      "hashPath": "microsoft.dotnet.cli.commandline.1.0.0-preview.19208.1.nupkg.sha512"
     },
     "Microsoft.NETCore.Targets/1.1.0": {
       "type": "package",
@@ -622,54 +625,61 @@
       "path": "microsoft.netcore.targets/1.1.0",
       "hashPath": "microsoft.netcore.targets.1.1.0.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Abstractions/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Abstractions/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-bRvwvVb1WgSD0MST4QuGxGIXKtXClgLVvJrDr9Dq5jXOjsgrnXpNIwefariwiHw86EF9BWhwipdgqXkKYmEzLg==",
-      "path": "microsoft.templateengine.abstractions/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.abstractions.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-0bp5sv+fENDfNG+gPs5Othcsm9FuWzjjyIyKTydceQznYTjAtogwl8doA5RFW9ZH5RoMLgoBCyzhRE1CS0217g==",
+      "path": "microsoft.templateengine.abstractions/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.abstractions.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Cli/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Cli/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-Mjdu6Va/BsAV9oRxNzrIbFRhG2UEnx+TwMKMssH7EgxeecwWgxjeu4bJyeMI+3cZ2oV12WkX0BUhtZkvTF+pRQ==",
-      "path": "microsoft.templateengine.cli/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.cli.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-SfwLsqA61ub15q2CSr/+arC1k07y48+eCVoR3H0A3p21lJfjBgdQQ1eZDjvRGGMXU7jAtnjb7ZLEAc0bijceHQ==",
+      "path": "microsoft.templateengine.cli/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.cli.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Core/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Core/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-WqJZyK/ddzWO/bgScxHerRi00a/bviKxPqx3NT35q/bmgPh6Q07IIWCGLA/dZ7UxhK+QjROeQEA/mG7AhImqpA==",
-      "path": "microsoft.templateengine.core/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.core.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-GLgQTJzjMwWOs+iniHPRnVrQcaKbfo2LDrRj7Wu9aW/0A6LoxaYxk7seaui1BI+sY4RE7VYKGkgfoF/Xw+AvWw==",
+      "path": "microsoft.templateengine.core/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.core.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Core.Contracts/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Core.Contracts/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-ddgwQgw8T2Qv2wOcSYrifW2/3DEForNk2KpdCBHRpw5f4mQYSb0fqsCUe9T/28FoetVRy4OYUMmJja46GwzSxg==",
-      "path": "microsoft.templateengine.core.contracts/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.core.contracts.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-AN4ozaqQ9Z1m3z5iSjG3T5PY1ciSpsFMu6mF4lc8D+fed9LNxes7PejWyIpKrAVGd1ZhZQlaY+U2xsqUbX4B9A==",
+      "path": "microsoft.templateengine.core.contracts/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.core.contracts.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Edge/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Edge/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-ylcZsmh60KrESodzU3i6F5Zt+m+pdQ3doLyNAwSwEcOcouIVozjNzNsfcqY3UTBnknSh6ltaYXc/mj1b9ZkLQQ==",
-      "path": "microsoft.templateengine.edge/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.edge.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-pUhOCCNxN4Jq6lXWRKDy4vvj44jcBVbO1xMYpzznG5Guok+gdI7cbEqs8ZR4yAUSTZW2AOEL2XrUSvKGcHj88g==",
+      "path": "microsoft.templateengine.edge/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.edge.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Orchestrator.RunnableProjects/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Orchestrator.RunnableProjects/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-SPsuWGAbXLIEZ5U8K7iFartVhtBRu/KJV7cBD+xRc8kpNgDOlcSeanZfVlBko7iDQJNLQtWoNKGxSBfkLf7iHQ==",
-      "path": "microsoft.templateengine.orchestrator.runnableprojects/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.orchestrator.runnableprojects.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-3hjFwlUYFRrSd6bP99zLuLFiAiQWqiQLl9NyNhj1Iwhq0sOqkOrBMTTQSiBD0PFlSB99Jh52I6jZJPbw4IFqPA==",
+      "path": "microsoft.templateengine.orchestrator.runnableprojects/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.orchestrator.runnableprojects.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
-    "Microsoft.TemplateEngine.Utils/1.0.2-beta4-20181001-2078020": {
+    "Microsoft.TemplateEngine.Utils/5.0.0-preview.6.20304.1": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-bNRiqVz5SABxIiTq1LyUHk41jwYg6SS+vCxSjgvQPvCUywma7sgM/lyk6ZDTGIz+neHPkzklxbWQ5bnvU4qaDA==",
-      "path": "microsoft.templateengine.utils/1.0.2-beta4-20181001-2078020",
-      "hashPath": "microsoft.templateengine.utils.1.0.2-beta4-20181001-2078020.nupkg.sha512"
+      "sha512": "sha512-UoDOzkDlRDJjdvyJOAfpXtADzea1QXIFeX/sH7sD1j4iNC2FVTIlfigc5f0AIG4nPlulCdxOEGxCznyRFxmCjg==",
+      "path": "microsoft.templateengine.utils/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templateengine.utils.5.0.0-preview.6.20304.1.nupkg.sha512"
+    },
+    "Microsoft.TemplateSearch.Common/5.0.0-preview.6.20304.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-o8SJUqBeu1eZVMzeEMhHuEsVxWJ6VoPYBCqrf/6PLEg2hXnxEP2N1Z6YaOm6P+3+ICweibsw+I42vP674R080w==",
+      "path": "microsoft.templatesearch.common/5.0.0-preview.6.20304.1",
+      "hashPath": "microsoft.templatesearch.common.5.0.0-preview.6.20304.1.nupkg.sha512"
     },
     "Microsoft.Win32.Primitives/4.3.0": {
       "type": "package",
@@ -744,14 +754,14 @@
     "System.ComponentModel.Primitives/4.3.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-KMVuoQ+8bMQ/Z59M3s64num5AD74X5YSqVc7ibwGkPTfmmkl2W8VuSxLRJtpw4KzQrSKUgR0BLbF0adPfcTSGQ==",
+      "sha512": "sha512-j8GUkCpM8V4d4vhLIIoBLGey2Z5bCkMVNjEZseyAlm4n5arcsJOeI3zkUP+zvZgzsbLTYh4lYeP/ZD/gdIAPrw==",
       "path": "system.componentmodel.primitives/4.3.0",
       "hashPath": "system.componentmodel.primitives.4.3.0.nupkg.sha512"
     },
     "System.ComponentModel.TypeConverter/4.3.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-HZiP0DwTHJ+C+rdFqP47nBYUh5283kcwXIGY2zOVVhsJmVI/2tYiX2zNRdjRQRHsTox58Ydkec6h0pWSh8wAsw==",
+      "sha512": "sha512-16pQ6P+EdhcXzPiEK4kbA953Fu0MNG2ovxTZU81/qsCd1zPRsKc3uif5NgvllCY598k6bI0KUyKW8fanlfaDQg==",
       "path": "system.componentmodel.typeconverter/4.3.0",
       "hashPath": "system.componentmodel.typeconverter.4.3.0.nupkg.sha512"
     },
@@ -929,13 +939,6 @@
       "sha512": "sha512-uv1ynXqiMK8mp1GM3jDqPCFN66eJ5w5XNomaK2XD+TuCroNTLFGeZ+WCmBMcBDyTFKou3P6cR6J/QsaqDp7fGQ==",
       "path": "system.runtime.interopservices/4.3.0",
       "hashPath": "system.runtime.interopservices.4.3.0.nupkg.sha512"
-    },
-    "System.Runtime.InteropServices.RuntimeInformation/4.3.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-cbz4YJMqRDR7oLeMRbdYv7mYzc++17lNhScCX0goO2XpGWdvAt60CGN+FHdePUEHCe/Jy9jUlvNAiNdM+7jsOw==",
-      "path": "system.runtime.interopservices.runtimeinformation/4.3.0",
-      "hashPath": "system.runtime.interopservices.runtimeinformation.4.3.0.nupkg.sha512"
     },
     "System.Runtime.Loader/4.3.0": {
       "type": "package",
