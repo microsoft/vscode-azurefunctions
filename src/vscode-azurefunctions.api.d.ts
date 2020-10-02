@@ -9,14 +9,14 @@ export interface AzureFunctionsExtensionApi {
     revealTreeItem(resourceId: string): Promise<void>;
 
     createFunction(options: ICreateFunctionOptions): Promise<void>;
-    downloadAppSettings(client: ISimpleAppSettingsClient): Promise<void>;
-    uploadAppSettings(client: ISimpleAppSettingsClient): Promise<void>;
+    downloadAppSettings(client: IAppSettingsClient): Promise<void>;
+    uploadAppSettings(client: IAppSettingsClient): Promise<void>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
 export type ProjectVersion = '~1' | '~2' | '~3';
 
-export interface ISimpleAppSettingsClient {
+export interface IAppSettingsClient {
     fullName: string;
     listApplicationSettings(): Promise<IStringDictionary>;
     updateApplicationSettings(appSettings: IStringDictionary): Promise<IStringDictionary>;

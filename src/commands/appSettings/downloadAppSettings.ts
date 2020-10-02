@@ -12,7 +12,7 @@ import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
-import { ISimpleAppSettingsClient } from "../../vscode-azurefunctions.api";
+import * as api from '../../vscode-azurefunctions.api';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
@@ -29,7 +29,7 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
     });
 }
 
-export async function downloadAppSettingsInternal(context: IActionContext, client: ISimpleAppSettingsClient): Promise<void> {
+export async function downloadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the destination file for your downloaded settings.');
     const localSettingsPath: string = await getLocalSettingsFile(message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);

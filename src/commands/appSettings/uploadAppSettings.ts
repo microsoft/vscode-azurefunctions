@@ -12,7 +12,7 @@ import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
-import { ISimpleAppSettingsClient } from "../../vscode-azurefunctions.api";
+import * as api from '../../vscode-azurefunctions.api';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
@@ -29,7 +29,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
     });
 }
 
-export async function uploadAppSettingsInternal(context: IActionContext, client: ISimpleAppSettingsClient, workspacePath?: string): Promise<void> {
+export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspacePath?: string): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
     const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);

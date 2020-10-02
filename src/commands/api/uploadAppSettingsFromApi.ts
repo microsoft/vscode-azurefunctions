@@ -3,11 +3,11 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 import { callWithTelemetryAndErrorHandling, IActionContext } from "vscode-azureextensionui";
-import { ISimpleAppSettingsClient } from "../../vscode-azurefunctions.api";
+import { IAppSettingsClient } from "../../vscode-azurefunctions.api";
 import { uploadAppSettingsInternal } from "../appSettings/uploadAppSettings";
 
-export async function uploadAppSettingsFromApi(client: ISimpleAppSettingsClient, workspacePath?: string): Promise<void> {
+export async function uploadAppSettingsFromApi(client: IAppSettingsClient): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.uploadAppSettings', async (context: IActionContext) => {
-        await uploadAppSettingsInternal(context, client, workspacePath);
+        await uploadAppSettingsInternal(context, client);
     });
 }
