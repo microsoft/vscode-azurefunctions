@@ -20,6 +20,7 @@ import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { validateRemoteBuild } from './validateRemoteBuild';
@@ -95,8 +96,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
-    const projFiles: string[] = await dotnetUtils.getProjFiles(language, context.workspaceFolder.uri.fsPath);
-    const mainProject: string = path.join(context.workspaceFolder.uri.fsPath, projFiles[0]);
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
+    if (functionProject === undefined) {
+        throw new Error(localize('failedToFindFuncHost', 'Unable not locate Azure Functions project.'));
+    }
+    const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
+    if (projectFiles.length === 0) {
+        throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
+    }
+    const mainProject: string = path.join(functionProject, projectFiles[0]);
     const platformTarget: string | undefined = await dotnetUtils.getPlatformTarget(mainProject);
     if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
         const config: WebSiteManagementModels.SiteConfigResource = {
