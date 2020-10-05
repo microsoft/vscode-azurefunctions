@@ -118,7 +118,18 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
 
-            executeSteps.push(new OpenAPICreateStep());
+            switch (context.language) {
+                case ProjectLanguage.Java:
+                    promptSteps.push(new JavaFunctionNameStep());
+                    break;
+                case ProjectLanguage.CSharp:
+                    promptSteps.push(new DotnetNamespaceStep());
+                    break;
+                default:
+                    break;
+            }
+
+            executeSteps.push(await OpenAPICreateStep.createStep(context));
 
             const title: string = localize('createFunction', 'Create new {0}', '');
             return { promptSteps, executeSteps, title };
