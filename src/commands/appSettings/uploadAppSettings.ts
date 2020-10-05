@@ -12,21 +12,27 @@ import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
+import * as api from '../../vscode-azurefunctions.api';
 import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
-    const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
-    const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
-    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: IAppSettingsClient = node.client;
+    await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
+        await uploadAppSettingsInternal(context, client, workspacePath);
+    });
+}
+
+export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspacePath?: string): Promise<void> {
+    const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
+    const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
+    const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
     if (localSettings.IsEncrypted) {
@@ -44,13 +50,12 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
             remoteSettings.properties = {};
         }
 
-        ext.outputChannel.appendLog(localize('uploadingSettings', 'Uploading settings...'), { resourceName: client.fullName });
+        const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
+        ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
         await confirmOverwriteSettings(localSettings.Values, remoteSettings.properties, client.fullName);
 
-        await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
-            await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
-                await client.updateApplicationSettings(remoteSettings);
-            });
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
+            await client.updateApplicationSettings(remoteSettings);
         });
 
         ext.outputChannel.appendLog(localize('uploadedSettings', 'Successfully uploaded settings.'), { resourceName: client.fullName });

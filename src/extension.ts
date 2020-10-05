@@ -12,7 +12,9 @@ import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandlin
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
+import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
+import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
@@ -92,7 +94,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     return createApiProvider([<AzureFunctionsExtensionApi>{
         revealTreeItem,
         createFunction: createFunctionFromApi,
-        apiVersion: '1.2.0'
+        downloadAppSettings: downloadAppSettingsFromApi,
+        uploadAppSettings: uploadAppSettingsFromApi,
+        apiVersion: '1.3.0'
     }]);
 }
 

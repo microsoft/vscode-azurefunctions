@@ -9,11 +9,23 @@ export interface AzureFunctionsExtensionApi {
     revealTreeItem(resourceId: string): Promise<void>;
 
     createFunction(options: ICreateFunctionOptions): Promise<void>;
+    downloadAppSettings(client: IAppSettingsClient): Promise<void>;
+    uploadAppSettings(client: IAppSettingsClient): Promise<void>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
-
 export type ProjectVersion = '~1' | '~2' | '~3';
+
+export interface IAppSettingsClient {
+    fullName: string;
+    listApplicationSettings(): Promise<IStringDictionary>;
+    updateApplicationSettings(appSettings: IStringDictionary): Promise<IStringDictionary>;
+}
+
+interface IStringDictionary {
+    properties?: { [propertyName: string]: string };
+}
+
 
 /**
  * The options to use when creating a function. If an option is not specified, the default will be used or the user will be prompted
