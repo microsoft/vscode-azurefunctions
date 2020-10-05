@@ -8,6 +8,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { workerRuntimeVersionKey } from '../../../constants';
+import { IHostJsonV2 } from '../../../funcConfig/host';
 import { hasMinFuncCliVersion } from '../../../funcCoreTools/hasMinFuncCliVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from "../../../utils/fs";
@@ -59,8 +60,6 @@ const requirementspsd1Offine: string = `# This file enables modules to be automa
 }`;
 
 export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
-    protected supportsManagedDependencies: boolean = true;
-
     private readonly azModuleName: string = 'Az';
     private readonly azModuleGalleryUrl: string = `https://aka.ms/PwshPackageInfo?id='${this.azModuleName}'`;
 
@@ -96,6 +95,12 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
                 await fse.writeFile(requirementspsd1Path, requirementspsd1Offine);
             }
         }
+    }
+
+    protected async getHostContent(): Promise<IHostJsonV2> {
+        const hostJson: IHostJsonV2 = await super.getHostContent();
+        hostJson.managedDependency = { enabled: true };
+        return hostJson;
     }
 
     private async tryGetLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {

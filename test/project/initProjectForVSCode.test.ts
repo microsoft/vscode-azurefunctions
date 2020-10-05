@@ -8,7 +8,7 @@ import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
 import { createTestActionContext, testFolderPath, testUserInput } from '../global.test';
-import { getCSharpValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 // tslint:disable-next-line:no-function-expression max-func-body-length
 suite('Init Project For VS Code', async function (this: Mocha.Suite): Promise<void> {
@@ -109,6 +109,20 @@ suite('Init Project For VS Code', async function (this: Mocha.Suite): Promise<vo
         options.expectedSettings['files.exclude'] = { obj: true, bin: true };
         options.expectedSettings['azureFunctions.preDeployTask'] = 'func: extensions install';
         await initAndValidateProject({ ...options, mockFiles: [['HttpTriggerPS', 'run.ps1'], 'profile.ps1', 'requirements.psd1', 'extensions.csproj'] });
+    });
+
+    test('Custom', async () => {
+        const mockFiles: MockFile[] = [{
+            fsPath: 'local.settings.json',
+            contents: {
+                IsEncrypted: false,
+                Values: {
+                    FUNCTIONS_WORKER_RUNTIME: "custom",
+                    AzureWebJobsStorage: ""
+                }
+            }
+        }];
+        await initAndValidateProject({ ...getCustomValidateOptions(), mockFiles });
     });
 
     test('Multi-language', async () => {

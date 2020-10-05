@@ -7,7 +7,7 @@ import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
 import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
-import { getCSharpValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
+import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 suite('Create New Project', async () => {
     const testCases: ICreateProjectTestCase[] = [
@@ -44,6 +44,8 @@ suite('Create New Project', async () => {
             inputs: javaInputs
         });
     }
+
+    testCases.push({ ...getCustomValidateOptions(FuncVersion.v3) });
 
     for (const testCase of testCases) {
         addTest(testCase);

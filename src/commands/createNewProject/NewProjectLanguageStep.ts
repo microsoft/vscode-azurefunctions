@@ -5,7 +5,7 @@
 
 import { QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
-import { ProjectLanguage } from '../../constants';
+import { previewDescription, ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
@@ -19,6 +19,7 @@ import { JavaGroupIdStep } from './javaSteps/JavaGroupIdStep';
 import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
 import { JavaProjectVersionStep } from './javaSteps/JavaProjectVersionStep';
 import { JavaVersionStep } from './javaSteps/JavaVersionStep';
+import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaProjectCreateStep } from './ProjectCreateStep/JavaProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -47,7 +48,8 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
             { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
             { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
-            { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell }
+            { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell },
+            { label: localize('customHandler', 'Custom Handler'), description: previewDescription, data: ProjectLanguage.Custom }
         ];
 
         languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });
@@ -99,6 +101,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 await JavaVersionStep.setDefaultVersion(context);
                 promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
                 executeSteps.push(await JavaProjectCreateStep.createStep(context));
+                break;
+            case ProjectLanguage.Custom:
+                executeSteps.push(new CustomProjectCreateStep());
                 break;
             default:
                 executeSteps.push(new ScriptProjectCreateStep());
