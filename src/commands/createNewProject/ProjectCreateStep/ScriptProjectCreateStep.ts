@@ -21,7 +21,6 @@ import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
     protected gitignore: string = '';
-    protected supportsManagedDependencies: boolean = false;
     protected localSettingsJson: ILocalSettingsJson = {
         IsEncrypted: false,
         Values: {
@@ -33,7 +32,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const version: FuncVersion = nonNullProp(context, 'version');
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: IHostJsonV2 | IHostJsonV1 = await this.getHostContent(version);
+            const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent();
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -73,31 +72,21 @@ local.settings.json`));
         }
     }
 
-    private async getHostContent(version: FuncVersion): Promise<IHostJsonV2 | IHostJsonV1> {
-        if (version === FuncVersion.v1) {
-            return {};
-        } else {
-            const hostJson: IHostJsonV2 = {
-                version: '2.0',
-                logging: {
-                    applicationInsights: {
-                        samplingSettings: {
-                            isEnabled: true,
-                            excludedTypes: 'Request'
-                        }
+    protected async getHostContent(): Promise<IHostJsonV2> {
+        const hostJson: IHostJsonV2 = {
+            version: '2.0',
+            logging: {
+                applicationInsights: {
+                    samplingSettings: {
+                        isEnabled: true,
+                        excludedTypes: 'Request'
                     }
                 }
-            };
-
-            await bundleFeedUtils.addDefaultBundle(hostJson);
-
-            if (this.supportsManagedDependencies) {
-                hostJson.managedDependency = {
-                    enabled: true
-                };
             }
+        };
 
-            return hostJson;
-        }
+        await bundleFeedUtils.addDefaultBundle(hostJson);
+
+        return hostJson;
     }
 }

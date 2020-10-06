@@ -167,27 +167,30 @@ function addSuite(tester: FunctionTesterBase): void {
             return label;
         }
 
-        const durableActivity: string = 'Durable Functions activity';
-        test(durableActivity, async () => {
-            await tester.testCreateFunction(
-                fixDurableLabel(durableActivity)
-            );
-        });
+        // Not supported for Custom Handlers
+        if (tester.language !== ProjectLanguage.Custom) {
+            const durableActivity: string = 'Durable Functions activity';
+            test(durableActivity, async () => {
+                await tester.testCreateFunction(
+                    fixDurableLabel(durableActivity)
+                );
+            });
 
-        const durableHttpStarter: string = 'Durable Functions HTTP starter';
-        test(durableHttpStarter, async () => {
-            await tester.testCreateFunction(
-                fixDurableLabel(durableHttpStarter),
-                getRotatingAuthLevel()
-            );
-        });
+            const durableHttpStarter: string = 'Durable Functions HTTP starter';
+            test(durableHttpStarter, async () => {
+                await tester.testCreateFunction(
+                    fixDurableLabel(durableHttpStarter),
+                    getRotatingAuthLevel()
+                );
+            });
 
-        const durableOrchestrator: string = 'Durable Functions orchestrator';
-        test(durableOrchestrator, async () => {
-            await tester.testCreateFunction(
-                fixDurableLabel(durableOrchestrator)
-            );
-        });
+            const durableOrchestrator: string = 'Durable Functions orchestrator';
+            test(durableOrchestrator, async () => {
+                await tester.testCreateFunction(
+                    fixDurableLabel(durableOrchestrator)
+                );
+            });
+        }
 
         // For now - these are not supported in Python
         if (tester.language !== ProjectLanguage.Python) {
