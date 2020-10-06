@@ -3,19 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
+import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
+    public abstract workerArgKey: string;
     protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
 
     private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map();
 
-    public abstract getExecutionOptions(folder: WorkspaceFolder): Promise<ShellExecutionOptions>;
+    public abstract getWorkerArgValue(folder: WorkspaceFolder): Promise<string>;
 
     public async provideDebugConfigurations(folder: WorkspaceFolder | undefined, _token?: CancellationToken): Promise<DebugConfiguration[]> {
         const configs: DebugConfiguration[] | undefined = await callWithTelemetryAndErrorHandling('provideDebugConfigurations', async (context: IActionContext) => {
