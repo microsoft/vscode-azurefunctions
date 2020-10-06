@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ProjectLanguage } from '../constants';
-import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 
 export namespace dotnetUtils {
@@ -27,12 +26,15 @@ export namespace dotnetUtils {
         return await getPropertyInProjFile(projFilePath, 'TargetFramework');
     }
 
-    export async function getFuncVersion(projFilePath: string): Promise<FuncVersion | undefined> {
-        const version: string = await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
-        return tryParseFuncVersion(version);
+    export async function tryGetFuncVersion(projFilePath: string): Promise<string | undefined> {
+        try {
+            return await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+        } catch {
+            return undefined;
+        }
     }
 
-    export async function getPlatformTarget(projFilePath: string): Promise<string | undefined> {
+    export async function tryGetPlatformTarget(projFilePath: string): Promise<string | undefined> {
         try {
             return await getPropertyInProjFile(projFilePath, 'PlatformTarget');
         } catch {
