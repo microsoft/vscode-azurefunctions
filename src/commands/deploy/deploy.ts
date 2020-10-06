@@ -99,7 +99,7 @@ async function tryToUpdateWorkerProcessTo64BitIfRequired(context: IDeployContext
     try {
         const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
         if (functionProject === undefined) {
-            throw new Error(localize('failedToFindFuncHost', 'Unable not locate Azure Functions project.'));
+            throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
         }
         const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
         if (projectFiles.length === 0) {
