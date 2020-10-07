@@ -23,7 +23,7 @@ import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
-import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
+import { OpenAPICreateStep, OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPICreateStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
@@ -83,7 +83,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            // Add settings to context that were programatically passed in
+            // Add settings to context that were programmatically passed in
             for (const key of Object.keys(this._functionSettings)) {
                 context[key.toLowerCase()] = this._functionSettings[key];
             }
@@ -120,7 +120,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             switch (context.language) {
                 case ProjectLanguage.Java:
-                    promptSteps.push(new JavaFunctionNameStep());
+                    promptSteps.push(new JavaPackageNameStep());
                     break;
                 case ProjectLanguage.CSharp:
                     promptSteps.push(new DotnetNamespaceStep());
@@ -129,9 +129,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
+            promptSteps.push(new OpenAPIGetSpecificationFileStep());
             executeSteps.push(await OpenAPICreateStep.createStep(context));
 
-            const title: string = localize('createFunction', 'Create new {0}', '');
+            const title: string = localize('createFunction', 'Create new {0}', 'HTTP Triggers from OpenAPI (v2/v3) Specification File');
             return { promptSteps, executeSteps, title };
         } else {
             return undefined;

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OpenDialogOptions, ProgressLocation, Uri, window, workspace } from "vscode";
-import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
@@ -24,7 +24,8 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
     }
 
     public async execute(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext & IDotnetFunctionWizardContext): Promise<void> {
-        const uris: Uri[] = await this.askDocument();
+        // const uris: Uri[] = await this.askDocument();
+        const uris: Uri[] = nonNullProp(wizardContext, 'openApiSpecificationFile');
         const uri: Uri = uris[0];
         const args: string[] = [];
 
@@ -67,8 +68,10 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
     public shouldExecute(): boolean {
         return true;
     }
+}
 
-    public async askDocument(): Promise<Uri[]> {
+export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunctionWizardContext> {
+    public async prompt(context: IFunctionWizardContext): Promise<void> {
         const openDialogOptions: OpenDialogOptions = {
             canSelectFiles: true,
             canSelectFolders: false,
@@ -80,10 +83,15 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             }
         };
 
+        context.openApiSpecificationFile = await ext.ui.showOpenDialog(openDialogOptions);
+
         if (workspace.workspaceFolders) {
             openDialogOptions.defaultUri = Uri.file(workspace.workspaceFolders[0].uri.toString());
         }
-        return await ext.ui.showOpenDialog(openDialogOptions);
+    }
+
+    public shouldPrompt(context: IJavaProjectWizardContext): boolean {
+        return !context.javaPackageName;
     }
 }
 
@@ -93,7 +101,6 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
     } catch (error) {
         const message: string = localize('autorestNotFound', 'Please make sure you have Autorest installed. Visit https://aka.ms/autorest to find more information on Autorest and installation steps.');
         if (!context.errorHandling.suppressDisplay) {
-            // don't wait
             window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
                 if (result === DialogResponses.learnMore) {
                     await openUrl('https://aka.ms/autorest');
