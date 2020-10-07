@@ -999,6 +999,12 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "The default function app to use when deploying, represented by its full Azure id.  Every subsequent deployment of this workspace will deploy to this function app or slot."
+                    },
+                    "azureFunctions.suppressProject": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "description": "%azureFunctions.suppressProject%",
+                        "default": false
                     }
                 }
             }
