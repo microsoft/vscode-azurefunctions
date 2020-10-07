@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
+import { DebugConfiguration, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
@@ -20,11 +20,12 @@ export const javaDebugConfig: DebugConfiguration = {
 };
 
 export class JavaDebugProvider extends FuncDebugProviderBase {
+    public readonly workerArgKey: string = 'languageWorkers__java__arguments';
     protected readonly defaultPortOrPipeName: number = defaultJavaDebugPort;
     protected readonly debugConfig: DebugConfiguration = javaDebugConfig;
 
-    public async getExecutionOptions(folder: WorkspaceFolder): Promise<ShellExecutionOptions> {
+    public async getWorkerArgValue(folder: WorkspaceFolder): Promise<string> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
-        return { env: { languageWorkers__java__arguments: `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}` } };
+        return `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${port}`;
     }
 }
