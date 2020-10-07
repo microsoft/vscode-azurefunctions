@@ -52,6 +52,7 @@
     "azureFunctions.projectRuntime": "The default version of the Azure Functions runtime to use when performing operations like \"Create New Function\".",
     "azureFunctions.projectSubpath": "The default subpath of a workspace folder to use for project operations. This is only necessary if you have multiple projects in one workspace. See https://aka.ms/AA4nmfy for more information.",
     "azureFunctions.pythonVenv": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",
+    "azureFunctions.suppressProject": "Set to true if this should not be recognized as an Azure Functions project and you want to hide related functionality.",
     "azureFunctions.redeploy": "Redeploy",
     "azureFunctions.refresh": "Refresh",
     "azureFunctions.requestTimeout": "The timeout (in seconds) to be used when making requests, for example getting the latest templates.",
