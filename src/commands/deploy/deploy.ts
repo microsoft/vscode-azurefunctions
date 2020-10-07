@@ -117,8 +117,6 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
             use32BitWorkerProcess: false
         };
         await node.root.client.updateConfiguration(config);
-        // restart function app if required - not needed
-        // await restartFunctionApp(context, node);
     }
 }
 
