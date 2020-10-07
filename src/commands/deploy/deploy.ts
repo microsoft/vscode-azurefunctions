@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext, IParsedError, parseError } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -67,7 +67,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (language === ProjectLanguage.CSharp && !node.root.client.isLinux) {
-        await tryToUpdateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
     }
 
     await verifyAppSettings(context, node, version, language);
@@ -95,45 +95,30 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
 }
 
-async function tryToUpdateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
-    try {
-        const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
-        if (functionProject === undefined) {
-            throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
-        }
-        const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
-        if (projectFiles.length === 0) {
-            throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
-        }
-        const mainProject: string = path.join(functionProject, projectFiles[0]);
-        const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
-        if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
-            const message: string = localize('overwriteSetting', 'Detected 64 bit project. Update setting in Azure Portal?');
-            const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway'), isCloseAffordance: true };
-            const dialogResult: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, deployAnyway);
-            if (dialogResult.isCloseAffordance === true) {
-                return;
-            }
-            const config: WebSiteManagementModels.SiteConfigResource = {
-                use32BitWorkerProcess: false
-            };
-            // restart fn app otherwise we get error - Function Host is not running
-            context.stopAppBeforeDeploy = true;
-            await node.root.client.updateConfiguration(config);
-        }
-    } catch (error) {
-        // swallow cancellations
-        const parsedError: IParsedError = parseError(error);
-        if (!parsedError.isUserCancelledError) {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
+    if (functionProject === undefined) {
+        throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
+    }
+    const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
+    if (projectFiles.length === 0) {
+        throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
+    }
+    const mainProject: string = path.join(functionProject, projectFiles[0]);
+    const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
+    if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
+        const message: string = localize('overwriteSetting', 'The remote app targets "{0}", but your local project targets "{1}". Update remote app to "{1}"?', '32 bit', '64 bit');
+        const no64Bit: vscode.MessageItem = { title: localize('noTo64Bit', 'No'), isCloseAffordance: true };
+        const dialogResult: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, no64Bit);
+        if (dialogResult === no64Bit) {
             return;
         }
-        // We try out best to update app to 64 bit
-        // If we don't succeed, we shouldn't stop the deployment
-        const errorUpdatingTo64Bit: string = `WARNING: Unable to update function app to 64 bit. Please manually update to 64 bit in Azure Portal.`;
-        ext.outputChannel.appendLog(errorUpdatingTo64Bit);
-        if (parsedError.message !== undefined) {
-            ext.outputChannel.appendLog(parsedError.message);
-        }
+        const config: WebSiteManagementModels.SiteConfigResource = {
+            use32BitWorkerProcess: false
+        };
+        await node.root.client.updateConfiguration(config);
+        // restart function app if required - not needed
+        // await restartFunctionApp(context, node);
     }
 }
 
