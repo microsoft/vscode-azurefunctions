@@ -91,10 +91,5 @@ export async function getLocalSettingsJson(localSettingsPath: string, allowOverw
         }
     }
 
-    return {
-        IsEncrypted: false,
-        Values: {
-            AzureWebJobsStorage: ''
-        }
-    };
+    return {};
 }
