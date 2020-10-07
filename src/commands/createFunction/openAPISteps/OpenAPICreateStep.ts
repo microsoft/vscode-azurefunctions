@@ -73,7 +73,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             canSelectFiles: true,
             canSelectFolders: false,
             canSelectMany: false,
-            title: 'Select OpenAPI (v2 or V3) Specification File',
+            title: 'Select OpenAPI (v2/v3) Specification File',
             openLabel: 'Specification File',
             filters: {
                 JSON: ['json', 'yaml']
