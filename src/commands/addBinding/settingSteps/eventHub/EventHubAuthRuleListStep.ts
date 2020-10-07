@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
-import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
+import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { localize } from '../../../../localize';
 import { IBaseResourceWithName, promptForResource } from '../../../../utils/azure';
+import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
@@ -16,7 +17,7 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
         const resourceGroupName: string = nonNullProp(context, 'resourceGroupName');
         const eventHubName: string = nonNullProp(context, 'eventhubname');
 
-        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
+        const client: EventHubManagementClient = await createEventHubClient(context);
 
         const namespaceDescription: string = localize('namespacePolicy', '(namespace policy)');
         const hubDescription: string = localize('hubPolicy', '(hub policy)');

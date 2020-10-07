@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
-import { createAzureClient } from 'vscode-azureextensionui';
+import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
@@ -17,7 +17,7 @@ export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<
         const eventHubName: string = nonNullProp(context, 'eventhubname');
         const authRuleName: string = nonNullProp(context, 'authRuleName');
 
-        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
+        const client: EventHubManagementClient = await createEventHubClient(context);
         let connectionString: string;
         if (context.isNamespaceAuthRule) {
             const keys: EventHubManagementModels.AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRuleName);

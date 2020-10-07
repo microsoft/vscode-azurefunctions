@@ -117,7 +117,7 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
 
     assert.ok(functionUrl.includes(routePrefix), 'Function url did not include routePrefix.');
 
-    const client: ServiceClient = createGenericClient();
+    const client: ServiceClient = await createGenericClient();
     const response: HttpOperationResponse = await client.sendRequest({ method: 'POST', url: functionUrl, body: { name: "World" } });
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok(body.includes('Hello') && body.includes('World'), 'Expected function response to include "Hello" and "World"');
