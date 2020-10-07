@@ -98,11 +98,13 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
     if (functionProject === undefined) {
-        throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
+        return;
+        // throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
     }
     const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
     if (projectFiles.length === 0) {
-        throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
+        return;
+        // throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
     }
     const mainProject: string = path.join(functionProject, projectFiles[0]);
     const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
