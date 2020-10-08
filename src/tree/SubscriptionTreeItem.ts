@@ -109,7 +109,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.stackFilter = getFunctionsWorkerRuntime(language);
             if (wizardContext.stackFilter) {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
-                setLocationsTask(wizardContext);
+                await setLocationsTask(wizardContext);
             }
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
