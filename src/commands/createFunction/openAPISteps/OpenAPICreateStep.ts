@@ -99,7 +99,7 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
     try {
         await cpUtils.executeCommand(undefined, undefined, 'autorest', '--version');
     } catch (error) {
-        const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs Autorest to generate Function app from OpenAPI specification. Click "Learn more" for more details for installation steps.');
+        const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
         if (!context.errorHandling.suppressDisplay) {
             window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
                 if (result === DialogResponses.learnMore) {
