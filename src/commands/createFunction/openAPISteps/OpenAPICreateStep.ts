@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OpenDialogOptions, ProgressLocation, Uri, window, workspace } from "vscode";
-import { AzureWizardExecuteStep, AzureWizardPromptStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { ProgressLocation, Uri, window } from "vscode";
+import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
@@ -24,12 +24,12 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
     }
 
     public async execute(wizardContext: IFunctionWizardContext & IJavaProjectWizardContext & IDotnetFunctionWizardContext): Promise<void> {
-        // const uris: Uri[] = await this.askDocument();
         const uris: Uri[] = nonNullProp(wizardContext, 'openApiSpecificationFile');
         const uri: Uri = uris[0];
         const args: string[] = [];
 
-        args.push(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)} --version:3.0.6320`);
+        args.push(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)}`);
+        args.push(`--version:3.0.6320`)
 
         switch (wizardContext.language) {
             case ProjectLanguage.TypeScript:
@@ -55,7 +55,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
         }
 
         args.push('--generate-metadata:false');
-        args.push(`--output-folder:${wizardContext.projectPath}`);
+        args.push(`--output-folder:${cpUtils.wrapArgInQuotes(wizardContext.projectPath)}`);
 
         ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.'));
         const title: string = localize('generatingFunctions', 'Generating from OpenAPI...Check [output window](command:{0}) for status.', ext.prefix + '.showOutputChannel');
@@ -67,31 +67,6 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
 
     public shouldExecute(): boolean {
         return true;
-    }
-}
-
-export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunctionWizardContext> {
-    public async prompt(context: IFunctionWizardContext): Promise<void> {
-        const openDialogOptions: OpenDialogOptions = {
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-            title: 'Select OpenAPI (v2/v3) Specification File',
-            openLabel: 'Specification File',
-            filters: {
-                JSON: ['json', 'yaml']
-            }
-        };
-
-        context.openApiSpecificationFile = await ext.ui.showOpenDialog(openDialogOptions);
-
-        if (workspace.workspaceFolders) {
-            openDialogOptions.defaultUri = Uri.file(workspace.workspaceFolders[0].uri.toString());
-        }
-    }
-
-    public shouldPrompt(context: IJavaProjectWizardContext): boolean {
-        return !context.javaPackageName;
     }
 }
 
