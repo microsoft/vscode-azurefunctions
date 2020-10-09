@@ -99,20 +99,18 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
     if (functionProject === undefined) {
         return;
-        // throw new Error(localize('failedToFindFuncHost', 'Unable to locate Azure Functions project.'));
     }
     const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
-    if (projectFiles.length === 0) {
+    if (projectFiles.length !== 1) {
         return;
-        // throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
     }
     const mainProject: string = path.join(functionProject, projectFiles[0]);
     const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
     if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
         const message: string = localize('overwriteSetting', 'The remote app targets "{0}", but your local project targets "{1}". Update remote app to "{1}"?', '32 bit', '64 bit');
-        const no64Bit: vscode.MessageItem = { title: localize('noTo64Bit', 'No'), isCloseAffordance: true };
-        const dialogResult: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, no64Bit);
-        if (dialogResult === no64Bit) {
+        const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
+        const dialogResult: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, deployAnyway);
+        if (dialogResult === deployAnyway) {
             return;
         }
         const config: WebSiteManagementModels.SiteConfigResource = {
