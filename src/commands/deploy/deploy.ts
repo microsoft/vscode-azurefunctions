@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -15,9 +16,11 @@ import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
 import { validateRemoteBuild } from './validateRemoteBuild';
@@ -63,6 +66,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
+    if (language === ProjectLanguage.CSharp && !node.root.client.isLinux) {
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
+    }
+
     await verifyAppSettings(context, node, version, language);
 
     await node.runWithTemporaryDescription(
@@ -86,6 +93,31 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     );
 
     await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
+}
+
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
+    if (functionProject === undefined) {
+        return;
+    }
+    const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
+    if (projectFiles.length !== 1) {
+        return;
+    }
+    const mainProject: string = path.join(functionProject, projectFiles[0]);
+    const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
+    if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
+        const message: string = localize('overwriteSetting', 'The remote app targets "{0}", but your local project targets "{1}". Update remote app to "{1}"?', '32 bit', '64 bit');
+        const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
+        const dialogResult: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, deployAnyway);
+        if (dialogResult === deployAnyway) {
+            return;
+        }
+        const config: WebSiteManagementModels.SiteConfigResource = {
+            use32BitWorkerProcess: false
+        };
+        await node.root.client.updateConfiguration(config);
+    }
 }
 
 async function validateGlobSettings(context: IActionContext, fsPath: string): Promise<void> {

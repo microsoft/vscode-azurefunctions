@@ -26,7 +26,23 @@ export namespace dotnetUtils {
         return await getPropertyInProjFile(projFilePath, 'TargetFramework');
     }
 
-    export async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
+    export async function tryGetFuncVersion(projFilePath: string): Promise<string | undefined> {
+        try {
+            return await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+        } catch {
+            return undefined;
+        }
+    }
+
+    export async function tryGetPlatformTarget(projFilePath: string): Promise<string | undefined> {
+        try {
+            return await getPropertyInProjFile(projFilePath, 'PlatformTarget');
+        } catch {
+            return undefined;
+        }
+    }
+
+    async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
         const projContents: string = (await fse.readFile(projFilePath)).toString();
         const regExp: RegExp = new RegExp(`<${prop}>(.*)<\\/${prop}>`);
         const matches: RegExpMatchArray | null = projContents.match(regExp);
