@@ -57,6 +57,16 @@ class PowerShellFunctionTester extends FunctionTesterBase {
     }
 }
 
+class CustomFunctionTester extends FunctionTesterBase {
+    public language: ProjectLanguage = ProjectLanguage.Custom;
+
+    public getExpectedPaths(functionName: string): string[] {
+        return [
+            path.join(functionName, 'function.json')
+        ];
+    }
+}
+
 addSuitesForVersion(FuncVersion.v2);
 addSuitesForVersion(FuncVersion.v3);
 
@@ -66,6 +76,8 @@ function addSuitesForVersion(version: FuncVersion): void {
     addSuite(new PythonFunctionTester(version));
     addSuite(new PowerShellFunctionTester(version));
 }
+
+addSuite(new CustomFunctionTester(FuncVersion.v3));
 
 function addSuite(tester: FunctionTesterBase): void {
     // tslint:disable-next-line:max-func-body-length no-function-expression

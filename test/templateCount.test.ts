@@ -28,7 +28,8 @@ function addSuite(source: TemplateSource | undefined): void {
             [ProjectLanguage.TypeScript, FuncVersion.v3, 14],
             [ProjectLanguage.PowerShell, FuncVersion.v2, 14],
             [ProjectLanguage.PowerShell, FuncVersion.v3, 14],
-            [ProjectLanguage.Java, FuncVersion.v2, 4]
+            [ProjectLanguage.Java, FuncVersion.v2, 4],
+            [ProjectLanguage.Custom, FuncVersion.v3, 11]
             // https://github.com/microsoft/vscode-azurefunctions/issues/1605
             // [ProjectLanguage.Java, FuncVersion.v3, 4]
         ];
