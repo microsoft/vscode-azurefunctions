@@ -104,6 +104,26 @@ const linuxFunctionsStacks: string = `{
                 "dependency": null,
                 "majorVersions": [
                     {
+                        "displayVersion": "14",
+                        "runtimeVersion": "Node|14",
+                        "supportedFunctionsExtensionVersions": [
+                            "~3"
+                        ],
+                        "isDefault": true,
+                        "minorVersions": [],
+                        "applicationInsights": true,
+                        "appSettingsDictionary": {
+                            "FUNCTIONS_WORKER_RUNTIME": "node"
+                        },
+                        "siteConfigPropertiesDictionary": {
+                            "use32BitWorkerProcess": false,
+                            "linuxFxVersion": "Node|14"
+                        },
+                        "isPreview": true,
+                        "isDeprecated": false,
+                        "isHidden": true
+                    },
+                    {
                         "displayVersion": "12",
                         "runtimeVersion": "Node|12",
                         "supportedFunctionsExtensionVersions": [
@@ -206,7 +226,7 @@ const linuxFunctionsStacks: string = `{
                         "supportedFunctionsExtensionVersions": [
                             "~3"
                         ],
-                        "isDefault": false,
+                        "isDefault": true,
                         "minorVersions": [],
                         "applicationInsights": true,
                         "appSettingsDictionary": {
@@ -241,7 +261,7 @@ const linuxFunctionsStacks: string = `{
                             "~2",
                             "~3"
                         ],
-                        "isDefault": false,
+                        "isDefault": true,
                         "minorVersions": [],
                         "applicationInsights": true,
                         "appSettingsDictionary": {
@@ -305,7 +325,7 @@ const linuxFunctionsStacks: string = `{
                             "use32BitWorkerProcess": false,
                             "linuxFxVersion": "Java|11"
                         },
-                        "isPreview": true,
+                        "isPreview": false,
                         "isDeprecated": false,
                         "isHidden": false
                     }
@@ -413,6 +433,26 @@ const windowsFunctionsStacks: string = `{
                 "display": "Node.js",
                 "dependency": null,
                 "majorVersions": [
+                    {
+                        "displayVersion": "14",
+                        "runtimeVersion": "~14",
+                        "supportedFunctionsExtensionVersions": [
+                            "~3"
+                        ],
+                        "isDefault": true,
+                        "minorVersions": [],
+                        "applicationInsights": true,
+                        "appSettingsDictionary": {
+                            "FUNCTIONS_WORKER_RUNTIME": "node",
+                            "WEBSITE_NODE_DEFAULT_VERSION": "~14"
+                        },
+                        "siteConfigPropertiesDictionary": {
+                            "use32BitWorkerProcess": true
+                        },
+                        "isPreview": true,
+                        "isDeprecated": false,
+                        "isHidden": true
+                    },
                     {
                         "displayVersion": "12",
                         "runtimeVersion": "~12",
@@ -577,7 +617,7 @@ const windowsFunctionsStacks: string = `{
                             "javaVersion": "11",
                             "use32BitWorkerProcess": true
                         },
-                        "isPreview": true,
+                        "isPreview": false,
                         "isDeprecated": false,
                         "isHidden": false
                     }
@@ -622,7 +662,7 @@ const windowsFunctionsStacks: string = `{
                         "supportedFunctionsExtensionVersions": [
                             "~3"
                         ],
-                        "isDefault": false,
+                        "isDefault": true,
                         "minorVersions": [],
                         "applicationInsights": true,
                         "appSettingsDictionary": {
