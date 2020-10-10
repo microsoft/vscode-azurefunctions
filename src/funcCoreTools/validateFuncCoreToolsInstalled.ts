@@ -54,7 +54,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installion has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
             await openUrl('https://aka.ms/Dqur4e');
         }
     }
