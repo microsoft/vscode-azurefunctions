@@ -84,7 +84,7 @@ export abstract class TemplateProviderBase {
 
     /**
      * Adds version, templateType, and language information to a key to ensure there are no collisions in the cache
-     * For backwards compatability, the original version, templateType, and language will not have this information
+     * For backwards compatibility, the original version, templateType, and language will not have this information
      */
     private async getCacheKey(key: string): Promise<string> {
         key = key + await this.getCacheKeySuffix();
