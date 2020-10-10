@@ -7,10 +7,10 @@ import { AzureParentTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
-import { ICreateFuntionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
+import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 import { ISiteCreatedOptions } from './showSiteCreated';
 
-export async function createFunctionApp(context: IActionContext & Partial<ICreateFuntionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
+export async function createFunctionApp(context: IActionContext & Partial<ICreateFunctionAppContext>, subscription?: AzureParentTreeItem | string, newResourceGroupName?: string): Promise<string> {
     let node: AzureParentTreeItem | undefined;
     if (typeof subscription === 'string') {
         node = await ext.tree.findTreeItem(`/subscriptions/${subscription}`, context);
