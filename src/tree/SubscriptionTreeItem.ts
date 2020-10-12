@@ -19,7 +19,7 @@ import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
-export interface ICreateFuntionAppContext extends ICreateChildImplContext {
+export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
 }
 
@@ -73,7 +73,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateFuntionAppContext): Promise<AzureTreeItem> {
+    public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzureTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
