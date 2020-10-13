@@ -25,7 +25,7 @@ export namespace requestUtils {
         }
 
         try {
-            const client: ServiceClient = createGenericClient();
+            const client: ServiceClient = await createGenericClient();
             return await client.sendRequest(request);
         } catch (error) {
             if (parseError(error).errorType === 'REQUEST_ABORTED_ERROR') {
@@ -41,7 +41,7 @@ export namespace requestUtils {
         const request: WebResource = new WebResource();
         request.prepare({ method: 'GET', url });
         request.streamResponseBody = true;
-        const client: ServiceClient = createGenericClient();
+        const client: ServiceClient = await createGenericClient();
         const response: HttpOperationResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
         await new Promise(async (resolve, reject): Promise<void> => {

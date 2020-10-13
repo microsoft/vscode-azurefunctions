@@ -6,12 +6,13 @@
 import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels as AIModels } from '@azure/arm-appinsights';
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as appservice from 'vscode-azureappservice';
-import { createAzureClient, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { enableFileLogging } from './enableFileLogging';
@@ -57,7 +58,7 @@ async function openLiveMetricsStream(treeItem: SlotTreeItemBase | RemoteFunction
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
-        const aiClient: ApplicationInsightsManagementClient = createAzureClient(treeItem.root, ApplicationInsightsManagementClient);
+        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient(treeItem.root);
         const components: AIModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
         const component: AIModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {

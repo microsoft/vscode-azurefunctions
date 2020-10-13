@@ -6,13 +6,14 @@
 import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
 import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardExecuteStep, createAzureClient, parseError } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, parseError } from 'vscode-azureextensionui';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getStorageConnectionString } from '../../utils/azure';
+import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { enableFileLogging } from '../logstream/enableFileLogging';
@@ -39,7 +40,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
         const locationName: string = nonNullProp(nonNullProp(context, 'location'), 'name');
 
-        const client: WebSiteManagementClient = createAzureClient(context, WebSiteManagementClient);
+        const client: WebSiteManagementClient = await createWebSiteClient(context);
         context.site = await client.webApps.createOrUpdate(rgName, siteName, {
             name: siteName,
             kind: context.newSiteKind,

@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ServiceBusManagementClient, ServiceBusManagementModels } from '@azure/arm-servicebus';
-import { createAzureClient } from 'vscode-azureextensionui';
 import { localize } from '../../../../localize';
 import { getResourceGroupFromId } from '../../../../utils/azure';
+import { createServiceBusClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
@@ -19,7 +19,7 @@ export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBas
         const name: string = nonNullProp(sbNamespace, 'name');
 
         const resourceGroup: string = getResourceGroupFromId(id);
-        const client: ServiceBusManagementClient = createAzureClient(context, ServiceBusManagementClient);
+        const client: ServiceBusManagementClient = await createServiceBusClient(context);
         const authRules: ServiceBusManagementModels.SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
         const authRule: ServiceBusManagementModels.SBAuthorizationRule | undefined = authRules.find(ar => ar.rights.some(r => r.toLowerCase() === 'listen'));
         if (!authRule) {

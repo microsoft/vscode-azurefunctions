@@ -18,7 +18,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         ];
 
         [wizardContext.useConsumptionPlan, wizardContext.planSkuFamilyFilter] = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
-        setLocationsTask(wizardContext);
+        await setLocationsTask(wizardContext);
     }
 
     public shouldPrompt(wizardContext: IAppServiceWizardContext): boolean {

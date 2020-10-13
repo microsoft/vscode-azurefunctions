@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, setLocationsTask, SiteClient, SiteNameStep, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/FunctionAppStackStep';
@@ -14,6 +14,7 @@ import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
+import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
@@ -38,7 +39,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = createAzureClient(this.root, WebSiteManagementClient);
+        const client: WebSiteManagementClient = await createWebSiteClient(this.root);
         let webAppCollection: WebSiteManagementModels.WebAppCollection;
         try {
             webAppCollection = this._nextLink ?
@@ -108,7 +109,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.stackFilter = getFunctionsWorkerRuntime(language);
             if (wizardContext.stackFilter) {
                 wizardContext.newSiteOS = language === ProjectLanguage.Python ? WebsiteOS.linux : WebsiteOS.windows;
-                setLocationsTask(wizardContext);
+                await setLocationsTask(wizardContext);
             }
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
