@@ -196,17 +196,21 @@ async function promptForTemplateFilter(): Promise<TemplateFilter> {
 }
 
 /**
- * If templateFilter is verified, puts HttpTrigger at the top since it's the most popular
+ * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
  * Otherwise sort alphabetically
  */
 function sortTemplates(a: IFunctionTemplate, b: IFunctionTemplate, templateFilter: TemplateFilter): number {
     if (templateFilter === TemplateFilter.Verified) {
-        const regExp: RegExp = /httptrigger($|[^a-z])/i;
-        if (regExp.test(a.id)) {
-            return -1;
-        } else if (regExp.test(b.id)) {
-            return 1;
+        function getPriority(id: string): number {
+            if (/\bhttptrigger\b/i.test(id)) {
+                return 1;
+            } else if (/\btimertrigger\b/i.test(id)) {
+                return 2;
+            } else {
+                return 3;
+            }
         }
+        return getPriority(a.id) - getPriority(b.id);
     }
 
     return a.name.localeCompare(b.name);
