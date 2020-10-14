@@ -74,8 +74,6 @@ export const packCommand: string = 'pack';
 export const buildNativeDeps: string = '--build-native-deps';
 export const packTaskName: string = `${func}: ${packCommand}`;
 
-export const funcWatchProblemMatcher: string = '$func-watch';
-
 export const localhost: string = '127.0.0.1';
 
 export const tsDefaultOutDir: string = 'dist';

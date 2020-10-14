@@ -39,7 +39,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);
-        await this.writeTasksJson(context, vscodePath);
+        await this.writeTasksJson(context, vscodePath, language);
         await this.writeLaunchJson(context.workspaceFolder, vscodePath, version);
         await this.writeSettingsJson(context, vscodePath, language, version);
         await this.writeExtensionsJson(vscodePath, language);
@@ -58,7 +58,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     }
 
     protected abstract executeCore(context: IProjectWizardContext): Promise<void>;
-    protected abstract getTasks(): TaskDefinition[];
+    protected abstract getTasks(language: ProjectLanguage): TaskDefinition[];
     protected getDebugConfiguration?(version: FuncVersion): DebugConfiguration;
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
@@ -74,8 +74,8 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return path.posix.join(subDir, fsPath);
     }
 
-    private async writeTasksJson(context: IProjectWizardContext, vscodePath: string): Promise<void> {
-        const newTasks: TaskDefinition[] = this.getTasks();
+    private async writeTasksJson(context: IProjectWizardContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
+        const newTasks: TaskDefinition[] = this.getTasks(language);
         for (const task of newTasks) {
             // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
             let cwd: string = (task.options && task.options.cwd) || '.';

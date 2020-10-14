@@ -7,9 +7,10 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { TaskDefinition } from 'vscode';
-import { extensionsCsprojFileName, extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
+import { extensionsCsprojFileName, extInstallTaskName, func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../../FuncVersion';
+import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -19,12 +20,12 @@ import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
     protected useFuncExtensionsInstall: boolean = false;
 
-    protected getTasks(): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         return [
             {
                 type: func,
                 command: hostStartCommand,
-                problemMatcher: funcWatchProblemMatcher,
+                problemMatcher: getFuncWatchProblemMatcher(language),
                 dependsOn: this.useFuncExtensionsInstall ? extInstallTaskName : undefined,
                 isBackground: true
             }
