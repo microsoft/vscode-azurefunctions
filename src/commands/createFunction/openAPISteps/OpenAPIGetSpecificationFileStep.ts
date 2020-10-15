@@ -21,17 +21,14 @@ export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunc
             }
         };
 
-        context.openApiSpecificationFile = await ext.ui.showOpenDialog(openDialogOptions);
-
         if (workspace.workspaceFolders) {
             openDialogOptions.defaultUri = Uri.file(workspace.workspaceFolders[0].uri.toString());
         }
+
+        context.openApiSpecificationFile = await ext.ui.showOpenDialog(openDialogOptions);
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        if (context.generateFromOpenAPI) {
-            return true;
-        }
-        return false;
+        return !!context.generateFromOpenAPI;
     }
 }

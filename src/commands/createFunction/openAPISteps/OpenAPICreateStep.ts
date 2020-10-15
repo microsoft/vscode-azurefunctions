@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
 import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { convertToValidPackageName } from '../../../../extension.bundle';
 import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
+import { confirmOverwriteFile, writeFormattedJson } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -29,7 +32,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
         const args: string[] = [];
 
         args.push(`--input-file:${cpUtils.wrapArgInQuotes(uri.fsPath)}`);
-        args.push(`--version:3.0.6320`)
+        args.push(`--version:3.0.6320`);
 
         switch (wizardContext.language) {
             case ProjectLanguage.TypeScript:
@@ -57,12 +60,17 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
         args.push('--generate-metadata:false');
         args.push(`--output-folder:${cpUtils.wrapArgInQuotes(wizardContext.projectPath)}`);
 
-        ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.'));
+        ext.outputChannel.appendLog(localize('statutoryWarning', 'Using the plugin could overwrite your custom changes to the functions.\nIf autorest fails, you can run the script on your command-line, or try resetting autorest (autorest --reset) and try again.'));
         const title: string = localize('generatingFunctions', 'Generating from OpenAPI...Check [output window](command:{0}) for status.', ext.prefix + '.showOutputChannel');
 
         await window.withProgress({ location: ProgressLocation.Notification, title }, async () => {
-            await cpUtils.tryExecuteCommand(ext.outputChannel, undefined, 'autorest', ...args);
+            await cpUtils.executeCommand(ext.outputChannel, undefined, 'autorest', ...args);
         });
+
+        if (wizardContext.language === ProjectLanguage.TypeScript) {
+            // Change the package.json only when the autorest successfully ran.
+            await addAutorestSpecificTypescriptDependencies(wizardContext);
+        }
     }
 
     public shouldExecute(): boolean {
@@ -85,5 +93,38 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
         }
 
         throw new Error(message);
+    }
+}
+
+async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizardContext): Promise<void> {
+    const coreHttp: string = '@azure/core-http';
+    const coreHttpVersion: string = '^1.1.4';
+    const packagePath: string = path.join(context.projectPath, 'package.json');
+
+    const packageJsonScripts: { [key: string]: string } = {
+        build: 'tsc',
+        watch: 'tsc -w',
+        prestart: 'npm run build',
+        start: 'func start',
+        test: 'echo \"No tests yet...\"'
+    };
+
+    const packageJsonDevDeps: { [key: string]: string } = {
+        '@azure/functions': '^1.0.2-beta2',
+        typescript: '^3.3.3',
+        coreHttp: coreHttpVersion
+    };
+
+    if (await confirmOverwriteFile(packagePath)) {
+        await writeFormattedJson(packagePath, {
+            name: convertToValidPackageName(path.basename(context.projectPath)),
+            version: '1.0.0',
+            description: '',
+            scripts: packageJsonScripts,
+            dependencies: {},
+            devDependencies: packageJsonDevDeps
+        });
+    } else {
+        ext.outputChannel.appendLine(localize('autorestDependencyWarning', 'WARNING: Could not write the package.json. Please make sure {0}:{1} is added as {2} to the package.json.', coreHttp, coreHttpVersion, 'devDependencies'));
     }
 }
