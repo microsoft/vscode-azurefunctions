@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as process from 'process';
 import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDefinition, TaskProvider, TaskScope, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
@@ -142,7 +143,8 @@ export class FuncTaskProvider implements TaskProvider {
                 return undefined;
         }
 
-        return await debugProvider.getExecutionOptions(folder);
+        // Defer to process.env (aka return undefined) if the workerArg variable is already defined
+        return process.env[debugProvider.workerArgKey] ? undefined : { env: { [debugProvider.workerArgKey]: await debugProvider.getWorkerArgValue(folder) } };
     }
 }
 

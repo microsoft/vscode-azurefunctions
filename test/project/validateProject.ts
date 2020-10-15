@@ -250,13 +250,15 @@ export function getPowerShellValidateOptions(version: FuncVersion = defaultVersi
     };
 }
 
-export function getScriptValidateOptions(language: ProjectLanguage, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getCustomValidateOptions(version: FuncVersion = defaultVersion): IValidateProjectOptions {
     return {
-        language,
+        language: ProjectLanguage.Custom,
+        displayLanguage: /custom handler/i,
         version,
         expectedSettings: {
-            'azureFunctions.projectLanguage': language,
+            'azureFunctions.projectLanguage': ProjectLanguage.Custom,
             'azureFunctions.projectRuntime': version,
+            'azureFunctions.deploySubpath': '.',
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
@@ -288,6 +290,7 @@ const commonExpectedPaths: string[] = [
 
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
+    displayLanguage?: RegExp;
     version: FuncVersion;
     expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
     expectedPaths: string[];

@@ -63,7 +63,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
 
         const projFilePath: string = path.join(projectPath, projFileName);
 
-        const versionInProjFile: string = await dotnetUtils.getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+        const versionInProjFile: string | undefined = await dotnetUtils.tryGetFuncVersion(projFilePath);
         context.telemetry.properties.versionInProjFile = versionInProjFile;
         // The version from the proj file takes precedence over whatever was set in `context` before this
         // tslint:disable-next-line: strict-boolean-expressions

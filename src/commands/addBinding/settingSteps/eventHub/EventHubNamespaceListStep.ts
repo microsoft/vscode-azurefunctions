@@ -4,16 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
-import { AzureWizardPromptStep, createAzureClient } from 'vscode-azureextensionui';
+import { AzureWizardPromptStep } from 'vscode-azureextensionui';
 import { localize } from '../../../../localize';
 import { getResourceGroupFromId, promptForResource } from '../../../../utils/azure';
+import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubNamespaceListStep extends AzureWizardPromptStep<IEventHubWizardContext> {
     public async prompt(context: IEventHubWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select an event hub namespace');
-        const client: EventHubManagementClient = createAzureClient(context, EventHubManagementClient);
+        const client: EventHubManagementClient = await createEventHubClient(context);
         const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.namespaces.list());
         if (result) {
             context.namespaceName = nonNullProp(result, 'name');

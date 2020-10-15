@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DebugConfiguration, Extension, extensions, ShellExecutionOptions, WorkspaceFolder } from 'vscode';
+import { DebugConfiguration, Extension, extensions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
@@ -19,12 +19,13 @@ export const pythonDebugConfig: DebugConfiguration = {
 };
 
 export class PythonDebugProvider extends FuncDebugProviderBase {
+    public readonly workerArgKey: string = 'languageWorkers__python__arguments';
     protected readonly defaultPortOrPipeName: number = defaultPythonDebugPort;
     protected readonly debugConfig: DebugConfiguration = pythonDebugConfig;
 
-    public async getExecutionOptions(folder: WorkspaceFolder): Promise<ShellExecutionOptions> {
+    public async getWorkerArgValue(folder: WorkspaceFolder): Promise<string> {
         const port: number = <number>this.getDebugPortOrPipeName(folder);
-        return { env: { languageWorkers__python__arguments: await getPythonCommand(localhost, port) } };
+        return await getPythonCommand(localhost, port);
     }
 }
 

@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CosmosDBManagementClient, CosmosDBManagementModels } from '@azure/arm-cosmosdb';
-import { createAzureClient } from 'vscode-azureextensionui';
 import { getResourceGroupFromId } from '../../../../utils/azure';
+import { createCosmosDBClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
@@ -16,7 +16,7 @@ export class CosmosDBConnectionCreateStep extends AzureConnectionCreateStepBase<
         const databaseAccount: CosmosDBManagementModels.DatabaseAccountGetResults = nonNullProp(context, 'databaseAccount');
         const name: string = nonNullProp(databaseAccount, 'name');
 
-        const client: CosmosDBManagementClient = createAzureClient(context, CosmosDBManagementClient);
+        const client: CosmosDBManagementClient = await createCosmosDBClient(context);
         const resourceGroup: string = getResourceGroupFromId(nonNullProp(databaseAccount, 'id'));
         // NOTE: We have to generate the connection string ourselves rather than calling client.databaseAccounts.listConnectionStrings
         // (The runtime currently only handles Cosmos DB connection strings _not_ mongo connection strings)

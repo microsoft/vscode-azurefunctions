@@ -999,6 +999,12 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "The default function app to use when deploying, represented by its full Azure id.  Every subsequent deployment of this workspace will deploy to this function app or slot."
+                    },
+                    "azureFunctions.suppressProject": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "description": "%azureFunctions.suppressProject%",
+                        "default": false
                     }
                 }
             }
@@ -1066,15 +1072,17 @@
         "@azure/arm-storage": "^15.0.0",
         "@azure/ms-rest-js": "^2.0.7",
         "azure-storage": "^2.10.3",
+        "escape-string-regexp": "^4.0.0",
         "extract-zip": "^1.6.6",
         "fs-extra": "^4.0.2",
+        "jsonc-parser": "^2.3.1",
         "opn": "^6.0.0",
-        "portfinder": "^1.0.23",
         "p-retry": "^4.1.0",
+        "portfinder": "^1.0.23",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.66.1",
-        "vscode-azureextensionui": "^0.35.0",
+        "vscode-azureappservice": "^0.68.0",
+        "vscode-azureextensionui": "^0.36.0",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",

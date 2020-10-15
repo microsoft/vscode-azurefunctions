@@ -8,6 +8,6 @@ import { localize } from '../localize';
 import { deleteNode } from './deleteNode';
 
 export async function deleteFunction(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
-    (<ITreeItemPickerContext>context).noItemFoundErrorMessage = localize('noFuntionsToDelete', 'No matching functions found or your function app is read-only.');
+    (<ITreeItemPickerContext>context).noItemFoundErrorMessage = localize('noFunctionsToDelete', 'No matching functions found or your function app is read-only.');
     await deleteNode(context, /Remote;ReadWrite;Function;/i, node);
 }

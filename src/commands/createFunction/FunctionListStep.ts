@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as escape from 'escape-string-regexp';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
@@ -51,8 +52,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 if (options.templateId) {
                     const actualId: string = t.id.toLowerCase();
                     const expectedId: string = options.templateId.toLowerCase();
-                    // Check for a match with or without the language in the id
-                    return actualId === expectedId || actualId === `${expectedId}-${language.toLowerCase()}`;
+                    // check for an exact match or only whole word matches and escape the "\b" since it's in a string, not a RegExp expression
+                    return actualId === expectedId || new RegExp(`\\b${escape(expectedId)}\\b`, 'gmi').test(actualId);
                 } else {
                     return false;
                 }
@@ -228,17 +229,21 @@ async function promptForTemplateFilter(): Promise<TemplateFilter> {
 }
 
 /**
- * If templateFilter is verified, puts HttpTrigger at the top since it's the most popular
+ * If templateFilter is verified, puts HttpTrigger/TimerTrigger at the top since they're the most popular
  * Otherwise sort alphabetically
  */
 function sortTemplates(a: IFunctionTemplate, b: IFunctionTemplate, templateFilter: TemplateFilter): number {
     if (templateFilter === TemplateFilter.Verified) {
-        const regExp: RegExp = /httptrigger($|[^a-z])/i;
-        if (regExp.test(a.id)) {
-            return -1;
-        } else if (regExp.test(b.id)) {
-            return 1;
+        function getPriority(id: string): number {
+            if (/\bhttptrigger\b/i.test(id)) {
+                return 1;
+            } else if (/\btimertrigger\b/i.test(id)) {
+                return 2;
+            } else {
+                return 3;
+            }
         }
+        return getPriority(a.id) - getPriority(b.id);
     }
 
     return a.name.localeCompare(b.name);

@@ -40,6 +40,7 @@ export * from './src/utils/envUtils';
 export * from './src/utils/fs';
 export * from './src/utils/nonNull';
 export * from './src/utils/nugetUtils';
+export * from './src/utils/parseJson';
 export * from './src/utils/requestUtils';
 export * from './src/utils/venvUtils';
 export * from './src/vsCodeConfig/extensions';
