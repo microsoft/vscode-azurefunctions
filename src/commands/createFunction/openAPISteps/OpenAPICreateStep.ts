@@ -6,12 +6,11 @@
 import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
 import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { convertToValidPackageName } from '../../../../extension.bundle';
 import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
-import { confirmOverwriteFile, writeFormattedJson } from '../../../utils/fs';
+import { confirmEditJsonFile } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
@@ -101,30 +100,12 @@ async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizar
     const coreHttpVersion: string = '^1.1.4';
     const packagePath: string = path.join(context.projectPath, 'package.json');
 
-    const packageJsonScripts: { [key: string]: string } = {
-        build: 'tsc',
-        watch: 'tsc -w',
-        prestart: 'npm run build',
-        start: 'func start',
-        test: 'echo \"No tests yet...\"'
-    };
-
-    const packageJsonDevDeps: { [key: string]: string } = {
-        '@azure/functions': '^1.0.2-beta2',
-        typescript: '^3.3.3',
-        coreHttp: coreHttpVersion
-    };
-
-    if (await confirmOverwriteFile(packagePath)) {
-        await writeFormattedJson(packagePath, {
-            name: convertToValidPackageName(path.basename(context.projectPath)),
-            version: '1.0.0',
-            description: '',
-            scripts: packageJsonScripts,
-            dependencies: {},
-            devDependencies: packageJsonDevDeps
-        });
-    } else {
-        ext.outputChannel.appendLine(localize('autorestDependencyWarning', 'WARNING: Could not write the package.json. Please make sure {0}:{1} is added as {2} to the package.json.', coreHttp, coreHttpVersion, 'devDependencies'));
-    }
+    await confirmEditJsonFile(packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
+        // tslint:disable-next-line: strict-boolean-expressions
+        data.devDependencies = data.devDependencies || {};
+        if (!data.devDependencies[coreHttp]) {
+            data.devDependencies[coreHttp] = coreHttpVersion;
+        }
+        return data;
+    });
 }
