@@ -6,10 +6,11 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { func, funcWatchProblemMatcher, hostStartCommand, javaPackageTaskLabel, pomXmlFileName } from '../../../constants';
+import { func, hostStartCommand, javaPackageTaskLabel, pomXmlFileName, ProjectLanguage } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
 import { mavenUtils } from '../../../utils/mavenUtils';
+import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -34,12 +35,12 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
         this.setDeploySubpath(context, this._debugSubpath);
     }
 
-    protected getTasks(): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         return [
             {
                 type: func,
                 command: hostStartCommand,
-                problemMatcher: funcWatchProblemMatcher,
+                problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
                 options: {
                     cwd: this._debugSubpath

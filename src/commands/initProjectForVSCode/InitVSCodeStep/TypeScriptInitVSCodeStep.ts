@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from '../../../constants';
+import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
 
 const npmPruneTaskLabel: string = 'npm prune';
@@ -14,12 +15,12 @@ const npmBuildTaskLabel: string = 'npm build';
 export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
     public readonly preDeployTask: string = npmPruneTaskLabel;
 
-    public getTasks(): TaskDefinition[] {
+    public getTasks(language: ProjectLanguage): TaskDefinition[] {
         return [
             {
                 type: func,
                 command: hostStartCommand,
-                problemMatcher: funcWatchProblemMatcher,
+                problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
                 dependsOn: npmBuildTaskLabel
             },

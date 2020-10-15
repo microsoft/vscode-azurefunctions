@@ -8,10 +8,10 @@ import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDefinition, TaskProvider, TaskScope, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { buildNativeDeps, extInstallCommand, func, funcWatchProblemMatcher, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { venvUtils } from '../utils/venvUtils';
-import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 import { JavaDebugProvider } from './JavaDebugProvider';
@@ -108,7 +108,7 @@ export class FuncTaskProvider implements TaskProvider {
         let problemMatcher: string | undefined;
         let options: ShellExecutionOptions | undefined;
         if (/^\s*(host )?start/i.test(command)) {
-            problemMatcher = funcWatchProblemMatcher;
+            problemMatcher = getFuncWatchProblemMatcher(language);
             options = await this.getHostStartOptions(folder, language);
         }
 

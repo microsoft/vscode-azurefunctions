@@ -6,8 +6,9 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, funcWatchProblemMatcher, hostStartCommand } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
+import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
@@ -31,15 +32,15 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         return nodeDebugConfig;
     }
 
-    protected getTasks(): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         if (!this.hasPackageJson) {
-            return super.getTasks();
+            return super.getTasks(language);
         } else {
             return [
                 {
                     type: func,
                     command: hostStartCommand,
-                    problemMatcher: funcWatchProblemMatcher,
+                    problemMatcher: getFuncWatchProblemMatcher(language),
                     isBackground: true,
                     dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel
                 },

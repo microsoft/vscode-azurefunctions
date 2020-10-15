@@ -6,14 +6,14 @@
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { dotnetPublishTaskLabel, func, funcWatchProblemMatcher, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { dotnetPublishTaskLabel, func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
-import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
+import { getFuncWatchProblemMatcher, getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
@@ -94,7 +94,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         this._debugSubpath = dotnetUtils.getDotnetDebugSubpath(targetFramework);
     }
 
-    protected getTasks(): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         const commonArgs: string[] = ['/property:GenerateFullPaths=true', '/consoleloggerparameters:NoSummary'];
         const releaseArgs: string[] = ['--configuration', 'Release'];
 
@@ -155,7 +155,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 },
                 command: hostStartCommand,
                 isBackground: true,
-                problemMatcher: funcWatchProblemMatcher
+                problemMatcher: getFuncWatchProblemMatcher(language)
             }
         ];
     }

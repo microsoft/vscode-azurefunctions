@@ -82,3 +82,8 @@ export function getFunctionsWorkerRuntime(language: string | undefined): string 
             return undefined;
     }
 }
+
+export function getFuncWatchProblemMatcher(language: string | undefined): string {
+    const runtime: string | undefined = getFunctionsWorkerRuntime(language);
+    return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
+}

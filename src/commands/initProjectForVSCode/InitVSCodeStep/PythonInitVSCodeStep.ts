@@ -7,10 +7,11 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extInstallCommand, extInstallTaskName, func, funcWatchProblemMatcher, gitignoreFileName, hostStartCommand, pythonVenvSetting } from "../../../constants";
+import { extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, ProjectLanguage, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
+import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { IPythonVenvWizardContext } from '../../createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
@@ -40,14 +41,14 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
         return pythonDebugConfig;
     }
 
-    protected getTasks(): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         const pipInstallLabel: string = 'pipInstall';
         const dependsOn: string | undefined = this.useFuncExtensionsInstall ? extInstallTaskName : this._venvName ? pipInstallLabel : undefined;
         const tasks: TaskDefinition[] = [
             {
                 type: func,
                 command: hostStartCommand,
-                problemMatcher: funcWatchProblemMatcher,
+                problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
                 dependsOn
             }

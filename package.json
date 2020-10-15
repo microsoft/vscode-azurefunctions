@@ -793,6 +793,36 @@
                     "endsPattern": "^.*(Worker process started and initialized|Host lock lease acquired by instance ID).*$"
                 },
                 "severity": "error"
+            },
+            {
+                "name": "func-dotnet-watch",
+                "label": "%azureFunctions.problemMatchers.funcDotnetWatch%",
+                "base": "$func-watch"
+            },
+            {
+                "name": "func-java-watch",
+                "label": "%azureFunctions.problemMatchers.funcJavaWatch%",
+                "base": "$func-watch"
+            },
+            {
+                "name": "func-node-watch",
+                "label": "%azureFunctions.problemMatchers.funcNodeWatch%",
+                "base": "$func-watch"
+            },
+            {
+                "name": "func-powershell-watch",
+                "label": "%azureFunctions.problemMatchers.funcPowerShellWatch%",
+                "base": "$func-watch",
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^.*(Job host stopped|signaling restart).*$",
+                    "endsPattern": "^.*(Host lock lease acquired by instance ID).*$"
+                }
+            },
+            {
+                "name": "func-python-watch",
+                "label": "%azureFunctions.problemMatchers.funcPythonWatch%",
+                "base": "$func-watch"
             }
         ],
         "keybindings": [
