@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WorkspaceFolder } from "vscode";
+import { Uri, WorkspaceFolder } from "vscode";
 import { IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage } from "../../constants";
 import { FuncVersion } from "../../FuncVersion";
@@ -17,6 +17,9 @@ export interface IProjectWizardContext extends IActionContext {
     languageFilter?: RegExp;
     version: FuncVersion;
     openBehavior?: OpenBehavior;
+
+    generateFromOpenAPI?: boolean;
+    openApiSpecificationFile?: Uri[];
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';

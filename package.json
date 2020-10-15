@@ -1056,6 +1056,7 @@
         "all": "npm i && npm run lint && npm test"
     },
     "devDependencies": {
+        "@azure/arm-resources": "^3.0.0",
         "@types/fs-extra": "^8.1.0",
         "@types/glob": "^7.1.1",
         "@types/gulp": "^4.0.6",
@@ -1070,7 +1071,6 @@
         "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "^3.0.30",
-        "@azure/arm-resources": "^3.0.0",
         "copy-webpack-plugin": "^6.0.3",
         "glob": "^7.1.6",
         "gulp": "^4.0.2",

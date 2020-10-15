@@ -24,6 +24,8 @@ import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
+import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
+import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
@@ -83,7 +85,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            // Add settings to context that were programatically passed in
+            // Add settings to context that were programmatically passed in
             for (const key of Object.keys(this._functionSettings)) {
                 context[key.toLowerCase()] = this._functionSettings[key];
             }
@@ -114,6 +116,26 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);
             return { promptSteps, executeSteps, title };
+        } else if (context.generateFromOpenAPI) {
+            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
+            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
+
+            switch (context.language) {
+                case ProjectLanguage.Java:
+                    promptSteps.push(new JavaPackageNameStep());
+                    break;
+                case ProjectLanguage.CSharp:
+                    promptSteps.push(new DotnetNamespaceStep());
+                    break;
+                default:
+                    break;
+            }
+
+            promptSteps.push(new OpenAPIGetSpecificationFileStep());
+            executeSteps.push(await OpenAPICreateStep.createStep(context));
+
+            const title: string = localize('createFunction', 'Create new {0}', 'HTTP Triggers from OpenAPI (v2/v3) Specification File');
+            return { promptSteps, executeSteps, title };
         } else {
             return undefined;
         }
@@ -137,6 +159,9 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
                     await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
                 }
+            } else if (result === 'openAPI') {
+                context.generateFromOpenAPI = true;
+                break;
             } else {
                 context.functionTemplate = result;
             }
@@ -165,6 +190,14 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             });
         }
 
+        if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || language === ProjectLanguage.Python || language === ProjectLanguage.TypeScript) {
+            picks.push({
+                label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
+                data: 'openAPI',
+                suppressPersistence: true
+            });
+        }
+
         picks.push({
             label: localize('selectFilter', '$(gear) Change template filter'),
             description: localize('currentFilter', 'Current: {0}', templateFilter),
@@ -182,7 +215,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'changeFilter' | 'skipForNow';
+type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI';
 
 async function promptForTemplateFilter(): Promise<TemplateFilter> {
     const picks: IAzureQuickPickItem<TemplateFilter>[] = [

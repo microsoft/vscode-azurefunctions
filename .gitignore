@@ -70,3 +70,6 @@ stats.json
 
 # debugging artifacts
 resources/dotnetTemplates
+
+# macOS related extra files
+.DS_Store
