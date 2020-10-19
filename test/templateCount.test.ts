@@ -21,7 +21,7 @@ function addSuite(source: TemplateSource | undefined): void {
             [ProjectLanguage.JavaScript, FuncVersion.v3, 14],
             [ProjectLanguage.CSharp, FuncVersion.v1, 12],
             [ProjectLanguage.CSharp, FuncVersion.v2, 10],
-            [ProjectLanguage.CSharp, FuncVersion.v3, 10],
+            [ProjectLanguage.CSharp, FuncVersion.v3, 11],
             [ProjectLanguage.Python, FuncVersion.v2, 12],
             [ProjectLanguage.Python, FuncVersion.v3, 12],
             [ProjectLanguage.TypeScript, FuncVersion.v2, 14],
