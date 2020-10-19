@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.0.0 - 2020-10-20
+
+### Added
+- Preview support for creating custom handler projects and functions
+- Preview support for generating functions from an OpenAPI specification
+- Extended deployment slot support to Linux consumption apps
+- Warn when attempting to deploy a 64-bit C# project to a 32-bit Function App (thanks @prabh-62)
+- Allow comments in "local.settings.json"
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.0.0%22+is%3Aclosed)
+
 ## 0.24.1 - 2020-09-21
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.24.1%22+is%3Aclosed)
