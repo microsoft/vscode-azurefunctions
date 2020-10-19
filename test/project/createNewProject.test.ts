@@ -22,7 +22,7 @@ suite('Create New Project', async () => {
         testCases.push(
             { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version) },
             { ...getTypeScriptValidateOptions(version) },
-            { ...getPowerShellValidateOptions(version) },
+            { ...getPowerShellValidateOptions(version), timeout: 60 * 1000 },
             { ...getDotnetScriptValidateOptions(ProjectLanguage.CSharpScript, version), isHiddenLanguage: true },
             { ...getDotnetScriptValidateOptions(ProjectLanguage.FSharpScript, version), isHiddenLanguage: true },
         );
