@@ -6,7 +6,7 @@
 - Preview support for creating custom handler projects and functions
 - Preview support for generating functions from an OpenAPI specification
 - Extended deployment slot support to Linux consumption apps
-- Warn when attempting to deploy a 64 bit C# project to a 32 bit Function App (thanks @prabh-62)
+- Warn when attempting to deploy a 64-bit C# project to a 32-bit Function App (thanks @prabh-62)
 - Allow comments in "local.settings.json"
 
 ### Fixed
