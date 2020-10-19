@@ -68,6 +68,17 @@ function addSuite(version: FuncVersion): void {
             );
         });
 
+        // Doesn't work on v2: https://github.com/microsoft/vscode-azurefunctions/issues/792
+        if (version !== FuncVersion.v2) {
+            const eventGridTrigger: string = 'EventGridTrigger';
+            test(eventGridTrigger, async () => {
+                await csTester.testCreateFunction(
+                    eventGridTrigger,
+                    'TestCompany.TestFunction'
+                );
+            });
+        }
+
         const eventHubTrigger: string = 'EventHubTrigger';
         test(eventHubTrigger, async () => {
             await csTester.testCreateFunction(

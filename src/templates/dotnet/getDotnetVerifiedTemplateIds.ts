@@ -14,12 +14,12 @@ export function getDotnetVerifiedTemplateIds(version: string): string[] {
         'TimerTrigger',
         'ServiceBusTopicTrigger',
         'ServiceBusQueueTrigger',
-        'CosmosDBTrigger'
+        'CosmosDBTrigger',
+        'EventGridTrigger'
     ];
 
     if (version === FuncVersion.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
-            'EventGridTrigger',
             'GenericWebHook',
             'GitHubWebHook',
             'HttpTriggerWithParameters'
