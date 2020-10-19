@@ -1,4 +1,4 @@
-# Azure Functions for Visual Studio Code (Preview)
+# Azure Functions for Visual Studio Code
 
 <!-- region exclude-from-marketplace -->
 
