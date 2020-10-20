@@ -1044,7 +1044,7 @@
         "build": "tsc",
         "compile": "tsc -watch",
         "cleanReadme": "gulp cleanReadme",
-        "package": "vsce package",
+        "package": "vsce package --githubBranch main",
         "lint": "tslint --project tsconfig.json -t verbose",
         "lint-fix": "tslint --project tsconfig.json -t verbose --fix",
         "pretest": "npm run webpack-prod && gulp preTest",
