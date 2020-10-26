@@ -69,8 +69,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             try {
                 await cpUtils.executeCommand(ext.outputChannel, undefined, 'autorest', ...args);
             } catch (error) {
-                const message: string = localize('autorestNotRunSuccessfully',
-                    `Failed to run "autorest.${pluginRunPrefix}-${pluginRun}" | Click "Report an Issue" to report the error.`);
+                const message: string = localize('autorestNotRunSuccessfully', `Failed to run "autorest.${pluginRunPrefix}-${pluginRun}" | Click "Report an Issue" to report the error.`);
                 if (!wizardContext.errorHandling.suppressDisplay) {
                     window.showErrorMessage(message, DialogResponses.reportAnIssue).then(async result => {
                         if (result === DialogResponses.reportAnIssue) {
