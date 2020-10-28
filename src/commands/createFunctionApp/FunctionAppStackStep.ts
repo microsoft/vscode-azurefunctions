@@ -26,9 +26,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
     }
 
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
-        if (context.newSiteRuntime) {
-            return false;
-        } else if (context.stackFilter) {
+        if (context.stackFilter) {
             const picks: IAzureQuickPickItem<INewSiteStacks>[] = this.getPicks(context);
             if (picks.length === 1) {
                 // This needs to be set in `shouldPrompt` instead of `prompt`, otherwise the back button won't work
