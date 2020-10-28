@@ -3,26 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
-import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
 import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { ProjectLanguage, requirementsFileName } from "../../../constants";
+import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
-import { confirmEditJsonFile, confirmOverwriteFile } from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';
 import { IFunctionWizardContext } from "../IFunctionWizardContext";
+import { openApiUtils } from './OpenApiUtils';
 
 export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardContext> {
     public priority: number = 220;
 
-    public static async createStep(context: IActionContext): Promise<OpenAPICreateStep> {
-        await validateAutorestInstalled(context);
+    public static async createStep(context: IActionContext & IFunctionWizardContext): Promise<OpenAPICreateStep> {
+        await openApiUtils.validateAutorestInstalled(context);
+
+        switch (context.language) {
+            case ProjectLanguage.Java:
+                await openApiUtils.validateJavaForAutorestInstalled(context);
+                break;
+            case ProjectLanguage.CSharp:
+                await openApiUtils.validateDotnetForAutorestInstalled(context);
+                break;
+            case ProjectLanguage.Python:
+                await openApiUtils.validatePythonForAutorestInstalled(context);
+            default:
+                break;
+        }
+
         return new OpenAPICreateStep();
     }
 
@@ -69,7 +81,7 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
             try {
                 await cpUtils.executeCommand(ext.outputChannel, undefined, 'autorest', ...args);
             } catch (error) {
-                const message: string = localize('autorestNotRunSuccessfully', `Failed to run "autorest.${pluginRunPrefix}-${pluginRun}" | Click "Report an Issue" to report the error.`);
+                const message: string = localize('autorestNotRunSuccessfully', `Failed to run "autorest.${pluginRunPrefix}-${pluginRun}".`);
                 if (!wizardContext.errorHandling.suppressDisplay) {
                     window.showErrorMessage(message, DialogResponses.reportAnIssue).then(async result => {
                         if (result === DialogResponses.reportAnIssue) {
@@ -85,10 +97,10 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
 
         switch (wizardContext.language) {
             case ProjectLanguage.TypeScript:
-                await addAutorestSpecificTypescriptDependencies(wizardContext);
+                await openApiUtils.addAutorestSpecificTypescriptDependencies(wizardContext);
                 break;
             case ProjectLanguage.Python:
-                await addAutorestSpecificPythonDependencies(wizardContext);
+                await openApiUtils.addAutorestSpecificPythonDependencies(wizardContext);
                 break;
             default:
                 break;
@@ -98,67 +110,4 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
     public shouldExecute(): boolean {
         return true;
     }
-}
-
-async function validateAutorestInstalled(context: IActionContext): Promise<void> {
-    try {
-        await cpUtils.executeCommand(undefined, undefined, 'autorest', '--version');
-    } catch (error) {
-        const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
-        if (!context.errorHandling.suppressDisplay) {
-            window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
-                if (result === DialogResponses.learnMore) {
-                    await openUrl('https://aka.ms/autorest');
-                }
-            });
-            context.errorHandling.suppressDisplay = true;
-        }
-
-        throw new Error(message);
-    }
-}
-
-async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizardContext): Promise<void> {
-    const coreHttp: string = '@azure/core-http';
-    const coreHttpVersion: string = '^1.1.4';
-    const packagePath: string = path.join(context.projectPath, 'package.json');
-
-    await confirmEditJsonFile(packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
-        // tslint:disable-next-line: strict-boolean-expressions
-        data.devDependencies = data.devDependencies || {};
-        if (!data.devDependencies[coreHttp]) {
-            data.devDependencies[coreHttp] = coreHttpVersion;
-        }
-        return data;
-    });
-}
-
-async function addAutorestSpecificPythonDependencies(context: IFunctionWizardContext): Promise<void> {
-
-    let oldRequirements: string = '';
-    let newRequirements: string = '';
-    const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
-
-    // Current list of dependencies to be added to support stencil generated projects.
-    const dependenciesToAddArray: string[] = ['msrest'];
-
-    // Some custom requirements might not have newline character added already.
-    const dependenciesToAdd: string = `\n${dependenciesToAddArray.join('\n')}\n`;
-
-    if (await fse.pathExists(requirementsPath)) {
-        try {
-            oldRequirements = (await fse.readFile(requirementsPath)).toString();
-            newRequirements = oldRequirements.concat(dependenciesToAdd);
-        } catch (error) {
-            // If we failed to parse or edit the existing file, just ask to overwrite the file completely
-            if (await confirmOverwriteFile(requirementsPath)) {
-                newRequirements = dependenciesToAdd;
-            } else {
-                return;
-            }
-        }
-    } else {
-        newRequirements = dependenciesToAdd;
-    }
-    await fse.writeFile(requirementsPath, newRequirements);
 }

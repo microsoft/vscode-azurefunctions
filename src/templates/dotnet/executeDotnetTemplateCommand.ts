@@ -45,6 +45,10 @@ export async function validateDotnetInstalled(context: IActionContext): Promise<
     await getFramework(context, undefined);
 }
 
+export async function getDotnetInstalled(context: IActionContext): Promise<string> {
+    return getFramework(context, undefined);
+}
+
 let cachedFramework: string | undefined;
 async function getFramework(context: IActionContext, workingDirectory: string | undefined): Promise<string> {
     if (!cachedFramework) {
