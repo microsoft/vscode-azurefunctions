@@ -1034,6 +1034,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.suppressProject%",
                         "default": false
+                    },
+                    "azureFunctions.showHiddenStacks": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showHiddenStacks%",
+                        "default": false
                     }
                 }
             }

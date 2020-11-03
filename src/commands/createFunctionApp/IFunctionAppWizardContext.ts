@@ -4,24 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAppServiceWizardContext, SiteClient } from 'vscode-azureappservice';
+import { ICreateChildImplContext } from 'vscode-azureextensionui';
 import { FuncVersion } from '../../FuncVersion';
-import { IFunctionStackMajorVersion } from './functionStacks';
+import { AppStackMajorVersion, AppStackMinorVersion } from './stacks/models/AppStackModel';
+import { FunctionAppRuntimes, FunctionAppStack } from './stacks/models/FunctionAppStackModel';
 
-export interface IFunctionAppWizardContext extends IAppServiceWizardContext {
+export type FullFunctionAppStack = {
+    stack: FunctionAppStack;
+    majorVersion: AppStackMajorVersion<FunctionAppRuntimes>;
+    minorVersion: AppStackMinorVersion<FunctionAppRuntimes>;
+};
+
+export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext {
     version: FuncVersion;
     language: string | undefined;
     stackFilter?: string;
-    newSiteStack?: INewSiteStacks;
+    newSiteStack?: FullFunctionAppStack;
     siteClient?: SiteClient;
-}
-
-export interface INewSiteStacks {
-    name: string;
-    displayVersion: string;
-    windows?: INewSiteStack;
-    linux?: INewSiteStack;
-}
-
-export interface INewSiteStack extends IFunctionStackMajorVersion {
-    name: string;
 }

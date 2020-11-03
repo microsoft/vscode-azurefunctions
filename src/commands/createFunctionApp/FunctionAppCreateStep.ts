@@ -17,19 +17,21 @@ import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { enableFileLogging } from '../logstream/enableFileLogging';
-import { IFunctionAppWizardContext, INewSiteStack } from './IFunctionAppWizardContext';
+import { FullFunctionAppStack, IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
+import { FunctionAppRuntimeSettings } from './stacks/models/FunctionAppStackModel';
 
 export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWizardContext> {
     public priority: number = 140;
 
     public async execute(context: IFunctionAppWizardContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const os: WebsiteOS = nonNullProp(context, 'newSiteOS');
-        const stack: INewSiteStack = nonNullProp(nonNullProp(context, 'newSiteStack'), os);
+        const stack: FullFunctionAppStack = nonNullProp(context, 'newSiteStack');
 
         context.telemetry.properties.newSiteOS = os;
-        context.telemetry.properties.newSiteStack = stack.name;
-        context.telemetry.properties.newSiteStackVersion = stack.runtimeVersion;
+        context.telemetry.properties.newSiteStack = stack.stack.value;
+        context.telemetry.properties.newSiteMajorVersion = stack.majorVersion.value;
+        context.telemetry.properties.newSiteMinorVersion = stack.minorVersion.value;
         context.telemetry.properties.planSkuTier = context.plan?.sku?.tier;
 
         const message: string = localize('creatingNewApp', 'Creating new function app "{0}"...', context.newSiteName);
@@ -68,8 +70,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return !context.site;
     }
 
-    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: INewSiteStack): Promise<SiteModels.SiteConfig> {
-        const newSiteConfig: SiteModels.SiteConfig = stack.siteConfigPropertiesDictionary;
+    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteModels.SiteConfig> {
+        const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
+        const newSiteConfig: SiteModels.SiteConfig = stackSettings.siteConfigPropertiesDictionary;
 
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
@@ -82,7 +85,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: extensionVersionKey,
                 value: '~' + getMajorVersion(context.version)
             },
-            ...Object.entries(stack.appSettingsDictionary).map(([name, value]) => { return { name, value }; })
+            ...Object.entries(stackSettings.appSettingsDictionary).map(([name, value]) => { return { name, value }; })
         ];
 
         // This setting only applies for v1 https://github.com/Microsoft/vscode-azurefunctions/issues/640
