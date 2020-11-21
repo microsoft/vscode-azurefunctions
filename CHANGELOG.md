@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.0.1 - 2020-11-11
+
+### Added
+- Dynamically retrieve the runtime stacks available in Azure so that the extension supports them as soon as possible, including upcoming preview support for Node 14
+
 ## 1.0.0 - 2020-10-20
 
 ### Added

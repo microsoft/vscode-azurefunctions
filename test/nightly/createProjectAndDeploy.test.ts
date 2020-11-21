@@ -40,7 +40,7 @@ suite('Create Project and Deploy', async function (this: Mocha.Suite): Promise<v
 
     test('CSharp', async () => {
         const namespace: string = 'Company.Function';
-        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp3.1'), createFunctionInputs: [namespace] });
+        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp3.1'), deployInputs: [/net.*3\.1/i], createFunctionInputs: [namespace] });
     });
 
     test('PowerShell', async function (this: Mocha.Context): Promise<void> {
