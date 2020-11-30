@@ -78,6 +78,7 @@
         "onCommand:azureFunctions.swapSlot",
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
+        "onCommand:azureFunctions.reportIssue",
         "workspaceContains:host.json",
         "workspaceContains:*/host.json",
         "onView:azFuncTree",
@@ -362,6 +363,11 @@
             {
                 "command": "azureFunctions.setAzureWebJobsStorage",
                 "title": "%azureFunctions.setAzureWebJobsStorage%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.reportIssue",
+                "title": "%azureFunctions.reportIssue%",
                 "category": "Azure Functions"
             }
         ],
@@ -1116,7 +1122,7 @@
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
         "vscode-azureappservice": "^0.69.0",
-        "vscode-azureextensionui": "^0.36.0",
+        "vscode-azureextensionui": "^0.36.2",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
