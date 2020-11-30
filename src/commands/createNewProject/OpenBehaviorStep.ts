@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IProjectWizardContext, OpenBehavior } from './IProjectWizardContext';
 
@@ -17,7 +16,7 @@ export class OpenBehaviorStep extends AzureWizardPromptStep<IProjectWizardContex
         ];
 
         const placeHolder: string = localize('selectOpenBehavior', 'Select how you would like to open your project');
-        context.openBehavior = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        context.openBehavior = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {

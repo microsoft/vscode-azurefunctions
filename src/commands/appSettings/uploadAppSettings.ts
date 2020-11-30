@@ -24,7 +24,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
     }
 
     const client: IAppSettingsClient = node.client;
-    await node.runWithTemporaryDescription(localize('uploading', 'Uploading...'), async () => {
+    await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
         await uploadAppSettingsInternal(context, client, workspacePath);
     });
 }

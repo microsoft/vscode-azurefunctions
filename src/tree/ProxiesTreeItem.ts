@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getFile, ISiteFile, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzureParentTreeItem, AzureTreeItem, DialogResponses, IActionContext, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
@@ -83,9 +83,9 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         }
     }
 
-    public async deleteProxy(name: string): Promise<void> {
+    public async deleteProxy(context: IActionContext, name: string): Promise<void> {
         const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {

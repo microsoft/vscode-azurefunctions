@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IBindingWizardContext } from './IBindingWizardContext';
 
@@ -17,7 +16,7 @@ export class BindingDirectionStep extends AzureWizardPromptStep<IBindingWizardCo
             { label: 'in', data: 'in' },
             { label: 'out', data: 'out' }
         ];
-        context.bindingDirection = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        context.bindingDirection = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     public shouldPrompt(context: IBindingWizardContext): boolean {

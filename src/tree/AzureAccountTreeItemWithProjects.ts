@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureAccountTreeItemBase, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureAccountTreeItemBase, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
 import { funcVersionSetting, hostFileName, pomXmlFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
@@ -29,12 +29,22 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
     public constructor(testAccount?: {}) {
         super(undefined, testAccount);
-        this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => await this.refresh()));
+        this.disposables.push(workspace.onDidChangeWorkspaceFolders(async () => {
+            await callWithTelemetryAndErrorHandling('AzureAccountTreeItemWithProjects.onDidChangeWorkspaceFolders', async (context: IActionContext) => {
+                context.errorHandling.suppressDisplay = true;
+                context.telemetry.suppressIfSuccessful = true;
+                await this.refresh(context);
+            });
+        }));
         this.disposables.push(workspace.onDidChangeConfiguration(async e => {
-            const settings: string[] = [projectLanguageSetting, funcVersionSetting, projectSubpathSetting];
-            if (settings.some(s => e.affectsConfiguration(`${ext.prefix}.${s}`))) {
-                await this.refresh();
-            }
+            await callWithTelemetryAndErrorHandling('AzureAccountTreeItemWithProjects.onDidChangeConfiguration', async (context: IActionContext) => {
+                context.errorHandling.suppressDisplay = true;
+                context.telemetry.suppressIfSuccessful = true;
+                const settings: string[] = [projectLanguageSetting, funcVersionSetting, projectSubpathSetting];
+                if (settings.some(s => e.affectsConfiguration(`${ext.prefix}.${s}`))) {
+                    await this.refresh(context);
+                }
+            });
         }));
     }
 

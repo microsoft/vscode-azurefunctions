@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 
@@ -17,7 +16,7 @@ export class LocalAppSettingValueStep extends AzureWizardPromptStep<IBindingWiza
     }
 
     public async prompt(context: IBindingWizardContext): Promise<void> {
-        context[this._key] = await ext.ui.showInputBox({
+        context[this._key] = await context.ui.showInputBox({
             placeHolder: localize('appSettingValuePlaceholder', 'App setting value'),
             prompt: localize('appSettingValuePrompt', 'Provide a connection string')
         });

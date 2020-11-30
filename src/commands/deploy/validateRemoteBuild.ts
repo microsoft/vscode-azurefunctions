@@ -8,7 +8,6 @@ import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, packTaskName, preDeployTaskSetting, ProjectLanguage } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
@@ -24,7 +23,7 @@ export async function validateRemoteBuild(context: IActionContext, client: SiteC
             const learnMoreLink: string = 'https://aka.ms/AA5vsfd';
             const downgrade: vscode.MessageItem = { title: localize('downgrade', 'Downgrade config') };
             context.telemetry.properties.cancelStep = 'validateRemoteBuild';
-            await ext.ui.showWarningMessage(message, { learnMoreLink, modal: true }, downgrade);
+            await context.ui.showWarningMessage(message, { learnMoreLink, modal: true }, downgrade);
             context.telemetry.properties.cancelStep = undefined;
 
             const projectPath: string = await tryGetFunctionProjectRoot(workspacePath, true /* suppressPrompt */) || workspacePath;

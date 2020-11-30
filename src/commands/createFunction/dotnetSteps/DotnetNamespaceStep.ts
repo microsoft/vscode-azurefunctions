@@ -4,15 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-// tslint:disable-next-line:no-require-imports
-import XRegExp = require('xregexp');
-import { ext } from '../../../extensionVariables';
+import * as XRegExp from 'xregexp';
 import { localize } from "../../../localize";
 import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 
 export class DotnetNamespaceStep extends AzureWizardPromptStep<IDotnetFunctionWizardContext> {
     public async prompt(context: IDotnetFunctionWizardContext): Promise<void> {
-        context.namespace = await ext.ui.showInputBox({
+        context.namespace = await context.ui.showInputBox({
             placeHolder: localize('namespacePlaceHolder', 'Namespace'),
             prompt: localize('namespacePrompt', 'Provide a namespace'),
             validateInput: validateCSharpNamespace,

@@ -33,7 +33,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
             buttons.push(skipForNow);
         }
 
-        const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, ...buttons);
+        const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === selectAccount) {
             context.azureWebJobsStorageType = 'azure';
         } else if (result === useEmulator) {

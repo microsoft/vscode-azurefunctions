@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { getContainingWorkspace, selectWorkspaceFolder } from '../../utils/workspace';
 import { IProjectWizardContext } from './IProjectWizardContext';
@@ -23,7 +22,7 @@ export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext>
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         const placeHolder: string = localize('selectNewProjectFolder', 'Select the folder that will contain your function project');
-        FolderListStep.setProjectPath(context, await selectWorkspaceFolder(ext.ui, placeHolder));
+        FolderListStep.setProjectPath(context, await selectWorkspaceFolder(context.ui, placeHolder));
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {

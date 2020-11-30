@@ -8,7 +8,6 @@ import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { PackageManager } from '../constants';
-import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullProp } from '../utils/nonNull';
@@ -46,7 +45,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                 if (showMultiCoreToolsWarning) {
                     const message: string = localize('multipleInstalls', 'Detected multiple installs of the func cli.');
                     const selectUninstall: vscode.MessageItem = { title: localize('selectUninstall', 'Select version to uninstall') };
-                    const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, selectUninstall, DialogResponses.dontWarnAgain);
+                    const result: vscode.MessageItem = await context.ui.showWarningMessage(message, selectUninstall, DialogResponses.dontWarnAgain);
                     if (result === selectUninstall) {
                         await uninstallFuncCoreTools(context, packageManagers);
                     } else if (result === DialogResponses.dontWarnAgain) {
@@ -87,8 +86,8 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                     let result: vscode.MessageItem;
 
                     do {
-                        result = packageManager !== undefined ? await ext.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
-                            await ext.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                        result = packageManager !== undefined ? await context.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
+                            await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
                             await openUrl('https://aka.ms/azFuncOutdated');
                         } else if (result === update) {

@@ -6,7 +6,6 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { AzureWizardPromptStep } from 'vscode-azureextensionui';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
@@ -16,7 +15,7 @@ export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> ext
     public async prompt(context: T): Promise<void> {
         const template: IFunctionTemplate = nonNullProp(context, 'functionTemplate');
         const uniqueFunctionName: string | undefined = await this.getUniqueFunctionName(context);
-        context.functionName = await ext.ui.showInputBox({
+        context.functionName = await context.ui.showInputBox({
             placeHolder: localize('funcNamePlaceholder', 'Function name'),
             prompt: localize('funcNamePrompt', 'Provide a function name'),
             validateInput: async (s: string): Promise<string | undefined> => await this.validateFunctionName(context, s),

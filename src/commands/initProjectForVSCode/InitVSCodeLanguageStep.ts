@@ -6,7 +6,6 @@
 import { QuickPickItem, QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
@@ -37,7 +36,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
         ];
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', "Select your project's language") };
-        context.language = <ProjectLanguage>(await ext.ui.showQuickPick(languagePicks, options)).label;
+        context.language = <ProjectLanguage>(await context.ui.showQuickPick(languagePicks, options)).label;
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {

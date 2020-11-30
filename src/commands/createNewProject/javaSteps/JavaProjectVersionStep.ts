@@ -5,7 +5,6 @@
 
 import { InputBoxOptions } from "vscode";
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
@@ -16,7 +15,7 @@ export class JavaProjectVersionStep extends AzureWizardPromptStep<IJavaProjectWi
             prompt: localize('versionPrompt', 'Provide a version for your project'),
             value: '1.0-SNAPSHOT'
         };
-        context.javaProjectVersion = await ext.ui.showInputBox(options);
+        context.javaProjectVersion = await context.ui.showInputBox(options);
     }
 
     public shouldPrompt(context: IJavaProjectWizardContext): boolean {

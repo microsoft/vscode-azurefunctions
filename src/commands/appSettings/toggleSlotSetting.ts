@@ -12,5 +12,5 @@ export async function toggleSlotSetting(context: IActionContext, node?: AppSetti
         node = await ext.tree.showTreeItemPicker<AppSettingTreeItem>(AppSettingTreeItem.contextValue, context);
     }
 
-    await node.toggleSlotSetting();
+    await node.toggleSlotSetting(context);
 }

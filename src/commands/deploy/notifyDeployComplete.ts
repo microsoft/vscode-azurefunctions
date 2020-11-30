@@ -59,7 +59,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
 async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
     const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
-    await node.treeDataProvider.refresh(functionsNode);
+    await node.treeDataProvider.refresh(context, functionsNode);
 
     const logOptions: {} = { resourceName: node.client.fullName };
     let hasHttpTriggers: boolean = false;
