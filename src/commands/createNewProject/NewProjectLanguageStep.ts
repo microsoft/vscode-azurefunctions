@@ -6,7 +6,6 @@
 import { QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
 import { previewDescription, ProjectLanguage } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -61,7 +60,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
-        const result: ProjectLanguage | undefined = (await ext.ui.showQuickPick(languagePicks, options)).data;
+        const result: ProjectLanguage | undefined = (await context.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
             await openUrl('https://aka.ms/AA4ul9b');
             context.telemetry.properties.cancelStep = 'viewSampleProjects';

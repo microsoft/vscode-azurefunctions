@@ -17,6 +17,7 @@ export async function stopFunctionApp(context: IActionContext, node?: SlotTreeIt
 
     const client: SiteClient = node.root.client;
     await node.runWithTemporaryDescription(
+        context,
         localize('stopping', 'Stopping...'),
         async () => {
             await client.stop();

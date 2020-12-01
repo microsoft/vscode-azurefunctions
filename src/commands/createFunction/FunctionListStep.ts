@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as escape from 'escape-string-regexp';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
@@ -149,12 +149,12 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
                 localize('selectFuncTemplate', 'Select a template for your function');
-            const result: IFunctionTemplate | TemplatePromptResult = (await ext.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
+            const result: IFunctionTemplate | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
                 context.telemetry.properties.templateId = 'skipForNow';
                 break;
             } else if (result === 'changeFilter') {
-                templateFilter = await promptForTemplateFilter();
+                templateFilter = await promptForTemplateFilter(context);
                 // can only update setting if it's open in a workspace
                 if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
                     await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
@@ -217,7 +217,7 @@ interface IFunctionListStepOptions {
 
 type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI';
 
-async function promptForTemplateFilter(): Promise<TemplateFilter> {
+async function promptForTemplateFilter(context: IActionContext): Promise<TemplateFilter> {
     const picks: IAzureQuickPickItem<TemplateFilter>[] = [
         { label: TemplateFilter.Verified, description: localize('verifiedDescription', '(Subset of "Core" that has been verified in VS Code)'), data: TemplateFilter.Verified },
         { label: TemplateFilter.Core, data: TemplateFilter.Core },
@@ -225,7 +225,7 @@ async function promptForTemplateFilter(): Promise<TemplateFilter> {
     ];
 
     const options: IAzureQuickPickOptions = { suppressPersistence: true, placeHolder: localize('selectFilter', 'Select a template filter') };
-    return (await ext.ui.showQuickPick(picks, options)).data;
+    return (await context.ui.showQuickPick(picks, options)).data;
 }
 
 /**

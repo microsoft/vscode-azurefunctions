@@ -38,7 +38,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
             }
 
             // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
-            input = await ext.ui.showWarningMessage(message, { modal: true }, ...items);
+            input = await context.ui.showWarningMessage(message, { modal: true }, ...items);
 
             context.telemetry.properties.dialogResult = input.title;
 

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { getGlobalSetting } from "../../../vsCodeConfig/settings";
 import { EnterPythonAliasStep } from "./EnterPythonAliasStep";
@@ -16,7 +15,7 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
 
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
         const placeHolder: string = localize('selectAlias', 'Select a Python interpreter to create a virtual environment');
-        const result: string | boolean = (await ext.ui.showQuickPick(getPicks(context), { placeHolder })).data;
+        const result: string | boolean = (await context.ui.showQuickPick(getPicks(context), { placeHolder })).data;
         if (typeof result === 'string') {
             context.pythonAlias = result;
             context.telemetry.properties.pythonAliasBehavior = 'selectAlias';

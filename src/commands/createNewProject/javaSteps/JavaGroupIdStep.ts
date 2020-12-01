@@ -5,7 +5,6 @@
 
 import { InputBoxOptions } from "vscode";
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext, validateMavenIdentifier } from "./IJavaProjectWizardContext";
 
@@ -17,7 +16,7 @@ export class JavaGroupIdStep extends AzureWizardPromptStep<IJavaProjectWizardCon
             validateInput: validateMavenIdentifier,
             value: 'com.function'
         };
-        context.javaGroupId = await ext.ui.showInputBox(options);
+        context.javaGroupId = await context.ui.showInputBox(options);
     }
 
     public shouldPrompt(context: IJavaProjectWizardContext): boolean {

@@ -34,7 +34,7 @@ export class LocalAppSettingListStep extends BindingSettingStepBase {
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
         picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));
         const placeHolder: string = localize('selectAppSetting', 'Select setting from "{0}"', localSettingsFileName);
-        return (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        return (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {

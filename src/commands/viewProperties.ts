@@ -6,6 +6,7 @@
 import { Uri, window } from 'vscode';
 import { IActionContext, openReadOnlyJson } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
@@ -22,7 +23,7 @@ export async function viewProperties(context: IActionContext, node?: SlotTreeIte
         let data: {};
         if (node instanceof SlotTreeItemBase) {
             const siteNode: SlotTreeItemBase = node;
-            await node.runWithTemporaryDescription('Retrieving properties...', async () => {
+            await node.runWithTemporaryDescription(context, localize('retrievingProps', 'Retrieving properties...'), async () => {
                 // `siteConfig` already exists on `node.site`, but has very limited properties for some reason. We want to get the full site config
                 siteNode.site.siteConfig = await siteNode.root.client.getSiteConfig();
             });

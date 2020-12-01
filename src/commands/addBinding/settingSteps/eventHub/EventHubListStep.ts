@@ -18,7 +18,7 @@ export class EventHubListStep extends AzureWizardPromptStep<IEventHubWizardConte
 
         const placeHolder: string = localize('placeHolder', 'Select an event hub');
         const client: EventHubManagementClient = await createEventHubClient(context);
-        const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.eventHubs.listByNamespace(resourceGroupName, namespaceName));
+        const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(context, placeHolder, client.eventHubs.listByNamespace(resourceGroupName, namespaceName));
         if (result) {
             context.eventhubname = nonNullProp(result, 'name');
         }

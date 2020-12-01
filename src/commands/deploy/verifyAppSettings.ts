@@ -32,7 +32,7 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
         if (updateAppSettings) {
             await node.root.client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
-            await node.appSettingsTreeItem.refresh();
+            await node.appSettingsTreeItem.refresh(context);
         }
     }
 }
@@ -55,7 +55,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
         const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
         context.telemetry.properties.cancelStep = 'incompatibleVersion';
         // No need to check result - cancel will throw a UserCancelledError
-        await ext.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
+        await context.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
         context.telemetry.properties.cancelStep = undefined;
     }
 }
@@ -83,7 +83,7 @@ async function verifyWebContentSettings(context: IActionContext, remotePropertie
     const shouldRemoveSettings: boolean = !!(remoteProperties[contentConnectionStringKey] || remoteProperties[contentShareKey]);
     if (shouldRemoveSettings) {
         const message: string = localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', contentConnectionStringKey, contentShareKey);
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         delete remoteProperties[contentConnectionStringKey];
         delete remoteProperties[contentShareKey];
     }

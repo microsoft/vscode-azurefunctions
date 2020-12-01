@@ -5,7 +5,6 @@
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
-import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { getStackPicks } from './getStackPicks';
@@ -13,7 +12,7 @@ import { getStackPicks } from './getStackPicks';
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
-        context.newSiteStack = (await ext.ui.showQuickPick(getStackPicks(context), { placeHolder })).data;
+        context.newSiteStack = (await context.ui.showQuickPick(getStackPicks(context), { placeHolder })).data;
 
         if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
             context.newSiteOS = WebsiteOS.windows;

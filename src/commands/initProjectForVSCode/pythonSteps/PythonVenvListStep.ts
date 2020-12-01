@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IPythonVenvWizardContext } from "../../createNewProject/pythonSteps/IPythonVenvWizardContext";
 
@@ -21,7 +20,7 @@ export class PythonVenvListStep extends AzureWizardPromptStep<IPythonVenvWizardC
     public async prompt(context: IPythonVenvWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<string>[] = this._venvs.map(venv => { return { label: venv, data: venv }; });
         const placeHolder: string = localize('selectVenv', 'Select a virtual environment to use for your project');
-        context.venvName = (await ext.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
+        context.venvName = (await context.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
     }
 
     public shouldPrompt(context: IPythonVenvWizardContext): boolean {

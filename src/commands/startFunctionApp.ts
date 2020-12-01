@@ -17,6 +17,7 @@ export async function startFunctionApp(context: IActionContext, node?: SlotTreeI
 
     const client: SiteClient = node.root.client;
     await node.runWithTemporaryDescription(
+        context,
         localize('starting', 'Starting...'),
         async () => {
             await client.start();

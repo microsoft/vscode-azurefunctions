@@ -14,7 +14,7 @@ import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 
-export async function uninstallFuncCoreTools(_context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
+export async function uninstallFuncCoreTools(context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
     ext.outputChannel.show();
     // tslint:disable-next-line: strict-boolean-expressions
     packageManagers = packageManagers || await getFuncPackageManagers(true /* isFuncInstalled */);
@@ -26,7 +26,7 @@ export async function uninstallFuncCoreTools(_context: IActionContext, packageMa
     } else {
         const placeHolder: string = localize('multipleInstalls', 'Multiple installs of the func cli detected. Select the one to uninstall');
         const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: localize('uninstall', 'Uninstall {0} package', pm), data: pm }; });
-        packageManager = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        packageManager = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     switch (packageManager) {
