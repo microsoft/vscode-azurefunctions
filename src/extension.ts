@@ -180,7 +180,7 @@ async function setupLocalProjectFolder(uri: vscode.Uri, filePath: string, token:
             const functionAppName: string = getNameFromId(resourceId, false);
             const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
-            vscode.window.showInformationMessage(localize('settingUpFunctionAppLocalProjInfoMessage', 'Setting up project for function app "${0}" with language "${1}".', functionAppName, language));
+            vscode.window.showInformationMessage(localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`));
 
             if (downloadAppContent === 'true') {
                 // NOTE: We don't want to download app content for compiled languages.
