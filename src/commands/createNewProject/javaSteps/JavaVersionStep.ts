@@ -5,7 +5,6 @@
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { previewDescription } from "../../../constants";
-import { ext } from "../../../extensionVariables";
 import { hasMinFuncCliVersion } from "../../../funcCoreTools/hasMinFuncCliVersion";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
@@ -25,7 +24,7 @@ export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardCon
             { label: 'Java 11', description: previewDescription, data: '11' },
         ];
         const placeHolder: string = localize('selectJavaVersion', 'Select a version of Java');
-        context.javaVersion = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+        context.javaVersion = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     public shouldPrompt(context: IJavaProjectWizardContext): boolean {

@@ -73,7 +73,7 @@ async function promptToInitializeProject(workspacePath: string, context: IAction
 
         const learnMoreLink: string = 'https://aka.ms/azFuncProject';
         const message: string = localize('uninitializedWarning', 'Detected an Azure Functions Project in folder "{0}" that may have been created outside of VS Code. Initialize for optimal use with VS Code?', path.basename(workspacePath));
-        const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink }, DialogResponses.yes, DialogResponses.dontWarnAgain);
+        const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink }, DialogResponses.yes, DialogResponses.dontWarnAgain);
         if (result === DialogResponses.dontWarnAgain) {
             context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
             await updateGlobalSetting(settingKey, false);

@@ -7,7 +7,6 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage } from '../constants';
-import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
@@ -39,7 +38,7 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
                 const message: string = localize('mismatchTargetFramework', 'The targetFramework "{0}" in your project file does not match the targetFramework "{1}" in your VS Code config.', targetFramework, mismatchTargetFramework);
                 const update: vscode.MessageItem = { title: localize('updateTargetFramework', 'Update VS Code config') };
 
-                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, update, DialogResponses.dontWarnAgain);
+                const result: vscode.MessageItem = await context.ui.showWarningMessage(message, update, DialogResponses.dontWarnAgain);
                 if (result === DialogResponses.dontWarnAgain) {
                     context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
                     await updateWorkspaceSetting(settingKey, false, folder.uri.fsPath);

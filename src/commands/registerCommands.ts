@@ -90,7 +90,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.openInPortal', openInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
-    registerCommand('azureFunctions.refresh', async (_context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(node));
+    registerCommand('azureFunctions.refresh', async (context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(context, node));
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
     registerCommand('azureFunctions.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
@@ -101,7 +101,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.stopFunctionApp', stopFunctionApp);
     registerCommand('azureFunctions.stopStreamingLogs', stopStreamingLogs);
     registerCommand('azureFunctions.swapSlot', swapSlot);
-    registerCommand('azureFunctions.toggleAppSettingVisibility', async (_context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(); }, 250);
+    registerCommand('azureFunctions.toggleAppSettingVisibility', async (context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(context); }, 250);
     registerCommand('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommand('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
     registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);

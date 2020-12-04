@@ -15,17 +15,17 @@ import { ITemplates } from '../ITemplates';
  * Describes a script template before it has been parsed
  */
 export interface IRawTemplate {
-    id: string;
+    id?: string;
     // tslint:disable-next-line:no-reserved-keywords
-    function: {};
-    metadata: {
+    function?: {};
+    metadata?: {
         defaultFunctionName: string;
         name: string;
         language: ProjectLanguage;
         userPrompt?: string[];
-        category: TemplateCategory[] | undefined;
+        category?: TemplateCategory[];
     };
-    files: { [filename: string]: string };
+    files?: { [filename: string]: string };
 }
 
 /**
@@ -52,11 +52,11 @@ interface IRawSetting {
 
 interface IRawBinding {
     // tslint:disable-next-line:no-reserved-keywords
-    type: string;
+    type?: string;
     documentation: string;
     displayName: string;
     direction: string;
-    settings: object[];
+    settings?: IRawSetting[];
 }
 
 /**
@@ -64,7 +64,7 @@ interface IRawBinding {
  */
 export interface IConfig {
     variables: IVariables;
-    bindings: object[];
+    bindings?: IRawBinding[];
 }
 
 /**
@@ -154,20 +154,35 @@ function replaceHtmlLinkWithMarkdown(text: string): string {
 }
 
 export function parseScriptBindings(config: IConfig, resources: IResources): IBindingTemplate[] {
-    return config.bindings.map((rawBinding: IRawBinding) => {
-        const settings: IBindingSetting[] = rawBinding.settings.map((setting: object) => parseScriptSetting(setting, resources, config.variables));
-        return {
-            direction: rawBinding.direction,
-            displayName: getResourceValue(resources, rawBinding.displayName),
-            isHttpTrigger: !!rawBinding.type && /^http/i.test(rawBinding.type),
-            isTimerTrigger: !!rawBinding.type && /^timer/i.test(rawBinding.type),
-            settings,
-            type: rawBinding.type
-        };
-    });
+    const result: IBindingTemplate[] = [];
+    if (config.bindings) {
+        for (const rawBinding of config.bindings) {
+            try {
+                if (rawBinding.type) {
+                    // tslint:disable-next-line: strict-boolean-expressions
+                    const settings: IBindingSetting[] = (rawBinding.settings || []).map((setting: object) => parseScriptSetting(setting, resources, config.variables));
+                    result.push({
+                        direction: rawBinding.direction,
+                        displayName: getResourceValue(resources, rawBinding.displayName),
+                        isHttpTrigger: /^http/i.test(rawBinding.type),
+                        isTimerTrigger: /^timer/i.test(rawBinding.type),
+                        settings,
+                        type: rawBinding.type
+                    });
+                }
+            } catch {
+                // Ignore errors so that a single poorly formed binding does not affect other bindings
+            }
+        }
+    }
+    return result;
 }
 
-export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, bindingTemplates: IBindingTemplate[]): IScriptFunctionTemplate {
+export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResources, bindingTemplates: IBindingTemplate[]): IScriptFunctionTemplate | undefined {
+    if (!rawTemplate.id || !rawTemplate.metadata) {
+        return undefined;
+    }
+
     const functionJson: ParsedFunctionJson = new ParsedFunctionJson(rawTemplate.function);
 
     let language: ProjectLanguage = rawTemplate.metadata.language;
@@ -191,7 +206,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         for (const settingName of rawTemplate.metadata.userPrompt) {
             if (functionJson.triggerBinding) {
                 const triggerBinding: IFunctionBinding = functionJson.triggerBinding;
-                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type === triggerBinding.type);
+                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type.toLowerCase() === triggerBinding.type?.toLowerCase());
                 if (bindingTemplate) {
                     const setting: IBindingSetting | undefined = bindingTemplate.settings.find((bs: IBindingSetting) => bs.name === settingName);
                     if (setting) {
@@ -216,7 +231,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
         language,
         userPromptedSettings,
-        templateFiles: rawTemplate.files,
+        // tslint:disable-next-line: strict-boolean-expressions
+        templateFiles: rawTemplate.files || {},
         // tslint:disable-next-line: strict-boolean-expressions
         categories: rawTemplate.metadata.category || []
     };
@@ -237,8 +253,11 @@ export function parseScriptTemplates(rawResources: object, rawTemplates: object[
     const functionTemplates: IFunctionTemplate[] = [];
     for (const rawTemplate of rawTemplates) {
         try {
-            functionTemplates.push(parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, bindingTemplates));
-        } catch (error) {
+            const parsed: IScriptFunctionTemplate | undefined = parseScriptTemplate(<IRawTemplate>rawTemplate, <IResources>rawResources, bindingTemplates);
+            if (parsed) {
+                functionTemplates.push(parsed);
+            }
+        } catch {
             // Ignore errors so that a single poorly formed template does not affect other templates
         }
     }

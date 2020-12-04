@@ -7,7 +7,6 @@ import { commands, MessageItem, Uri, window, workspace, WorkspaceFolder } from '
 import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
-import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -73,14 +72,14 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
         const newProject: MessageItem = { title: localize('createNewProject', 'Create new project') };
         const openExistingProject: MessageItem = { title: localize('openExistingProject', 'Open existing project') };
-        const result: MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, newProject, openExistingProject);
+        const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, newProject, openExistingProject);
 
         if (result === newProject) {
             // don't wait
             commands.executeCommand('azureFunctions.createNewProject');
             context.telemetry.properties.noWorkspaceResult = 'createNewProject';
         } else {
-            const uri: Uri[] = await ext.ui.showOpenDialog({
+            const uri: Uri[] = await context.ui.showOpenDialog({
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,

@@ -14,7 +14,7 @@ export class ServiceBusListStep extends AzureWizardPromptStep<IServiceBusWizardC
     public async prompt(context: IServiceBusWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select a service bus namespace');
         const client: ServiceBusManagementClient = await createServiceBusClient(context);
-        context.sbNamespace = await promptForResource(placeHolder, client.namespaces.list());
+        context.sbNamespace = await promptForResource(context, placeHolder, client.namespaces.list());
     }
 
     public shouldPrompt(context: IServiceBusWizardContext): boolean {

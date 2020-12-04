@@ -24,7 +24,7 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
     }
 
     const client: IAppSettingsClient = node.client;
-    await node.runWithTemporaryDescription(localize('downloading', 'Downloading...'), async () => {
+    await node.runWithTemporaryDescription(context, localize('downloading', 'Downloading...'), async () => {
         await downloadAppSettingsInternal(context, client);
     });
 }

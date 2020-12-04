@@ -7,7 +7,6 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
-import { ext } from '../../../extensionVariables';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
@@ -33,7 +32,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
 
         const projectName: string = path.basename(context.projectPath);
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
-        await this.confirmOverwriteExisting(context.projectPath, projName);
+        await this.confirmOverwriteExisting(context, projName);
 
         const templateLanguage: string = language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
         const majorVersion: string = getMajorVersion(version);
@@ -44,18 +43,18 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }
 
-    private async confirmOverwriteExisting(projectPath: string, projName: string): Promise<void> {
+    private async confirmOverwriteExisting(context: IProjectWizardContext, projName: string): Promise<void> {
         const filesToCheck: string[] = [projName, gitignoreFileName, localSettingsFileName, hostFileName];
         const existingFiles: string[] = [];
         for (const fileName of filesToCheck) {
-            if (await fse.pathExists(path.join(projectPath, fileName))) {
+            if (await fse.pathExists(path.join(context.projectPath, fileName))) {
                 existingFiles.push(fileName);
             }
         }
 
         if (existingFiles.length > 0) {
             const message: string = localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', '));
-            await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+            await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         }
     }
 }

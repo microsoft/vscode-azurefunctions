@@ -38,7 +38,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             }
         }
 
-        const data: string = await ext.ui.showInputBox({ prompt, value });
+        const data: string = await context.ui.showInputBox({ prompt, value });
         try {
             functionInput = <{}>JSON.parse(data);
         } catch {
@@ -58,7 +58,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     }
 
     let responseText: string | null | undefined;
-    await node.runWithTemporaryDescription(localize('executing', 'Executing...'), async () => {
+    await node.runWithTemporaryDescription(context, localize('executing', 'Executing...'), async () => {
         const headers: { [name: string]: string | undefined } = {};
         if (client) {
             headers['x-functions-key'] = (await client.listHostKeys()).masterKey;

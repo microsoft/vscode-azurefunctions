@@ -19,7 +19,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
     public async prompt(context: IBindingWizardContext): Promise<void> {
         const direction: string = nonNullProp(context, 'bindingDirection');
         const placeHolder: string = localize('selectBinding', 'Select binding with direction "{0}"', direction);
-        context.bindingTemplate = (await ext.ui.showQuickPick(this.getPicks(context, direction), { placeHolder })).data;
+        context.bindingTemplate = (await context.ui.showQuickPick(this.getPicks(context, direction), { placeHolder })).data;
     }
 
     public shouldPrompt(context: IBindingWizardContext): boolean {

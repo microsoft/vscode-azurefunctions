@@ -15,7 +15,7 @@ export class EventHubNamespaceListStep extends AzureWizardPromptStep<IEventHubWi
     public async prompt(context: IEventHubWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select an event hub namespace');
         const client: EventHubManagementClient = await createEventHubClient(context);
-        const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(placeHolder, client.namespaces.list());
+        const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(context, placeHolder, client.namespaces.list());
         if (result) {
             context.namespaceName = nonNullProp(result, 'name');
             context.resourceGroupName = getResourceGroupFromId(nonNullProp(result, 'id'));

@@ -5,8 +5,7 @@
 
 import { StorageManagementClient, StorageManagementModels } from '@azure/arm-storage';
 import { isArray } from 'util';
-import { IAzureQuickPickItem, IStorageAccountWizardContext } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
+import { IActionContext, IAzureQuickPickItem, IStorageAccountWizardContext } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { createStorageClient } from './azureClients';
 import { nonNullProp, nonNullValue } from './nonNull';
@@ -44,7 +43,7 @@ export interface IBaseResourceWithName {
     _description?: string;
 }
 
-export async function promptForResource<T extends IBaseResourceWithName>(placeHolder: string, resourcesTask: Promise<T[]>): Promise<T | undefined> {
+export async function promptForResource<T extends IBaseResourceWithName>(context: IActionContext, placeHolder: string, resourcesTask: Promise<T[]>): Promise<T | undefined> {
     const picksTask: Promise<IAzureQuickPickItem<T | undefined>[]> = resourcesTask.then((resources: T[]) => {
         const picks: IAzureQuickPickItem<T | undefined>[] = !isArray(resources) ? [] : <IAzureQuickPickItem<T>[]>(resources
             .map((r: T) => r.name ? { data: r, label: r.name, description: r._description } : undefined)
@@ -57,7 +56,7 @@ export async function promptForResource<T extends IBaseResourceWithName>(placeHo
         return picks;
     });
 
-    return (await ext.ui.showQuickPick(picksTask, { placeHolder })).data;
+    return (await context.ui.showQuickPick(picksTask, { placeHolder })).data;
 }
 
 export interface IResourceResult {

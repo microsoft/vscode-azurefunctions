@@ -31,7 +31,7 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
         }
 
         const placeHolder: string = localize('placeHolder', 'Select an event hub policy');
-        const result: (EventHubManagementModels.AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(placeHolder, getEventHubAuthRules());
+        const result: (EventHubManagementModels.AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(context, placeHolder, getEventHubAuthRules());
         if (result) {
             context.authRuleName = nonNullProp(result, 'name');
             context.isNamespaceAuthRule = result._description === namespaceDescription;

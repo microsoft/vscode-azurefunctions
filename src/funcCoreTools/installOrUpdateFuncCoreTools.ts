@@ -5,7 +5,6 @@
 
 import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { PackageManager } from '../constants';
-import { ext } from '../extensionVariables';
 import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
@@ -29,7 +28,7 @@ export async function installOrUpdateFuncCoreTools(context: IActionContext): Pro
         } else {
             const placeHolder: string = localize('multipleInstalls', 'Multiple installs of the func cli detected. Select the one to update');
             const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: localize('update', 'Update {0} package', pm), data: pm }; });
-            packageManager = (await ext.ui.showQuickPick(picks, { placeHolder })).data;
+            packageManager = (await context.ui.showQuickPick(picks, { placeHolder })).data;
         }
 
         let version: FuncVersion | undefined = await tryGetLocalFuncVersion();

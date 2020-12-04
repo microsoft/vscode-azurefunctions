@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISiteTreeRoot } from 'vscode-azureappservice';
-import { AzureTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzureTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { treeUtils } from '../utils/treeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
@@ -31,7 +31,7 @@ export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
         return treeUtils.getIconPath(ProxyTreeItem.contextValue);
     }
 
-    public async deleteTreeItemImpl(): Promise<void> {
-        await this.parent.deleteProxy(this._name);
+    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        await this.parent.deleteProxy(context, this._name);
     }
 }

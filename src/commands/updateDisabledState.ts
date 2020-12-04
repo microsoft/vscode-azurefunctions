@@ -31,7 +31,7 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
     } else {
         await node.parent.parent.setApplicationSetting(node.disabledStateKey, String(isDisabled));
     }
-    await node.parent.parent.refresh();
+    await node.parent.parent.refresh(context);
 
     const message: string = isDisabled ? localize('disabledFunction', 'Disabled function "{0}".', node.name) : localize('enabledFunction', 'Enabled function "{0}".', node.name);
     // don't wait

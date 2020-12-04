@@ -26,7 +26,7 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
 
             const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };
             const message: string = localize('uninitializedWarning', 'Failed to find Python virtual environment "{0}", which is expected based on the setting "{1}.{2}".', venvName, ext.prefix, pythonVenvSetting);
-            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
+            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, createVenv, DialogResponses.dontWarnAgain);
             if (result === createVenv) {
                 context.errorHandling.suppressDisplay = false;
                 context.telemetry.properties.verifyConfigResult = 'update';

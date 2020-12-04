@@ -5,7 +5,6 @@
 
 import { OpenDialogOptions, Uri, workspace } from "vscode";
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { IFunctionWizardContext } from "../IFunctionWizardContext";
 
 export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunctionWizardContext> {
@@ -25,7 +24,7 @@ export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunc
             openDialogOptions.defaultUri = Uri.file(workspace.workspaceFolders[0].uri.toString());
         }
 
-        context.openApiSpecificationFile = await ext.ui.showOpenDialog(openDialogOptions);
+        context.openApiSpecificationFile = await context.ui.showOpenDialog(openDialogOptions);
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {

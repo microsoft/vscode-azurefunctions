@@ -6,7 +6,6 @@
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
-import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
@@ -22,7 +21,7 @@ export async function verifyInitForVSCode(context: IActionContext, fsPath: strin
     if (!language || !version) {
         const message: string = localize('initFolder', 'Initialize project for use with VS Code?');
         // No need to check result - cancel will throw a UserCancelledError
-        await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         await initProjectForVSCode(context, fsPath);
         language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
         version = nonNullOrEmptyValue(tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath)), funcVersionSetting);

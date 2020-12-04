@@ -11,7 +11,7 @@ import * as extract from 'extract-zip';
 import { URL } from 'url';
 import * as vscode from 'vscode';
 import { registerAppServiceExtensionVariables } from 'vscode-azureappservice';
-import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerEvent, registerUIExtensionVariables } from 'vscode-azureextensionui';
+import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from 'vscode-azureextensionui';
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -115,6 +115,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         });
 
         ext.templateProvider = new CentralTemplateProvider();
+
+        // Suppress "Report an Issue" button for all errors in favor of the command
+        registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
+        registerReportIssueCommand('azureFunctions.reportIssue');
 
         registerCommands();
 

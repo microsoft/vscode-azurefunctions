@@ -27,9 +27,9 @@ export async function connectToGitHub(context: IActionContext, target?: GenericT
 
     if (node instanceof ProductionSlotTreeItem) {
         if (node.deploymentsNode) {
-            await node.deploymentsNode.refresh();
+            await node.deploymentsNode.refresh(context);
         }
     } else {
-        await node.parent?.refresh();
+        await node.parent?.refresh(context);
     }
 }

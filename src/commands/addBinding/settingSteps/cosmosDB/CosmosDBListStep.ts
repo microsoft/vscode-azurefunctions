@@ -14,7 +14,7 @@ export class CosmosDBListStep extends AzureWizardPromptStep<ICosmosDBWizardConte
     public async prompt(context: ICosmosDBWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select a database account');
         const client: CosmosDBManagementClient = await createCosmosDBClient(context);
-        context.databaseAccount = await promptForResource(placeHolder, client.databaseAccounts.list());
+        context.databaseAccount = await promptForResource(context, placeHolder, client.databaseAccounts.list());
     }
 
     public shouldPrompt(context: ICosmosDBWizardContext): boolean {

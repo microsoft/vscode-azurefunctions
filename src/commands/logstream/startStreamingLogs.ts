@@ -38,7 +38,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
             const logsConfig: WebSiteManagementModels.SiteLogsConfig = await client.getLogsConfig();
             if (!isApplicationLoggingEnabled(logsConfig)) {
                 const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
-                await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
+                await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel);
                 await enableFileLogging(client, logsConfig);
             }
         };

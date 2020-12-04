@@ -82,7 +82,7 @@ export async function verifyAndPromptToCreateProject(context: IActionContext, fs
         if (!options.suppressCreateProjectPrompt) {
             const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
             // No need to check result - cancel will throw a UserCancelledError
-            await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+            await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
         }
 
         options.folderPath = fsPath;

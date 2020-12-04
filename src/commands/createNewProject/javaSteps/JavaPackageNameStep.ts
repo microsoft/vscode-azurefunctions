@@ -5,7 +5,6 @@
 
 import { InputBoxOptions } from "vscode";
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
-import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
@@ -18,7 +17,7 @@ export class JavaPackageNameStep extends AzureWizardPromptStep<IJavaProjectWizar
             // tslint:disable-next-line: strict-boolean-expressions
             value: context.javaGroupId || 'com.function'
         };
-        context.javaPackageName = await ext.ui.showInputBox(options);
+        context.javaPackageName = await context.ui.showInputBox(options);
     }
 
     public shouldPrompt(context: IJavaProjectWizardContext): boolean {
