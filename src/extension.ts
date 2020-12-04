@@ -68,19 +68,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&downloadAppContent=<true/false>
     vscode.window.registerUriHandler({
         async handleUri(uri: vscode.Uri): Promise<void> {
-            ext.context.globalState.update(GlobalStates.initProjectWithoutConfigVerification, true);
-            const account: AzureAccount | undefined = await activateAzureExtension(azureAccountExt);
-            if (account) {
-                const token = await setupAzureAccount(account);
-                if (token) {
-                    const filePath: string | undefined = await vscode.window.showInputBox({ prompt: localize('absoluteFolderPathInputPromptText', 'Enter absolute folder path for your local project'), ignoreFocusOut: true });
-                    if (filePath) {
-                        return setupLocalProjectFolder(uri, filePath, token.accessToken, account);
-                    } else {
-                        vscode.window.showErrorMessage(localize('filepathUndefinedErrorMessage', 'Folder path not entered. Please try again.'));
-                    }
-                }
-            }
+            return handleUriForLocalDevelopment(uri, azureAccountExt);
         }
     });
 
@@ -157,6 +145,24 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 export function deactivateInternal(): void {
 }
 
+async function handleUriForLocalDevelopment(uri: vscode.Uri, azureAccountExt: vscode.Extension<AzureAccount> | undefined): Promise<void> {
+    ext.context.globalState.update(GlobalStates.initProjectWithoutConfigVerification, true);
+    const account: AzureAccount | undefined = await activateAzureExtension(azureAccountExt);
+    if (account) {
+        // tslint:disable-next-line:typedef
+        const token = await setupAzureAccount(account);
+        if (token) {
+            const filePath: string | undefined = await vscode.window.showInputBox({ prompt: localize('absoluteFolderPathInputPromptText', 'Enter absolute folder path for your local project'), ignoreFocusOut: true });
+            if (filePath) {
+                // tslint:disable-next-line: no-unsafe-any
+                return setupLocalProjectFolder(uri, filePath, token.accessToken, account);
+            } else {
+                vscode.window.showErrorMessage(localize('filepathUndefinedErrorMessage', 'Folder path not entered. Please try again.'));
+            }
+        }
+    }
+}
+
 async function setupLocalProjectFolder(uri: vscode.Uri, filePath: string, token: string, account: AzureAccount): Promise<void> {
     const requiredInputs: ILocalDevelopmentRequiredInputs = getAllRequiredInputs(uri.query);
     const resourceId: string | null = requiredInputs.resourceId;
@@ -180,6 +186,7 @@ async function setupLocalProjectFolder(uri: vscode.Uri, filePath: string, token:
                 // NOTE: We don't want to download app content for compiled languages.
                 await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionAppMasterKeyAndDownloadContent', async (_actionContext: IActionContext) => {
                     const listKeyResponse: HttpOperationResponse = await requestUtils.getFunctionAppMasterKey(account.sessions[0], resourceId, token);
+                    // tslint:disable-next-line: no-unsafe-any
                     await requestUtils.downloadFunctionAppContent(defaultHostName, downloadFilePath, listKeyResponse.parsedBody.masterKey);
                 });
             }
@@ -240,6 +247,7 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
     }
 }
 
+// tslint:disable-next-line:no-any
 async function setupAzureAccount(account: AzureAccount): Promise<any> {
     try {
         await vscode.commands.executeCommand('azure-account.login');
