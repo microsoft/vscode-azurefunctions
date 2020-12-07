@@ -24,8 +24,10 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
 
             for (const minorVersion of minorVersions) {
                 let description: string | undefined;
-                if (minorVersion.stackSettings.linuxRuntimeSettings?.isPreview || minorVersion.stackSettings.windowsRuntimeSettings?.isPreview) {
+                if (isFlagSet(minorVersion.stackSettings, 'isPreview')) {
                     description = localize('preview', '(Preview)');
+                } else if (isFlagSet(minorVersion.stackSettings, 'isEarlyAccess')) {
+                    description = localize('earlyAccess', '(Early Access)');
                 }
 
                 picks.push({
@@ -38,6 +40,10 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
     }
 
     return picks;
+}
+
+function isFlagSet(ss: FunctionAppRuntimes, key: 'isPreview' | 'isEarlyAccess'): boolean {
+    return !![ss.linuxRuntimeSettings, ss.windowsRuntimeSettings].find(s => s && s[key]);
 }
 
 async function getStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
