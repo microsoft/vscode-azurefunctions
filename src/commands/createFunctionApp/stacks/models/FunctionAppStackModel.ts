@@ -6,7 +6,7 @@
 import { AppInsightsSettings, AppStack, CommonSettings, GitHubActionSettings } from './AppStackModel';
 
 // Types copied from here:
-// https://github.com/Azure/azure-functions-ux/blob/fa150ffa944e93c6d08cc9798b558e7095febee3/server/src/stacks/2020-10-01/models/FunctionAppStackModel.ts
+// https://github.com/Azure/azure-functions-ux/blob/3322f0b5151bbfcf7a08f281efe678ebac643dc0/server/src/stacks/2020-10-01/models/FunctionAppStackModel.ts
 // tslint:disable: interface-name
 
 export type FunctionAppStack = AppStack<FunctionAppRuntimes, FunctionAppStackValue>;
