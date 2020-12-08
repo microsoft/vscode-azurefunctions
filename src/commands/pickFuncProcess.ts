@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ServiceClient, WebResource } from '@azure/ms-rest-js';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
@@ -34,17 +35,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
-    const settingKey: string = 'pickProcessTimeout';
-    const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
-    const timeoutInSeconds: number = Number(settingValue);
-    if (isNaN(timeoutInSeconds)) {
-        throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
-    }
-    context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
-    const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
-
-    const pid: string = await startFuncTask(context, result.workspace, funcTask, timeoutInSeconds, timeoutError);
-    return process.platform === 'win32' ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
+    const pid: string = await startFuncTask(context, result.workspace, funcTask);
+    return process.platform === 'win32' ? await getInnermostWindowsPid(pid) : await getInnermostUnixPid(pid);
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
@@ -59,7 +51,15 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<string> {
+    const settingKey: string = 'pickProcessTimeout';
+    const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
+    const timeoutInSeconds: number = Number(settingValue);
+    if (isNaN(timeoutInSeconds)) {
+        throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
+    }
+    context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
+
     let taskError: Error | undefined;
     const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
         if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
@@ -73,6 +73,9 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     try {
         await vscode.tasks.executeTask(funcTask);
 
+        const intervalMs: number = 500;
+        const client: ServiceClient = await createGenericClient();
+        const statusRequest: WebResource = getStatusRequest(funcTask, intervalMs);
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -80,18 +83,38 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             }
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
-            // Ensure func task runs for at least 1 second in case it fails on startup and thus `taskError` will be thrown instead
-            if (taskInfo && Date.now() > taskInfo.startTime + 1000) {
-                return taskInfo.processId.toString();
+            if (taskInfo) {
+                try {
+                    // wait for status url to indicate functions host is running
+                    await client.sendRequest(statusRequest);
+                    return taskInfo.processId.toString();
+                } catch {
+                    // ignore
+                }
             }
 
-            await delay(500);
+            await delay(intervalMs);
         }
 
-        throw timeoutError;
+        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
     } finally {
         errorListener.dispose();
     }
+}
+
+function getStatusRequest(funcTask: vscode.Task, intervalMs: number): WebResource {
+    let port: string = '7071';
+    if (typeof funcTask.definition.command === 'string') {
+        const match: RegExpMatchArray | null = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+        if (match) {
+            port = match[1];
+        }
+    }
+
+    let request: WebResource = new WebResource();
+    request = request.prepare({ url: `http://localhost:${port}/admin/host/status`, method: 'GET' });
+    request.timeout = intervalMs;
+    return request;
 }
 
 /**
@@ -112,30 +135,20 @@ async function getInnermostUnixPid(pid: string): Promise<string> {
 
 /**
  * Gets the innermost child pid for a Windows process. This is almost always necessary since the original pid is associated with the parent PowerShell process.
- * We also need to delay to make sure the func process has been started within the PowerShell process.
  */
-async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+async function getInnermostWindowsPid(pid: string): Promise<string> {
     const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
-    const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-    while (Date.now() < maxTime) {
-        let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
-            windowsProcessTree.getProcessTree(Number(pid), resolve);
-        });
+    let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
+        windowsProcessTree.getProcessTree(Number(pid), resolve);
+    });
 
-        if (!psTree) {
-            throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
-        }
-
-        while (psTree.children.length > 0) {
-            psTree = psTree.children[0];
-        }
-
-        if (psTree.name.toLowerCase().includes('func')) {
-            return psTree.pid.toString();
-        } else {
-            await delay(500);
-        }
+    if (!psTree) {
+        throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
     }
 
-    throw timeoutError;
+    while (psTree.children.length > 0) {
+        psTree = psTree.children[0];
+    }
+
+    return psTree.pid.toString();
 }
