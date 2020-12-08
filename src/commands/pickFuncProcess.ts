@@ -13,7 +13,7 @@ import { ext } from '../extensionVariables';
 import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
-import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
@@ -36,7 +36,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
     }
 
     const pid: string = await startFuncTask(context, result.workspace, funcTask);
-    return process.platform === 'win32' ? await getInnermostWindowsPid(pid) : await getInnermostUnixPid(pid);
+    return await pickChildProcess(pid);
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
@@ -117,38 +117,43 @@ function getStatusRequest(funcTask: vscode.Task, intervalMs: number): WebResourc
     return request;
 }
 
+type OSAgnosticProcess = { command: string | undefined; pid: number | string };
+
 /**
- * Gets the innermost child pid for a unix process. This is only really necessary if the user installs 'func' with a tool like 'npm', which uses a wrapper around the main func exe
+ * Picks the child process that we want to use. Scenarios to keep in mind:
+ * 1. On Windows, the rootPid is almost always the parent PowerShell process
+ * 2. On Unix, the rootPid may be a wrapper around the main func exe if installed with npm
+ * 3. Starting with the .NET 5 worker, Windows sometimes has an inner process we _don't_ want like 'conhost.exe'
+ * The only processes we should want to attach to are the "func" process itself or a "dotnet" process running a dll, so we will pick the innermost one of those
  */
-async function getInnermostUnixPid(pid: string): Promise<string> {
-    return await new Promise<string>((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
-        unixPsTree(parseInt(pid), (error: Error | undefined, children: unixPsTree.PS[]) => {
+async function pickChildProcess(rootPid: string): Promise<string> {
+    const children: OSAgnosticProcess[] = process.platform === 'win32' ? await getWindowsChildren(rootPid) : await getUnixChildren(rootPid);
+    // tslint:disable-next-line: strict-boolean-expressions
+    const child: OSAgnosticProcess | undefined = children.reverse().find(c => /(dotnet|func)(\.exe|)$/i.test(c.command || ''));
+    return child ? child.pid.toString() : rootPid;
+}
+
+// Looks like this bug was fixed, but never merged:
+// https://github.com/indexzero/ps-tree/issues/18
+type ActualUnixPS = unixPsTree.PS & { COMM?: string };
+
+async function getUnixChildren(pid: string): Promise<OSAgnosticProcess[]> {
+    const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
+        unixPsTree(parseInt(pid), (error: Error | undefined, result: unixPsTree.PS[]) => {
             if (error) {
                 reject(error);
             } else {
-                const child: unixPsTree.PS | undefined = children.pop();
-                resolve(child ? child.PID : pid);
+                resolve(result);
             }
         });
     });
+    return processes.map(c => { return { command: c.COMMAND || c.COMM, pid: c.PID }; });
 }
 
-/**
- * Gets the innermost child pid for a Windows process. This is almost always necessary since the original pid is associated with the parent PowerShell process.
- */
-async function getInnermostWindowsPid(pid: string): Promise<string> {
+async function getWindowsChildren(pid: string): Promise<OSAgnosticProcess[]> {
     const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
-    let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
-        windowsProcessTree.getProcessTree(Number(pid), resolve);
+    const processes: IProcessInfo[] = await new Promise((resolve): void => {
+        windowsProcessTree.getProcessList(Number(pid), resolve, ProcessDataFlag.None);
     });
-
-    if (!psTree) {
-        throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
-    }
-
-    while (psTree.children.length > 0) {
-        psTree = psTree.children[0];
-    }
-
-    return psTree.pid.toString();
+    return processes.map(c => { return { command: c.name, pid: c.pid }; });
 }
