@@ -8,7 +8,6 @@ import { IActionContext, registerEvent } from 'vscode-azureextensionui';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
-    startTime: number;
     processId: number;
 }
 
@@ -25,7 +24,7 @@ export function registerFuncHostTaskEvents(): void {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
-            runningFuncTaskMap.set(e.execution.task.scope, { startTime: Date.now(), processId: e.processId });
+            runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
         }
     });
 
