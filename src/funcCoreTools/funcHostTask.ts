@@ -5,7 +5,6 @@
 
 import * as vscode from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
-import { delay } from '../utils/delay';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
@@ -47,22 +46,11 @@ async function stopFuncTaskIfRunning(context: IActionContext, debugSession: vsco
 
     if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug')) {
         if (debugSession.workspaceFolder) {
-            const funcExecution: vscode.TaskExecution | undefined = vscode.tasks.taskExecutions.find((te: vscode.TaskExecution) => {
-                return te.task.scope === debugSession.workspaceFolder && isFuncHostTask(te.task);
-            });
-
-            if (funcExecution) {
-                context.telemetry.suppressIfSuccessful = false; // only track telemetry if it's actually the func task
-
-                const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(debugSession.workspaceFolder);
-                if (runningFuncTask !== undefined) {
-                    // Wait at least 10 seconds after the func task started before calling `terminate` since that will remove task output and we want the user to see any startup errors
-                    await delay(Math.max(0, runningFuncTask.startTime + 10 * 1000 - Date.now()));
-
-                    if (runningFuncTaskMap.get(debugSession.workspaceFolder) === runningFuncTask) {
-                        funcExecution.terminate();
-                    }
-                }
+            const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(debugSession.workspaceFolder);
+            if (runningFuncTask !== undefined) {
+                // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
+                // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
+                process.kill(runningFuncTask.processId);
             }
         }
     }
