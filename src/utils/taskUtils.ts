@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Task, tasks as codeTasks, TaskScope, WorkspaceFolder } from "vscode";
-import { isPathEqual, isSubpath } from "./fs";
+import { Task, tasks as codeTasks, WorkspaceFolder } from "vscode";
+import { isPathEqual } from "./fs";
 
 export namespace taskUtils {
     export function getFsPathFromTask(task: Task): string | undefined {
@@ -13,18 +13,6 @@ export namespace taskUtils {
             return workspaceFolder.uri?.fsPath;
         } else {
             return undefined;
-        }
-    }
-
-    /**
-     * Returns true if the task's scope is a workspace folder matching the given path or if the task is not associated with a path
-     */
-    export function isTaskInScopeOfPath(task: Task, fsPath: string): boolean {
-        if (task.scope === TaskScope.Global || task.scope === TaskScope.Workspace) {
-            return true;
-        } else {
-            const taskPath: string | undefined = getFsPathFromTask(task);
-            return !!taskPath && (isPathEqual(taskPath, fsPath) || isSubpath(taskPath, fsPath));
         }
     }
 
