@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceClient, WebResource } from '@azure/ms-rest-js';
+import { HttpOperationResponse, ServiceClient, WebResource } from '@azure/ms-rest-js';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
 import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
@@ -86,8 +86,11 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             if (taskInfo) {
                 try {
                     // wait for status url to indicate functions host is running
-                    await client.sendRequest(statusRequest);
-                    return taskInfo.processId.toString();
+                    const response: HttpOperationResponse = await client.sendRequest(statusRequest);
+                    // tslint:disable-next-line: no-unsafe-any
+                    if (response.parsedBody.state.toLowerCase() === 'running') {
+                        return taskInfo.processId.toString();
+                    }
                 } catch {
                     // ignore
                 }
