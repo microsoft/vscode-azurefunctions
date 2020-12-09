@@ -10,9 +10,10 @@ import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
+import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
+import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
@@ -40,6 +41,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    await stopFuncTaskIfRunning(workspaceFolder);
+
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
@@ -71,7 +74,9 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     });
 
     try {
-        await vscode.tasks.executeTask(funcTask);
+        // The "IfNotActive" part helps when the user starts, stops and restarts debugging quickly in succession. We want to use the already-active task to avoid two func tasks causing a port conflict error
+        // The most common case we hit this is if the "clean" or "build" task is running when we get here. It's unlikely the "func host start" task is active, since we would've stopped it in `waitForPrevFuncTaskToStop` above
+        await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
         const client: ServiceClient = await createGenericClient();
