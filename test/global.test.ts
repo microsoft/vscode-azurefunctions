@@ -27,7 +27,7 @@ export let skipStagingTemplateSource: boolean;
 export let testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
-    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, ui: testUserInput };
+    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: testUserInput };
 }
 
 let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;

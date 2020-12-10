@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { HttpOperationResponse, ServiceClient, WebResource } from '@azure/ms-rest-js';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap } from '../funcCoreTools/funcHostTask';
+import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
-import { getWindowsProcessTree, IProcessTreeNode, IWindowsProcessTree } from '../utils/windowsProcessTree';
+import { taskUtils } from '../utils/taskUtils';
+import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
@@ -34,20 +36,13 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
-    const settingKey: string = 'pickProcessTimeout';
-    const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
-    const timeoutInSeconds: number = Number(settingValue);
-    if (isNaN(timeoutInSeconds)) {
-        throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
-    }
-    context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
-    const timeoutError: Error = new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
-
-    const pid: string = await startFuncTask(context, result.workspace, funcTask, timeoutInSeconds, timeoutError);
-    return process.platform === 'win32' ? await getInnermostWindowsPid(pid, timeoutInSeconds, timeoutError) : await getInnermostUnixPid(pid);
+    const pid: string = await startFuncTask(context, result.workspace, funcTask);
+    return await pickChildProcess(pid);
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+    await stopFuncTaskIfRunning(workspaceFolder);
+
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
     while (Date.now() < maxTime) {
@@ -59,7 +54,15 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
+async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<string> {
+    const settingKey: string = 'pickProcessTimeout';
+    const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
+    const timeoutInSeconds: number = Number(settingValue);
+    if (isNaN(timeoutInSeconds)) {
+        throw new Error(localize('invalidSettingValue', 'The setting "{0}" must be a number, but instead found "{1}".', settingKey, settingValue));
+    }
+    context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
+
     let taskError: Error | undefined;
     const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
         if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
@@ -71,8 +74,13 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     });
 
     try {
-        await vscode.tasks.executeTask(funcTask);
+        // The "IfNotActive" part helps when the user starts, stops and restarts debugging quickly in succession. We want to use the already-active task to avoid two func tasks causing a port conflict error
+        // The most common case we hit this is if the "clean" or "build" task is running when we get here. It's unlikely the "func host start" task is active, since we would've stopped it in `waitForPrevFuncTaskToStop` above
+        await taskUtils.executeIfNotActive(funcTask);
 
+        const intervalMs: number = 500;
+        const client: ServiceClient = await createGenericClient();
+        const statusRequest: WebResource = getStatusRequest(funcTask, intervalMs);
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -80,62 +88,80 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             }
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
-            // Ensure func task runs for at least 1 second in case it fails on startup and thus `taskError` will be thrown instead
-            if (taskInfo && Date.now() > taskInfo.startTime + 1000) {
-                return taskInfo.processId.toString();
+            if (taskInfo) {
+                try {
+                    // wait for status url to indicate functions host is running
+                    const response: HttpOperationResponse = await client.sendRequest(statusRequest);
+                    // tslint:disable-next-line: no-unsafe-any
+                    if (response.parsedBody.state.toLowerCase() === 'running') {
+                        return taskInfo.processId.toString();
+                    }
+                } catch {
+                    // ignore
+                }
             }
 
-            await delay(500);
+            await delay(intervalMs);
         }
 
-        throw timeoutError;
+        throw new Error(localize('failedToFindFuncHost', 'Failed to detect running Functions host within "{0}" seconds. You may want to adjust the "{1}" setting.', timeoutInSeconds, `${ext.prefix}.${settingKey}`));
     } finally {
         errorListener.dispose();
     }
 }
 
-/**
- * Gets the innermost child pid for a unix process. This is only really necessary if the user installs 'func' with a tool like 'npm', which uses a wrapper around the main func exe
- */
-async function getInnermostUnixPid(pid: string): Promise<string> {
-    return await new Promise<string>((resolve: (pid: string) => void, reject: (e: Error) => void): void => {
-        unixPsTree(parseInt(pid), (error: Error | undefined, children: unixPsTree.PS[]) => {
-            if (error) {
-                reject(error);
-            } else {
-                const child: unixPsTree.PS | undefined = children.pop();
-                resolve(child ? child.PID : pid);
-            }
-        });
-    });
-}
-
-/**
- * Gets the innermost child pid for a Windows process. This is almost always necessary since the original pid is associated with the parent PowerShell process.
- * We also need to delay to make sure the func process has been started within the PowerShell process.
- */
-async function getInnermostWindowsPid(pid: string, timeoutInSeconds: number, timeoutError: Error): Promise<string> {
-    const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
-    const maxTime: number = Date.now() + timeoutInSeconds * 1000;
-    while (Date.now() < maxTime) {
-        let psTree: IProcessTreeNode | undefined = await new Promise<IProcessTreeNode | undefined>((resolve: (p: IProcessTreeNode | undefined) => void): void => {
-            windowsProcessTree.getProcessTree(Number(pid), resolve);
-        });
-
-        if (!psTree) {
-            throw new Error(localize('funcTaskStopped', 'Functions host is no longer running.'));
-        }
-
-        while (psTree.children.length > 0) {
-            psTree = psTree.children[0];
-        }
-
-        if (psTree.name.toLowerCase().includes('func')) {
-            return psTree.pid.toString();
-        } else {
-            await delay(500);
+function getStatusRequest(funcTask: vscode.Task, intervalMs: number): WebResource {
+    let port: string = '7071';
+    if (typeof funcTask.definition.command === 'string') {
+        const match: RegExpMatchArray | null = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+        if (match) {
+            port = match[1];
         }
     }
 
-    throw timeoutError;
+    let request: WebResource = new WebResource();
+    request = request.prepare({ url: `http://localhost:${port}/admin/host/status`, method: 'GET' });
+    request.timeout = intervalMs;
+    return request;
+}
+
+type OSAgnosticProcess = { command: string | undefined; pid: number | string };
+
+/**
+ * Picks the child process that we want to use. Scenarios to keep in mind:
+ * 1. On Windows, the rootPid is almost always the parent PowerShell process
+ * 2. On Unix, the rootPid may be a wrapper around the main func exe if installed with npm
+ * 3. Starting with the .NET 5 worker, Windows sometimes has an inner process we _don't_ want like 'conhost.exe'
+ * The only processes we should want to attach to are the "func" process itself or a "dotnet" process running a dll, so we will pick the innermost one of those
+ */
+async function pickChildProcess(rootPid: string): Promise<string> {
+    const children: OSAgnosticProcess[] = process.platform === 'win32' ? await getWindowsChildren(rootPid) : await getUnixChildren(rootPid);
+    // tslint:disable-next-line: strict-boolean-expressions
+    const child: OSAgnosticProcess | undefined = children.reverse().find(c => /(dotnet|func)(\.exe|)$/i.test(c.command || ''));
+    return child ? child.pid.toString() : rootPid;
+}
+
+// Looks like this bug was fixed, but never merged:
+// https://github.com/indexzero/ps-tree/issues/18
+type ActualUnixPS = unixPsTree.PS & { COMM?: string };
+
+async function getUnixChildren(pid: string): Promise<OSAgnosticProcess[]> {
+    const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
+        unixPsTree(parseInt(pid), (error: Error | undefined, result: unixPsTree.PS[]) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+    return processes.map(c => { return { command: c.COMMAND || c.COMM, pid: c.PID }; });
+}
+
+async function getWindowsChildren(pid: string): Promise<OSAgnosticProcess[]> {
+    const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
+    const processes: IProcessInfo[] = await new Promise((resolve): void => {
+        windowsProcessTree.getProcessList(Number(pid), resolve, ProcessDataFlag.None);
+    });
+    return processes.map(c => { return { command: c.name, pid: c.pid }; });
 }
