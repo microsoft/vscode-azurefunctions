@@ -64,6 +64,16 @@ export class CentralTemplateProvider {
         }
     }
 
+    public async clearTemplateCache(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
+        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
+        for (const provider of providers) {
+            await provider.deleteCachedValue(TemplateProviderBase.templateVersionKey);
+            await provider.clearCache();
+        }
+        const key: string = this.getProviderTaskKey(providers, version);
+        this._templatesTaskMap[key] = undefined;
+    }
+
     public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<IBindingTemplate[]> {
         const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
         return templates.bindingTemplates;
@@ -79,16 +89,21 @@ export class CentralTemplateProvider {
         }
     }
 
+    private getProviderTaskKey(providers: TemplateProviderBase[], version: FuncVersion): string {
+        let key: string = version;
+        for (const provider of providers) {
+            key += provider.templateType;
+        }
+        return key;
+    }
+
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
     private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<ITemplates> {
         const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
 
-        let key: string = version;
-        for (const provider of providers) {
-            key += provider.templateType;
-        }
+        const key: string = this.getProviderTaskKey(providers, version);
 
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;

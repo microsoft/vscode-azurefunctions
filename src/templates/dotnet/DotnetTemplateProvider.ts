@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
+import { homedir } from 'os';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
@@ -11,7 +12,7 @@ import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
-import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 
 export class DotnetTemplateProvider extends TemplateProviderBase {
@@ -79,6 +80,14 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
     public async cacheTemplates(): Promise<void> {
         await this.updateCachedValue(this._dotnetTemplatesKey, this._rawTemplates);
+    }
+
+    public async clearCache(): Promise<void> {
+        await this.deleteCachedValue(this._dotnetTemplatesKey);
+        const templateEnginePath: string = path.join(homedir(), '.templateengine', 'AzureFunctions-VSCodeExtension'); // This is used by the JsonCli tool
+        for (const dir of [getDotnetTemplatesPath(), templateEnginePath]) {
+            await fse.remove(dir);
+        }
     }
 
     private async parseTemplates(context: IActionContext): Promise<ITemplates> {
