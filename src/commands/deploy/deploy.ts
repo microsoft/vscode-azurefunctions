@@ -61,7 +61,7 @@ async function deploy(context: IActionContext, target: vscode.Uri | string | Slo
         context.telemetry.properties.cancelStep = '';
     }
 
-    await runPreDeployTask(context, effectiveDeployFsPath, siteConfig.scmType);
+    await runPreDeployTask(context, effectiveDeployFsPath, workspaceFolder, siteConfig.scmType);
 
     if (isZipDeploy) {
         // tslint:disable-next-line:no-floating-promises

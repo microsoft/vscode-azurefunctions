@@ -13,11 +13,11 @@ import { localize } from '../../localize';
 import { openUrl } from '../../utils/openUrl';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 
-export async function runPreDeployTask(context: IActionContext, deployFsPath: string, scmType: string | undefined): Promise<void> {
+export async function runPreDeployTask(context: IActionContext, deployFsPath: string, workspaceFolder: vscode.WorkspaceFolder, scmType: string | undefined): Promise<void> {
     const preDeployTask: string | undefined = getWorkspaceSetting(preDeployTaskSetting, deployFsPath);
     if (preDeployTask && preDeployTask.startsWith('func:')) {
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run preDeployTask "{0}".', preDeployTask);
-        if (!await validateFuncCoreToolsInstalled(message, deployFsPath)) {
+        if (!await validateFuncCoreToolsInstalled(message, workspaceFolder)) {
             throw new UserCancelledError();
         }
     }

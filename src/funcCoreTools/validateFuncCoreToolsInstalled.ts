@@ -3,19 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MessageItem } from 'vscode';
+import { Disposable, MessageItem, ShellExecution, Task, TaskRevealKind, tasks, TaskScope, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { funcVersionSetting, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
+import { delay } from '../utils/delay';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(message: string, fsPath: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(message: string, workspace: WorkspaceFolder): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
@@ -23,7 +24,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (context: IActionContext) => {
         context.errorHandling.suppressDisplay = true;
 
-        if (await funcToolsInstalled()) {
+        if (await funcToolsInstalledInWorkspace(workspace)) {
             installed = true;
         } else {
             const items: MessageItem[] = [];
@@ -40,7 +41,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
             context.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
-                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath));
+                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, workspace.uri.fsPath));
                 await installFuncCoreTools(packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
@@ -59,9 +60,40 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
     return installed;
 }
 
+const versionArg: string = '--version';
+
+export async function funcToolsInstalledInWorkspace(workspace: WorkspaceFolder | undefined): Promise<boolean> {
+    const taskName: string = localize('validateFuncCli', 'Validate "func" installed');
+    // tslint:disable-next-line: strict-boolean-expressions
+    const task: Task = new Task({ type: 'shell' }, workspace || TaskScope.Workspace, taskName, 'func', new ShellExecution(ext.funcCliPath, [versionArg]));
+    task.presentationOptions = { reveal: TaskRevealKind.Never, focus: false };
+
+    let exitCode: number | undefined;
+    let disposable: Disposable | undefined;
+
+    try {
+        const exitCodeTask: Promise<number> = new Promise((resolve): void => {
+            disposable = tasks.onDidEndTaskProcess(e => {
+                if (e.execution.task.name === taskName) {
+                    exitCode = e.exitCode;
+                    resolve();
+                }
+            });
+        });
+
+        await tasks.executeTask(task);
+
+        await Promise.race([exitCodeTask, delay(3 * 1000)]);
+    } finally {
+        disposable?.dispose();
+    }
+
+    return exitCode === undefined || exitCode === 0;
+}
+
 export async function funcToolsInstalled(): Promise<boolean> {
     try {
-        await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, '--version');
+        await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, versionArg);
         return true;
     } catch (error) {
         return false;
