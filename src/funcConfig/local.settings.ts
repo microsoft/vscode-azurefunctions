@@ -91,5 +91,7 @@ export async function getLocalSettingsJson(localSettingsPath: string, allowOverw
         }
     }
 
-    return {};
+    return {
+        IsEncrypted: false // Include this by default otherwise the func cli assumes settings are encrypted and fails to run
+    };
 }
