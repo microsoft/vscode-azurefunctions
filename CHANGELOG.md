@@ -8,7 +8,7 @@
 - Added "Reload Templates" option when creating a function that will also clear the template cache (Use setting "azureFunctions.showReloadTemplates" to enable)
 
 ### Changed
-- "Report an Issue" button has been removed from errors. Instead, use the "Report Issue" command in the command palette
+- "Report an Issue" button has been removed from errors. Instead, use the "Report Issue" command in the [command palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette)
 
 ### Fixed
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.1.0%22+is%3Aclosed)
