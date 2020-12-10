@@ -1,5 +1,18 @@
 # Change Log
 
+## 1.1.0 - 2020-12-11
+
+### Added
+- Support debugging .NET 5 projects
+- Modified post-debug behavior so that "func host start" output remains viewable and to optimistically fix issue where VS Code becomes unresponsive [#1401](https://github.com/microsoft/vscode-azurefunctions/issues/1401)
+- Added "Reload Templates" option when creating a function that will also clear the template cache (Use setting "azureFunctions.showReloadTemplates" to enable)
+
+### Changed
+- "Report an Issue" button has been removed from errors. Instead, use the "Report Issue" command in the command palette
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.1.0%22+is%3Aclosed)
+
 ## 1.0.1 - 2020-11-11
 
 ### Added
