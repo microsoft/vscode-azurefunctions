@@ -83,6 +83,10 @@ export function getFunctionsWorkerRuntime(language: string | undefined): string 
     }
 }
 
+export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
+    return !!runtime && ['node', 'dotnet', 'java', 'python', 'powershell', 'custom'].includes(runtime.toLowerCase());
+}
+
 export function getFuncWatchProblemMatcher(language: string | undefined): string {
     const runtime: string | undefined = getFunctionsWorkerRuntime(language);
     return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
