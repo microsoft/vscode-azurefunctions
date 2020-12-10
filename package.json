@@ -1045,6 +1045,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showHiddenStacks%",
                         "default": false
+                    },
+                    "azureFunctions.showReloadTemplates": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showReloadTemplates%",
+                        "default": false
                     }
                 }
             }

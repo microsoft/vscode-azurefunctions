@@ -162,6 +162,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             } else if (result === 'openAPI') {
                 context.generateFromOpenAPI = true;
                 break;
+            } else if (result === 'reloadTemplates') {
+                await ext.templateProvider.clearTemplateCache(context.projectPath, nonNullProp(context, 'language'), nonNullProp(context, 'version'));
             } else {
                 context.functionTemplate = result;
             }
@@ -205,6 +207,14 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             suppressPersistence: true
         });
 
+        if (getWorkspaceSetting<boolean>('showReloadTemplates')) {
+            picks.push({
+                label: localize('reloadTemplates', '$(sync) Reload templates'),
+                data: 'reloadTemplates',
+                suppressPersistence: true
+            });
+        }
+
         return picks;
     }
 }
@@ -215,7 +225,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI';
+type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI' | 'reloadTemplates';
 
 async function promptForTemplateFilter(context: IActionContext): Promise<TemplateFilter> {
     const picks: IAzureQuickPickItem<TemplateFilter>[] = [

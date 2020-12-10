@@ -96,6 +96,12 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         await this.updateCachedValue(this._resourcesKey, this._rawResources);
     }
 
+    public async clearCache(): Promise<void> {
+        await this.deleteCachedValue(this._templatesKey);
+        await this.deleteCachedValue(this._bindingsKey);
+        await this.deleteCachedValue(this._resourcesKey);
+    }
+
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return this.version === FuncVersion.v1 || !bundleFeedUtils.isBundleTemplate(template);
     }
