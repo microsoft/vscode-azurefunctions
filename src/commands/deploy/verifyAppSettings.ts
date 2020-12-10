@@ -12,7 +12,7 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { getFunctionsWorkerRuntime } from '../../vsCodeConfig/settings';
+import { getFunctionsWorkerRuntime, isKnownWorkerRuntime } from '../../vsCodeConfig/settings';
 
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
@@ -45,7 +45,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
     context.telemetry.properties.remoteRuntime = azureWorkerRuntime;
     const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
-    if (localVersion !== FuncVersion.v1 && azureWorkerRuntime && localWorkerRuntime && azureWorkerRuntime !== localWorkerRuntime) {
+    if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
     }
 
