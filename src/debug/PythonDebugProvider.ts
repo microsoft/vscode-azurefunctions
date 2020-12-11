@@ -39,9 +39,7 @@ async function getPythonCommand(host: string, port: number): Promise<string> {
 
         // tslint:disable-next-line:strict-boolean-expressions
         if (pyExtension.exports && pyExtension.exports.debug) {
-            const debugPyCommand: string = (await pyExtension.exports.debug.getRemoteLauncherCommand(host, port, false)).join(' ');
-            const debugPyFlag: string = '--configure-subProcess False';
-            return [debugPyCommand, debugPyFlag].join(' ');
+            return (await pyExtension.exports.debug.getRemoteLauncherCommand(host, port, false)).join(' ');
         } else {
             throw new Error(localize('pyExtOutOfDate', 'You must update extension with id "{0}" to debug Python projects.', pyExtensionId));
         }
