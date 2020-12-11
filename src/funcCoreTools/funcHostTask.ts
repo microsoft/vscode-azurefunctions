@@ -13,11 +13,6 @@ export interface IRunningFuncTask {
 
 export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map();
 
-/**
- * Need to track failed tasks to workaround this issue: https://github.com/microsoft/vscode/issues/112247
- */
-export const failedFuncExecutionMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, boolean> = new Map();
-
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
     // tslint:disable-next-line: strict-boolean-expressions
@@ -28,26 +23,16 @@ export function registerFuncHostTaskEvents(): void {
     registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
-        if (e.execution.task.scope !== undefined) {
-            failedFuncExecutionMap.set(e.execution.task.scope, false);
-
-            if (isFuncHostTask(e.execution.task)) {
-                runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
-            }
+        if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
         }
     });
 
     registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
-        if (e.execution.task.scope !== undefined) {
-            if (e.exitCode !== 0) {
-                failedFuncExecutionMap.set(e.execution.task.scope, true);
-            }
-
-            if (isFuncHostTask(e.execution.task)) {
-                runningFuncTaskMap.delete(e.execution.task.scope);
-            }
+        if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
+            runningFuncTaskMap.delete(e.execution.task.scope);
         }
     });
 
