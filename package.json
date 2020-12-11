@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.0.3-alpha",
+    "version": "1.1.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -1046,6 +1046,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showHiddenStacks%",
                         "default": false
+                    },
+                    "azureFunctions.showReloadTemplates": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showReloadTemplates%",
+                        "default": false
                     }
                 }
             }
@@ -1122,7 +1127,7 @@
         "portfinder": "^1.0.23",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.72.0",
+        "vscode-azureappservice": "^0.72.1",
         "vscode-azureextensionui": "^0.38.1",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",

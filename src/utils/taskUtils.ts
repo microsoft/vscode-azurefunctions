@@ -34,8 +34,9 @@ export namespace taskUtils {
      * Handles condition where we don't need to start the task because it's already running
      */
     export async function executeIfNotActive(task: Task): Promise<void> {
-        if (!codeTasks.taskExecutions.find(t => isTaskEqual(t.task, task))) {
-            await codeTasks.executeTask(task);
-        }
+        // Temporarily disable this behavior because it's not worth the trouble caused by https://github.com/microsoft/vscode/issues/112247
+        // if (!codeTasks.taskExecutions.find(t => isTaskEqual(t.task, task))) {
+        await codeTasks.executeTask(task);
+        // }
     }
 }

@@ -159,9 +159,13 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 if (!this._isProjectWizard || context.openBehavior === 'AlreadyOpen') {
                     await updateWorkspaceSetting(templateFilterSetting, templateFilter, context.projectPath);
                 }
+                context.telemetry.properties.changedFilter = 'true';
             } else if (result === 'openAPI') {
                 context.generateFromOpenAPI = true;
                 break;
+            } else if (result === 'reloadTemplates') {
+                await ext.templateProvider.clearTemplateCache(context.projectPath, nonNullProp(context, 'language'), nonNullProp(context, 'version'));
+                context.telemetry.properties.reloaded = 'true';
             } else {
                 context.functionTemplate = result;
             }
@@ -178,6 +182,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const version: FuncVersion = nonNullProp(context, 'version');
         const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(context, context.projectPath, language, version, templateFilter);
+        context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
@@ -205,6 +210,14 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             suppressPersistence: true
         });
 
+        if (getWorkspaceSetting<boolean>('showReloadTemplates')) {
+            picks.push({
+                label: localize('reloadTemplates', '$(sync) Reload templates'),
+                data: 'reloadTemplates',
+                suppressPersistence: true
+            });
+        }
+
         return picks;
     }
 }
@@ -215,7 +228,7 @@ interface IFunctionListStepOptions {
     functionSettings: { [key: string]: string | undefined } | undefined;
 }
 
-type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI';
+type TemplatePromptResult = 'changeFilter' | 'skipForNow' | 'openAPI' | 'reloadTemplates';
 
 async function promptForTemplateFilter(context: IActionContext): Promise<TemplateFilter> {
     const picks: IAzureQuickPickItem<TemplateFilter>[] = [

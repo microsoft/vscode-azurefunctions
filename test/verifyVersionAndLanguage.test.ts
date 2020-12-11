@@ -114,4 +114,20 @@ suite('verifyVersionAndLanguage', () => {
         };
         await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v2, <ProjectLanguage>"unknown", props);
     });
+
+    test('Local: ~2/C#, Remote: ~2/unknown', async () => {
+        const props: { [name: string]: string } = {
+            FUNCTIONS_EXTENSION_VERSION: '~2',
+            FUNCTIONS_WORKER_RUNTIME: 'unknown'
+        };
+        await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v2, ProjectLanguage.CSharp, props);
+    });
+
+    test('Local: ~2/unknown, Remote: ~2/unknown', async () => {
+        const props: { [name: string]: string } = {
+            FUNCTIONS_EXTENSION_VERSION: '~2',
+            FUNCTIONS_WORKER_RUNTIME: 'unknown'
+        };
+        await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v2, <ProjectLanguage>"unknown", props);
+    });
 });

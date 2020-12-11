@@ -38,6 +38,10 @@ export abstract class TemplateProviderBase {
         ext.context.globalState.update(await this.getCacheKey(key), value);
     }
 
+    public async deleteCachedValue(key: string): Promise<void> {
+        ext.context.globalState.update(await this.getCacheKey(key), undefined);
+    }
+
     public async getCachedValue<T>(key: string): Promise<T | undefined> {
         return ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
@@ -47,6 +51,7 @@ export abstract class TemplateProviderBase {
     public abstract getCachedTemplates(context: IActionContext): Promise<ITemplates | undefined>;
     public abstract getBackupTemplates(context: IActionContext): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
+    public abstract clearCache(): Promise<void>;
     public abstract updateBackupTemplates(): Promise<void>;
 
     /**
