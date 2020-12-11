@@ -10,7 +10,7 @@ import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { failedFuncExecutionMap, IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
+import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { taskUtils } from '../utils/taskUtils';
@@ -74,12 +74,9 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     });
 
     try {
-        // NOTE: Can't use taskUtils.executeIfNotActive because of this issue: https://github.com/microsoft/vscode/issues/112247
         // The "IfNotActive" part helps when the user starts, stops and restarts debugging quickly in succession. We want to use the already-active task to avoid two func tasks causing a port conflict error
         // The most common case we hit this is if the "clean" or "build" task is running when we get here. It's unlikely the "func host start" task is active, since we would've stopped it in `waitForPrevFuncTaskToStop` above
-        if (!vscode.tasks.taskExecutions.find(t => taskUtils.isTaskEqual(t.task, funcTask) && !failedFuncExecutionMap.get(workspaceFolder))) {
-            await vscode.tasks.executeTask(funcTask);
-        }
+        await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
         const client: ServiceClient = await createGenericClient();
