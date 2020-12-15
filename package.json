@@ -1045,6 +1045,11 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showHiddenStacks%",
                         "default": false
+                    },
+                    "azureFunctions.waitForPythonDebugger": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.waitForPythonDebugger%",
+                        "default": false
                     }
                 }
             }
