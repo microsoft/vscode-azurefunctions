@@ -6,7 +6,6 @@
 import { DebugConfiguration, Extension, extensions, WorkspaceFolder } from 'vscode';
 import { hostStartTaskName, localhost } from '../constants';
 import { localize } from '../localize';
-import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { FuncDebugProviderBase } from './FuncDebugProviderBase';
 
 export const defaultPythonDebugPort: number = 9091;
@@ -40,9 +39,7 @@ async function getPythonCommand(host: string, port: number): Promise<string> {
 
         // tslint:disable-next-line:strict-boolean-expressions
         if (pyExtension.exports && pyExtension.exports.debug) {
-            const waitForClientSettingName: string = 'waitForPythonDebugger';
-            const waitForClient: boolean = !!getWorkspaceSetting<boolean>(waitForClientSettingName);
-            return (await pyExtension.exports.debug.getRemoteLauncherCommand(host, port, waitForClient)).join(' ');
+            return (await pyExtension.exports.debug.getRemoteLauncherCommand(host, port, false)).join(' ');
         } else {
             throw new Error(localize('pyExtOutOfDate', 'You must update extension with id "{0}" to debug Python projects.', pyExtensionId));
         }
