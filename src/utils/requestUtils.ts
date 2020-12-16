@@ -53,7 +53,7 @@ export namespace requestUtils {
 
     // tslint:disable-next-line:no-any
     export async function getFunctionAppMasterKey(azureSession: AzureSession, resourceId: string, accessToken: any): Promise<HttpOperationResponse> {
-        const subscriptionId: string = getSubscriptionFromId(resourceId, false);
+        const subscriptionId: string = getSubscriptionFromId(resourceId);
         const subscriptionContext: ISubscriptionContext = {
             credentials: azureSession.credentials2,
             subscriptionDisplayName: '',
