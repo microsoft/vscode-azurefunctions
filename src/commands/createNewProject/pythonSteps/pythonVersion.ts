@@ -33,7 +33,8 @@ export async function getSupportedPythonVersions(funcVersionFromSetting: FuncVer
     const versionInfo: [string, string][] = [
         ['2.0.0', '3.6'],
         ['2.7.1846', '3.7'],
-        ['3.0.2245', '3.8']
+        ['3.0.2245', '3.8'],
+        ['3.0.3160', '3.9']
     ];
 
     for (const [minFuncVersion, pyVersion] of versionInfo) {
