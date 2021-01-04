@@ -168,7 +168,8 @@ function addSuite(tester: FunctionTesterBase): void {
         }
 
         // Not supported for Custom Handlers
-        if (tester.language !== ProjectLanguage.Custom) {
+        // Not supported for Python while the default bundle version is v1
+        if (tester.language !== ProjectLanguage.Custom && tester.language !== ProjectLanguage.Python) {
             const durableActivity: string = 'Durable Functions activity';
             test(durableActivity, async () => {
                 await tester.testCreateFunction(
