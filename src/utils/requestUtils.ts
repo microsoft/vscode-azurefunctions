@@ -6,10 +6,11 @@
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createGenericClient, ISubscriptionContext, parseError } from "vscode-azureextensionui";
+import { createGenericClient, IActionContext, ISubscriptionContext, parseError } from "vscode-azureextensionui";
 import { AzureSession } from '../debug/AzureAccountExtension.api';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { getSubscriptionFromId } from "./azure";
 import { nonNullProp } from "./nonNull";
@@ -52,8 +53,14 @@ export namespace requestUtils {
     }
 
     // tslint:disable-next-line:no-any
-    export async function getFunctionAppMasterKey(azureSession: AzureSession, resourceId: string, accessToken: any): Promise<HttpOperationResponse> {
+    export async function getFunctionAppMasterKey(azureSession: AzureSession, resourceId: string, accessToken: any, actionContext: IActionContext): Promise<HttpOperationResponse> {
+        // temp code to try out
         const subscriptionId: string = getSubscriptionFromId(resourceId);
+        const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...actionContext, loadAll: true });
+        // tslint:disable-next-line:typedef
+        const keys = await slotTreeItem?.client.listHostKeys();
+
+        // existing code that works
         const subscriptionContext: ISubscriptionContext = {
             credentials: azureSession.credentials2,
             subscriptionDisplayName: '',

@@ -40,8 +40,8 @@ export async function setupProjectFolder(uri: vscode.Uri, filePath: string, toke
 
             if (downloadAppContent === 'true') {
                 // NOTE: We don't want to download app content for compiled languages.
-                await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionAppMasterKeyAndDownloadContent', async (_actionContext: IActionContext) => {
-                    const listKeyResponse: HttpOperationResponse = await requestUtils.getFunctionAppMasterKey(account.sessions[0], resourceId, token);
+                await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionAppMasterKeyAndDownloadContent', async (actionContext: IActionContext) => {
+                    const listKeyResponse: HttpOperationResponse = await requestUtils.getFunctionAppMasterKey(account.sessions[0], resourceId, token, actionContext);
                     // tslint:disable-next-line: no-unsafe-any
                     await requestUtils.downloadFunctionAppContent(defaultHostName, downloadFilePath, listKeyResponse.parsedBody.masterKey);
                 });
