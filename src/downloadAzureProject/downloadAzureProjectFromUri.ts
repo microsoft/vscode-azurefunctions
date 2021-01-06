@@ -23,6 +23,7 @@ export async function downloadAzureProjectFromUri(uri: vscode.Uri, azureAccountE
     }
 }
 
+// tslint:disable-next-line:no-any
 async function setupAzureAccount(account: AzureAccount): Promise<any> {
     try {
         await vscode.commands.executeCommand('azure-account.login');
