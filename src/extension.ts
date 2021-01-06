@@ -25,13 +25,13 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
+import { downloadAzureProjectFromUri } from './downloadAzureProject/downloadAzureProjectFromUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { localize } from './localize';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
-import { localDevelopmentUtils } from './utils/localDevelopmentUtils';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
@@ -56,7 +56,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&downloadAppContent=<true/false>
     vscode.window.registerUriHandler({
         async handleUri(uri: vscode.Uri): Promise<void> {
-            return localDevelopmentUtils.handleUriForLocalDevelopment(uri, azureAccountExt);
+            return downloadAzureProjectFromUri(uri, azureAccountExt);
         }
     });
 
