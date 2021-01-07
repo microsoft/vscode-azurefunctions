@@ -1,10 +1,9 @@
-import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as extract from 'extract-zip';
 import { URL } from 'url';
 import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
-import { AzureAccount } from '../debug/AzureAccountExtension.api';
 import { GlobalStates } from '../extension';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
@@ -19,7 +18,7 @@ interface ILocalDevelopmentRequiredInputs {
     downloadAppContent: string | null;
 }
 
-export async function setupProjectFolder(uri: vscode.Uri, filePath: string, token: string, account: AzureAccount): Promise<void> {
+export async function setupProjectFolder(uri: vscode.Uri, filePath: string): Promise<void> {
     const requiredInputs: ILocalDevelopmentRequiredInputs = getAllRequiredInputs(uri.query);
     const resourceId: string | null = requiredInputs.resourceId;
     const defaultHostName: string | null = requiredInputs.defaultHostName;
@@ -41,9 +40,11 @@ export async function setupProjectFolder(uri: vscode.Uri, filePath: string, toke
             if (downloadAppContent === 'true') {
                 // NOTE: We don't want to download app content for compiled languages.
                 await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionAppMasterKeyAndDownloadContent', async (actionContext: IActionContext) => {
-                    const listKeyResponse: HttpOperationResponse = await requestUtils.getFunctionAppMasterKey(account.sessions[0], resourceId, token, actionContext);
+                    const hostKeys: WebSiteManagementModels.HostKeys | undefined = await requestUtils.getFunctionAppMasterKey(resourceId, actionContext);
                     // tslint:disable-next-line: no-unsafe-any
-                    await requestUtils.downloadFunctionAppContent(defaultHostName, downloadFilePath, listKeyResponse.parsedBody.masterKey);
+                    if (!!hostKeys && hostKeys.masterKey) {
+                        await requestUtils.downloadFunctionAppContent(defaultHostName, downloadFilePath, hostKeys.masterKey);
+                    }
                 });
             }
 
@@ -104,11 +105,15 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
 }
 
 function getAllRequiredInputs(query: string): ILocalDevelopmentRequiredInputs {
-    // NOTE: Need to generate the URL on line 234 so we can use the parser below to get query values.
+    // NOTE: VSCode treats resourceId as case sensitive. Hence we need to use split to get resourceId query value.
+    const queryParts: string[] = query.split('&');
+    const resourceId: string | null = queryParts[0].split('=')[1];
+
+    // NOTE: Need to generate the URL on line 234 so we can use the parser below to get query values. We need to convert to lower case for searchParams to work.
     const queryUrl: URL = new URL(`https://functions.azure.com?${query.toLowerCase()}`);
 
     return {
-        resourceId: queryUrl.searchParams.get('resourceid'),
+        resourceId: resourceId,
         defaultHostName: queryUrl.searchParams.get('defaulthostname'),
         devContainerName: queryUrl.searchParams.get('devcontainer'),
         language: queryUrl.searchParams.get('language'),

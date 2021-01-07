@@ -19,7 +19,6 @@ import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/F
 import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
-import { AzureAccount } from './debug/AzureAccountExtension.api';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -48,15 +47,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     context.subscriptions.push(ext.outputChannel);
     ext.ui = new AzureUserInput(context.globalState);
 
-    const azureAccountExt: vscode.Extension<AzureAccount> | undefined = vscode.extensions.getExtension<AzureAccount>('ms-vscode.azure-account');
-
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
     // NOTE: Example call for opening vscode with query parameters -
     // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&downloadAppContent=<true/false>
     vscode.window.registerUriHandler({
         async handleUri(uri: vscode.Uri): Promise<void> {
-            return downloadAzureProjectFromUri(uri, azureAccountExt);
+            return downloadAzureProjectFromUri(uri);
         }
     });
 

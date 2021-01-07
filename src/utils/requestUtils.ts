@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createGenericClient, IActionContext, ISubscriptionContext, parseError } from "vscode-azureextensionui";
-import { AzureSession } from '../debug/AzureAccountExtension.api';
+import { createGenericClient, IActionContext, parseError } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
-import { getSubscriptionFromId } from "./azure";
 import { nonNullProp } from "./nonNull";
 
 export namespace requestUtils {
@@ -53,31 +52,9 @@ export namespace requestUtils {
     }
 
     // tslint:disable-next-line:no-any
-    export async function getFunctionAppMasterKey(azureSession: AzureSession, resourceId: string, accessToken: any, actionContext: IActionContext): Promise<HttpOperationResponse> {
-        // temp code to try out
-        const subscriptionId: string = getSubscriptionFromId(resourceId);
+    export async function getFunctionAppMasterKey(resourceId: string, actionContext: IActionContext): Promise<WebSiteManagementModels.HostKeys | undefined> {
         const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...actionContext, loadAll: true });
-        // tslint:disable-next-line:typedef
-        const keys = await slotTreeItem?.client.listHostKeys();
-
-        // existing code that works
-        const subscriptionContext: ISubscriptionContext = {
-            credentials: azureSession.credentials2,
-            subscriptionDisplayName: '',
-            subscriptionId: subscriptionId,
-            subscriptionPath: `/subscriptions/${subscriptionId}`,
-            tenantId: azureSession.tenantId,
-            userId: azureSession.userId,
-            environment: azureSession.environment,
-        };
-        const client: ServiceClient = await createGenericClient(subscriptionContext);
-        const request: WebResource = new WebResource();
-        request.prepare({
-            method: 'POST',
-            url: `/${resourceId}/host/default/listkeys?api-version=2018-11-01`,
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        return await client.sendRequest(request);
+        return await slotTreeItem?.client.listHostKeys();
     }
 
     export async function downloadFunctionAppContent(defaultHostName: string, filePath: string, masterKey: string): Promise<void> {
