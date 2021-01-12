@@ -83,7 +83,7 @@
         "workspaceContains:*/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
-	"onUri"
+	    "onUri"
     ],
     "main": "./main.js",
     "contributes": {

@@ -3,14 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createGenericClient, IActionContext, parseError } from "vscode-azureextensionui";
+import { createGenericClient, parseError } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { nonNullProp } from "./nonNull";
 
@@ -38,33 +36,10 @@ export namespace requestUtils {
         }
     }
 
-    export async function downloadFile(url: string, filePath: string): Promise<void> {
+    export async function downloadFile(requestOptionsOrUrl: string | RequestPrepareOptions, filePath: string): Promise<void> {
         await fse.ensureDir(path.dirname(filePath));
         const request: WebResource = new WebResource();
-        request.prepare({ method: 'GET', url });
-        request.streamResponseBody = true;
-        const client: ServiceClient = await createGenericClient();
-        const response: HttpOperationResponse = await client.sendRequest(request);
-        const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
-        await new Promise(async (resolve, reject): Promise<void> => {
-            stream.pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
-        });
-    }
-
-    // tslint:disable-next-line:no-any
-    export async function getFunctionAppMasterKey(resourceId: string, actionContext: IActionContext): Promise<WebSiteManagementModels.HostKeys | undefined> {
-        const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...actionContext, loadAll: true });
-        return await slotTreeItem?.client.listHostKeys();
-    }
-
-    export async function downloadFunctionAppContent(defaultHostName: string, filePath: string, masterKey: string): Promise<void> {
-        await fse.ensureDir(path.dirname(filePath));
-        const request: WebResource = new WebResource();
-        request.prepare({
-            method: 'GET',
-            url: `https://${defaultHostName}/admin/functions/download?includeCsproj=true&includeAppSettings=true`,
-            headers: { 'x-functions-key': masterKey }
-        });
+        request.prepare(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseBody = true;
         const client: ServiceClient = await createGenericClient();
         const response: HttpOperationResponse = await client.sendRequest(request);

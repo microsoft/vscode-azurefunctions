@@ -49,13 +49,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
-    // NOTE: Example call for opening vscode with query parameters -
-    // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&downloadAppContent=<true/false>
-    vscode.window.registerUriHandler({
-        async handleUri(uri: vscode.Uri): Promise<void> {
-            return downloadAzureProjectFromUri(uri);
-        }
-    });
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -115,6 +108,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         WebSiteManagementMappers.SiteConfig.type.modelProperties!.powerShellVersion = { serializedName: 'powerShellVersion', type: { name: 'String' } };
         // tslint:disable-next-line: no-non-null-assertion
         WebSiteManagementMappers.SiteConfigResource.type.modelProperties!.powerShellVersion = { serializedName: 'properties.powerShellVersion', type: { name: 'String' } };
+
+        context.subscriptions.push(vscode.window.registerUriHandler({
+            handleUri: downloadAzureProjectFromUri
+        }));
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
