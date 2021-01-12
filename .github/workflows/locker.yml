@@ -1,0 +1,24 @@
+name: Locker
+on:
+  schedule:
+    - cron: 0 5 * * * # 10:00pm PT
+  repository_dispatch:
+    types: [trigger-locker]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions
+        uses: actions/checkout@v2
+        with:
+          repository: "microsoft/vscode-github-triage-actions"
+          path: ./actions
+          ref: v42
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
+      - name: Run Locker
+        uses: ./actions/locker
+        with:
+          daysSinceClose: 45
+          daysSinceUpdate: 7
