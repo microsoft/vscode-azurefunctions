@@ -5,7 +5,7 @@
 
 import { QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
-import { previewDescription, ProjectLanguage } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -48,7 +48,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
             { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
             { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell },
-            { label: localize('customHandler', 'Custom Handler'), description: previewDescription, data: ProjectLanguage.Custom }
+            { label: localize('customHandler', 'Custom Handler'), data: ProjectLanguage.Custom }
         ];
 
         languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });

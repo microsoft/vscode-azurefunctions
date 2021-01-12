@@ -899,7 +899,7 @@
                             "",
                             "",
                             "",
-                            "%azureFunctions.projectLanguage.preview%"
+                            ""
                         ]
                     },
                     "azureFunctions.deploySubpath": {
