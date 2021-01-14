@@ -1,0 +1,26 @@
+name: Needs More Info Closer
+on:
+  schedule:
+    - cron: 30 5 * * * # 10:30pm PT
+  repository_dispatch:
+    types: [trigger-needs-more-info]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions
+        uses: actions/checkout@v2
+        with:
+          repository: "microsoft/vscode-github-triage-actions"
+          path: ./actions
+          ref: v42
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
+      - name: Run Needs More Info Closer
+        uses: ./actions/needs-more-info-closer
+        with:
+          token: ${{secrets.AZCODE_BOT_PAT}}
+          label: needs more info
+          closeDays: 14
+          closeComment: "This issue has been closed automatically because it needs more information and has not had recent activity. See also our [issue reporting](https://aka.ms/azcodeissuereporting) guidelines.\n\nHappy Coding!"
