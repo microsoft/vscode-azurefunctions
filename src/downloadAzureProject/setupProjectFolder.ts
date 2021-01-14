@@ -8,35 +8,34 @@ import { RequestPrepareOptions } from '@azure/ms-rest-js';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { IActionContext } from 'vscode-azureextensionui';
+import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
-import { GlobalStates } from '../extension';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
+import { getRequiredQueryParameter, HandleUriActions } from './handleUri';
 
-export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vscode.Uri): Promise<void> {
+export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vscode.Uri, context: IActionContext): Promise<void> {
     const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
     const resourceId: string = getRequiredQueryParameter(parsedQuery, 'resourceId');
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
-    const downloadAppContent: string = getRequiredQueryParameter(parsedQuery, 'downloadAppContent');
+    const action: string = getRequiredQueryParameter(parsedQuery, 'action');
+    const downloadAppContent: boolean = action === HandleUriActions.downloadContentAndSetupProject;
 
-    ext.context.globalState.update(GlobalStates.projectLanguage, getProjectLanguageForLanguage(language));
     const toBeDeletedFolderPathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, 'temp');
 
     try {
         const functionAppName: string = getNameFromId(resourceId);
         const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
-        vscode.window.showInformationMessage(localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`));
-
-        if (downloadAppContent === 'true') {
-            // NOTE: We don't want to download app content for compiled languages.
-            await callWithTelemetryAndErrorHandling('azureFunctions.getFunctionAppMasterKeyAndDownloadContent', async (actionContext: IActionContext) => {
-                const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...actionContext, loadAll: true });
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
+            if (downloadAppContent) {
+                // NOTE: We don't want to download app content for compiled languages.
+                const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
                 const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
                 const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
 
@@ -48,15 +47,12 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                     };
                     await requestUtils.downloadFile(requestOptions, downloadFilePath);
                 }
-            });
-        }
+            }
 
-        const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
-        const projectFilePath: string = projectFilePathUri.fsPath;
-        const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-        ext.context.globalState.update(GlobalStates.projectFilePath, projectFilePathUri.fsPath);
-        await callWithTelemetryAndErrorHandling('azureFunctions.extractContentAndDownloadDevContainerFiles', async (_actionContext: IActionContext) => {
-            if (downloadAppContent === 'true') {
+            const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
+            const projectFilePath: string = projectFilePathUri.fsPath;
+            const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
+            if (downloadAppContent) {
                 // tslint:disable-next-line: no-unsafe-any
                 await extract(downloadFilePath, { dir: projectFilePath });
             }
@@ -68,9 +64,10 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
             );
+            await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
+            vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
+            vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
-        vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
-        vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath));
     } catch (err) {
         vscode.window.showErrorMessage(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project. Please try again.'));
     } finally {
@@ -99,17 +96,6 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
         case 'dotnetcore3.1':
             return ProjectLanguage.CSharp;
         default:
-            vscode.window.showErrorMessage(localize('unsupportedLangErrorMessage', 'Language not supported: "{0}"', language));
             throw new Error(`Language not supported: ${language}`);
-    }
-}
-
-function getRequiredQueryParameter(parsedQuery: querystring.ParsedUrlQuery, key: string): string {
-    const value: string | string[] | undefined = parsedQuery[key];
-    if (value && typeof value === 'string') {
-        return value;
-    } else {
-        vscode.window.showErrorMessage(localize('invalidInputsErrorMessage', 'Invalid inputs. Please try again.'));
-        throw new Error(localize('missingQueryParam', 'Missing query parameter "{0}".', key));
     }
 }

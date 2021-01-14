@@ -16,7 +16,6 @@ import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFr
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
-import { initProjectForVSCode } from './commands/initProjectForVSCode/initProjectForVSCode';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
@@ -24,21 +23,14 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
-import { downloadAzureProjectFromUri } from './downloadAzureProject/downloadAzureProjectFromUri';
+import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { localize } from './localize';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-
-export enum GlobalStates {
-    initProjectWithoutConfigVerification = 'initProjectWithoutConfigVerification',
-    projectFilePath = 'projectFilePath',
-    projectLanguage = 'projectLanguage'
-}
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -68,13 +60,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         // tslint:disable-next-line:no-floating-promises
         callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
-            if (ext.context.globalState.get(GlobalStates.initProjectWithoutConfigVerification) === true) {
-                vscode.window.showInformationMessage(localize('initializingFunctionAppProjectInfoMessage', 'Initializing function app project with language specific metadata'));
-                ext.context.globalState.update(GlobalStates.initProjectWithoutConfigVerification, false);
-                await initProjectForVSCode(actionContext, ext.context.globalState.get(GlobalStates.projectFilePath), ext.context.globalState.get(GlobalStates.projectLanguage));
-            } else {
-                await verifyVSCodeConfigOnActivate(actionContext, vscode.workspace.workspaceFolders);
-            }
+            await verifyVSCodeConfigOnActivate(actionContext, vscode.workspace.workspaceFolders);
         });
         registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async (actionContext: IActionContext, event: vscode.WorkspaceFoldersChangeEvent) => {
             await verifyVSCodeConfigOnActivate(actionContext, event.added);
@@ -110,7 +96,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         WebSiteManagementMappers.SiteConfigResource.type.modelProperties!.powerShellVersion = { serializedName: 'properties.powerShellVersion', type: { name: 'String' } };
 
         context.subscriptions.push(vscode.window.registerUriHandler({
-            handleUri: downloadAzureProjectFromUri
+            handleUri
         }));
     });
 
