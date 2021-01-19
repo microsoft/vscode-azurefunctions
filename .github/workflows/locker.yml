@@ -2,23 +2,22 @@ name: Locker
 on:
   schedule:
     - cron: 0 5 * * * # 10:00pm PT
-  repository_dispatch:
-    types: [trigger-locker]
+  workflow_dispatch:
 
 jobs:
   main:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Actions
+      - name: Checkout triage-actions
         uses: actions/checkout@v2
         with:
-          repository: "microsoft/vscode-github-triage-actions"
-          path: ./actions
-          ref: v42
-      - name: Install Actions
-        run: npm install --production --prefix ./actions
+          repository: "microsoft/vscode-azuretools"
+          path: ./azuretools
+          ref: main
+      - name: npm install
+        run: npm install --production --prefix ./azuretools/triage-actions
       - name: Run Locker
-        uses: ./actions/locker
+        uses: ./azuretools/triage-actions/locker
         with:
           daysSinceClose: 45
           daysSinceUpdate: 7
