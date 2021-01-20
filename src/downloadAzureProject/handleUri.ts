@@ -19,17 +19,19 @@ export enum HandleUriActions {
 // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject' OR 'setupProject'>
 export async function handleUri(uri: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
-        const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
-        if (!isLoggedIn) {
-            await vscode.commands.executeCommand('azure-account.login');
-        }
-
         const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
         const action: string = getRequiredQueryParameter(parsedQuery, 'action');
 
         if (action === HandleUriActions.downloadContentAndSetupProject || action === HandleUriActions.setupProject) {
+            const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
+            if (!isLoggedIn) {
+                await vscode.commands.executeCommand('azure-account.login');
+            }
+
             const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
             await setupProjectFolder(uri, filePathUri[0], context);
+        } else {
+            throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
         }
     });
 }
@@ -39,7 +41,6 @@ export function getRequiredQueryParameter(parsedQuery: querystring.ParsedUrlQuer
     if (value && typeof value === 'string') {
         return value;
     } else {
-        vscode.window.showErrorMessage(localize('invalidInputsErrorMessage', 'Invalid inputs. Please try again.'));
-        throw new Error(localize('missingQueryParam', 'Missing query parameter "{0}".', key));
+        throw new Error(localize('missingQueryParam', 'Missing query parameter "{0}". Please try again.', key));
     }
 }

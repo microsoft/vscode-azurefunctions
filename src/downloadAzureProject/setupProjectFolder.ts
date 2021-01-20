@@ -8,7 +8,7 @@ import { RequestPrepareOptions } from '@azure/ms-rest-js';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
@@ -46,6 +46,8 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                         headers: { 'x-functions-key':  hostKeys.masterKey }
                     };
                     await requestUtils.downloadFile(requestOptions, downloadFilePath);
+                } else {
+                    throw new Error(localize('hostInformationNotFound', 'Failed to get host information for the functionApp.'));
                 }
             }
 
@@ -69,7 +71,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
     } catch (err) {
-        vscode.window.showErrorMessage(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project. Please try again.'));
+        throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}". Please try again.', parseError(err).message));
     } finally {
         vscode.workspace.fs.delete(
             vscode.Uri.file(toBeDeletedFolderPathUri.fsPath),
