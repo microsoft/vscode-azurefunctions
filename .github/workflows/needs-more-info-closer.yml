@@ -13,7 +13,7 @@ jobs:
         with:
           repository: "microsoft/vscode-azuretools"
           path: ./azuretools
-          ref: main
+          ref: v0.1.0-triage-actions
       - name: npm install
         run: npm install --production --prefix ./azuretools/triage-actions
       - name: Run Needs More Info Closer
@@ -23,4 +23,5 @@ jobs:
           label: needs more info
           closeDays: 14
           closeComment: "This issue has been closed automatically because it needs more information and has not had recent activity. See also our [issue reporting](https://aka.ms/azcodeissuereporting) guidelines.\n\nHappy Coding!"
-          readonly: true
+          pingDays: 80
+          pingComment: "Hey @${assignee}, this issue might need further attention.\n\n@${author}, you can help us out by closing this issue if the problem no longer exists, or adding more information."
