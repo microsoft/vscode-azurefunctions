@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.2.0 - 2021-01-21
+
+### Added
+- Allow Python v3.9 when creating a virtual environment for a local project
+- Remove "Preview" label for custom handler projects
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.2.0%22+is%3Aclosed)
+- Python project fails to attach debugger with error "The operation has timed out."
+
 ## 1.1.0 - 2020-12-11
 
 ### Added
