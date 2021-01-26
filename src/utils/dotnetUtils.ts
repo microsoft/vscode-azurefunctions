@@ -19,7 +19,7 @@ export namespace dotnetUtils {
     export async function getProjFiles(projectLanguage: ProjectLanguage, projectPath: string): Promise<string[]> {
         const regexp: RegExp = projectLanguage === ProjectLanguage.FSharp ? /\.fsproj$/i : /\.csproj$/i;
         const files: string[] = await fse.readdir(projectPath);
-        return files.filter((f: string) => regexp.test(f) && !/extensions\.csproj$/i.test(f));
+        return files.filter((f: string) => regexp.test(f) && !/^extensions\.csproj$/i.test(f));
     }
 
     export async function getTargetFramework(projFilePath: string): Promise<string> {
