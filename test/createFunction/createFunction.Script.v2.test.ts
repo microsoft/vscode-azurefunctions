@@ -161,15 +161,14 @@ function addSuite(tester: FunctionTesterBase): void {
         });
 
         function fixDurableLabel(label: string): string {
-            if (tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Python) {
+            if (tester.language === ProjectLanguage.PowerShell) {
                 label += ' (preview)';
             }
             return label;
         }
 
         // Not supported for Custom Handlers
-        // Not supported for Python while the default bundle version is v1
-        if (tester.language !== ProjectLanguage.Custom && tester.language !== ProjectLanguage.Python) {
+        if (tester.language !== ProjectLanguage.Custom) {
             const durableActivity: string = 'Durable Functions activity';
             test(durableActivity, async () => {
                 await tester.testCreateFunction(
