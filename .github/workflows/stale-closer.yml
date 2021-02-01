@@ -29,4 +29,3 @@ jobs:
           candidateMilestone: 'Backlog Candidates'
           labelsToExclude: 'P0,P1'
           staleLabel: 'out of scope'
-          readonly: true
