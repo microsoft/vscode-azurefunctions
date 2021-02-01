@@ -21,12 +21,11 @@ jobs:
         with:
           token: ${{secrets.AZCODE_BOT_PAT}}
           closeDays: 240
-          closeComment: ':slightly_frowning_face: In the last 60 days, this issue has received less than 5 community upvotes and we closed it. Still a big Thank You to you for taking the time to create it! To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!'
+          closeComment: ":slightly_frowning_face: In the last 60 days, this issue has received less than 5 community upvotes and we closed it. Still a big Thank You to you for taking the time to create it! To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
           warnDays: 60
-          warnComment: 'This issue has become stale and is at risk of being closed. The community has 60 days to upvote the issue. If it receives 5 upvotes we will keep it open and take another look. If not, we will close it. To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!'
+          warnComment: "This issue has become stale and is at risk of being closed. The community has 60 days to upvote the issue. If it receives 5 upvotes we will keep it open and take another look. If not, we will close it. To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
           upvotesRequired: 5
           numCommentsOverride: 10
-          candidateMilestone: 'Backlog Candidates'
-          labelsToExclude: 'P0,P1'
-          staleLabel: 'out of scope'
-          readonly: true
+          candidateMilestone: "Backlog Candidates"
+          labelsToExclude: "P0,P1"
+          staleLabel: "out of scope"
