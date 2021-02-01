@@ -1051,7 +1051,12 @@
                         "type": "boolean",
                         "description": "%azureFunctions.showReloadTemplates%",
                         "default": false
-                    }
+                    },
+		      "azureFunctions.enableDownloadContentAndSetupProject": {
+            		  "type": "boolean",
+            		  "description": "Enable download content and setup project feature using handle uri (experimental)",
+            		 "default": false
+          	      }
                 }
             }
         ]

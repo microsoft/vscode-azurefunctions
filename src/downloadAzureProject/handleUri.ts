@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { setupProjectFolder } from './setupProjectFolder';
 
 export enum HandleUriActions {
@@ -19,19 +20,25 @@ export enum HandleUriActions {
 // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject' OR 'setupProject'>
 export async function handleUri(uri: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
-        const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
-        const action: string = getRequiredQueryParameter(parsedQuery, 'action');
+        const enableDownloadContentAndSetupProject: boolean | undefined = getWorkspaceSetting<boolean>('enableDownloadContentAndSetupProject');
 
-        if (action === HandleUriActions.downloadContentAndSetupProject || action === HandleUriActions.setupProject) {
-            const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
-            if (!isLoggedIn) {
-                await vscode.commands.executeCommand('azure-account.login');
+        if (enableDownloadContentAndSetupProject) {
+            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
+            const action: string = getRequiredQueryParameter(parsedQuery, 'action');
+
+            if (action === HandleUriActions.downloadContentAndSetupProject || action === HandleUriActions.setupProject) {
+                const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
+                if (!isLoggedIn) {
+                    await vscode.commands.executeCommand('azure-account.login');
+                }
+
+                const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                await setupProjectFolder(uri, filePathUri[0], context);
+            } else {
+                throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
             }
-
-            const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
-            await setupProjectFolder(uri, filePathUri[0], context);
         } else {
-            throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
+            throw new Error(localize('featureNotSupported', 'Download content and setup project feature is not supported for this extension version.'));
         }
     });
 }
