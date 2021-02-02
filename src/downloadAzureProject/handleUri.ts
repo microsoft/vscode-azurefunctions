@@ -20,9 +20,9 @@ export enum HandleUriActions {
 // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject' OR 'setupProject'>
 export async function handleUri(uri: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
-        const enableDownloadContentAndSetupProject: boolean | undefined = getWorkspaceSetting<boolean>('enableDownloadContentAndSetupProject');
+        const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
 
-        if (enableDownloadContentAndSetupProject) {
+        if (enableOpenFromPortal) {
             const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
             const action: string = getRequiredQueryParameter(parsedQuery, 'action');
 
@@ -48,6 +48,6 @@ export function getRequiredQueryParameter(parsedQuery: querystring.ParsedUrlQuer
     if (value && typeof value === 'string') {
         return value;
     } else {
-        throw new Error(localize('missingQueryParam', 'Missing query parameter "{0}". Please try again.', key));
+        throw new Error(localize('missingQueryParam', 'Missing query parameter "{0}".', key));
     }
 }

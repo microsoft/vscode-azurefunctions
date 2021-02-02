@@ -71,7 +71,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
     } catch (err) {
-        throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}". Please try again.', parseError(err).message));
+        throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
     } finally {
         vscode.workspace.fs.delete(
             vscode.Uri.file(toBeDeletedFolderPathUri.fsPath),
@@ -96,7 +96,7 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
             return ProjectLanguage.Java;
         case 'dotnetcore2.1':
         case 'dotnetcore3.1':
-            return ProjectLanguage.CSharp;
+            return ProjectLanguage.CSharpScript;
         default:
             throw new Error(`Language not supported: ${language}`);
     }
