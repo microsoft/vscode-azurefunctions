@@ -1115,7 +1115,7 @@
         "@azure/arm-eventhub": "^3.2.0",
         "@azure/arm-servicebus": "^3.2.0",
         "@azure/arm-storage": "^15.0.0",
-        "@azure/ms-rest-js": "^2.0.7",
+        "@azure/ms-rest-js": "^2.2.1",
         "azure-storage": "^2.10.3",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^1.6.6",
