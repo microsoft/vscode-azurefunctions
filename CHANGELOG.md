@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.2.1 - 2021-02-09
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.2.1%22+is%3Aclosed)
+- Fixed failure to debug on VS Code v1.53+ because extension did not activate
+- Mitigated "ECONNRESET" errors by retrying the request
+
 ## 1.2.0 - 2021-01-21
 
 ### Added
