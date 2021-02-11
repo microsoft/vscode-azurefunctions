@@ -21,9 +21,9 @@ export namespace mavenUtils {
 
             if (!context.errorHandling.suppressDisplay) {
                 // don't wait
-                vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
+                void vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(result => {
                     if (result === DialogResponses.learnMore) {
-                        await openUrl('https://aka.ms/azurefunction_maven');
+                        openUrl('https://aka.ms/azurefunction_maven');
                     }
                 });
                 context.errorHandling.suppressDisplay = true;
@@ -36,12 +36,12 @@ export namespace mavenUtils {
     export async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
         const pomString: string = await fse.readFile(pomLocation, 'utf-8');
         return await new Promise((resolve: (ret: string | undefined) => void): void => {
-            // tslint:disable-next-line:no-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {
                 if (result && !err) {
-                    // tslint:disable-next-line:no-string-literal no-unsafe-any
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     if (result['project'] && result['project']['properties']) {
-                        // tslint:disable-next-line:no-string-literal no-unsafe-any
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         resolve(result['project']['properties']['functionAppName']);
                         return;
                     }

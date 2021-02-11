@@ -25,7 +25,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 
     await waitForPrevFuncTaskToStop(result.workspace);
 
-    // tslint:disable-next-line: no-unsafe-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const preLaunchTaskName: string | undefined = debugConfig.preLaunchTask;
     const tasks: vscode.Task[] = await vscode.tasks.fetchTasks();
     const funcTask: vscode.Task | undefined = tasks.find(t => {
@@ -41,7 +41,7 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
-    await stopFuncTaskIfRunning(workspaceFolder);
+    stopFuncTaskIfRunning(workspaceFolder);
 
     const timeoutInSeconds: number = 30;
     const maxTime: number = Date.now() + timeoutInSeconds * 1000;
@@ -92,7 +92,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                 try {
                     // wait for status url to indicate functions host is running
                     const response: HttpOperationResponse = await client.sendRequest(statusRequest);
-                    // tslint:disable-next-line: no-unsafe-any
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
                         return taskInfo.processId.toString();
                     }
@@ -136,7 +136,6 @@ type OSAgnosticProcess = { command: string | undefined; pid: number | string };
  */
 async function pickChildProcess(rootPid: string): Promise<string> {
     const children: OSAgnosticProcess[] = process.platform === 'win32' ? await getWindowsChildren(rootPid) : await getUnixChildren(rootPid);
-    // tslint:disable-next-line: strict-boolean-expressions
     const child: OSAgnosticProcess | undefined = children.reverse().find(c => /(dotnet|func)(\.exe|)$/i.test(c.command || ''));
     return child ? child.pid.toString() : rootPid;
 }

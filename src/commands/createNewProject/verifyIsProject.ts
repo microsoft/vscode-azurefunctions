@@ -74,7 +74,6 @@ async function promptForProjectSubpath(workspacePath: string, matchingSubpaths: 
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
 export async function verifyAndPromptToCreateProject(context: IActionContext, fsPath: string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
-    // tslint:disable-next-line: strict-boolean-expressions
     options = options || {};
 
     const projectPath: string | undefined = await tryGetFunctionProjectRoot(fsPath);

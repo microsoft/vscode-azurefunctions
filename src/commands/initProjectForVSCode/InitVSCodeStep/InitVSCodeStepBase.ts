@@ -77,14 +77,14 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     private async writeTasksJson(context: IProjectWizardContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
         const newTasks: TaskDefinition[] = this.getTasks(language);
         for (const task of newTasks) {
-            // tslint:disable-next-line: strict-boolean-expressions no-unsafe-any
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             let cwd: string = (task.options && task.options.cwd) || '.';
             cwd = this.addSubDir(context, cwd);
             if (!isPathEqual(cwd, '.')) {
-                // tslint:disable-next-line: strict-boolean-expressions
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 task.options = task.options || {};
                 // always use posix for debug config
-                // tslint:disable-next-line: no-unsafe-any no-invalid-template-strings
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 task.options.cwd = path.posix.join('${workspaceFolder}', cwd);
             }
         }
@@ -121,7 +121,6 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     }
 
     private insertNewTasks(existingTasks: ITask[] | undefined, newTasks: ITask[]): ITask[] {
-        // tslint:disable-next-line: strict-boolean-expressions
         existingTasks = existingTasks || [];
         // Remove tasks that match the ones we're about to add
         existingTasks = existingTasks.filter(t1 => !newTasks.find(t2 => {
@@ -181,9 +180,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     }
 
     private insertLaunchConfig(existingConfigs: DebugConfiguration[] | undefined, newConfig: DebugConfiguration): DebugConfiguration[] {
-        // tslint:disable-next-line: strict-boolean-expressions
         existingConfigs = existingConfigs || [];
-        // Remove configs that match the one we're about to add
         existingConfigs = existingConfigs.filter(l1 => !isDebugConfigEqual(l1, newConfig));
         existingConfigs.push(newConfig);
         return existingConfigs;

@@ -88,7 +88,6 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     private async refreshTriggerUrl(): Promise<void> {
         const triggerUrl: url.URL = new url.URL(this.parent.parent.hostUrl);
 
-        // tslint:disable-next-line: strict-boolean-expressions
         const route: string = (this.config.triggerBinding && this.config.triggerBinding.route) || this.name;
         const hostJson: IParsedHostJson = await this.parent.parent.getHostJson();
         triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
@@ -118,7 +117,6 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
              * The following resulted in an enabled function:
              * false, fAlse, 0, fdsaf, 2, undefined
              */
-            // tslint:disable-next-line:strict-boolean-expressions
             this._disabled = /^(1|true)$/i.test(appSettings[this.disabledStateKey] || '');
         }
     }

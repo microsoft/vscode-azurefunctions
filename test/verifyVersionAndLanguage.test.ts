@@ -7,7 +7,6 @@ import { FuncVersion, ProjectLanguage, verifyVersionAndLanguage } from '../exten
 import { assertThrowsAsync } from './assertThrowsAsync';
 import { createTestActionContext, testUserInput } from './global.test';
 
-// tslint:disable-next-line: max-func-body-length
 suite('verifyVersionAndLanguage', () => {
     test('Local: ~1, Remote: none', async () => {
         const props: { [name: string]: string } = {};

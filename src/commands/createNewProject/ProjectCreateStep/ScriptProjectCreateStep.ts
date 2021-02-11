@@ -40,7 +40,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         if (await confirmOverwriteFile(localSettingsJsonPath)) {
             const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
-                // tslint:disable-next-line:no-non-null-assertion
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
@@ -50,7 +50,6 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const proxiesJsonPath: string = path.join(context.projectPath, proxiesFileName);
         if (await confirmOverwriteFile(proxiesJsonPath)) {
             await writeFormattedJson(proxiesJsonPath, {
-                // tslint:disable-next-line:no-http-string
                 $schema: 'http://json.schemastore.org/proxies',
                 proxies: {}
             });

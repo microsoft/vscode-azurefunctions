@@ -9,7 +9,6 @@ import { WebSiteManagementMappers } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { registerAppServiceExtensionVariables } from 'vscode-azureappservice';
 import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from 'vscode-azureextensionui';
-// tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
@@ -41,14 +40,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
 
-    await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
+    await callWithTelemetryAndErrorHandling('azureFunctions.activate', (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         runPostFunctionCreateStepsFromCache();
 
-        // tslint:disable-next-line:no-floating-promises
-        validateFuncCoreToolsIsLatest();
+        void validateFuncCoreToolsIsLatest();
 
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         context.subscriptions.push(ext.azureAccountTreeItem);
@@ -57,8 +55,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.treeView);
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
-        // tslint:disable-next-line:no-floating-promises
-        callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
+        void callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
             await verifyVSCodeConfigOnActivate(actionContext, vscode.workspace.workspaceFolders);
         });
         registerEvent(validateEventId, vscode.workspace.onDidChangeWorkspaceFolders, async (actionContext: IActionContext, event: vscode.WorkspaceFoldersChangeEvent) => {
@@ -89,9 +86,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         // Temporary workaround so that "powerShellVersion" is an allowed property on SiteConfig
         // https://github.com/Azure/azure-sdk-for-js/issues/10552
-        // tslint:disable-next-line: no-non-null-assertion
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         WebSiteManagementMappers.SiteConfig.type.modelProperties!.powerShellVersion = { serializedName: 'powerShellVersion', type: { name: 'String' } };
-        // tslint:disable-next-line: no-non-null-assertion
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         WebSiteManagementMappers.SiteConfigResource.type.modelProperties!.powerShellVersion = { serializedName: 'properties.powerShellVersion', type: { name: 'String' } };
     });
 
@@ -104,6 +101,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     }]);
 }
 
-// tslint:disable-next-line:no-empty
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivateInternal(): void {
 }

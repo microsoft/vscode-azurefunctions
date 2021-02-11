@@ -8,7 +8,6 @@ import { getCoreNodeModule } from "./getCoreNodeModule";
 
 export function getWindowsProcessTree(): IWindowsProcessTree {
     const moduleName: string = 'windows-process-tree';
-    // tslint:disable-next-line:no-unsafe-any
     const windowsProcessTree: IWindowsProcessTree | undefined = getCoreNodeModule<IWindowsProcessTree>(moduleName);
     if (!windowsProcessTree) {
         throw new Error(localize('noWindowsProcessTree', 'Failed to find dependency "{0}".', moduleName));

@@ -22,7 +22,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
 
     // Don't wait
-    window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
+    void window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
         await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             if (result === viewOutput) {

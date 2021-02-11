@@ -311,7 +311,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     let expectedPaths: string[] = commonExpectedPaths.filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
     expectedPaths = expectedPaths.concat(options.expectedPaths);
     await Promise.all(expectedPaths.map(async p => {
-        assert.equal(await fse.pathExists(path.join(projectPath, p)), true, `Path "${p}" does not exist.`);
+        assert.strictEqual(await fse.pathExists(path.join(projectPath, p)), true, `Path "${p}" does not exist.`);
     }));
 
     //
@@ -319,9 +319,8 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     const recs: string[] = options.expectedExtensionRecs.concat('ms-azuretools.vscode-azurefunctions');
     const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(projectPath, '.vscode', 'extensions.json'));
-    // tslint:disable-next-line: strict-boolean-expressions
     extensionsJson.recommendations = extensionsJson.recommendations || [];
-    assert.equal(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");
+    assert.strictEqual(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");
     for (const rec of recs) {
         assert.ok(extensionsJson.recommendations.find(r => r === rec), `The recommendation "${rec}" was not found in extensions.json.`);
     }
@@ -342,16 +341,15 @@ export async function validateProject(projectPath: string, options: IValidatePro
         }
         delete settings[key];
     }
-    assert.equal(Object.keys(settings).length, 0, `settings.json has extra settings: ${JSON.stringify(settings)}`);
+    assert.strictEqual(Object.keys(settings).length, 0, `settings.json has extra settings: ${JSON.stringify(settings)}`);
 
     //
     // Validate launch.json
     //
     if (expectedPaths.find(p => p.includes('launch.json'))) {
         const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(projectPath, '.vscode', 'launch.json'));
-        // tslint:disable-next-line: strict-boolean-expressions
         launchJson.configurations = launchJson.configurations || [];
-        assert.equal(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");
+        assert.strictEqual(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");
         for (const configName of options.expectedDebugConfigs) {
             assert.ok(launchJson.configurations.find(c => c.name === configName), `The debug config "${configName}" was not found in launch.json.`);
         }
@@ -361,9 +359,8 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate tasks.json
     //
     const tasksJson: ITasksJson = <ITasksJson>await fse.readJSON(path.join(projectPath, '.vscode', 'tasks.json'));
-    // tslint:disable-next-line: strict-boolean-expressions
     tasksJson.tasks = tasksJson.tasks || [];
-    assert.equal(tasksJson.tasks.length, options.expectedTasks.length, "tasks.json doesn't have the expected number of tasks.");
+    assert.strictEqual(tasksJson.tasks.length, options.expectedTasks.length, "tasks.json doesn't have the expected number of tasks.");
     for (const task of options.expectedTasks) {
         assert.ok(tasksJson.tasks.find(t => t.label === task || t.command === task), `The task "${task}" was not found in tasks.json.`);
     }
@@ -372,5 +369,5 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate .gitignore
     //
     const gitignoreContents: string = (await fse.readFile(path.join(projectPath, '.gitignore'))).toString();
-    assert.equal(gitignoreContents.indexOf('.vscode'), -1, 'The ".vscode" folder is being ignored.');
+    assert.strictEqual(gitignoreContents.indexOf('.vscode'), -1, 'The ".vscode" folder is being ignored.');
 }

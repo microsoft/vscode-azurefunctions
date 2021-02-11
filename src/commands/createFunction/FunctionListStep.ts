@@ -38,7 +38,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     private constructor(functionSettings: { [key: string]: string | undefined } | undefined, isProjectWizard: boolean | undefined) {
         super();
-        // tslint:disable-next-line: strict-boolean-expressions
         this._functionSettings = functionSettings || {};
         this._isProjectWizard = !!isProjectWizard;
     }
@@ -142,7 +141,6 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {
-        // tslint:disable-next-line: strict-boolean-expressions
         let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
         while (!context.functionTemplate) {

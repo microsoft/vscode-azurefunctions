@@ -56,7 +56,6 @@ export function convertToValidPackageName(name: string): string {
 }
 
 // https://raw.githubusercontent.com/github/gitignore/master/Node.gitignore
-// tslint:disable-next-line:no-multiline-string
 const nodeGitignore: string = `# Logs
 logs
 *.log

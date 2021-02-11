@@ -186,7 +186,6 @@ export class CentralTemplateProvider {
     }
 
     private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, latestTemplateVersion: string): Promise<ITemplates | undefined> {
-        // tslint:disable-next-line:strict-boolean-expressions
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
             const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
@@ -199,7 +198,6 @@ export class CentralTemplateProvider {
     }
 
     private async tryGetCachedTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates | undefined> {
-        // tslint:disable-next-line:strict-boolean-expressions
         if (!this.templateSource) {
             try {
                 context.telemetry.properties.templateSource = 'cache';
@@ -215,7 +213,6 @@ export class CentralTemplateProvider {
     }
 
     private async tryGetBackupTemplates(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates | undefined> {
-        // tslint:disable-next-line:strict-boolean-expressions
         if (!this.templateSource || this.templateSource === TemplateSource.Backup) {
             try {
                 context.telemetry.properties.templateSource = 'backup';

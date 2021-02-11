@@ -20,8 +20,8 @@ export namespace ext {
     export let outputChannel: IAzExtOutputChannel;
     export let ui: IAzureUserInput;
     export let templateProvider: CentralTemplateProvider;
-    export let funcCliPath: string = func;
     export let ignoreBundle: boolean | undefined;
+    export const funcCliPath: string = func;
     export const prefix: string = 'azureFunctions';
 }
 

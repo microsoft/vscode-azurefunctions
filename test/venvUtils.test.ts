@@ -11,7 +11,6 @@ import { cpUtils, ext, getGlobalSetting, pythonVenvSetting, updateGlobalSetting,
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
-// tslint:disable-next-line: max-func-body-length
 suite('venvUtils', () => {
     const command: string = 'do a thing';
     const windowsTerminalSetting: string = 'terminal.integrated.shell.windows';
@@ -40,19 +39,19 @@ suite('venvUtils', () => {
             this.skip();
         }
 
-        assert.equal(await venvUtils.venvExists(venvName, testFolder), true);
+        assert.strictEqual(await venvUtils.venvExists(venvName, testFolder), true);
     });
 
     test('venvExists false', async () => {
-        assert.equal(await venvUtils.venvExists('nonExistentPath', testFolder), false);
+        assert.strictEqual(await venvUtils.venvExists('nonExistentPath', testFolder), false);
 
         const fileName: string = 'notAVenvFile';
         await fse.ensureFile(path.join(testFolder, fileName));
-        assert.equal(await venvUtils.venvExists(fileName, testFolder), false);
+        assert.strictEqual(await venvUtils.venvExists(fileName, testFolder), false);
 
         const folderName: string = 'notAVenvFolder';
         await fse.ensureDir(path.join(testFolder, folderName));
-        assert.equal(await venvUtils.venvExists(folderName, testFolder), false);
+        assert.strictEqual(await venvUtils.venvExists(folderName, testFolder), false);
     });
 
     test('runCommandInVenv', async function (this: ITestCallbackContext): Promise<void> {
@@ -68,8 +67,8 @@ suite('venvUtils', () => {
             this.skip();
         }
         await runWithSetting(windowsTerminalSetting, 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', async () => {
-            assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate ; do a thing');
-            assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
+            assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate ; do a thing');
+            assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
         });
     });
 
@@ -78,8 +77,8 @@ suite('venvUtils', () => {
             this.skip();
         }
         await runWithSetting(windowsTerminalSetting, 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\pwsh.exe', async () => {
-            assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate ; do a thing');
-            assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
+            assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate ; do a thing');
+            assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
         });
     });
 
@@ -88,8 +87,8 @@ suite('venvUtils', () => {
             this.skip();
         }
         await runWithSetting(windowsTerminalSetting, 'C:\\Windows\\System32\\cmd.exe', async () => {
-            assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate && do a thing');
-            assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
+            assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '.venv\\Scripts\\activate && do a thing');
+            assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv\\Scripts\\python -m do a thing');
         });
     });
 
@@ -98,8 +97,8 @@ suite('venvUtils', () => {
             this.skip();
         }
         await runWithSetting(windowsTerminalSetting, 'C:\\Program Files\\Git\\bin\\bash.exe', async () => {
-            assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/Scripts/activate && do a thing');
-            assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv/Scripts/python -m do a thing');
+            assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/Scripts/activate && do a thing');
+            assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv/Scripts/python -m do a thing');
         });
     });
 
@@ -108,8 +107,8 @@ suite('venvUtils', () => {
             this.skip();
         }
         await runWithSetting(windowsTerminalSetting, 'C:\\Windows\\System32\\bash.exe', async () => {
-            assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/Scripts/activate && do a thing');
-            assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv/Scripts/python -m do a thing');
+            assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/Scripts/activate && do a thing');
+            assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'win32'), '.venv/Scripts/python -m do a thing');
         });
     });
 
@@ -117,15 +116,15 @@ suite('venvUtils', () => {
         if (process.platform !== 'darwin') {
             this.skip();
         }
-        assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/bin/activate && do a thing');
-        assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'darwin'), '.venv/bin/python -m do a thing');
+        assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/bin/activate && do a thing');
+        assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'darwin'), '.venv/bin/python -m do a thing');
     });
 
     test('convertToVenvCommand Linux', async function (this: ITestCallbackContext): Promise<void> {
         if (process.platform !== 'linux') {
             this.skip();
         }
-        assert.equal(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/bin/activate && do a thing');
-        assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'linux'), '.venv/bin/python -m do a thing');
+        assert.strictEqual(venvUtils.convertToVenvCommand(command, testFolder), '. .venv/bin/activate && do a thing');
+        assert.strictEqual(venvUtils.convertToVenvPythonCommand(command, venvName, 'linux'), '.venv/bin/python -m do a thing');
     });
 });

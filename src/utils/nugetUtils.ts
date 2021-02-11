@@ -155,7 +155,6 @@ export namespace nugetUtils {
             // Assume wildcard or prerelease versions are fine as-is
             return version;
         } else {
-            // tslint:disable-next-line: strict-boolean-expressions
             let count: number = (version.match(/\./g) || []).length;
             while (count < 2) {
                 version += '.0';

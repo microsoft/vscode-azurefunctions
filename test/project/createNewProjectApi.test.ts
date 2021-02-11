@@ -9,7 +9,7 @@ import { FuncVersion } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath, testUserInput } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';
 
-suite('Create New Project API (deprecated)', async () => {
+suite('Create New Project API (deprecated)', () => {
     // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-new-project
     test('JavaScript', async () => {
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApi');

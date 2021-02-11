@@ -29,6 +29,7 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
         return !context.useExistingVenv && !context.pythonAlias;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getSubWizard(context: IPythonVenvWizardContext): Promise<IWizardOptions<IPythonVenvWizardContext> | undefined> {
         if (context.manuallyEnterAlias) {
             return {

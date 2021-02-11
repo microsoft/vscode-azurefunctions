@@ -33,8 +33,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                 const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                 if (language !== undefined && version !== undefined) {
                     // Don't wait
-                    // tslint:disable-next-line: no-floating-promises
-                    callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
+                    void callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
                         await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version);

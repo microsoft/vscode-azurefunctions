@@ -10,12 +10,11 @@ const versionKey: string = 'version';
 export const tasksVersion: string = '2.0.0';
 
 export function getTasks(folder: WorkspaceFolder): ITask[] {
-    // tslint:disable-next-line: strict-boolean-expressions
     return getTasksConfig(folder).get<ITask[]>(tasksKey) || [];
 }
 
 export function updateTasks(folder: WorkspaceFolder, tasks: ITask[]): void {
-    getTasksConfig(folder).update(tasksKey, tasks);
+    void getTasksConfig(folder).update(tasksKey, tasks);
 }
 
 export function getTasksVersion(folder: WorkspaceFolder): string | undefined {
@@ -23,7 +22,7 @@ export function getTasksVersion(folder: WorkspaceFolder): string | undefined {
 }
 
 export function updateTasksVersion(folder: WorkspaceFolder, version: string): void {
-    getTasksConfig(folder).update(versionKey, version);
+    void getTasksConfig(folder).update(versionKey, version);
 }
 
 function getTasksConfig(folder: WorkspaceFolder): WorkspaceConfiguration {

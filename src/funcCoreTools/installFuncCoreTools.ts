@@ -12,7 +12,6 @@ import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
 export async function installFuncCoreTools(packageManagers: PackageManager[], version?: FuncVersion): Promise<void> {
-    // tslint:disable-next-line: strict-boolean-expressions
     version = version || await promptForFuncVersion(localize('selectVersion', 'Select the version of the runtime to install'));
 
     ext.outputChannel.show();

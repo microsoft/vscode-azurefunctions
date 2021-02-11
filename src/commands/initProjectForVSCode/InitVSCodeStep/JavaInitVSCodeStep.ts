@@ -27,7 +27,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
         const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomFilePath);
         if (!functionAppName) {
             this._debugSubpath = '<function_build_path>';
-            window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
+            void window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
         } else {
             this._debugSubpath = getJavaDebugSubpath(functionAppName);
         }

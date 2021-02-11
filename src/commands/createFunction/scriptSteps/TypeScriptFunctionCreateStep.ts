@@ -16,7 +16,7 @@ export class TypeScriptFunctionCreateStep extends ScriptFunctionCreateStep {
         let outDir: string = tsDefaultOutDir;
         try {
             const tsconfigPath: string = path.join(context.projectPath, tsConfigFileName);
-            // tslint:disable-next-line:no-unsafe-any
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             outDir = (await fse.readJSON(tsconfigPath)).compilerOptions.outDir;
         } catch {
             // ignore and use default outDir

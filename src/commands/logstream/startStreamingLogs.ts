@@ -73,7 +73,7 @@ async function openLiveMetricsStream(treeItem: SlotTreeItemBase | RemoteFunction
 
             // Not using `openInPortal` because this url is so unconventional
             const url: string = `${treeItem.root.environment.portalUrl}/#blade/AppInsightsExtension/QuickPulseBladeV2/ComponentId/${componentId}/ResourceId/${resourceId}`;
-            await openUrl(url);
+            openUrl(url);
         }
     }
 }

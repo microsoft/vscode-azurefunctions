@@ -43,7 +43,6 @@ export function getScriptResourcesLanguage(vscodeLang: string = vscode.env.langu
         }
 
         if (!supportedLanguage) {
-            // tslint:disable-next-line: strict-boolean-expressions
             locale = locale || '[a-z]*';
             const regExp: RegExp = new RegExp(`^${language}(-${locale})?$`, 'i');
             supportedLanguage = supportedLanguages.find(f => regExp.test(f));

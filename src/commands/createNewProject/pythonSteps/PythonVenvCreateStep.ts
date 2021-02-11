@@ -28,8 +28,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStep<IPythonVenvWiza
         }
 
         // Don't wait just for telemetry and don't block on errors
-        // tslint:disable-next-line: no-floating-promises
-        getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
+        void getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
 
         await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, '-m', 'venv', context.venvName);
 

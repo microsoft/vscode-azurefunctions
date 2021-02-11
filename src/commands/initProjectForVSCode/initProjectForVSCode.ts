@@ -42,9 +42,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         return;
     }
 
-    // tslint:disable-next-line: strict-boolean-expressions
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(projectPath);
-    // tslint:disable-next-line: strict-boolean-expressions
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
 
     const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, version, workspaceFolder });
@@ -53,5 +51,5 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
     await wizard.execute();
 
     // don't wait
-    window.showInformationMessage(localize('finishedInitializing', 'Finished initializing for use with VS Code.'));
+    void window.showInformationMessage(localize('finishedInitializing', 'Finished initializing for use with VS Code.'));
 }

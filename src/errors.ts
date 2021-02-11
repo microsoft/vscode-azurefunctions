@@ -5,8 +5,6 @@
 
 import { localize } from './localize';
 
-// tslint:disable:max-classes-per-file export-name
-
 export class NoWorkspaceError extends Error {
     public message: string = localize('noWorkspaceError', 'You must have a workspace open to perform this operation.');
 }

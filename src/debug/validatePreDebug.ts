@@ -142,7 +142,6 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
             await new Promise((resolve, reject): void => {
                 // Checking against a common container for functions, but doesn't really matter what call we make here
                 client.doesContainerExist('azure-webjob-hosts', (err: Error | undefined) => {
-                    // tslint:disable-next-line: no-void-expression
                     err ? reject(err) : resolve();
                 });
             });

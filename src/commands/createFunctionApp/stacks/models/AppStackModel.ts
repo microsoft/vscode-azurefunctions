@@ -5,7 +5,6 @@
 
 // Types copied from here:
 // https://github.com/Azure/azure-functions-ux/blob/3322f0b5151bbfcf7a08f281efe678ebac643dc0/server/src/stacks/2020-10-01/models/AppStackModel.ts
-// tslint:disable: interface-name
 
 export interface AppStack<T, V> {
     displayText: string;

@@ -24,6 +24,7 @@ suite('parseJson', () => {
 
     test('Invalid json', () => {
         const data: string = '{"a": "1}';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         assert.throws(() => parseJson(data));
     });
 });

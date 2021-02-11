@@ -44,7 +44,7 @@ suite('nugetUtils.tryGetMaxInRange', () => {
 
     for (const testCase of testCases) {
         test(testCase.range, () => {
-            assert.equal(nugetUtils.tryGetMaxInRange(testCase.range, versions), testCase.expected);
+            assert.strictEqual(nugetUtils.tryGetMaxInRange(testCase.range, versions), testCase.expected);
         });
     }
 

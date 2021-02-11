@@ -24,7 +24,6 @@ export async function createAndValidateProject(options: ICreateProjectTestOption
     const projectPath: string = options.projectPath || path.join(testFolderPath, getRandomHexString(), language + 'Project');
 
     if (!options.isHiddenLanguage) {
-        // tslint:disable-next-line: strict-boolean-expressions
         inputs.unshift(options.displayLanguage || language);
     }
 

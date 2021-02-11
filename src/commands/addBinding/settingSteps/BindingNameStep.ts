@@ -13,7 +13,7 @@ export class BindingNameStep extends StringPromptStep {
     private _functionJson: ParsedFunctionJson | undefined;
 
     public async getDefaultValue(context: IBindingWizardContext): Promise<string | undefined> {
-        const defaultValue: string | undefined = await super.getDefaultValue(context);
+        const defaultValue: string | undefined = super.getDefaultValue(context);
         if (defaultValue) {
             let uniqueValue: string = defaultValue;
 
@@ -38,7 +38,7 @@ export class BindingNameStep extends StringPromptStep {
         } else if (await this.bindingExists(context, val)) {
             return localize('existingBindingError', 'A binding with the name "{0}" already exists.', val);
         } else {
-            return await super.validateInput(context, val);
+            return super.validateInput(context, val);
         }
     }
 

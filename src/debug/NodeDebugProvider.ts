@@ -23,6 +23,7 @@ export class NodeDebugProvider extends FuncDebugProviderBase {
     protected readonly defaultPortOrPipeName: number = defaultNodeDebugPort;
     protected readonly debugConfig: DebugConfiguration = nodeDebugConfig;
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getWorkerArgValue(folder: WorkspaceFolder): Promise<string> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
         return `--inspect=${port}`;

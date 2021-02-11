@@ -11,7 +11,6 @@ export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext
     public priority: number = 250;
 
     public async execute(context: IProjectWizardContext): Promise<void> {
-        // tslint:disable-next-line:strict-boolean-expressions
         const openFolders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         if (context.openBehavior === 'AddToWorkspace' && openFolders.length === 0) {
             // no point in adding to an empty workspace

@@ -37,7 +37,6 @@ async function getPythonCommand(host: string, port: number): Promise<string> {
             await pyExtension.activate();
         }
 
-        // tslint:disable-next-line:strict-boolean-expressions
         if (pyExtension.exports && pyExtension.exports.debug) {
             return (await pyExtension.exports.debug.getRemoteLauncherCommand(host, port, false)).join(' ');
         } else {

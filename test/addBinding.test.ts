@@ -11,7 +11,7 @@ import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
 import { cleanTestWorkspace, createTestActionContext, testUserInput, testWorkspacePath } from './global.test';
 
-suite('Add Binding', async () => {
+suite('Add Binding', () => {
     let functionJsonPath: string;
     const functionName: string = 'HttpTriggerTest';
     let initialBindingsCount: number;
@@ -28,7 +28,7 @@ suite('Add Binding', async () => {
 
     suiteTeardown(async () => {
         const finalBindingsCount: number = await getBindingsCount();
-        assert.equal(finalBindingsCount, initialBindingsCount + 3, 'Not all expected bindings were added.');
+        assert.strictEqual(finalBindingsCount, initialBindingsCount + 3, 'Not all expected bindings were added.');
     });
 
     test('Command Palette', async () => {
@@ -52,11 +52,9 @@ suite('Add Binding', async () => {
 
     async function getBindingsCount(): Promise<number> {
         const data: IFunctionJson = <IFunctionJson>await fse.readJSON(functionJsonPath);
-        // tslint:disable-next-line: strict-boolean-expressions
         return (data.bindings || []).length;
     }
 
-    // tslint:disable-next-line: no-any
     async function validateAddBinding(commandInputs: any[], userInputs: string[]): Promise<void> {
         const bindingType: string = 'HTTP';
         const bindingDirection: string = 'out';
@@ -70,8 +68,8 @@ suite('Add Binding', async () => {
         if (!binding) {
             assert.fail(`Failed to find binding "${bindingName}".`);
         } else {
-            assert.equal(binding.direction, bindingDirection);
-            assert.equal(binding.type, bindingType.toLowerCase()); // For no particular reason, the type is lowercase in function.json
+            assert.strictEqual(binding.direction, bindingDirection);
+            assert.strictEqual(binding.type, bindingType.toLowerCase()); // For no particular reason, the type is lowercase in function.json
         }
     }
 });

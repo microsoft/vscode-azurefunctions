@@ -23,6 +23,7 @@ export class LocalFunctionTreeItem extends FunctionTreeItemBase {
         return ti;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getKey(): Promise<string | undefined> {
         return undefined;
     }

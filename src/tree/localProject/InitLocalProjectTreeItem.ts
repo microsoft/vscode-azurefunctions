@@ -22,6 +22,7 @@ export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
         return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         const ti: GenericTreeItem = new GenericTreeItem(this, {
             contextValue: 'initProject',

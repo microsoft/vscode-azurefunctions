@@ -83,9 +83,9 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
     } catch (error) {
         const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
         if (!context.errorHandling.suppressDisplay) {
-            window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
+            void window.showErrorMessage(message, DialogResponses.learnMore).then(result => {
                 if (result === DialogResponses.learnMore) {
-                    await openUrl('https://aka.ms/autorest');
+                    openUrl('https://aka.ms/autorest');
                 }
             });
             context.errorHandling.suppressDisplay = true;
@@ -101,7 +101,6 @@ async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizar
     const packagePath: string = path.join(context.projectPath, 'package.json');
 
     await confirmEditJsonFile(packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
-        // tslint:disable-next-line: strict-boolean-expressions
         data.devDependencies = data.devDependencies || {};
         if (!data.devDependencies[coreHttp]) {
             data.devDependencies[coreHttp] = coreHttpVersion;

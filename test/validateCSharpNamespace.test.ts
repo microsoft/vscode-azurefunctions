@@ -8,12 +8,12 @@ import { validateCSharpNamespace } from '../extension.bundle';
 
 suite('validateCSharpNamespace', () => {
     test('Valid values', async () => {
-        assert.equal(validateCSharpNamespace('Company.Function'), undefined);
-        assert.equal(validateCSharpNamespace('Company_A.Function'), undefined);
-        assert.equal(validateCSharpNamespace('a.b.c.d.e.f'), undefined);
-        assert.equal(validateCSharpNamespace('a'), undefined);
-        assert.equal(validateCSharpNamespace('_a'), undefined);
-        assert.equal(validateCSharpNamespace('a9'), undefined);
+        assert.strictEqual(validateCSharpNamespace('Company.Function'), undefined);
+        assert.strictEqual(validateCSharpNamespace('Company_A.Function'), undefined);
+        assert.strictEqual(validateCSharpNamespace('a.b.c.d.e.f'), undefined);
+        assert.strictEqual(validateCSharpNamespace('a'), undefined);
+        assert.strictEqual(validateCSharpNamespace('_a'), undefined);
+        assert.strictEqual(validateCSharpNamespace('a9'), undefined);
     });
 
     test('Invalid - Extra period', () => {

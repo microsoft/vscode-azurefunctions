@@ -6,7 +6,7 @@
 import * as assert from 'assert';
 import { convertToValidPackageName } from '../extension.bundle';
 
-suite('convertToValidPackageName', async () => {
+suite('convertToValidPackageName', () => {
     const testCases: [string, string, string][] = [
         ['Valid name', 'js1', 'js1'],
         ['Invalid casing', 'JS1', 'js1'],
@@ -19,7 +19,7 @@ suite('convertToValidPackageName', async () => {
 
     for (const [testCaseName, name, expected] of testCases) {
         test(testCaseName, () => {
-            assert.equal(convertToValidPackageName(name), expected);
+            assert.strictEqual(convertToValidPackageName(name), expected);
         });
     }
 });

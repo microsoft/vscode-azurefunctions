@@ -11,16 +11,15 @@ export interface IRunningFuncTask {
     processId: number;
 }
 
-export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map();
+export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask>();
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
-    // tslint:disable-next-line: strict-boolean-expressions
     return /func (host )?start/i.test(commandLine || '');
 }
 
 export function registerFuncHostTaskEvents(): void {
-    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
+    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
@@ -28,7 +27,7 @@ export function registerFuncHostTaskEvents(): void {
         }
     });
 
-    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, async (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
+    registerEvent('azureFunctions.onDidEndTask', vscode.tasks.onDidEndTaskProcess, (context: IActionContext, e: vscode.TaskProcessEndEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
@@ -36,17 +35,17 @@ export function registerFuncHostTaskEvents(): void {
         }
     });
 
-    registerEvent('azureFunctions.onDidTerminateDebugSession', vscode.debug.onDidTerminateDebugSession, async (context: IActionContext, debugSession: vscode.DebugSession) => {
+    registerEvent('azureFunctions.onDidTerminateDebugSession', vscode.debug.onDidTerminateDebugSession, (context: IActionContext, debugSession: vscode.DebugSession) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
 
         if (getWorkspaceSetting<boolean>('stopFuncTaskPostDebug') && debugSession.workspaceFolder) {
-            await stopFuncTaskIfRunning(debugSession.workspaceFolder);
+            stopFuncTaskIfRunning(debugSession.workspaceFolder);
         }
     });
 }
 
-export async function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): void {
     const runningFuncTask: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
     if (runningFuncTask !== undefined) {
         // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output

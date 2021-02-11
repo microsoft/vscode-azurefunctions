@@ -67,7 +67,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         if (await hasMinFuncCliVersion('3.0.2534', context.version)) {
-            // tslint:disable-next-line:no-non-null-assertion
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             this.localSettingsJson.Values![workerRuntimeVersionKey] = '~7';
         }
 
@@ -121,14 +121,13 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     private parseLatestAzModuleVersion(response: HttpOperationResponse): string {
-        // tslint:disable-next-line: no-any
+        /* eslint-disable */
         const moduleInfo: any = response.parsedBody;
-        // tslint:disable: no-unsafe-any
         if (moduleInfo?.entry && Array.isArray(moduleInfo.entry)) {
             const releasedVersions: string[] = moduleInfo.entry
                 .filter(entry => entry['m:properties']['d:IsPrerelease']._ === 'false')
                 .map(entry => entry['m:properties']['d:Version']);
-            // tslint:enable: no-unsafe-any
+            /* eslint-enable */
 
             // Select the latest version
             if (releasedVersions.length > 0) {

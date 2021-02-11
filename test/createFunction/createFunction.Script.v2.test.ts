@@ -11,8 +11,6 @@ import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
-// tslint:disable: max-classes-per-file
-
 class JavaScriptFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.JavaScript;
 
@@ -68,8 +66,7 @@ function addSuitesForVersion(version: FuncVersion): void {
 }
 
 function addSuite(tester: FunctionTesterBase): void {
-    // tslint:disable-next-line:max-func-body-length no-function-expression
-    suite(`Create Function ${tester.language} ${tester.version}`, async function (this: Mocha.Suite): Promise<void> {
+    suite(`Create Function ${tester.language} ${tester.version}`, function (this: Mocha.Suite): void {
         suiteSetup(async () => {
             await tester.initAsync();
         });

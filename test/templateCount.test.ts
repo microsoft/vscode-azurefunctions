@@ -14,7 +14,7 @@ addSuite(TemplateSource.Staging);
 addSuite(TemplateSource.Backup);
 
 function addSuite(source: TemplateSource | undefined): void {
-    suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, async () => {
+    suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, () => {
         const cases: [ProjectLanguage, FuncVersion, number][] = [
             [ProjectLanguage.JavaScript, FuncVersion.v1, 8],
             [ProjectLanguage.JavaScript, FuncVersion.v2, 14],
@@ -45,7 +45,7 @@ function addSuite(source: TemplateSource | undefined): void {
 
                 await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
                     const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified);
-                    assert.equal(templates.length, expectedCount);
+                    assert.strictEqual(templates.length, expectedCount);
                 });
             });
         }

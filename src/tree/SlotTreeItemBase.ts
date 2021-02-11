@@ -105,7 +105,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             } catch {
                 // ignore and use default
             }
-            // tslint:disable-next-line: strict-boolean-expressions
             result = version || latestGAVersion;
             this._cachedVersion = result;
         }
@@ -116,9 +115,10 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public async getHostJson(): Promise<IParsedHostJson> {
         let result: IParsedHostJson | undefined = this._cachedHostJson;
         if (!result) {
-            // tslint:disable-next-line: no-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let data: any;
             try {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 data = JSON.parse((await getFile(this.client, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
@@ -133,7 +133,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
 
     public async getApplicationSettings(): Promise<ApplicationSettings> {
         const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-        // tslint:disable-next-line: strict-boolean-expressions
         return appSettings.properties || {};
     }
 
@@ -177,6 +176,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._proxiesTreeItem];
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
         for (const expectedContextValue of expectedContextValues) {
             switch (expectedContextValue) {

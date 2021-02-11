@@ -26,7 +26,7 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
                 updateAppSettings = await verifyWebContentSettings(context, appSettings.properties);
             }
         } else {
-            updateAppSettings = await verifyRunFromPackage(context, node.root.client, appSettings.properties);
+            updateAppSettings = verifyRunFromPackage(context, node.root.client, appSettings.properties);
         }
 
         if (updateAppSettings) {
@@ -64,7 +64,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
  * Automatically set to 1 on windows plans because it has significant perf improvements
  * https://github.com/microsoft/vscode-azurefunctions/issues/1465
  */
-async function verifyRunFromPackage(context: IActionContext, client: SiteClient, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+function verifyRunFromPackage(context: IActionContext, client: SiteClient, remoteProperties: { [propertyName: string]: string }): boolean {
     const shouldAddSetting: boolean = !remoteProperties[runFromPackageKey];
     if (shouldAddSetting) {
         remoteProperties[runFromPackageKey] = '1';

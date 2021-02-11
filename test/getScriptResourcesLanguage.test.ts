@@ -7,10 +7,10 @@ import * as assert from 'assert';
 import { getScriptResourcesLanguage } from '../extension.bundle';
 
 async function verifyLanguage(vscodeLanguage: string, expected: string): Promise<void> {
-    assert.equal(getScriptResourcesLanguage(vscodeLanguage), expected);
+    assert.strictEqual(getScriptResourcesLanguage(vscodeLanguage), expected);
 }
 
-suite('getScriptResourcesLanguage', async () => {
+suite('getScriptResourcesLanguage', () => {
     // list of VS Code locales: https://code.visualstudio.com/docs/getstarted/locales
     test('en', async () => { await verifyLanguage('en', 'en-US'); });
     test('zh-CN', async () => { await verifyLanguage('zh-CN', 'zh-CN'); });

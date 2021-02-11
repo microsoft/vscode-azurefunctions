@@ -24,7 +24,7 @@ export let testWorkspacePath: string;
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
-export let testUserInput: TestUserInput = new TestUserInput(vscode);
+export const testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
     return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: testUserInput };
@@ -151,9 +151,9 @@ async function initTestWorkspacePath(): Promise<string> {
     if (!workspaceFolders) {
         throw new Error("No workspace is open");
     } else {
-        assert.equal(workspaceFolders.length, 1, "Expected only one workspace to be open.");
+        assert.strictEqual(workspaceFolders.length, 1, "Expected only one workspace to be open.");
         const workspacePath: string = workspaceFolders[0].uri.fsPath;
-        assert.equal(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
+        assert.strictEqual(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
         await fse.ensureDir(workspacePath);
         await fse.emptyDir(workspacePath);
         return workspacePath;

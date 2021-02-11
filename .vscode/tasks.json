@@ -17,7 +17,7 @@
         {
             "type": "npm",
             "script": "lint",
-            "problemMatcher": "$tslint5"
+            "problemMatcher": "$eslint-stylish"
         }
     ]
 }

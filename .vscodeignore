@@ -1,4 +1,6 @@
 .azure-pipelines/**
+.eslintignore
+.eslintrc.js
 .github/**
 .gitignore
 .vscode-test/**
@@ -21,6 +23,5 @@ test/**
 testWorkspace/**
 tools/**
 tsconfig.json
-tslint.json
 typings/**
 webpack.config*

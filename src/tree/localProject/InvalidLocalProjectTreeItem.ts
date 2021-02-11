@@ -20,6 +20,7 @@ export class InvalidLocalProjectTreeItem extends LocalProjectTreeItemBase {
         return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         throw this._projectError;
     }

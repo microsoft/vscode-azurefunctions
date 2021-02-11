@@ -40,7 +40,6 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
             context.azureWebJobsStorageType = 'emulator';
         }
 
-        // tslint:disable-next-line: strict-boolean-expressions
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType || 'skipForNow';
     }
 
