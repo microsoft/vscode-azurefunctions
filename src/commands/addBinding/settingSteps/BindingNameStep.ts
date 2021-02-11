@@ -13,7 +13,7 @@ export class BindingNameStep extends StringPromptStep {
     private _functionJson: ParsedFunctionJson | undefined;
 
     public async getDefaultValue(context: IBindingWizardContext): Promise<string | undefined> {
-        const defaultValue: string | undefined = super.getDefaultValue(context);
+        const defaultValue: string | undefined = await super.getDefaultValue(context);
         if (defaultValue) {
             let uniqueValue: string = defaultValue;
 

@@ -12,16 +12,18 @@ export class StringPromptStep extends BindingSettingStepBase {
         return await context.ui.showInputBox({
             placeHolder: this._setting.label,
             prompt: this._setting.description || localize('stringSettingPrompt', 'Provide a \'{0}\'', this._setting.label),
-            validateInput: (s): string | undefined => this.validateInput(context, s),
-            value: this.getDefaultValue(context)
+            validateInput: async (s): Promise<string | undefined> => await this.validateInput(context, s),
+            value: await this.getDefaultValue(context)
         });
     }
 
-    public getDefaultValue(_wizardContext: IBindingWizardContext): string | undefined {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    public async getDefaultValue(_wizardContext: IBindingWizardContext): Promise<string | undefined> {
         return this._setting.defaultValue;
     }
 
-    public validateInput(_wizardContext: IBindingWizardContext, val: string | undefined): string | undefined {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    public async validateInput(_wizardContext: IBindingWizardContext, val: string | undefined): Promise<string | undefined> {
         return this._setting.validateSetting(val);
     }
 }

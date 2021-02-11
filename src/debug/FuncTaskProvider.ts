@@ -86,6 +86,8 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
                 const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);

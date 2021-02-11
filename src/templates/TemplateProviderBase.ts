@@ -35,15 +35,15 @@ export abstract class TemplateProviderBase {
     }
 
     public async updateCachedValue(key: string, value: unknown): Promise<void> {
-        await ext.context.globalState.update(this.getCacheKey(key), value);
+        await ext.context.globalState.update(await this.getCacheKey(key), value);
     }
 
     public async deleteCachedValue(key: string): Promise<void> {
-        await ext.context.globalState.update(this.getCacheKey(key), undefined);
+        await ext.context.globalState.update(await this.getCacheKey(key), undefined);
     }
 
-    public getCachedValue<T>(key: string): T | undefined {
-        return ext.context.globalState.get<T>(this.getCacheKey(key));
+    public async getCachedValue<T>(key: string): Promise<T | undefined> {
+        return ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
 
     public abstract getLatestTemplateVersion(): Promise<string>;
@@ -66,11 +66,11 @@ export abstract class TemplateProviderBase {
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
-        return (await fse.readFile(this.getBackupVersionPath())).toString().trim();
+        return (await fse.readFile(await this.getBackupVersionPath())).toString().trim();
     }
 
     public async updateBackupTemplateVersion(version: string): Promise<void> {
-        const filePath: string = this.getBackupVersionPath();
+        const filePath: string = await this.getBackupVersionPath();
         await fse.ensureFile(filePath);
         await fse.writeFile(filePath, version);
     }
@@ -79,11 +79,13 @@ export abstract class TemplateProviderBase {
         return ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
     }
 
-    protected getCacheKeySuffix(): string {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    protected async getCacheKeySuffix(): Promise<string>{
         return '';
     }
 
-    private getBackupVersionPath(): string {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    private async getBackupVersionPath(): Promise<string> {
         return path.join(this.getBackupPath(), 'version.txt');
     }
 
@@ -91,8 +93,8 @@ export abstract class TemplateProviderBase {
      * Adds version, templateType, and language information to a key to ensure there are no collisions in the cache
      * For backwards compatibility, the original version, templateType, and language will not have this information
      */
-    private getCacheKey(key: string): string {
-        key = key + this.getCacheKeySuffix();
+    private async getCacheKey(key: string): Promise<string> {
+        key = key + await this.getCacheKeySuffix();
 
         if (this.version !== FuncVersion.v1) {
             key = `${key}.${this.version}`;

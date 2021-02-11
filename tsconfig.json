@@ -8,7 +8,11 @@
         ],
         "sourceMap": true,
         "rootDir": ".",
-        "strict": true,
+        "noUnusedLocals": true,
+        "noImplicitThis": true,
+        "noImplicitReturns": true,
+        "strictNullChecks": true,
+        "noUnusedParameters": true,
         "baseUrl": "./",
         "paths": {
             "*": [
