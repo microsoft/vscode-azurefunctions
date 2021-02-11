@@ -42,12 +42,14 @@ if ($env:MSI_SECRET) {
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
 `;
 
-function requirementspsd1(majorVersion: number): string {
+function requirementspsd1Online(majorVersion: number): string {
     return `# This file enables modules to be automatically managed by the Functions service.
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
-    'Az' = '${majorVersion}.*'
+    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'.
+    # To use the Az module in your function app, please uncomment the line below.
+    # 'Az' = '${majorVersion}.*'
 }`;
 }
 
@@ -55,7 +57,7 @@ const requirementspsd1Offine: string = `# This file enables modules to be automa
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
-    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'. Uncomment the next line and replace the MAJOR_VERSION, e.g., 'Az' = '3.*'
+    # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'. Uncomment the next line and replace the MAJOR_VERSION, e.g., 'Az' = '5.*'
     # 'Az' = 'MAJOR_VERSION.*'
 }`;
 
@@ -90,7 +92,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
         if (await confirmOverwriteFile(requirementspsd1Path)) {
             if (majorVersion !== undefined) {
-                await fse.writeFile(requirementspsd1Path, requirementspsd1(majorVersion));
+                await fse.writeFile(requirementspsd1Path, requirementspsd1Online(majorVersion));
             } else {
                 await fse.writeFile(requirementspsd1Path, requirementspsd1Offine);
             }
