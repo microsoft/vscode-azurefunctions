@@ -45,7 +45,7 @@ function addSuite(source: TemplateSource | undefined): void {
 
                 await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
                     const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified);
-                    assert.strictEqual(templates.length, expectedCount);
+                    assert.equal(templates.length, expectedCount);
                 });
             });
         }

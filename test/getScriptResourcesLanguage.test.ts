@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import { getScriptResourcesLanguage } from '../extension.bundle';
 
 async function verifyLanguage(vscodeLanguage: string, expected: string): Promise<void> {
-    assert.strictEqual(getScriptResourcesLanguage(vscodeLanguage), expected);
+    assert.equal(getScriptResourcesLanguage(vscodeLanguage), expected);
 }
 
 suite('getScriptResourcesLanguage', () => {

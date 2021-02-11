@@ -28,7 +28,7 @@ suite('Add Binding', () => {
 
     suiteTeardown(async () => {
         const finalBindingsCount: number = await getBindingsCount();
-        assert.strictEqual(finalBindingsCount, initialBindingsCount + 3, 'Not all expected bindings were added.');
+        assert.equal(finalBindingsCount, initialBindingsCount + 3, 'Not all expected bindings were added.');
     });
 
     test('Command Palette', async () => {
@@ -68,8 +68,8 @@ suite('Add Binding', () => {
         if (!binding) {
             assert.fail(`Failed to find binding "${bindingName}".`);
         } else {
-            assert.strictEqual(binding.direction, bindingDirection);
-            assert.strictEqual(binding.type, bindingType.toLowerCase()); // For no particular reason, the type is lowercase in function.json
+            assert.equal(binding.direction, bindingDirection);
+            assert.equal(binding.type, bindingType.toLowerCase()); // For no particular reason, the type is lowercase in function.json
         }
     }
 });

@@ -19,7 +19,7 @@ suite('convertToValidPackageName', () => {
 
     for (const [testCaseName, name, expected] of testCases) {
         test(testCaseName, () => {
-            assert.strictEqual(convertToValidPackageName(name), expected);
+            assert.equal(convertToValidPackageName(name), expected);
         });
     }
 });

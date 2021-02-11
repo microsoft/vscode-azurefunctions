@@ -151,9 +151,9 @@ async function initTestWorkspacePath(): Promise<string> {
     if (!workspaceFolders) {
         throw new Error("No workspace is open");
     } else {
-        assert.strictEqual(workspaceFolders.length, 1, "Expected only one workspace to be open.");
+        assert.equal(workspaceFolders.length, 1, "Expected only one workspace to be open.");
         const workspacePath: string = workspaceFolders[0].uri.fsPath;
-        assert.strictEqual(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
+        assert.equal(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
         await fse.ensureDir(workspacePath);
         await fse.emptyDir(workspacePath);
         return workspacePath;
