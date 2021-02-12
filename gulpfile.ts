@@ -3,13 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable:no-console
-// tslint:disable:no-implicit-dependencies (this allows the use of dev dependencies)
-
-// Grandfathered in
-// tslint:disable:typedef
-// tslint:disable:no-unsafe-any
-
 import * as msRest from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';

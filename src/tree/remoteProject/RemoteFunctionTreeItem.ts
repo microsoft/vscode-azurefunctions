@@ -54,7 +54,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
             ext.outputChannel.appendLog(deleting);
             await this.client.deleteFunction(this.name);
-            window.showInformationMessage(deleteSucceeded);
+            void window.showInformationMessage(deleteSucceeded);
             ext.outputChannel.appendLog(deleteSucceeded);
         });
     }

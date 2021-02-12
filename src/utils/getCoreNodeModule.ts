@@ -10,14 +10,14 @@ import * as vscode from 'vscode';
  */
 export function getCoreNodeModule<T>(moduleName: string): T | undefined {
     try {
-        // tslint:disable-next-line:non-literal-require no-unsafe-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return require(`${vscode.env.appRoot}/node_modules.asar/${moduleName}`);
     } catch (err) {
         // ignore
     }
 
     try {
-        // tslint:disable-next-line:non-literal-require no-unsafe-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return require(`${vscode.env.appRoot}/node_modules/${moduleName}`);
     } catch (err) {
         // ignore

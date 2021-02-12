@@ -53,7 +53,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidSlot',
-            async (site: WebSiteManagementModels.Site) => {
+            (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 return new SlotTreeItem(this, siteClient, site);
             },

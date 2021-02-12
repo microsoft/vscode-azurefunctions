@@ -60,7 +60,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         ext.outputChannel.appendLog(localize('uploadedSettings', 'Successfully uploaded settings.'), { resourceName: client.fullName });
         // don't wait
-        vscode.window.showInformationMessage(localize('uploadedSettingsTo', 'Successfully uploaded settings to "{0}".', client.fullName), viewOutput).then(async result => {
+        void vscode.window.showInformationMessage(localize('uploadedSettingsTo', 'Successfully uploaded settings to "{0}".', client.fullName), viewOutput).then(result => {
             if (result === viewOutput) {
                 ext.outputChannel.show();
             }

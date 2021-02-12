@@ -11,20 +11,19 @@ const versionKey: string = 'version';
 export const launchVersion: string = '0.2.0';
 
 export function getDebugConfigs(folder: WorkspaceFolder): DebugConfiguration[] {
-    // tslint:disable-next-line: strict-boolean-expressions
     return getLaunchConfig(folder).get<DebugConfiguration[]>(configurationsKey) || [];
 }
 
-export function updateDebugConfigs(folder: WorkspaceFolder, configs: DebugConfiguration[]): void {
-    getLaunchConfig(folder).update(configurationsKey, configs);
+export async function updateDebugConfigs(folder: WorkspaceFolder, configs: DebugConfiguration[]): Promise<void> {
+    await getLaunchConfig(folder).update(configurationsKey, configs);
 }
 
 export function getLaunchVersion(folder: WorkspaceFolder): string | undefined {
     return getLaunchConfig(folder).get<string>(versionKey);
 }
 
-export function updateLaunchVersion(folder: WorkspaceFolder, version: string): void {
-    getLaunchConfig(folder).update(versionKey, version);
+export async function updateLaunchVersion(folder: WorkspaceFolder, version: string): Promise<void> {
+    await getLaunchConfig(folder).update(versionKey, version);
 }
 
 export function isDebugConfigEqual(c1: DebugConfiguration, c2: DebugConfiguration): boolean {

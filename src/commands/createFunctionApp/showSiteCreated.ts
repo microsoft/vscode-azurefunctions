@@ -23,7 +23,7 @@ export function showSiteCreated(client: SiteClient, context: ISiteCreatedOptions
 
     if (context.showCreatedNotification) {
         // don't wait
-        window.showInformationMessage(message, viewOutput).then(async result => {
+        void window.showInformationMessage(message, viewOutput).then(result => {
             if (result === viewOutput) {
                 ext.outputChannel.show();
             }

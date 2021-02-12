@@ -38,7 +38,7 @@ export class BindingNameStep extends StringPromptStep {
         } else if (await this.bindingExists(context, val)) {
             return localize('existingBindingError', 'A binding with the name "{0}" already exists.', val);
         } else {
-            return await super.validateInput(context, val);
+            return super.validateInput(context, val);
         }
     }
 

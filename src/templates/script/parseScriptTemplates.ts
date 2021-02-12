@@ -16,7 +16,6 @@ import { ITemplates } from '../ITemplates';
  */
 export interface IRawTemplate {
     id?: string;
-    // tslint:disable-next-line:no-reserved-keywords
     function?: {};
     metadata?: {
         defaultFunctionName: string;
@@ -43,7 +42,6 @@ interface IRawSetting {
         expression: string;
         errorText: string;
     }[];
-    // tslint:disable-next-line:no-reserved-keywords
     enum?: {
         value: string;
         display: string;
@@ -51,7 +49,6 @@ interface IRawSetting {
 }
 
 interface IRawBinding {
-    // tslint:disable-next-line:no-reserved-keywords
     type?: string;
     documentation: string;
     displayName: string;
@@ -81,7 +78,6 @@ export interface IResources {
     en: { [key: string]: string | undefined };
 }
 
-// tslint:disable-next-line:no-any
 function getVariableValue(resources: IResources, variables: IVariables, data: string): string {
     if (!isString(data)) {
         // This evaluates to a non-string value in rare cases, in which case we just return the value as-is
@@ -159,7 +155,6 @@ export function parseScriptBindings(config: IConfig, resources: IResources): IBi
         for (const rawBinding of config.bindings) {
             try {
                 if (rawBinding.type) {
-                    // tslint:disable-next-line: strict-boolean-expressions
                     const settings: IBindingSetting[] = (rawBinding.settings || []).map((setting: object) => parseScriptSetting(setting, resources, config.variables));
                     result.push({
                         direction: rawBinding.direction,
@@ -231,9 +226,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
         language,
         userPromptedSettings,
-        // tslint:disable-next-line: strict-boolean-expressions
         templateFiles: rawTemplate.files || {},
-        // tslint:disable-next-line: strict-boolean-expressions
         categories: rawTemplate.metadata.category || []
     };
 }

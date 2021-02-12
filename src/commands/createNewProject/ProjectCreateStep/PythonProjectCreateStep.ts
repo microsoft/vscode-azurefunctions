@@ -52,7 +52,6 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
 }
 
 // https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
-// tslint:disable-next-line:no-multiline-string
 const pythonGitignore: string = `# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -21,15 +21,12 @@ class CSharpFunctionTester extends FunctionTesterBase {
 addSuite(FuncVersion.v2);
 addSuite(FuncVersion.v3);
 
-// tslint:disable-next-line:no-function-expression max-func-body-length
 function addSuite(version: FuncVersion): void {
-    // tslint:disable-next-line:no-function-expression max-func-body-length
-    suite(`Create Function C# ${version}`, async function (this: Mocha.Suite): Promise<void> {
+    suite(`Create Function C# ${version}`, function (this: Mocha.Suite): void {
         this.timeout(40 * 1000);
 
         const csTester: CSharpFunctionTester = new CSharpFunctionTester(version);
 
-        // tslint:disable-next-line:no-function-expression
         suiteSetup(async function (this: Mocha.Context): Promise<void> {
             this.timeout(120 * 1000);
             await csTester.initAsync();

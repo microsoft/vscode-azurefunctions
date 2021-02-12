@@ -35,11 +35,11 @@ export abstract class TemplateProviderBase {
     }
 
     public async updateCachedValue(key: string, value: unknown): Promise<void> {
-        ext.context.globalState.update(await this.getCacheKey(key), value);
+        await ext.context.globalState.update(await this.getCacheKey(key), value);
     }
 
     public async deleteCachedValue(key: string): Promise<void> {
-        ext.context.globalState.update(await this.getCacheKey(key), undefined);
+        await ext.context.globalState.update(await this.getCacheKey(key), undefined);
     }
 
     public async getCachedValue<T>(key: string): Promise<T | undefined> {
@@ -66,11 +66,11 @@ export abstract class TemplateProviderBase {
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
-        return (await fse.readFile(this.getBackupVersionPath())).toString().trim();
+        return (await fse.readFile(await this.getBackupVersionPath())).toString().trim();
     }
 
     public async updateBackupTemplateVersion(version: string): Promise<void> {
-        const filePath: string = this.getBackupVersionPath();
+        const filePath: string = await this.getBackupVersionPath();
         await fse.ensureFile(filePath);
         await fse.writeFile(filePath, version);
     }
@@ -79,11 +79,13 @@ export abstract class TemplateProviderBase {
         return ext.context.asAbsolutePath(path.join('resources', 'backupTemplates', this.backupSubpath));
     }
 
-    protected async getCacheKeySuffix(): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    protected async getCacheKeySuffix(): Promise<string>{
         return '';
     }
 
-    private getBackupVersionPath(): string {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    private async getBackupVersionPath(): Promise<string> {
         return path.join(this.getBackupPath(), 'version.txt');
     }
 

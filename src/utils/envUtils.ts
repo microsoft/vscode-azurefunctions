@@ -5,7 +5,6 @@
 
 export namespace envUtils {
     export function isEnvironmentVariableSet(val: string | undefined): boolean {
-        // tslint:disable-next-line: strict-boolean-expressions
         return !/^(false|0)?$/i.test(val || '');
     }
 }

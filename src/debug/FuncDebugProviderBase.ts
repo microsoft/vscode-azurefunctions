@@ -14,7 +14,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
 
-    private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map();
+    private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map<WorkspaceFolder | undefined, number | undefined>();
 
     public abstract getWorkerArgValue(folder: WorkspaceFolder): Promise<string>;
 
@@ -34,7 +34,6 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
             return result;
         });
 
-        // tslint:disable-next-line: strict-boolean-expressions
         return configs || [];
     }
 
@@ -64,7 +63,6 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     }
 
     protected getDebugPortOrPipeName(folder: WorkspaceFolder): number | string {
-        // tslint:disable-next-line:strict-boolean-expressions
         return this._debugPorts.get(folder) || this.defaultPortOrPipeName;
     }
 }

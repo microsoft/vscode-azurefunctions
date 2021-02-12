@@ -28,7 +28,6 @@ export async function executeDotnetTemplateCommand(context: IActionContext, vers
 }
 
 export function getDotnetTemplatesPath(): string {
-    // tslint:disable-next-line:strict-boolean-expressions
     return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
 }
 

@@ -14,7 +14,6 @@ export class JavaPackageNameStep extends AzureWizardPromptStep<IJavaProjectWizar
             placeHolder: localize('packagePlaceHolder', 'Package name'),
             prompt: localize('packagePrompt', 'Provide a package name'),
             validateInput: validatePackageName,
-            // tslint:disable-next-line: strict-boolean-expressions
             value: context.javaGroupId || 'com.function'
         };
         context.javaPackageName = await context.ui.showInputBox(options);

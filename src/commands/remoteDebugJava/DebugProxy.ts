@@ -142,9 +142,11 @@ export class DebugProxy extends EventEmitter {
         if (this._keepAlive) {
             try {
                 await pingFunctionApp(this._client);
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
                 setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {
                 ext.outputChannel.appendLog(`[Proxy Server] ${err}`);
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
                 setTimeout(this.keepAlive, 5 * 1000 /* 5 seconds */);
             }
         }

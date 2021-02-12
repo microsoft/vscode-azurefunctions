@@ -20,6 +20,7 @@ export namespace ext {
     export let outputChannel: IAzExtOutputChannel;
     export let ui: IAzureUserInput;
     export let templateProvider: CentralTemplateProvider;
+    // eslint-disable-next-line prefer-const
     export let funcCliPath: string = func;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureFunctions';

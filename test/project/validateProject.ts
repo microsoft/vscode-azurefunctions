@@ -319,7 +319,6 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     const recs: string[] = options.expectedExtensionRecs.concat('ms-azuretools.vscode-azurefunctions');
     const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(projectPath, '.vscode', 'extensions.json'));
-    // tslint:disable-next-line: strict-boolean-expressions
     extensionsJson.recommendations = extensionsJson.recommendations || [];
     assert.equal(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");
     for (const rec of recs) {
@@ -349,7 +348,6 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     if (expectedPaths.find(p => p.includes('launch.json'))) {
         const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(projectPath, '.vscode', 'launch.json'));
-        // tslint:disable-next-line: strict-boolean-expressions
         launchJson.configurations = launchJson.configurations || [];
         assert.equal(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");
         for (const configName of options.expectedDebugConfigs) {
@@ -361,7 +359,6 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate tasks.json
     //
     const tasksJson: ITasksJson = <ITasksJson>await fse.readJSON(path.join(projectPath, '.vscode', 'tasks.json'));
-    // tslint:disable-next-line: strict-boolean-expressions
     tasksJson.tasks = tasksJson.tasks || [];
     assert.equal(tasksJson.tasks.length, options.expectedTasks.length, "tasks.json doesn't have the expected number of tasks.");
     for (const task of options.expectedTasks) {

@@ -37,7 +37,6 @@ export namespace bundleFeedUtils {
     }
 
     export async function getLatestTemplateVersion(bundleMetadata: IBundleMetadata | undefined): Promise<string> {
-        // tslint:disable-next-line: strict-boolean-expressions
         bundleMetadata = bundleMetadata || {};
 
         const feed: IBundleFeed = await getBundleFeed(bundleMetadata);

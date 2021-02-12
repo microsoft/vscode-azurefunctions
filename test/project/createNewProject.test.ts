@@ -9,7 +9,7 @@ import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.tes
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
-suite('Create New Project', async () => {
+suite('Create New Project', () => {
     const testCases: ICreateProjectTestCase[] = [
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3) },

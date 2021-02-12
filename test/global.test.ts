@@ -24,7 +24,7 @@ export let testWorkspacePath: string;
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
-export let testUserInput: TestUserInput = new TestUserInput(vscode);
+export const testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
     return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: testUserInput };

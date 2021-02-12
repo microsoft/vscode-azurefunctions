@@ -86,7 +86,7 @@ function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramewor
         return {
             mismatchTargetFramework,
             update: async (): Promise<void> => {
-                updateTasks(folder, tasks);
+                await updateTasks(folder, tasks);
             }
         };
     }

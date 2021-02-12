@@ -61,7 +61,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            async (site: WebSiteManagementModels.Site) => {
+            (site: WebSiteManagementModels.Site) => {
                 const siteClient: SiteClient = new SiteClient(site, this.root);
                 if (siteClient.isFunctionApp) {
                     return new ProductionSlotTreeItem(this, siteClient, site);

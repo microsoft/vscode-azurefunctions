@@ -22,13 +22,13 @@ interface ICachedFunction {
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
 
-export function runPostFunctionCreateStepsFromCache(): void {
+export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
     if (cachedFunc) {
         try {
             runPostFunctionCreateSteps(cachedFunc);
         } finally {
-            ext.context.globalState.update(cacheKey, undefined);
+            await ext.context.globalState.update(cacheKey, undefined);
         }
     }
 }
@@ -57,9 +57,9 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         if (context.openBehavior) {
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            ext.context.globalState.update(cacheKey, cachedFunc);
+            await ext.context.globalState.update(cacheKey, cachedFunc);
             // Delete cached information if the extension host was not restarted after 5 seconds
-            setTimeout(() => { ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
+            setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
         }
 
         runPostFunctionCreateSteps(cachedFunc);
@@ -72,13 +72,12 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
 function runPostFunctionCreateSteps(func: ICachedFunction): void {
     // Don't wait
-    // tslint:disable-next-line: no-floating-promises
-    callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
+    void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
         context.telemetry.suppressIfSuccessful = true;
 
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {
-                window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
+                await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
             }
         }
     });

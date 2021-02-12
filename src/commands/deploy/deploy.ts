@@ -62,8 +62,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
 
     if (isZipDeploy) {
-        // tslint:disable-next-line:no-floating-promises
-        validateGlobSettings(context, context.effectiveDeployFsPath);
+        void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
     if (language === ProjectLanguage.CSharp && !node.root.client.isLinux) {

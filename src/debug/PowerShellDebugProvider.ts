@@ -24,6 +24,7 @@ export class PowerShellDebugProvider extends FuncDebugProviderBase {
     protected defaultPortOrPipeName: string | number = defaultCustomPipeName;
     protected readonly debugConfig: DebugConfiguration = powershellDebugConfig;
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getWorkerArgValue(folder: WorkspaceFolder): Promise<string> {
         const port: string | number = this.getDebugPortOrPipeName(folder);
         return String(port);

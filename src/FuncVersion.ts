@@ -29,11 +29,11 @@ export async function promptForFuncVersion(message?: string): Promise<FuncVersio
     picks.push({ label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined });
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), suppressPersistence: true };
-    // tslint:disable-next-line: no-constant-condition
+    // eslint-disable-next-line no-constant-condition
     while (true) {
         const version: FuncVersion | undefined = (await ext.ui.showQuickPick(picks, options)).data;
         if (version === undefined) {
-            await openUrl('https://aka.ms/AA1tpij');
+            openUrl('https://aka.ms/AA1tpij');
         } else {
             return version;
         }

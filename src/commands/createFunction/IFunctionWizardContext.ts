@@ -18,7 +18,7 @@ export function setBindingSetting(context: IFunctionWizardContext, setting: IBin
 }
 
 export function getBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting): string | undefined {
-    // tslint:disable-next-line: no-unsafe-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const value: string | undefined = context[setting.name.toLowerCase()];
     if (value) {
         return value;

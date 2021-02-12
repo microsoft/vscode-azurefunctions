@@ -89,7 +89,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                         result = packageManager !== undefined ? await context.ui.showWarningMessage(message, update, DialogResponses.learnMore, DialogResponses.dontWarnAgain) :
                             await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                         if (result === DialogResponses.learnMore) {
-                            await openUrl('https://aka.ms/azFuncOutdated');
+                            openUrl('https://aka.ms/azFuncOutdated');
                         } else if (result === update) {
                             await updateFuncCoreTools(packageManager, versionFromSetting);
                         } else if (result === DialogResponses.dontWarnAgain) {

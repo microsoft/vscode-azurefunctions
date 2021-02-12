@@ -10,7 +10,7 @@ async function verifyLanguage(vscodeLanguage: string, expected: string): Promise
     assert.equal(getScriptResourcesLanguage(vscodeLanguage), expected);
 }
 
-suite('getScriptResourcesLanguage', async () => {
+suite('getScriptResourcesLanguage', () => {
     // list of VS Code locales: https://code.visualstudio.com/docs/getstarted/locales
     test('en', async () => { await verifyLanguage('en', 'en-US'); });
     test('zh-CN', async () => { await verifyLanguage('zh-CN', 'zh-CN'); });

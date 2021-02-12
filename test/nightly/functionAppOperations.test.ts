@@ -13,8 +13,7 @@ import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
 
-// tslint:disable-next-line: max-func-body-length
-suite('Function App Operations', async function (this: Mocha.Suite): Promise<void> {
+suite('Function App Operations', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
 
     let appName: string;

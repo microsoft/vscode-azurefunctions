@@ -7,7 +7,6 @@
  * Describes a template used for creating a binding
  */
 export interface IBindingTemplate {
-    // tslint:disable-next-line: no-reserved-keywords
     type: string;
     direction: string;
     displayName: string;

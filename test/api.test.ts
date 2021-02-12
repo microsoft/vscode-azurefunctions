@@ -5,14 +5,13 @@
 
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
-// tslint:disable-next-line: no-submodule-imports
 import { AzureExtensionApiProvider } from "vscode-azureextensionui/api";
 import { nonNullValue, ProjectLanguage } from '../extension.bundle';
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { testFolderPath, testUserInput } from './global.test';
 import { getJavaScriptValidateOptions, IValidateProjectOptions, validateProject } from './project/validateProject';
 
-suite(`AzureFunctionsExtensionApi`, async () => {
+suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {

@@ -18,7 +18,7 @@ export class SlotTreeItem extends SlotTreeItemBase {
     }
 
     public get label(): string {
-        // tslint:disable-next-line:no-non-null-assertion
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         return this.root.client.slotName!;
     }
 }

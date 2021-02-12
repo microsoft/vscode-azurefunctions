@@ -33,8 +33,8 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     });
 
     await vscode.window.withProgress({ location: vscode.ProgressLocation.Window }, async (p: vscode.Progress<{}>) => {
-        // tslint:disable-next-line:no-any
-        return new Promise(async (resolve: () => void, reject: (e: any) => void): Promise<void> => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
+        return new Promise(async (resolve: (value: unknown) => void, reject: (e: any) => void): Promise<void> => {
             try {
                 const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
                 const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
@@ -42,7 +42,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
                     const confirmMsg: string = localize('confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem = await context.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore, DialogResponses.cancel);
                     if (result === DialogResponses.learnMore) {
-                        await openUrl('https://aka.ms/azfunc-remotedebug');
+                        openUrl('https://aka.ms/azfunc-remotedebug');
                         return;
                     } else {
                         await updateSiteConfig(client, p, siteConfig);
@@ -52,8 +52,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
 
                 p.report({ message: 'starting debug proxy...' });
                 ext.outputChannel.appendLog('starting debug proxy...');
-                // tslint:disable-next-line:no-floating-promises
-                debugProxy.startProxy();
+                void debugProxy.startProxy();
                 debugProxy.on('start', resolve);
             } catch (error) {
                 reject(error);
@@ -115,6 +114,5 @@ function needUpdateSiteConfig(siteConfig: WebSiteManagementModels.SiteConfigReso
 }
 
 function needUpdateAppSettings(properties: {}): boolean | undefined {
-    // tslint:disable-next-line:no-string-literal
     return properties['JAVA_OPTS'] !== JAVA_OPTS || properties['HTTP_PLATFORM_DEBUG_PORT'] !== HTTP_PLATFORM_DEBUG_PORT;
 }

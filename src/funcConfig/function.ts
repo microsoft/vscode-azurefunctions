@@ -12,7 +12,6 @@ export interface IFunctionJson {
 }
 
 export interface IFunctionBinding {
-    // tslint:disable-next-line:no-reserved-keywords
     type?: string;
     name?: string;
     route?: string;
@@ -34,9 +33,9 @@ export enum HttpAuthLevel {
 export class ParsedFunctionJson {
     public readonly data: IFunctionJson;
 
-    // tslint:disable-next-line:no-any
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
     public constructor(data: any) {
-        // tslint:disable-next-line:no-unsafe-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
             this.data = <IFunctionJson>data;
         } else {
@@ -45,7 +44,6 @@ export class ParsedFunctionJson {
     }
 
     public get bindings(): IFunctionBinding[] {
-        // tslint:disable-next-line: strict-boolean-expressions
         return this.data.bindings || [];
     }
 
@@ -58,7 +56,6 @@ export class ParsedFunctionJson {
      * https://docs.microsoft.com/azure/azure-functions/functions-triggers-bindings
      */
     public get triggerBinding(): IFunctionBinding | undefined {
-        // tslint:disable-next-line: strict-boolean-expressions
         return this.bindings.find(b => /trigger$/i.test(b.type || ''));
     }
 

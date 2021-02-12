@@ -62,7 +62,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
         const result: ProjectLanguage | undefined = (await context.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
-            await openUrl('https://aka.ms/AA4ul9b');
+            openUrl('https://aka.ms/AA4ul9b');
             context.telemetry.properties.cancelStep = 'viewSampleProjects';
             throw new UserCancelledError();
         } else {

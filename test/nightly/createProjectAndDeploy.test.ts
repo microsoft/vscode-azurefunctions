@@ -15,7 +15,7 @@ import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPythonValida
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
-suite('Create Project and Deploy', async function (this: Mocha.Suite): Promise<void> {
+suite('Create Project and Deploy', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
 
     suiteSetup(async function (this: Mocha.Context): Promise<void> {
@@ -69,12 +69,10 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
     await cleanTestWorkspace();
 
-    // tslint:disable: strict-boolean-expressions
     options.createProjectInputs = options.createProjectInputs || [];
     options.createFunctionInputs = options.createFunctionInputs || [];
     options.deployInputs = options.deployInputs || [];
     options.excludedPaths = options.excludedPaths || [];
-    // tslint:enable: strict-boolean-expressions
 
     await testUserInput.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
         await vscode.commands.executeCommand('azureFunctions.createNewProject');

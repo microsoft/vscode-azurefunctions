@@ -24,6 +24,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         return context.useConsumptionPlan === undefined;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getSubWizard(context: IAppServiceWizardContext): Promise<IWizardOptions<IAppServiceWizardContext> | undefined> {
         if (!context.useConsumptionPlan) {
             return { promptSteps: [new AppServicePlanListStep()] };

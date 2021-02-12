@@ -45,11 +45,8 @@ export async function createNewProjectFromCommand(
 export async function createNewProjectInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
     addLocalFuncTelemetry(context);
 
-    // tslint:disable-next-line: strict-boolean-expressions
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
-    // tslint:disable-next-line: strict-boolean-expressions
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
-
     const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version) });
 
     if (options.folderPath) {
@@ -72,5 +69,5 @@ export async function createNewProjectInternal(context: IActionContext, options:
     await wizard.execute();
 
     // don't wait
-    window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
+    void window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
 }

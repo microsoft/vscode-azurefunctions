@@ -16,7 +16,6 @@ import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 
 export async function uninstallFuncCoreTools(context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
     ext.outputChannel.show();
-    // tslint:disable-next-line: strict-boolean-expressions
     packageManagers = packageManagers || await getFuncPackageManagers(true /* isFuncInstalled */);
     let packageManager: PackageManager;
     if (packageManagers.length === 0) {

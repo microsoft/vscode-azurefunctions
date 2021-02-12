@@ -10,8 +10,7 @@ import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage 
 import { createTestActionContext, testFolderPath, testUserInput } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
-// tslint:disable-next-line:no-function-expression max-func-body-length
-suite('Init Project For VS Code', async function (this: Mocha.Suite): Promise<void> {
+suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     this.timeout(30 * 1000);
 
     test('JavaScript', async () => {
@@ -311,7 +310,6 @@ interface IInitProjectTestOptions extends IValidateProjectOptions {
 async function initAndValidateProject(options: IInitProjectTestOptions): Promise<void> {
     const projectPath: string = path.join(testFolderPath, getRandomHexString());
 
-    // tslint:disable-next-line: strict-boolean-expressions
     const mockFiles: MockFile[] = options.mockFiles || [];
     mockFiles.push('local.settings.json', 'host.json', '.funcignore', '.gitignore', { fsPath: '.git', isDir: true });
 
@@ -329,7 +327,6 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
         }
     }));
 
-    // tslint:disable-next-line: strict-boolean-expressions
     await testUserInput.runWithInputs(options.inputs || [], async () => {
         await initProjectForVSCode(createTestActionContext(), projectPath);
     });

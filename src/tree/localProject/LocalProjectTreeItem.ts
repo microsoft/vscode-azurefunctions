@@ -58,6 +58,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
         return [this._localFunctionsTreeItem];
     }
@@ -78,18 +79,18 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     public async getHostJson(): Promise<IParsedHostJson> {
         const version: FuncVersion = await this.getVersion();
-        // tslint:disable-next-line: no-any
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
         const data: any = await fse.readJSON(path.join(this.effectiveProjectPath, hostFileName));
         return parseHostJson(data, version);
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getVersion(): Promise<FuncVersion> {
         return this.version;
     }
 
     public async getApplicationSettings(): Promise<ApplicationSettings> {
         const localSettings: ILocalSettingsJson = await getLocalSettingsJson(path.join(this.effectiveProjectPath, localSettingsFileName));
-        // tslint:disable-next-line: strict-boolean-expressions
         return localSettings.Values || {};
     }
 

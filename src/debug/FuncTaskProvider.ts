@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as process from 'process';
-import { isNullOrUndefined } from 'util';
 import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDefinition, TaskProvider, TaskScope, workspace, WorkspaceFolder } from 'vscode';
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
@@ -70,7 +69,7 @@ export class FuncTaskProvider implements TaskProvider {
                     }
                 }
 
-                if (!isNullOrUndefined(lastError)) {
+                if (!(lastError === null || lastError === undefined)) {
                     // throw the last error just for the sake of telemetry
                     // (This won't block providing tasks since it's inside callWithTelemetryAndErrorHandling)
                     throw lastError;
@@ -87,7 +86,7 @@ export class FuncTaskProvider implements TaskProvider {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-            // tslint:disable-next-line: no-unsafe-any
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const command: string | undefined = task.definition.command;
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
@@ -112,13 +111,11 @@ export class FuncTaskProvider implements TaskProvider {
             options = await this.getHostStartOptions(folder, language);
         }
 
-        // tslint:disable-next-line: strict-boolean-expressions
         options = options || {};
         if (projectRoot) {
             options.cwd = projectRoot;
         }
 
-        // tslint:disable-next-line: strict-boolean-expressions
         definition = definition || { type: func, command };
         return new Task(definition, folder, command, func, new ShellExecution(commandLine, options), problemMatcher);
     }

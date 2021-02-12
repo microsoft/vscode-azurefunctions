@@ -25,8 +25,7 @@ class JSFunctionTesterV1 extends FunctionTesterBase {
     }
 }
 
-// tslint:disable-next-line:max-func-body-length no-function-expression
-suite('Create Function JavaScript ~1', async function (this: Mocha.Suite): Promise<void> {
+suite('Create Function JavaScript ~1', function (this: Mocha.Suite): void {
     const jsTester: JSFunctionTesterV1 = new JSFunctionTesterV1();
 
     suiteSetup(async () => {

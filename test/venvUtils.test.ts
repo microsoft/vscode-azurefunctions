@@ -11,7 +11,6 @@ import { cpUtils, ext, getGlobalSetting, pythonVenvSetting, updateGlobalSetting,
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
 import { runWithSetting } from './runWithSetting';
 
-// tslint:disable-next-line: max-func-body-length
 suite('venvUtils', () => {
     const command: string = 'do a thing';
     const windowsTerminalSetting: string = 'terminal.integrated.shell.windows';

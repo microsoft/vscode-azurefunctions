@@ -6,10 +6,8 @@
 import * as assert from 'assert';
 import { HttpAuthLevel, ParsedFunctionJson } from '../extension.bundle';
 
-// tslint:disable-next-line:max-func-body-length
 suite('ParsedFunctionJson', () => {
     test('null', () => {
-        // tslint:disable-next-line: no-null-keyword
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson(null);
         assert.equal(funcJson.authLevel, HttpAuthLevel.function);
         assert.equal(funcJson.bindings.length, 0);

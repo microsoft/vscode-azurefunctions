@@ -85,6 +85,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 name: extensionVersionKey,
                 value: '~' + getMajorVersion(context.version)
             },
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             ...Object.entries(stackSettings.appSettingsDictionary).map(([name, value]) => { return { name, value }; })
         ];
 

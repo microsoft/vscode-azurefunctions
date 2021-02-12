@@ -65,7 +65,6 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const versionInProjFile: string | undefined = await dotnetUtils.tryGetFuncVersion(projFilePath);
         context.telemetry.properties.versionInProjFile = versionInProjFile;
         // The version from the proj file takes precedence over whatever was set in `context` before this
-        // tslint:disable-next-line: strict-boolean-expressions
         context.version = tryParseFuncVersion(versionInProjFile) || context.version;
 
         if (context.version === FuncVersion.v1) {
@@ -75,7 +74,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 try {
                     const result: MessageItem = await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                     if (result === DialogResponses.learnMore) {
-                        await openUrl('https://aka.ms/azFunc64bit');
+                        openUrl('https://aka.ms/azFunc64bit');
                     } else if (result === DialogResponses.dontWarnAgain) {
                         await updateGlobalSetting(settingKey, false);
                     }

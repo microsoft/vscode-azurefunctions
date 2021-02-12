@@ -72,7 +72,6 @@ export async function selectWorkspaceItem(ui: IAzureUserInput, placeHolder: stri
 }
 
 export function getContainingWorkspace(fsPath: string): vscode.WorkspaceFolder | undefined {
-    // tslint:disable-next-line:strict-boolean-expressions
     const openFolders: readonly vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders || [];
     return openFolders.find((f: vscode.WorkspaceFolder): boolean => {
         return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || fsUtils.isSubpath(f.uri.fsPath, fsPath);

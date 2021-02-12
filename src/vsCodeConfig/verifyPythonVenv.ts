@@ -41,7 +41,7 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
                 await wizard.execute();
 
                 // don't wait
-                vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
+                void vscode.window.showInformationMessage(localize('finishedCreatingVenv', 'Finished creating virtual environment.'));
             } else if (result === DialogResponses.dontWarnAgain) {
                 context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
                 await updateGlobalSetting(settingKey, false);

@@ -26,6 +26,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
         return !context.bindingTemplate;
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async getSubWizard(context: IBindingWizardContext): Promise<IWizardOptions<IBindingWizardContext> | undefined> {
         const binding: IBindingTemplate | undefined = context.bindingTemplate;
         if (binding) {

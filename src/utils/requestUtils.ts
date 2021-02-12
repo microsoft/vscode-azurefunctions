@@ -44,7 +44,7 @@ export namespace requestUtils {
         const client: ServiceClient = await createGenericClient();
         const response: HttpOperationResponse = await client.sendRequest(request);
         const stream: NodeJS.ReadableStream = nonNullProp(response, 'readableStreamBody');
-        await new Promise(async (resolve, reject): Promise<void> => {
+        await new Promise((resolve, reject): void => {
             stream.pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
         });
     }

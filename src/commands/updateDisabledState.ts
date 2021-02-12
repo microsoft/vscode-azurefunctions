@@ -35,6 +35,6 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
 
     const message: string = isDisabled ? localize('disabledFunction', 'Disabled function "{0}".', node.name) : localize('enabledFunction', 'Enabled function "{0}".', node.name);
     // don't wait
-    window.showInformationMessage(message);
+    void window.showInformationMessage(message);
     ext.outputChannel.appendLog(message, { resourceName: node.parent.parent.label });
 }

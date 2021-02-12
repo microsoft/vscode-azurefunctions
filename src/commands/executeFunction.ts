@@ -76,5 +76,5 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     });
 
     const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.name, responseText) : localize('executed', 'Executed function "{0}"', node.name);
-    window.showInformationMessage(message);
+    void window.showInformationMessage(message);
 }

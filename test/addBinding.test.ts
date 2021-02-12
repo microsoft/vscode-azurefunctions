@@ -11,7 +11,7 @@ import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
 import { cleanTestWorkspace, createTestActionContext, testUserInput, testWorkspacePath } from './global.test';
 
-suite('Add Binding', async () => {
+suite('Add Binding', () => {
     let functionJsonPath: string;
     const functionName: string = 'HttpTriggerTest';
     let initialBindingsCount: number;
@@ -52,11 +52,9 @@ suite('Add Binding', async () => {
 
     async function getBindingsCount(): Promise<number> {
         const data: IFunctionJson = <IFunctionJson>await fse.readJSON(functionJsonPath);
-        // tslint:disable-next-line: strict-boolean-expressions
         return (data.bindings || []).length;
     }
 
-    // tslint:disable-next-line: no-any
     async function validateAddBinding(commandInputs: any[], userInputs: string[]): Promise<void> {
         const bindingType: string = 'HTTP';
         const bindingDirection: string = 'out';

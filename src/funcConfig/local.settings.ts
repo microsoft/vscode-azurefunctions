@@ -52,7 +52,6 @@ export async function setLocalAppSetting(functionAppPath: string, key: string, v
     const localSettingsPath: string = path.join(functionAppPath, localSettingsFileName);
     const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
 
-    // tslint:disable-next-line:strict-boolean-expressions
     settings.Values = settings.Values || {};
     if (settings.Values[key] === value) {
         return;

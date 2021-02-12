@@ -16,7 +16,6 @@ import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
  * Otherwise, prompt
  */
 export async function getLocalSettingsFile(message: string, workspacePath?: string): Promise<string> {
-    // tslint:disable-next-line: strict-boolean-expressions
     const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
     if (workspacePath || folders.length === 1) {
         workspacePath = workspacePath || folders[0].uri.fsPath;

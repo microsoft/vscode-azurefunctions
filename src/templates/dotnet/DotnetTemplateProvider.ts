@@ -78,6 +78,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     public async cacheTemplates(): Promise<void> {
         await this.updateCachedValue(this._dotnetTemplatesKey, this._rawTemplates);
     }

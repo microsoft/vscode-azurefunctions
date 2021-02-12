@@ -31,7 +31,6 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
         }
 
         await confirmEditJsonFile(context.functionJsonPath, (functionJson: IFunctionJson) => {
-            // tslint:disable-next-line: strict-boolean-expressions
             functionJson.bindings = functionJson.bindings || [];
             functionJson.bindings.push(binding);
             return functionJson;
@@ -40,7 +39,7 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
 
         await verifyExtensionBundle(context, bindingTemplate);
 
-        window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
+        await window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
     }
 
     public shouldExecute(context: IBindingWizardContext): boolean {

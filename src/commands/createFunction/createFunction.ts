@@ -76,7 +76,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
 
         if (result === newProject) {
             // don't wait
-            commands.executeCommand('azureFunctions.createNewProject');
+            void commands.executeCommand('azureFunctions.createNewProject');
             context.telemetry.properties.noWorkspaceResult = 'createNewProject';
         } else {
             const uri: Uri[] = await context.ui.showOpenDialog({
@@ -86,7 +86,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
                 openLabel: localize('open', 'Open')
             });
             // don't wait
-            commands.executeCommand('vscode.openFolder', uri[0]);
+            void commands.executeCommand('vscode.openFolder', uri[0]);
             context.telemetry.properties.noWorkspaceResult = 'openExistingProject';
         }
 

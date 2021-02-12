@@ -27,7 +27,7 @@ class CSharpScriptFunctionTester extends FunctionTesterBase {
 }
 
 // NOTE: Only need to test v1 since v2+ emphasizes C# class libraries instead of C#Script
-suite('Create Function C# Script ~1', async () => {
+suite('Create Function C# Script ~1', () => {
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester();
 
     suiteSetup(async () => {
