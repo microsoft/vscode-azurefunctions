@@ -14,8 +14,8 @@ export function getDebugConfigs(folder: WorkspaceFolder): DebugConfiguration[] {
     return getLaunchConfig(folder).get<DebugConfiguration[]>(configurationsKey) || [];
 }
 
-export function updateDebugConfigs(folder: WorkspaceFolder, configs: DebugConfiguration[]): void {
-    void getLaunchConfig(folder).update(configurationsKey, configs);
+export async function updateDebugConfigs(folder: WorkspaceFolder, configs: DebugConfiguration[]): Promise<void> {
+    await getLaunchConfig(folder).update(configurationsKey, configs);
 }
 
 export function getLaunchVersion(folder: WorkspaceFolder): string | undefined {

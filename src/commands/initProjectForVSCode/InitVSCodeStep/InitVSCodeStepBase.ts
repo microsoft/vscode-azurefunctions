@@ -102,7 +102,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             } else if (currentVersion !== tasksVersion) {
                 throw versionMismatchError;
             }
-            updateTasks(context.workspaceFolder, this.insertNewTasks(getTasks(context.workspaceFolder), newTasks));
+            await updateTasks(context.workspaceFolder, this.insertNewTasks(getTasks(context.workspaceFolder), newTasks));
         } else { // otherwise manually edit json
             const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
             await confirmEditJsonFile(
@@ -160,7 +160,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
                 } else if (currentVersion !== launchVersion) {
                     throw versionMismatchError;
                 }
-                updateDebugConfigs(folder, this.insertLaunchConfig(getDebugConfigs(folder), newDebugConfig));
+                await updateDebugConfigs(folder, this.insertLaunchConfig(getDebugConfigs(folder), newDebugConfig));
             } else { // otherwise manually edit json
                 const launchJsonPath: string = path.join(vscodePath, launchFileName);
                 await confirmEditJsonFile(

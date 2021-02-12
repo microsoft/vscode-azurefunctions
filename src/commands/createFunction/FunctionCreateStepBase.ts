@@ -22,13 +22,13 @@ interface ICachedFunction {
 
 const cacheKey: string = 'azFuncPostFunctionCreate';
 
-export function runPostFunctionCreateStepsFromCache(): void {
+export async function runPostFunctionCreateStepsFromCache(): Promise<void> {
     const cachedFunc: ICachedFunction | undefined = ext.context.globalState.get(cacheKey);
     if (cachedFunc) {
         try {
             runPostFunctionCreateSteps(cachedFunc);
         } finally {
-            void ext.context.globalState.update(cacheKey, undefined);
+            await ext.context.globalState.update(cacheKey, undefined);
         }
     }
 }

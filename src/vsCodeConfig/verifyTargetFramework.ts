@@ -85,9 +85,8 @@ function verifyTasksFramework(folder: vscode.WorkspaceFolder, projTargetFramewor
     if (mismatchTargetFramework) {
         return {
             mismatchTargetFramework,
-            // eslint-disable-next-line @typescript-eslint/require-await
             update: async (): Promise<void> => {
-                updateTasks(folder, tasks);
+                await updateTasks(folder, tasks);
             }
         };
     }

@@ -39,7 +39,7 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
 
         await verifyExtensionBundle(context, bindingTemplate);
 
-        void window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
+        await window.showTextDocument(await workspace.openTextDocument(Uri.file(context.functionJsonPath)));
     }
 
     public shouldExecute(context: IBindingWizardContext): boolean {
