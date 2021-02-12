@@ -57,7 +57,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         if (context.openBehavior) {
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
-            void ext.context.globalState.update(cacheKey, cachedFunc);
+            await ext.context.globalState.update(cacheKey, cachedFunc);
             // Delete cached information if the extension host was not restarted after 5 seconds
             setTimeout(() => { void ext.context.globalState.update(cacheKey, undefined); }, 5 * 1000);
         }
@@ -77,7 +77,7 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
 
         if (getContainingWorkspace(func.projectPath)) {
             if (await fse.pathExists(func.newFilePath)) {
-                void window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
+                await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
             }
         }
     });

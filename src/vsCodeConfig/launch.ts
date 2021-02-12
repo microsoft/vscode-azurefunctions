@@ -22,8 +22,8 @@ export function getLaunchVersion(folder: WorkspaceFolder): string | undefined {
     return getLaunchConfig(folder).get<string>(versionKey);
 }
 
-export function updateLaunchVersion(folder: WorkspaceFolder, version: string): void {
-    void getLaunchConfig(folder).update(versionKey, version);
+export async function updateLaunchVersion(folder: WorkspaceFolder, version: string): Promise<void> {
+    await getLaunchConfig(folder).update(versionKey, version);
 }
 
 export function isDebugConfigEqual(c1: DebugConfiguration, c2: DebugConfiguration): boolean {

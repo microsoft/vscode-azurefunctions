@@ -40,11 +40,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
 
-    await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
+    await callWithTelemetryAndErrorHandling('azureFunctions.activate', (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        await runPostFunctionCreateStepsFromCache();
+        void runPostFunctionCreateStepsFromCache();
 
         void validateFuncCoreToolsIsLatest();
 

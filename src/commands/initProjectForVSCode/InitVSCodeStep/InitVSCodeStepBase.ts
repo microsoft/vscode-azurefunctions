@@ -98,7 +98,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         if (context.workspaceFolder && !isMultiRootWorkspace()) {
             const currentVersion: string | undefined = getTasksVersion(context.workspaceFolder);
             if (!currentVersion) {
-                updateTasksVersion(context.workspaceFolder, tasksVersion);
+                await updateTasksVersion(context.workspaceFolder, tasksVersion);
             } else if (currentVersion !== tasksVersion) {
                 throw versionMismatchError;
             }
@@ -156,7 +156,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             if (folder && !isMultiRootWorkspace()) {
                 const currentVersion: string | undefined = getLaunchVersion(folder);
                 if (!currentVersion) {
-                    updateLaunchVersion(folder, launchVersion);
+                    await updateLaunchVersion(folder, launchVersion);
                 } else if (currentVersion !== launchVersion) {
                     throw versionMismatchError;
                 }
