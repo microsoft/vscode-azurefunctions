@@ -50,7 +50,11 @@ export async function promptForResource<T extends IBaseResourceWithName>(context
         return picks;
     });
 
-    return (await context.ui.showQuickPick(picksTask, { placeHolder })).data;
+    const data: T | undefined = (await context.ui.showQuickPick(picksTask, { placeHolder })).data;
+    if (data?.name) {
+        context.valuesToMask.push(data.name);
+    }
+    return data;
 }
 
 export interface IResourceResult {
