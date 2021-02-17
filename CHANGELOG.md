@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+### Added
+- Now depends on the "Azure Resources" extension, which provides a "Resource Groups" and "Help and Feedback" view
+
 ## 1.2.1 - 2021-02-09
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.2.1%22+is%3Aclosed)

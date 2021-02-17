@@ -370,15 +370,6 @@
                 "category": "Azure Functions"
             }
         ],
-        "viewsContainers": {
-            "activitybar": [
-                {
-                    "id": "azure",
-                    "title": "Azure",
-                    "icon": "resources/azure.svg"
-                }
-            ]
-        },
         "views": {
             "azure": [
                 {
@@ -829,14 +820,6 @@
                 "base": "$func-watch"
             }
         ],
-        "keybindings": [
-            {
-                "command": "workbench.view.extension.azure",
-                "key": "ctrl+shift+a",
-                "mac": "cmd+shift+a",
-                "linux": "shift+alt+a"
-            }
-        ],
         "configuration": [
             {
                 "title": "Azure Functions",
@@ -1104,7 +1087,7 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.71.0",
-        "vscode-azureextensiondev": "^0.7.0",
+        "vscode-azureextensiondev": "^0.7.1",
         "vscode-test": "^1.3.0",
         "webpack": "^4.41.5",
         "webpack-cli": "^3.3.10"
@@ -1136,6 +1119,7 @@
         "xregexp": "^4.0.0"
     },
     "extensionDependencies": [
-        "ms-vscode.azure-account"
+        "ms-vscode.azure-account",
+        "ms-azuretools.vscode-azureresourcegroups"
     ]
 }
