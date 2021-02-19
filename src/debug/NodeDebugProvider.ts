@@ -15,7 +15,8 @@ export const nodeDebugConfig: DebugConfiguration = {
     type: 'node',
     request: 'attach',
     port: defaultNodeDebugPort,
-    preLaunchTask: hostStartTaskName
+    preLaunchTask: hostStartTaskName,
+    restart: true
 };
 
 export class NodeDebugProvider extends FuncDebugProviderBase {
