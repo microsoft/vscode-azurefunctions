@@ -11,14 +11,14 @@ import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 import { updateFuncCoreTools } from './updateFuncCoreTools';
-import { funcToolsInstalled } from './validateFuncCoreToolsInstalled';
+import { funcToolsInstalled, getInstallUrl } from './validateFuncCoreToolsInstalled';
 
 export async function installOrUpdateFuncCoreTools(context: IActionContext): Promise<void> {
     const isFuncInstalled: boolean = await funcToolsInstalled();
     const packageManagers: PackageManager[] = await getFuncPackageManagers(isFuncInstalled);
     if (packageManagers.length === 0) {
         context.errorHandling.suppressReportIssue = true;
-        throw new Error(localize('installNotSupported', 'Failed to install or update. Follow [these instructions](https://aka.ms/Dqur4e) to install manually.'));
+        throw new Error(localize('installNotSupported', 'Failed to install or update. Follow [these instructions]({0}) to install manually.', getInstallUrl()));
     }
 
     if (isFuncInstalled) {

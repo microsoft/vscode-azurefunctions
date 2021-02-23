@@ -47,7 +47,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
                 await installFuncCoreTools(packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
-                openUrl('https://aka.ms/Dqur4e');
+                openUrl(getInstallUrl());
             }
         }
     });
@@ -55,7 +55,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
         if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
-            openUrl('https://aka.ms/Dqur4e');
+            openUrl(getInstallUrl());
         }
     }
 
@@ -68,5 +68,17 @@ export async function funcToolsInstalled(): Promise<boolean> {
         return true;
     } catch (error) {
         return false;
+    }
+}
+
+export function getInstallUrl(): string {
+    switch (process.platform) {
+        case 'linux':
+            return 'https://aka.ms/AAb9zn8';
+        case 'darwin':
+            return 'https://aka.ms/AAb9zn6';
+        default:
+            return 'https://aka.ms/Dqur4e';
+
     }
 }
