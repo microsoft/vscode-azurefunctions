@@ -13,11 +13,10 @@ import { setupProjectFolder } from './setupProjectFolder';
 
 export enum HandleUriActions {
     downloadContentAndSetupProject = 'downloadContentAndSetupProject',
-    setupProject = 'setupProject',
 }
 
 // NOTE: Example call for opening vscode with query parameters -
-// vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject' OR 'setupProject'>
+// vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject'>
 export async function handleUri(uri: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
         const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
@@ -26,7 +25,7 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
             const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
             const action: string = getRequiredQueryParameter(parsedQuery, 'action');
 
-            if (action === HandleUriActions.downloadContentAndSetupProject || action === HandleUriActions.setupProject) {
+            if (action === HandleUriActions.downloadContentAndSetupProject) {
                 const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
                 if (!isLoggedIn) {
                     await vscode.commands.executeCommand('azure-account.login');
