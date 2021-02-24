@@ -22,6 +22,7 @@ import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
 import { PowerShellDebugProvider } from './debug/PowerShellDebugProvider';
 import { PythonDebugProvider } from './debug/PythonDebugProvider';
+import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
@@ -90,6 +91,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         WebSiteManagementMappers.SiteConfig.type.modelProperties!.powerShellVersion = { serializedName: 'powerShellVersion', type: { name: 'String' } };
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         WebSiteManagementMappers.SiteConfigResource.type.modelProperties!.powerShellVersion = { serializedName: 'properties.powerShellVersion', type: { name: 'String' } };
+
+        context.subscriptions.push(vscode.window.registerUriHandler({
+            handleUri
+        }));
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

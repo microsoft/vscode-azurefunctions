@@ -36,10 +36,10 @@ export namespace requestUtils {
         }
     }
 
-    export async function downloadFile(url: string, filePath: string): Promise<void> {
+    export async function downloadFile(requestOptionsOrUrl: string | RequestPrepareOptions, filePath: string): Promise<void> {
         await fse.ensureDir(path.dirname(filePath));
         const request: WebResource = new WebResource();
-        request.prepare({ method: 'GET', url });
+        request.prepare(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseBody = true;
         const client: ServiceClient = await createGenericClient();
         const response: HttpOperationResponse = await client.sendRequest(request);
