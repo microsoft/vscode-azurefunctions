@@ -82,7 +82,7 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
         case 'powershell':
             return ProjectLanguage.PowerShell;
         case 'node':
-            return ProjectLanguage.TypeScript;
+            return ProjectLanguage.JavaScript;
         case 'python':
             return ProjectLanguage.Python;
         case 'dotnetcore2.1':
