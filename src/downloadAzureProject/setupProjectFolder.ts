@@ -50,7 +50,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-            // tslint:disable-next-line: no-unsafe-call
+            // tslint:disable-next-line:no-unsafe-call
             await extract(downloadFilePath, { dir: projectFilePath });
             await requestUtils.downloadFile(
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
@@ -61,12 +61,15 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
             );
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
+            // tslint:disable-next-line:no-floating-promises
             vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
+            // tslint:disable-next-line:no-floating-promises
             vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
     } finally {
+        // tslint:disable-next-line:no-floating-promises
         vscode.workspace.fs.delete(
             vscode.Uri.file(toBeDeletedFolderPathUri.fsPath),
             {
