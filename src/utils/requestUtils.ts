@@ -6,34 +6,35 @@
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createGenericClient, parseError } from "vscode-azureextensionui";
+import { createGenericClient, parseError, sendRequestWithTimeout } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
-import { nonNullProp } from "./nonNull";
+import { nonNullProp, nonNullValue } from "./nonNull";
 
 export namespace requestUtils {
     const timeoutKey: string = 'requestTimeout';
 
-    export async function sendRequestWithTimeout(options: RequestPrepareOptions): Promise<HttpOperationResponse> {
-        let request: WebResource = new WebResource();
-        request = request.prepare(options);
-
-        const timeoutSeconds: number | undefined = getWorkspaceSetting(timeoutKey);
-        if (timeoutSeconds !== undefined) {
-            request.timeout = timeoutSeconds * 1000;
-        }
+    /**
+     * Send a request using the extension's user-controlled timeout setting
+     */
+    export async function sendRequestWithExtTimeout(options: RequestPrepareOptions): Promise<HttpOperationResponse> {
+        // Shouldn't be null because the setting has a default value
+        const timeout: number = nonNullValue(getWorkspaceSetting<number>(timeoutKey), timeoutKey) * 1000;
 
         try {
-            const client: ServiceClient = await createGenericClient();
-            return await client.sendRequest(request);
+            return await sendRequestWithTimeout(options, timeout);
         } catch (error) {
-            if (parseError(error).errorType === 'REQUEST_ABORTED_ERROR') {
+            if (isTimeoutError(error)) {
                 throw new Error(localize('timeoutFeed', 'Request timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, timeoutKey));
             } else {
                 throw error;
             }
         }
+    }
+
+    export function isTimeoutError(error: unknown): boolean {
+        return parseError(error).errorType === 'REQUEST_ABORTED_ERROR';
     }
 
     export async function downloadFile(requestOptionsOrUrl: string | RequestPrepareOptions, filePath: string): Promise<void> {

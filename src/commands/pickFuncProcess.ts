@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse, ServiceClient, WebResource } from '@azure/ms-rest-js';
+import { HttpOperationResponse, RequestPrepareOptions } from '@azure/ms-rest-js';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { createGenericClient, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vscode-azureextensionui';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
 import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
+import { requestUtils } from '../utils/requestUtils';
 import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -79,8 +80,8 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
-        const client: ServiceClient = await createGenericClient();
-        const statusRequest: WebResource = getStatusRequest(funcTask, intervalMs);
+        const statusRequest: RequestPrepareOptions = getStatusRequest(funcTask);
+        let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
             if (taskError !== undefined) {
@@ -91,13 +92,19 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             if (taskInfo) {
                 try {
                     // wait for status url to indicate functions host is running
-                    const response: HttpOperationResponse = await client.sendRequest(statusRequest);
+                    const response: HttpOperationResponse = await sendRequestWithTimeout(statusRequest, statusRequestTimeout);
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
                         return taskInfo.processId.toString();
                     }
-                } catch {
-                    // ignore
+                } catch (error) {
+                    if (requestUtils.isTimeoutError(error)) {
+                        // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                        statusRequestTimeout *= 2;
+                        context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                    } else {
+                        // ignore
+                    }
                 }
             }
 
@@ -110,7 +117,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
 }
 
-function getStatusRequest(funcTask: vscode.Task, intervalMs: number): WebResource {
+function getStatusRequest(funcTask: vscode.Task): RequestPrepareOptions {
     let port: string = '7071';
     if (typeof funcTask.definition.command === 'string') {
         const match: RegExpMatchArray | null = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
@@ -119,10 +126,7 @@ function getStatusRequest(funcTask: vscode.Task, intervalMs: number): WebResourc
         }
     }
 
-    let request: WebResource = new WebResource();
-    request = request.prepare({ url: `http://localhost:${port}/admin/host/status`, method: 'GET' });
-    request.timeout = intervalMs;
-    return request;
+    return { url: `http://localhost:${port}/admin/host/status`, method: 'GET' };
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };
