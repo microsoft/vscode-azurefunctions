@@ -82,7 +82,7 @@
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
-	  "onUri"
+        "onUri"
     ],
     "main": "./main.js",
     "contributes": {
@@ -1034,11 +1034,11 @@
                         "description": "%azureFunctions.showReloadTemplates%",
                         "default": false
                     },
-		      "azureFunctions.enableOpenFromPortal": {
-            		  "type": "boolean",
-            		  "description": "Enable download content and setup project feature using handle uri (experimental)",
-            		 "default": false
-          	      }
+                    "azureFunctions.enableOpenFromPortal": {
+                        "type": "boolean",
+                        "description": "Enable download content and setup project feature using handle uri (experimental)",
+                        "default": false
+                    }
                 }
             }
         ]
@@ -1117,7 +1117,7 @@
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
         "vscode-azureappservice": "^0.73.0",
-        "vscode-azureextensionui": "^0.39.2",
+        "vscode-azureextensionui": "^0.39.3",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",

@@ -111,7 +111,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         });
 
         try {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url: this.azModuleGalleryUrl });
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url: this.azModuleGalleryUrl });
             const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);

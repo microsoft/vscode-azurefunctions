@@ -64,7 +64,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }
         try {
-            responseText = (await requestUtils.sendRequestWithTimeout({ method: 'POST', url, headers, body })).bodyAsText;
+            responseText = (await requestUtils.sendRequestWithExtTimeout({ method: 'POST', url, headers, body })).bodyAsText;
         } catch (error) {
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;

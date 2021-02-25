@@ -18,7 +18,7 @@ interface IPackageMetadata {
 }
 
 export async function getNpmDistTag(version: FuncVersion): Promise<INpmDistTag> {
-    const response: HttpOperationResponse = await requestUtils.sendRequestWithTimeout({ method: 'GET', url: npmRegistryUri });
+    const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url: npmRegistryUri });
     const packageMetadata: IPackageMetadata = <IPackageMetadata>response.parsedBody;
     const majorVersion: string = getMajorVersion(version);
 
