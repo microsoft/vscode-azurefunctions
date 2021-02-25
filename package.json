@@ -82,7 +82,7 @@
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
-	  "onUri"
+        "onUri"
     ],
     "main": "./main.js",
     "contributes": {
@@ -1034,11 +1034,11 @@
                         "description": "%azureFunctions.showReloadTemplates%",
                         "default": false
                     },
-		      "azureFunctions.enableOpenFromPortal": {
-            		  "type": "boolean",
-            		  "description": "Enable download content and setup project feature using handle uri (experimental)",
-            		 "default": false
-          	      }
+                    "azureFunctions.enableOpenFromPortal": {
+                        "type": "boolean",
+                        "description": "Enable download content and setup project feature using handle uri (experimental)",
+                        "default": false
+                    }
                 }
             }
         ]
