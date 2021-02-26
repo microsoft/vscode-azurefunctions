@@ -885,6 +885,11 @@
                             ""
                         ]
                     },
+                    "azureFunctions.projectTemplateKey": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azureFunctions.projectTemplateKey%"
+                    },
                     "azureFunctions.deploySubpath": {
                         "scope": "resource",
                         "type": "string",

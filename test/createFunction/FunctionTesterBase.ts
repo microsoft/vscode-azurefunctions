@@ -35,7 +35,7 @@ export abstract class FunctionTesterBase implements Disposable {
     }
 
     public async dispose(): Promise<void> {
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.version, TemplateFilter.Verified);
+        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.version, TemplateFilter.Verified, undefined);
         assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
     }
 
@@ -61,7 +61,7 @@ export abstract class FunctionTesterBase implements Disposable {
         }
     }
 
-    private async initializeTestFolder(testFolder: string): Promise<void> {
+    protected async initializeTestFolder(testFolder: string): Promise<void> {
         await fse.ensureDir(path.join(testFolder, '.vscode'));
         // Pretend to create the parent function project
         await Promise.all([

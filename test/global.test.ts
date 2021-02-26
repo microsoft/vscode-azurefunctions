@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
+import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -92,7 +92,7 @@ async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void
 
     for (const version of Object.values(FuncVersion)) {
         for (const language of languages) {
-            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, version);
+            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, version, TemplateFilter.Verified, undefined);
         }
     }
 }

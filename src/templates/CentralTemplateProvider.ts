@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
-import { ProjectLanguage, TemplateFilter } from '../constants';
+import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -21,12 +22,25 @@ import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvi
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
 import { TemplateProviderBase } from './TemplateProviderBase';
 
-export class CentralTemplateProvider {
+type CachedProviders = { providers: TemplateProviderBase[]; templatesTask?: Promise<ITemplates> }
+
+export class CentralTemplateProvider implements Disposable {
     public readonly templateSource: TemplateSource | undefined;
-    private readonly _templatesTaskMap: { [key: string]: Promise<ITemplates> | undefined } = {};
+    private readonly _providersMap = new Map<string, CachedProviders>();
+    private _disposables: Disposable[] = [];
 
     public constructor(templateSource?: TemplateSource) {
         this.templateSource = templateSource;
+        this._disposables.push(workspace.onDidChangeConfiguration(e => this.onConfigChanged(e)));
+    }
+
+    public dispose(): void {
+        const allProviders: TemplateProviderBase[] = [];
+        for (const p of this._providersMap.values()) {
+            allProviders.push(...p.providers);
+        }
+        Disposable.from(...allProviders, ...this._disposables).dispose();
+        this._providersMap.clear();
     }
 
     public static getProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): TemplateProviderBase[] {
@@ -34,54 +48,57 @@ export class CentralTemplateProvider {
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                providers.push(new DotnetTemplateProvider(version, projectPath));
+                providers.push(new DotnetTemplateProvider(version, projectPath, language));
                 break;
             case ProjectLanguage.Java:
-                providers.push(new JavaTemplateProvider(version, projectPath));
+                providers.push(new JavaTemplateProvider(version, projectPath, language));
                 break;
             default:
-                providers.push(new ScriptTemplateProvider(version, projectPath));
+                providers.push(new ScriptTemplateProvider(version, projectPath, language));
                 if (version !== FuncVersion.v1) {
-                    providers.push(new ScriptBundleTemplateProvider(version, projectPath));
+                    providers.push(new ScriptBundleTemplateProvider(version, projectPath, language));
                 }
                 break;
         }
         return providers;
     }
 
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, templateFilter?: TemplateFilter): Promise<IFunctionTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
-        const functionTemplates: IFunctionTemplate[] = templates.functionTemplates.filter((t: IFunctionTemplate) => t.language.toLowerCase() === language.toLowerCase());
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version, projectTemplateKey);
         switch (templateFilter) {
             case TemplateFilter.All:
-                return functionTemplates;
+                return templates.functionTemplates;
             case TemplateFilter.Core:
-                return functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
+                return templates.functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
                 const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
-                return functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
+                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
         }
     }
 
     public async clearTemplateCache(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
         const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
         for (const provider of providers) {
-            await provider.deleteCachedValue(TemplateProviderBase.templateVersionKey);
-            await provider.clearCache();
+            await provider.clearCachedTemplateMetadata();
+            await provider.clearCachedTemplates();
+            provider.clearSessionProjKey();
         }
-        const key: string = this.getProviderTaskKey(providers, version);
-        this._templatesTaskMap[key] = undefined;
+        const key: string = this.getProvidersKey(projectPath, language, version);
+        const cachedProviders = this._providersMap.get(key);
+        if (cachedProviders) {
+            delete cachedProviders.templatesTask;
+        }
     }
 
     public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<IBindingTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version);
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version, undefined);
         return templates.bindingTemplates;
     }
 
     public async tryGetSampleData(context: IActionContext, version: FuncVersion, triggerBindingType: string): Promise<string | undefined> {
         try {
-            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All);
+            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
             const template: IScriptFunctionTemplate | undefined = templates.find(t => t.functionJson.triggerBinding?.type?.toLowerCase() === triggerBindingType.toLowerCase());
             return template?.templateFiles['sample.dat'];
         } catch {
@@ -89,10 +106,10 @@ export class CentralTemplateProvider {
         }
     }
 
-    private getProviderTaskKey(providers: TemplateProviderBase[], version: FuncVersion): string {
-        let key: string = version;
-        for (const provider of providers) {
-            key += provider.templateType;
+    private getProvidersKey(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): string {
+        let key: string = language + version;
+        if (projectPath) {
+            key += projectPath;
         }
         return key;
     }
@@ -100,33 +117,43 @@ export class CentralTemplateProvider {
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
-    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<ITemplates> {
-        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
-
-        const key: string = this.getProviderTaskKey(providers, version);
-
+    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<ITemplates> {
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;
 
-        let templatesTask: Promise<ITemplates> | undefined = this._templatesTaskMap[key];
+        const key: string = this.getProvidersKey(projectPath, language, version);
+        let cachedProviders = this._providersMap.get(key);
+        if (!cachedProviders) {
+            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, version) };
+            this._providersMap.set(key, cachedProviders);
+        } else {
+            await Promise.all(cachedProviders.providers.map(async p => {
+                if (await p.hasProjKeyChanged(projectTemplateKey)) {
+                    delete cachedProviders?.templatesTask;
+                    p.clearSessionProjKey();
+                }
+            }));
+        }
+
+        let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
             return await templatesTask;
         } else {
-            templatesTask = this.refreshTemplates(context, providers);
-            this._templatesTaskMap[key] = templatesTask;
+            templatesTask = this.refreshTemplates(context, cachedProviders.providers, projectTemplateKey);
+            cachedProviders.templatesTask = templatesTask;
             try {
                 return await templatesTask;
             } catch (error) {
                 // If an error occurs, we want to start from scratch next time we try to get templates so remove this task from the map
-                delete this._templatesTaskMap[key];
+                delete cachedProviders.templatesTask;
                 throw error;
             }
         }
     }
 
-    private async refreshTemplates(context: IActionContext, providers: TemplateProviderBase[]): Promise<ITemplates> {
+    private async refreshTemplates(context: IActionContext, providers: TemplateProviderBase[], projectTemplateKey: string | undefined): Promise<ITemplates> {
         return (await Promise.all(providers.map(async provider => {
-            return await this.refreshTemplatesForProvider(context, provider);
+            return await this.refreshTemplatesForProvider(context, provider, projectTemplateKey);
         }))).reduce((t1: ITemplates, t2: ITemplates) => {
             return {
                 functionTemplates: t1.functionTemplates.concat(t2.functionTemplates),
@@ -135,7 +162,9 @@ export class CentralTemplateProvider {
         });
     }
 
-    private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
+    private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase, projectTemplateKey: string | undefined): Promise<ITemplates> {
+        provider.sessionProjKey = projectTemplateKey;
+
         let result: ITemplates | undefined;
         let latestErrorMessage: string | undefined;
         try {
@@ -174,8 +203,8 @@ export class CentralTemplateProvider {
 
         if (result) {
             return {
-                functionTemplates: result.functionTemplates.filter(f => provider.includeTemplate(f)),
-                bindingTemplates: result.bindingTemplates.filter(b => provider.includeTemplate(b))
+                functionTemplates: result.functionTemplates.filter(f => this.includeTemplate(provider, f)),
+                bindingTemplates: result.bindingTemplates.filter(b => this.includeTemplate(provider, b))
             };
         } else if (latestErrorMessage) {
             throw new Error(latestErrorMessage);
@@ -185,11 +214,15 @@ export class CentralTemplateProvider {
         }
     }
 
+    private includeTemplate(provider: TemplateProviderBase, template: IBindingTemplate | IFunctionTemplate): boolean {
+        return provider.includeTemplate(template) && (!('language' in template) || template.language.toLowerCase() === provider.language.toLowerCase());
+    }
+
     private async getLatestTemplates(context: IActionContext, provider: TemplateProviderBase, latestTemplateVersion: string): Promise<ITemplates | undefined> {
         if (!this.templateSource || this.templateSource === TemplateSource.Latest || this.templateSource === TemplateSource.Staging) {
             context.telemetry.properties.templateSource = 'latest';
             const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
-            await provider.updateCachedValue(TemplateProviderBase.templateVersionKey, latestTemplateVersion);
+            await provider.cacheTemplateMetadata(latestTemplateVersion);
             await provider.cacheTemplates();
             return result;
         }
@@ -201,7 +234,11 @@ export class CentralTemplateProvider {
         if (!this.templateSource) {
             try {
                 context.telemetry.properties.templateSource = 'cache';
-                return await provider.getCachedTemplates(context);
+                if (await provider.doesCachedProjKeyMatch()) {
+                    return await provider.getCachedTemplates(context);
+                } else {
+                    return undefined;
+                }
             } catch (error) {
                 const errorMessage: string = parseError(error).message;
                 ext.outputChannel.appendLog(localize('cachedTemplatesError', 'Failed to get cached templates: {0}', errorMessage));
@@ -219,7 +256,7 @@ export class CentralTemplateProvider {
                 const backupTemplateVersion: string = await provider.getBackupTemplateVersion();
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates(context);
-                await provider.updateCachedValue(TemplateProviderBase.templateVersionKey, backupTemplateVersion);
+                await provider.cacheTemplateMetadata(backupTemplateVersion);
                 await provider.cacheTemplates();
                 return result;
             } catch (error) {
@@ -230,5 +267,15 @@ export class CentralTemplateProvider {
         }
 
         return undefined;
+    }
+
+    private onConfigChanged(e: ConfigurationChangeEvent): void {
+        if (e.affectsConfiguration(`${ext.prefix}.${projectTemplateKeySetting}`)) {
+            for (const cached of this._providersMap.values()) {
+                for (const provider of cached.providers) {
+                    provider.projKeyMayHaveChanged();
+                }
+            }
+        }
     }
 }

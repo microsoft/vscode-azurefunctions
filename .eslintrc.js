@@ -33,5 +33,6 @@ module.exports = {
         "@typescript-eslint/restrict-template-expressions": "off",
         "@typescript-eslint/no-namespace": "off",
         "@typescript-eslint/ban-types": "off",
+        "@typescript-eslint/require-await": "off",
     }
 };

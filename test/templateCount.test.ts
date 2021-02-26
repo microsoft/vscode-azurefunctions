@@ -13,28 +13,40 @@ addSuite(TemplateSource.Latest);
 addSuite(TemplateSource.Staging);
 addSuite(TemplateSource.Backup);
 
+interface TestCase {
+    language: ProjectLanguage;
+    version: FuncVersion;
+    expectedCount: number;
+    projectTemplateKey?: string;
+}
+
 function addSuite(source: TemplateSource | undefined): void {
     suite(`Template Count - ${source === undefined ? 'defaultOnExtensionActivation' : source}`, () => {
-        const cases: [ProjectLanguage, FuncVersion, number][] = [
-            [ProjectLanguage.JavaScript, FuncVersion.v1, 8],
-            [ProjectLanguage.JavaScript, FuncVersion.v2, 14],
-            [ProjectLanguage.JavaScript, FuncVersion.v3, 14],
-            [ProjectLanguage.CSharp, FuncVersion.v1, 12],
-            [ProjectLanguage.CSharp, FuncVersion.v2, 10],
-            [ProjectLanguage.CSharp, FuncVersion.v3, 11],
-            [ProjectLanguage.Python, FuncVersion.v2, 12],
-            [ProjectLanguage.Python, FuncVersion.v3, 12],
-            [ProjectLanguage.TypeScript, FuncVersion.v2, 14],
-            [ProjectLanguage.TypeScript, FuncVersion.v3, 14],
-            [ProjectLanguage.PowerShell, FuncVersion.v2, 14],
-            [ProjectLanguage.PowerShell, FuncVersion.v3, 14],
-            [ProjectLanguage.Java, FuncVersion.v2, 4]
+        const cases: TestCase[] = [
+            { language: ProjectLanguage.JavaScript, version: FuncVersion.v1, expectedCount: 8 },
+            { language: ProjectLanguage.JavaScript, version: FuncVersion.v2, expectedCount: 14 },
+            { language: ProjectLanguage.JavaScript, version: FuncVersion.v3, expectedCount: 14 },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v1, expectedCount: 12 },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v2, expectedCount: 10 },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 11 },
+            { language: ProjectLanguage.CSharp, version: FuncVersion.v3, expectedCount: 9, projectTemplateKey: 'net5.0-isolated' },
+            { language: ProjectLanguage.Python, version: FuncVersion.v2, expectedCount: 12 },
+            { language: ProjectLanguage.Python, version: FuncVersion.v3, expectedCount: 12 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v2, expectedCount: 14 },
+            { language: ProjectLanguage.TypeScript, version: FuncVersion.v3, expectedCount: 14 },
+            { language: ProjectLanguage.PowerShell, version: FuncVersion.v2, expectedCount: 14 },
+            { language: ProjectLanguage.PowerShell, version: FuncVersion.v3, expectedCount: 14 },
+            { language: ProjectLanguage.Java, version: FuncVersion.v2, expectedCount: 4 }
             // https://github.com/microsoft/vscode-azurefunctions/issues/1605
-            // [ProjectLanguage.Java, FuncVersion.v3, 4]
+            // { language: ProjectLanguage.Java, version: FuncVersion.v3, expectedCount: 4}]
         ];
 
-        for (const [language, version, expectedCount] of cases) {
-            test(`${language} ${version}`, async function (this: Mocha.Context): Promise<void> {
+        for (const { language, version, expectedCount, projectTemplateKey } of cases) {
+            let testName: string = `${language} ${version}`;
+            if (projectTemplateKey) {
+                testName += ` ${projectTemplateKey}`;
+            }
+            test(testName, async function (this: Mocha.Context): Promise<void> {
                 if (source === TemplateSource.Staging && skipStagingTemplateSource) {
                     this.skip();
                 }
@@ -44,7 +56,7 @@ function addSuite(source: TemplateSource | undefined): void {
                 }
 
                 await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                    const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified);
+                    const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified, projectTemplateKey);
                     assert.equal(templates.length, expectedCount);
                 });
             });

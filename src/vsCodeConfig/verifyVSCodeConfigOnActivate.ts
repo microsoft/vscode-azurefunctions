@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -36,7 +36,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     void callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
-                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version);
+                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version, TemplateFilter.Verified, undefined);
                     });
 
                     let isDotnet: boolean = false;

@@ -7,6 +7,7 @@ import { Uri, WorkspaceFolder } from "vscode";
 import { IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage } from "../../constants";
 import { FuncVersion } from "../../FuncVersion";
+import { cliFeedUtils } from "../../utils/cliFeedUtils";
 
 export interface IProjectWizardContext extends IActionContext {
     projectPath: string;
@@ -16,6 +17,8 @@ export interface IProjectWizardContext extends IActionContext {
     language?: ProjectLanguage;
     languageFilter?: RegExp;
     version: FuncVersion;
+    projectTemplateKey: string | undefined;
+    workerRuntime?: cliFeedUtils.IWorkerRuntime;
     openBehavior?: OpenBehavior;
 
     generateFromOpenAPI?: boolean;

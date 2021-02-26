@@ -6,11 +6,11 @@
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
-import { FuncVersion } from '../../FuncVersion';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
+export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
     const framework: string = await getFramework(context, workingDirectory);
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
@@ -19,9 +19,9 @@ export async function executeDotnetTemplateCommand(context: IActionContext, vers
         'dotnet',
         cpUtils.wrapArgInQuotes(jsonDllPath),
         '--require',
-        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(version)),
+        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(version, projTemplateKey)),
         '--require',
-        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(version)),
+        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(version, projTemplateKey)),
         '--operation',
         operation,
         ...args);
@@ -31,12 +31,16 @@ export function getDotnetTemplatesPath(): string {
     return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
 }
 
-export function getDotnetItemTemplatePath(version: FuncVersion): string {
-    return path.join(getDotnetTemplatesPath(), `itemTemplates-${version}.nupkg`);
+export function getDotnetItemTemplatePath(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(getDotnetTemplatesPath(), getNupkgName('item', version, projTemplateKey));
 }
 
-export function getDotnetProjectTemplatePath(version: FuncVersion): string {
-    return path.join(getDotnetTemplatesPath(), `projectTemplates-${version}.nupkg`);
+export function getDotnetProjectTemplatePath(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(getDotnetTemplatesPath(), getNupkgName('project', version, projTemplateKey));
+}
+
+function getNupkgName(suffix: string, version: FuncVersion, projTemplateKey: string): string {
+    return `v${getMajorVersion(version)}-${projTemplateKey}-${suffix}.nupkg`;
 }
 
 export async function validateDotnetInstalled(context: IActionContext): Promise<void> {

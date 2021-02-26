@@ -9,6 +9,7 @@ import { FuncVersion } from '../../../FuncVersion';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
+import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -45,7 +46,11 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
 
         const version: FuncVersion = nonNullProp(context, 'version');
-        await executeDotnetTemplateCommand(context, version, context.projectPath, 'create', '--identity', template.id, ...args);
+        let projectTemplateKey = context.projectTemplateKey;
+        if (!projectTemplateKey) {
+            projectTemplateKey = await dotnetUtils.getTemplateKeyFromProjFile(context.projectPath, context.version, nonNullProp(context, 'language'));
+        }
+        await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }

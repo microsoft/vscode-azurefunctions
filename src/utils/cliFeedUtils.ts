@@ -8,7 +8,7 @@ import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
-    const funcCliFeedUrl: string = 'https://aka.ms/V00v5v';
+    const funcCliFeedV4Url: string = 'https://aka.ms/AAbbk68';
 
     interface ICliFeed {
         tags: {
@@ -20,15 +20,33 @@ export namespace cliFeedUtils {
     }
 
     export interface IRelease {
-        templateApiZip: string;
-        itemTemplates: string;
-        projectTemplates: string;
+        templates: string;
+        workerRuntimes: {
+            dotnet: {
+                [key: string]: IWorkerRuntime
+            }
+        };
     }
 
     interface ITag {
         release: string;
-        displayName: string;
-        hidden: boolean;
+    }
+
+    export interface IWorkerRuntime {
+        displayInfo: {
+            displayName: string;
+            description?: string;
+            hidden: boolean;
+        },
+        sdk: {
+            name: string;
+        }
+        targetFramework: string;
+        itemTemplates: string;
+        projectTemplates: string;
+        projectTemplateId: {
+            csharp: string;
+        }
     }
 
     export async function getLatestVersion(version: FuncVersion): Promise<string> {
@@ -51,6 +69,6 @@ export namespace cliFeedUtils {
     }
 
     async function getCliFeed(): Promise<ICliFeed> {
-        return feedUtils.getJsonFeed(funcCliFeedUrl);
+        return feedUtils.getJsonFeed(funcCliFeedV4Url);
     }
 }

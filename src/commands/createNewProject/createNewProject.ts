@@ -5,7 +5,7 @@
 
 import { window } from 'vscode';
 import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting } from '../../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
@@ -47,7 +47,8 @@ export async function createNewProjectInternal(context: IActionContext, options:
 
     const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
-    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version) });
+    const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
+    const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version), projectTemplateKey });
 
     if (options.folderPath) {
         FolderListStep.setProjectPath(wizardContext, options.folderPath);
