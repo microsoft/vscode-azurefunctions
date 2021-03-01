@@ -42,6 +42,22 @@
                 "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish (5.0)",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "--framework",
+                "net5.0",
+                "--output",
+                "${workspaceFolder}/../../resources/dotnetJsonCli/net5.0/",
+                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
+            ],
+            "problemMatcher": "$msCompile"
         }
     ]
 }
