@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fse from 'fs-extra';
-import { homedir } from 'os';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
@@ -19,7 +18,7 @@ import { IBindingTemplate } from '../IBindingTemplate';
 import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
-import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplatesPath, validateDotnetInstalled } from './executeDotnetTemplateCommand';
+import { executeDotnetTemplateCommand, getDotnetItemTemplatePath, getDotnetProjectTemplatePath, getDotnetTemplateDir, validateDotnetInstalled } from './executeDotnetTemplateCommand';
 import { parseDotnetTemplates } from './parseDotnetTemplates';
 
 export class DotnetTemplateProvider extends TemplateProviderBase {
@@ -91,21 +90,23 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
     public async getBackupTemplates(context: IActionContext): Promise<ITemplates> {
         const projKey = await this.getProjKey();
-        const backupPath: string = this.getBackupPath();
         const files: string[] = [getDotnetProjectTemplatePath(this.version, projKey), getDotnetItemTemplatePath(this.version, projKey)];
         for (const file of files) {
-            await fse.copy(path.join(backupPath, path.basename(file)), file);
+            await fse.copy(this.convertToBackupFilePath(projKey, file), file);
         }
         return await this.parseTemplates(context, projKey);
     }
 
     public async updateBackupTemplates(): Promise<void> {
         const projKey = await this.getProjKey();
-        const backupPath: string = this.getBackupPath();
         const files: string[] = [getDotnetProjectTemplatePath(this.version, projKey), getDotnetItemTemplatePath(this.version, projKey)];
         for (const file of files) {
-            await fse.copy(file, path.join(backupPath, path.basename(file)));
+            await fse.copy(file, this.convertToBackupFilePath(projKey, file));
         }
+    }
+
+    private convertToBackupFilePath(projKey: string, file: string): string {
+        return path.join(this.getBackupPath(), projKey, path.basename(file));
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
@@ -117,10 +118,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     public async clearCachedTemplates(): Promise<void> {
         const projKey = await this.getProjKey();
         await this.deleteCachedValue(projKey);
-        const templateEnginePath: string = path.join(homedir(), '.templateengine', 'AzureFunctions-VSCodeExtension'); // This is used by the JsonCli tool
-        for (const dir of [getDotnetTemplatesPath(), templateEnginePath]) {
-            await fse.remove(dir);
-        }
+        await fse.remove(getDotnetTemplateDir(this.version, projKey));
     }
 
     private async parseTemplates(context: IActionContext, projKey: string): Promise<ITemplates> {

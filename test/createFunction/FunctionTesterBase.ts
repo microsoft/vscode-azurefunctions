@@ -30,13 +30,17 @@ export abstract class FunctionTesterBase implements Disposable {
     public async initAsync(): Promise<void> {
         this.baseTestFolder = path.join(testFolderPath, `createFunction${this.language}${this.version}`);
         await runForAllTemplateSources(async (source) => {
-            await this.initializeTestFolder(path.join(this.baseTestFolder, source));
+            const testFolder = path.join(this.baseTestFolder, source);
+            await this.initializeTestFolder(testFolder);
         });
     }
 
     public async dispose(): Promise<void> {
-        const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), this.baseTestFolder, this.language, this.version, TemplateFilter.Verified, undefined);
-        assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
+        await runForAllTemplateSources(async (source) => {
+            const testFolder = path.join(this.baseTestFolder, source);
+            const templates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(createTestActionContext(), testFolder, this.language, this.version, TemplateFilter.Verified, undefined);
+            assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
+        });
     }
 
     public async testCreateFunction(templateName: string, ...inputs: string[]): Promise<void> {

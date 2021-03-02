@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
-import { FuncVersion, getMajorVersion } from '../../FuncVersion';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
@@ -18,29 +18,23 @@ export async function executeDotnetTemplateCommand(context: IActionContext, vers
         workingDirectory,
         'dotnet',
         cpUtils.wrapArgInQuotes(jsonDllPath),
-        '--require',
-        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(version, projTemplateKey)),
-        '--require',
-        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(version, projTemplateKey)),
+        '--templateDir',
+        cpUtils.wrapArgInQuotes(getDotnetTemplateDir(version, projTemplateKey)),
         '--operation',
         operation,
         ...args);
 }
 
-export function getDotnetTemplatesPath(): string {
-    return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
-}
-
 export function getDotnetItemTemplatePath(version: FuncVersion, projTemplateKey: string): string {
-    return path.join(getDotnetTemplatesPath(), getNupkgName('item', version, projTemplateKey));
+    return path.join(getDotnetTemplateDir(version, projTemplateKey), 'item.nupkg');
 }
 
 export function getDotnetProjectTemplatePath(version: FuncVersion, projTemplateKey: string): string {
-    return path.join(getDotnetTemplatesPath(), getNupkgName('project', version, projTemplateKey));
+    return path.join(getDotnetTemplateDir(version, projTemplateKey), 'project.nupkg');
 }
 
-function getNupkgName(suffix: string, version: FuncVersion, projTemplateKey: string): string {
-    return `v${getMajorVersion(version)}-${projTemplateKey}-${suffix}.nupkg`;
+export function getDotnetTemplateDir(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(ext.context.globalStoragePath, ext.templateProvider.templateSource || '', version, projTemplateKey);
 }
 
 export async function validateDotnetInstalled(context: IActionContext): Promise<void> {
@@ -64,11 +58,11 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             // ignore
         }
 
-        const majorVersions: string[] = ['3', '2'];
+        const majorVersions: number[] = [5, 3, 2];
         for (const majorVersion of majorVersions) {
             const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
             if (regExp.test(versions)) {
-                cachedFramework = `netcoreapp${majorVersion}.0`;
+                cachedFramework = `net${majorVersion < 4 ? 'coreapp' : ''}${majorVersion}.0`;
                 break;
             }
         }
