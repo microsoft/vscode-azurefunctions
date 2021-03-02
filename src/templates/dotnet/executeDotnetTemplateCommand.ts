@@ -60,7 +60,8 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
 
         const majorVersions: number[] = [5, 3, 2];
         for (const majorVersion of majorVersions) {
-            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
+            // NOTE: We only want GA versions (i.e. 1.0.0), not preview versions (i.e. 1.0.0-alpha)
+            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.[0-9]+\\.[0-9]+(\\s|$)`, 'm');
             if (regExp.test(versions)) {
                 cachedFramework = `net${majorVersion < 4 ? 'coreapp' : ''}${majorVersion}.0`;
                 break;
