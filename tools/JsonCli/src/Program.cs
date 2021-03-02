@@ -29,18 +29,30 @@ namespace Microsoft.TemplateEngine.JsonCli
         private static SettingsLoader _settingsLoader;
         private static Paths _paths;
         private const string DefaultLanguage = "C#";
-        private const string HostName = "AzureFunctions-VSCodeExtension";
+        private const string HostName = "vscode-azurefunctions";
         private const string HostVersion = "1.0.0";
 
         public static EngineEnvironmentSettings EnvironmentSettings { get; private set; }
 
         private static int Main(string[] args)
         {
-            string profileDir = GetHomeDirectory();
-            string hivePath = Path.Combine(profileDir, ".templateengine", HostName, HostVersion);
+            CommandLineParser parser = new CommandLineParser(args)
+                .AddOptionWithConstrainedValue("--operation", new[]
+                {
+                        "list",
+                        "create"
+                })
+                .AddOptionWithValue("--templateDir");
+
+            if (!parser.TryGetSingleValue("--operation", out string operation) || !parser.TryGetSingleValue("--templateDir", out string templateDir))
+            {
+                Console.SetOut(Console.Error);
+                Console.WriteLine("ERROR: Expected \"--operation\" and/or \"--templateDir\" parameter.");
+                return -1;
+            }
 
             ITemplateEngineHost host = CreateHost(HostName, HostVersion);
-            EnvironmentSettings = new EngineEnvironmentSettings(host, x => new SettingsLoader(x), hivePath);
+            EnvironmentSettings = new EngineEnvironmentSettings(host, x => new SettingsLoader(x), Path.Combine(templateDir, "cache"));
             EnvironmentSettings.SettingsLoader.Components.OfType<IIdentifiedComponent>().ToList();
             _paths = new Paths(EnvironmentSettings);
 
@@ -51,31 +63,12 @@ namespace Microsoft.TemplateEngine.JsonCli
             _settingsLoader = (SettingsLoader)EnvironmentSettings.SettingsLoader;
             _hostDataLoader = new HostSpecificDataLoader(EnvironmentSettings.SettingsLoader);
 
-            CommandLineParser parser = new CommandLineParser(args)
-                .AddOptionWithConstrainedValue("--operation", new[]
-                {
-                        "list",
-                        "create"
-                })
-                .AddOptionWithValue("--require")
-                .AddOptionWithValue("--source");
-
-            if (!parser.TryGetValues("--require", out IReadOnlyList<string> requireDirectives)
-                || !parser.TryGetSingleValue("--operation", out string operation))
-            {
-                Console.SetOut(Console.Error);
-                Console.WriteLine("ERROR: Expected \"--require\" and/or \"--operation\" parameter.");
-                return -1;
-            }
-
             IInstaller installer = new Installer(EnvironmentSettings);
 
-            if (!parser.TryGetValues("--source", out IReadOnlyList<string> sources))
-            {
-                sources = null;
-            }
-
-            installer.InstallPackages(requireDirectives, sources?.ToList());
+            installer.InstallPackages(new string[] {
+                Path.Combine(templateDir, "item.nupkg"),
+                Path.Combine(templateDir, "project.nupkg")
+            });
 
             //All required templates/components/lang packs have now been configured
             //Desired operation information starts at args[commandArgsStart]
