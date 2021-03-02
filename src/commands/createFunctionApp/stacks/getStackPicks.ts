@@ -5,6 +5,7 @@
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createGenericClient, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { hiddenStacksSetting } from '../../../constants';
 import { localize } from '../../../localize';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -54,7 +55,7 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
             url: 'https://aka.ms/AAa5ia0',
             queryParameters: {
                 'api-version': '2020-10-01',
-                removeHiddenStacks: String(!getWorkspaceSetting<boolean>('showHiddenStacks')),
+                removeHiddenStacks: String(!getWorkspaceSetting<boolean>(hiddenStacksSetting)),
                 removeDeprecatedStacks: 'true'
             }
         });

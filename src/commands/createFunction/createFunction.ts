@@ -5,13 +5,14 @@
 
 import { commands, MessageItem, Uri, window, workspace, WorkspaceFolder } from 'vscode';
 import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { ProjectLanguage } from '../../constants';
+import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
@@ -57,8 +58,8 @@ export async function createFunctionInternal(context: IActionContext, options: a
     }
 
     const [language, version] = await verifyInitForVSCode(context, projectPath, options.language, options.version);
-
-    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language });
+    const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
+    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, projectTemplateKey });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [await FunctionListStep.create(wizardContext, { templateId: options.templateId, functionSettings: options.functionSettings, isProjectWizard: false })]
     });

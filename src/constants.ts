@@ -14,6 +14,8 @@ export const templateVersionSetting: string = 'templateVersion';
 export const preDeployTaskSetting: string = 'preDeployTask';
 export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
+export const hiddenStacksSetting: string = 'showHiddenStacks';
+export const projectTemplateKeySetting: string = 'projectTemplateKey';
 
 export enum ProjectLanguage {
     CSharp = 'C#',

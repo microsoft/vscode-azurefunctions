@@ -64,6 +64,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         });
 
         ext.templateProvider = new CentralTemplateProvider();
+        context.subscriptions.push(ext.templateProvider);
 
         // Suppress "Report an Issue" button for all errors in favor of the command
         registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);

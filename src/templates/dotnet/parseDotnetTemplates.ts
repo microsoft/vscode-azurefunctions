@@ -106,7 +106,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
 
 function filterTemplatesByVersion(templates: IFunctionTemplate[], version: FuncVersion): IFunctionTemplate[] {
     const majorVersion: string = getMajorVersion(version);
-    const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.[^.]*\\.${majorVersion}\\.`, 'i');
+    const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.(Isolated\\.|)[^\\.]*\\.${majorVersion}\\.x$`, 'i');
     return templates.filter(t => regExp.test(t.id));
 }
 
@@ -120,7 +120,7 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.errorHandling.suppressDisplay = true;
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
-        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All);
+        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
             const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
             if (jsTemplate) {

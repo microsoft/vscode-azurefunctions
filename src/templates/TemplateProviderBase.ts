@@ -5,8 +5,10 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import { Disposable, env } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
+import { ProjectLanguage } from '../constants';
+import { NotImplementedError } from '../errors';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { IBindingTemplate } from './IBindingTemplate';
@@ -20,29 +22,49 @@ export enum TemplateType {
     Java = 'Java'
 }
 
-export abstract class TemplateProviderBase {
-    public static templateVersionKey: string = 'templateVersion';
+export abstract class TemplateProviderBase implements Disposable {
+    protected static templateVersionCacheKey: string = 'templateVersion';
+    protected static projTemplateKeyCacheKey: string = 'projectTemplateKey';
     public abstract templateType: TemplateType;
     public readonly version: FuncVersion;
+    public readonly language: ProjectLanguage;
     public readonly projectPath: string | undefined;
     public resourcesLanguage: string | undefined;
 
-    protected abstract backupSubpath: string;
+    /**
+     * Indicates a related setting/file changed, so we should refresh the worker runtime key next time we get templates
+     * We want to delay reading those files until necessary for performance reasons, hence "may have"
+     */
+    private _projKeyMayHaveChanged: boolean;
 
-    public constructor(version: FuncVersion, projectPath: string | undefined) {
+    /**
+     * The project key cached for this session of VS Code, purely meant for performance (since we don't want to read the file system to get detect the proj key every time)
+     * NOTE: Not using "cache" in the name because all other "cache" properties/methods are related to the global state cache we use accross sessions
+     */
+    public sessionProjKey: string | undefined;
+
+    protected abstract backupSubpath: string;
+    protected _disposables: Disposable[] = [];
+
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage) {
         this.version = version;
         this.projectPath = projectPath;
+        this.language = language;
     }
 
-    public async updateCachedValue(key: string, value: unknown): Promise<void> {
+    public dispose(): void {
+        Disposable.from(...this._disposables).dispose();
+    }
+
+    protected async updateCachedValue(key: string, value: unknown): Promise<void> {
         await ext.context.globalState.update(await this.getCacheKey(key), value);
     }
 
-    public async deleteCachedValue(key: string): Promise<void> {
+    protected async deleteCachedValue(key: string): Promise<void> {
         await ext.context.globalState.update(await this.getCacheKey(key), undefined);
     }
 
-    public async getCachedValue<T>(key: string): Promise<T | undefined> {
+    protected async getCachedValue<T>(key: string): Promise<T | undefined> {
         return ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
 
@@ -51,7 +73,7 @@ export abstract class TemplateProviderBase {
     public abstract getCachedTemplates(context: IActionContext): Promise<ITemplates | undefined>;
     public abstract getBackupTemplates(context: IActionContext): Promise<ITemplates>;
     public abstract cacheTemplates(): Promise<void>;
-    public abstract clearCache(): Promise<void>;
+    public abstract clearCachedTemplates(): Promise<void>;
     public abstract updateBackupTemplates(): Promise<void>;
 
     /**
@@ -62,7 +84,17 @@ export abstract class TemplateProviderBase {
     }
 
     public async getCachedTemplateVersion(): Promise<string | undefined> {
-        return this.getCachedValue(TemplateProviderBase.templateVersionKey);
+        return this.getCachedValue(TemplateProviderBase.templateVersionCacheKey);
+    }
+
+    public async cacheTemplateMetadata(templateVersion: string): Promise<void> {
+        await this.updateCachedValue(TemplateProviderBase.templateVersionCacheKey, templateVersion);
+        await this.updateCachedValue(TemplateProviderBase.projTemplateKeyCacheKey, this.sessionProjKey);
+    }
+
+    public async clearCachedTemplateMetadata(): Promise<void> {
+        await this.deleteCachedValue(TemplateProviderBase.templateVersionCacheKey);
+        await this.deleteCachedValue(TemplateProviderBase.projTemplateKeyCacheKey);
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
@@ -80,7 +112,7 @@ export abstract class TemplateProviderBase {
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    protected async getCacheKeySuffix(): Promise<string>{
+    protected async getCacheKeySuffix(): Promise<string> {
         return '';
     }
 
@@ -104,10 +136,62 @@ export abstract class TemplateProviderBase {
             key = `${key}.${this.templateType}`;
         }
 
-        if (vscode.env.language && !/^en(-us)?$/i.test(vscode.env.language)) {
-            key = `${key}.${vscode.env.language}`;
+        if (env.language && !/^en(-us)?$/i.test(env.language)) {
+            key = `${key}.${env.language}`;
         }
 
         return key;
+    }
+
+    /**
+     * Optional method if the provider has project-specific templates
+     */
+    protected refreshProjKey?(): Promise<string>;
+
+    /**
+     * A key used to identify the templates for the current type of project
+     */
+    public async getProjKey(): Promise<string> {
+        if (!this.refreshProjKey) {
+            throw new NotImplementedError('refreshProjKey', this);
+        }
+
+        if (!this.sessionProjKey) {
+            this.sessionProjKey = await this.refreshProjKey();
+        }
+
+        return this.sessionProjKey;
+    }
+
+    public projKeyMayHaveChanged(): void {
+        this._projKeyMayHaveChanged = true;
+    }
+
+    public async hasProjKeyChanged(projKey: string | undefined): Promise<boolean> {
+        if (!this.refreshProjKey) {
+            return false; // proj keys not supported, so it's impossible to have changed
+        }
+
+        if (this.sessionProjKey !== projKey) {
+            return true;
+        }
+
+        return this._projKeyMayHaveChanged && this.sessionProjKey !== await this.refreshProjKey();
+    }
+
+    public clearSessionProjKey(): void {
+        this._projKeyMayHaveChanged = false;
+        this.sessionProjKey = undefined;
+    }
+
+    public async doesCachedProjKeyMatch(): Promise<boolean> {
+        if (this.refreshProjKey) {
+            const projKey = await this.getProjKey();
+            const cachedProjKey = await this.getCachedValue(TemplateProviderBase.projTemplateKeyCacheKey);
+            // If cachedProjKey is not defined, assumes it's a match (the cache is probably from before proj keys were a thing)
+            return !cachedProjKey || projKey === cachedProjKey;
+        } else {
+            return true; // Proj keys are not supported, so assume a match
+        }
     }
 }

@@ -10,7 +10,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
-export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
+export async function executeDotnetTemplateCommand(context: IActionContext, version: FuncVersion, projTemplateKey: string, workingDirectory: string | undefined, operation: 'list' | 'create', ...args: string[]): Promise<string> {
     const framework: string = await getFramework(context, workingDirectory);
     const jsonDllPath: string = ext.context.asAbsolutePath(path.join('resources', 'dotnetJsonCli', framework, 'Microsoft.TemplateEngine.JsonCli.dll'));
     return await cpUtils.executeCommand(
@@ -18,25 +18,23 @@ export async function executeDotnetTemplateCommand(context: IActionContext, vers
         workingDirectory,
         'dotnet',
         cpUtils.wrapArgInQuotes(jsonDllPath),
-        '--require',
-        cpUtils.wrapArgInQuotes(getDotnetItemTemplatePath(version)),
-        '--require',
-        cpUtils.wrapArgInQuotes(getDotnetProjectTemplatePath(version)),
+        '--templateDir',
+        cpUtils.wrapArgInQuotes(getDotnetTemplateDir(version, projTemplateKey)),
         '--operation',
         operation,
         ...args);
 }
 
-export function getDotnetTemplatesPath(): string {
-    return path.join(ext.context.globalStoragePath, 'dotnetTemplates', ext.templateProvider.templateSource || '');
+export function getDotnetItemTemplatePath(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(getDotnetTemplateDir(version, projTemplateKey), 'item.nupkg');
 }
 
-export function getDotnetItemTemplatePath(version: FuncVersion): string {
-    return path.join(getDotnetTemplatesPath(), `itemTemplates-${version}.nupkg`);
+export function getDotnetProjectTemplatePath(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(getDotnetTemplateDir(version, projTemplateKey), 'project.nupkg');
 }
 
-export function getDotnetProjectTemplatePath(version: FuncVersion): string {
-    return path.join(getDotnetTemplatesPath(), `projectTemplates-${version}.nupkg`);
+export function getDotnetTemplateDir(version: FuncVersion, projTemplateKey: string): string {
+    return path.join(ext.context.globalStoragePath, ext.templateProvider.templateSource || '', version, projTemplateKey);
 }
 
 export async function validateDotnetInstalled(context: IActionContext): Promise<void> {
@@ -60,11 +58,11 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             // ignore
         }
 
-        const majorVersions: string[] = ['3', '2'];
+        const majorVersions: number[] = [5, 3, 2];
         for (const majorVersion of majorVersions) {
             const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
             if (regExp.test(versions)) {
-                cachedFramework = `netcoreapp${majorVersion}.0`;
+                cachedFramework = `net${majorVersion < 4 ? 'coreapp' : ''}${majorVersion}.0`;
                 break;
             }
         }

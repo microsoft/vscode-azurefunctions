@@ -5,7 +5,7 @@
 
 import { window, workspace, WorkspaceFolder } from 'vscode';
 import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectTemplateKeySetting } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion } from '../../FuncVersion';
@@ -44,8 +44,9 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
 
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
+    const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
-    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, version, workspaceFolder });
+    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, version, workspaceFolder, projectTemplateKey });
     const wizard: AzureWizard<IProjectWizardContext> = new AzureWizard(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();
     await wizard.execute();

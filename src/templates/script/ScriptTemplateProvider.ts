@@ -56,7 +56,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         const templatesPath: string = path.join(ext.context.globalStoragePath, 'scriptTemplates');
         try {
             const filePath: string = path.join(templatesPath, `${getRandomHexString()}.zip`);
-            await requestUtils.downloadFile(templateRelease.templateApiZip, filePath);
+            await requestUtils.downloadFile(templateRelease.templates, filePath);
 
             await new Promise((resolve: (value?: unknown) => void, reject: (e: Error) => void): void => {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -97,7 +97,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
-    public async clearCache(): Promise<void> {
+    public async clearCachedTemplates(): Promise<void> {
         await this.deleteCachedValue(this._templatesKey);
         await this.deleteCachedValue(this._bindingsKey);
         await this.deleteCachedValue(this._resourcesKey);

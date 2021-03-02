@@ -34,11 +34,15 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const projName: string = projectName + language === ProjectLanguage.FSharp ? '.fsproj' : '.csproj';
         await this.confirmOverwriteExisting(context, projName);
 
-        const templateLanguage: string = language === ProjectLanguage.FSharp ? 'FSharp' : 'CSharp';
         const majorVersion: string = getMajorVersion(version);
-        const identity: string = `Microsoft.AzureFunctions.ProjectTemplate.${templateLanguage}.${majorVersion}.x`;
+        const workerRuntime = nonNullProp(context, 'workerRuntime');
+        let identity: string = workerRuntime.projectTemplateId.csharp;
+        if (language === ProjectLanguage.FSharp) {
+            identity = identity.replace('CSharp', 'FSharp'); // they don't have FSharp in the feed yet
+        }
         const functionsVersion: string = 'v' + majorVersion;
-        await executeDotnetTemplateCommand(context, version, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
+        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
         await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }

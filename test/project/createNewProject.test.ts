@@ -12,9 +12,10 @@ import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptVali
 suite('Create New Project', () => {
     const testCases: ICreateProjectTestCase[] = [
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
-        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3) },
+        { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
+        { ...getCSharpValidateOptions('C#Project', 'net5.0', FuncVersion.v3), inputs: [/5/], description: 'net5.0 isolated' },
         { ...getFSharpValidateOptions('F#Project', 'netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
-        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.1', FuncVersion.v3), isHiddenLanguage: true },
+        { ...getFSharpValidateOptions('F#Project', 'netcoreapp3.1', FuncVersion.v3), inputs: [/3/], isHiddenLanguage: true },
     ];
 
     // Test cases that are the same for both v2 and v3
@@ -54,10 +55,15 @@ suite('Create New Project', () => {
 
 interface ICreateProjectTestCase extends ICreateProjectTestOptions {
     timeout?: number;
+    description?: string;
 }
 
 function addTest(testCase: ICreateProjectTestCase): void {
-    test(`${testCase.language} ${testCase.version}`, async function (this: Mocha.Context): Promise<void> {
+    let testName = `${testCase.language} ${testCase.version}`;
+    if (testCase.description) {
+        testName += ` ${testCase.description}`;
+    }
+    test(testName, async function (this: Mocha.Context): Promise<void> {
         if (testCase.timeout !== undefined) {
             if (longRunningTestsEnabled) {
                 this.timeout(testCase.timeout);

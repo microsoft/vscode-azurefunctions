@@ -7,6 +7,8 @@ import { CentralTemplateProvider, FuncVersion, ProjectLanguage, supportedLanguag
 import { createTestActionContext, testWorkspacePath, updateBackupTemplates } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
+type WorkerRuntime = { language: ProjectLanguage; projectTemplateKey?: string, versions: FuncVersion[] }
+
 /**
  * This is not actually a test, but a tool for updating backup templates.
  * The benefit of running as a test (as opposed to for example a gulp task) is that it can run within the context of VS Code and our extension
@@ -22,17 +24,25 @@ suite('Backup templates', () => {
     test('Update', async () => {
         await javaUtils.addJavaProjectToWorkspace();
 
-        const languages: ProjectLanguage[] = [ProjectLanguage.JavaScript, ProjectLanguage.CSharp, ProjectLanguage.Java];
-        for (const language of languages) {
+        const allVersions = Object.values(FuncVersion);
+        const workers: WorkerRuntime[] = [
+            { language: ProjectLanguage.JavaScript, versions: allVersions },
+            { language: ProjectLanguage.CSharp, versions: [FuncVersion.v1, FuncVersion.v2] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'netcoreapp3.1', versions: [FuncVersion.v3] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net5.0-isolated', versions: [FuncVersion.v3] },
+            { language: ProjectLanguage.Java, versions: [FuncVersion.v2, FuncVersion.v3] }
+        ];
+
+        for (const worker of workers) {
             for (const version of Object.values(FuncVersion)) {
-                if (language === ProjectLanguage.Java && version === FuncVersion.v1) {
-                    // not supported
+                if (!worker.versions?.includes(version)) {
                     continue;
                 }
 
-                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, language, version);
+                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, version);
 
                 for (const provider of providers) {
+                    provider.sessionProjKey = worker.projectTemplateKey;
                     const templateVersion: string = await provider.getLatestTemplateVersion();
 
                     async function updateBackupTemplatesInternal(): Promise<void> {
@@ -40,7 +50,7 @@ suite('Backup templates', () => {
                         await provider.updateBackupTemplates();
                     }
 
-                    if (language === ProjectLanguage.JavaScript) {
+                    if (worker.language === ProjectLanguage.JavaScript) {
                         for (const resourcesLanguage of resourceLanguages) {
                             provider.resourcesLanguage = resourcesLanguage;
                             await updateBackupTemplatesInternal();
