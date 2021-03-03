@@ -58,19 +58,37 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             // ignore
         }
 
-        const majorVersions: number[] = [5, 3, 2];
+        // Use 3 before 5 because it's LTS
+        const majorVersions: number[] = [3, 5, 2];
+
+        let pickedVersion: number | undefined;
+
+        // Try to get a GA version first (i.e. "1.0.0")
         for (const majorVersion of majorVersions) {
-            // NOTE: We only want GA versions (i.e. 1.0.0), not preview versions (i.e. 1.0.0-alpha)
             const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.[0-9]+\\.[0-9]+(\\s|$)`, 'm');
             if (regExp.test(versions)) {
-                cachedFramework = `net${majorVersion < 4 ? 'coreapp' : ''}${majorVersion}.0`;
+                pickedVersion = majorVersion;
                 break;
             }
         }
 
-        if (!cachedFramework) {
+        // Otherwise allow a preview version (i.e. "1.0.0-alpha")
+        if (!pickedVersion) {
+            for (const majorVersion of majorVersions) {
+                const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
+                if (regExp.test(versions)) {
+                    pickedVersion = majorVersion;
+                    break;
+                }
+            }
+        }
+
+
+        if (!pickedVersion) {
             context.errorHandling.suppressReportIssue = true;
             throw new Error(localize('noMatchingFramework', 'You must have the [.NET Core SDK](https://aka.ms/AA4ac70) installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
+        } else {
+            cachedFramework = `net${pickedVersion < 4 ? 'coreapp' : ''}${pickedVersion}.0`;
         }
     }
 
