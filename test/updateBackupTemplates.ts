@@ -39,10 +39,9 @@ suite('Backup templates', () => {
                     continue;
                 }
 
-                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, version);
+                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, version, worker.projectTemplateKey);
 
                 for (const provider of providers) {
-                    provider.sessionProjKey = worker.projectTemplateKey;
                     const templateVersion: string = await provider.getLatestTemplateVersion();
 
                     async function updateBackupTemplatesInternal(): Promise<void> {

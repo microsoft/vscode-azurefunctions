@@ -41,15 +41,16 @@ export abstract class TemplateProviderBase implements Disposable {
      * The project key cached for this session of VS Code, purely meant for performance (since we don't want to read the file system to get detect the proj key every time)
      * NOTE: Not using "cache" in the name because all other "cache" properties/methods are related to the global state cache we use accross sessions
      */
-    public sessionProjKey: string | undefined;
+    protected _sessionProjKey: string | undefined;
 
     protected abstract backupSubpath: string;
     protected _disposables: Disposable[] = [];
 
-    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage) {
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
         this.version = version;
         this.projectPath = projectPath;
         this.language = language;
+        this._sessionProjKey = projectTemplateKey;
     }
 
     public dispose(): void {
@@ -89,7 +90,7 @@ export abstract class TemplateProviderBase implements Disposable {
 
     public async cacheTemplateMetadata(templateVersion: string): Promise<void> {
         await this.updateCachedValue(TemplateProviderBase.templateVersionCacheKey, templateVersion);
-        await this.updateCachedValue(TemplateProviderBase.projTemplateKeyCacheKey, this.sessionProjKey);
+        await this.updateCachedValue(TemplateProviderBase.projTemplateKeyCacheKey, this._sessionProjKey);
     }
 
     public async clearCachedTemplateMetadata(): Promise<void> {
@@ -156,32 +157,37 @@ export abstract class TemplateProviderBase implements Disposable {
             throw new NotImplementedError('refreshProjKey', this);
         }
 
-        if (!this.sessionProjKey) {
-            this.sessionProjKey = await this.refreshProjKey();
+        if (!this._sessionProjKey) {
+            this._sessionProjKey = await this.refreshProjKey();
         }
 
-        return this.sessionProjKey;
+        return this._sessionProjKey;
     }
 
     public projKeyMayHaveChanged(): void {
         this._projKeyMayHaveChanged = true;
     }
 
-    public async hasProjKeyChanged(projKey: string | undefined): Promise<boolean> {
+    /**
+     * Returns true if the key changed
+     */
+    public async updateProjKeyIfChanged(projKey: string | undefined): Promise<boolean> {
+        let hasChanged: boolean;
         if (!this.refreshProjKey) {
-            return false; // proj keys not supported, so it's impossible to have changed
+            hasChanged = false; // proj keys not supported, so it's impossible to have changed
+        } else if (projKey) {
+            hasChanged = this._sessionProjKey !== projKey;
+            this._sessionProjKey = projKey;
+        } else if (this._projKeyMayHaveChanged) {
+            const latestProjKey = await this.refreshProjKey();
+            hasChanged = this._sessionProjKey !== latestProjKey;
+            this._sessionProjKey = latestProjKey;
+        } else {
+            hasChanged = false;
         }
 
-        if (this.sessionProjKey !== projKey) {
-            return true;
-        }
-
-        return this._projKeyMayHaveChanged && this.sessionProjKey !== await this.refreshProjKey();
-    }
-
-    public clearSessionProjKey(): void {
         this._projKeyMayHaveChanged = false;
-        this.sessionProjKey = undefined;
+        return hasChanged;
     }
 
     public async doesCachedProjKeyMatch(): Promise<boolean> {

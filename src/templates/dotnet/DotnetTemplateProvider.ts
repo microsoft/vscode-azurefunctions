@@ -24,8 +24,8 @@ import { parseDotnetTemplates } from './parseDotnetTemplates';
 export class DotnetTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Dotnet;
 
-    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage) {
-        super(version, projectPath, language);
+    public constructor(version: FuncVersion, projectPath: string | undefined, language: ProjectLanguage, projectTemplateKey: string | undefined) {
+        super(version, projectPath, language, projectTemplateKey);
         if (projectPath) {
             const projGlob = language === ProjectLanguage.FSharp ? '*.fsproj' : '*.csproj';
             const watcher = workspace.createFileSystemWatcher(new RelativePattern(projectPath, projGlob));
@@ -128,6 +128,6 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
 
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         const isIsolated = (v: string) => v.toLowerCase().includes('isolated');
-        return !('id' in template) || !this.sessionProjKey || isIsolated(template.id) === isIsolated(this.sessionProjKey);
+        return !('id' in template) || !this._sessionProjKey || isIsolated(template.id) === isIsolated(this._sessionProjKey);
     }
 }

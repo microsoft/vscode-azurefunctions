@@ -5,11 +5,11 @@
 
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
+import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
-import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -48,7 +48,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         const version: FuncVersion = nonNullProp(context, 'version');
         let projectTemplateKey = context.projectTemplateKey;
         if (!projectTemplateKey) {
-            projectTemplateKey = await dotnetUtils.getTemplateKeyFromProjFile(context.projectPath, context.version, nonNullProp(context, 'language'));
+            projectTemplateKey = await ext.templateProvider.getProjectTemplateKey(context.projectPath, nonNullProp(context, 'language'), context.version, undefined);
         }
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 

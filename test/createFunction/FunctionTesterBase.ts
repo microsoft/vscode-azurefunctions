@@ -28,10 +28,13 @@ export abstract class FunctionTesterBase implements Disposable {
     public abstract getExpectedPaths(functionName: string): string[];
 
     public async initAsync(): Promise<void> {
-        this.baseTestFolder = path.join(testFolderPath, `createFunction${this.language}${this.version}`);
+        this.baseTestFolder = path.join(testFolderPath, getRandomHexString());
         await runForAllTemplateSources(async (source) => {
-            const testFolder = path.join(this.baseTestFolder, source);
-            await this.initializeTestFolder(testFolder);
+            const projectPath = path.join(this.baseTestFolder, source);
+            await this.initializeTestFolder(projectPath);
+
+            // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
+            await ext.templateProvider.getFunctionTemplates(createTestActionContext(), projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
         });
     }
 

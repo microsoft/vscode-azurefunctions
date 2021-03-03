@@ -9,6 +9,7 @@ import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../c
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { nonNullValue } from '../utils/nonNull';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { IBindingTemplate } from './IBindingTemplate';
@@ -43,20 +44,20 @@ export class CentralTemplateProvider implements Disposable {
         this._providersMap.clear();
     }
 
-    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): TemplateProviderBase[] {
+    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): TemplateProviderBase[] {
         const providers: TemplateProviderBase[] = [];
         switch (language) {
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
-                providers.push(new DotnetTemplateProvider(version, projectPath, language));
+                providers.push(new DotnetTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             case ProjectLanguage.Java:
-                providers.push(new JavaTemplateProvider(version, projectPath, language));
+                providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             default:
-                providers.push(new ScriptTemplateProvider(version, projectPath, language));
+                providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
                 if (version !== FuncVersion.v1) {
-                    providers.push(new ScriptBundleTemplateProvider(version, projectPath, language));
+                    providers.push(new ScriptBundleTemplateProvider(version, projectPath, language, projectTemplateKey));
                 }
                 break;
         }
@@ -78,11 +79,11 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     public async clearTemplateCache(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
-        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version);
+        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version, undefined);
         for (const provider of providers) {
             await provider.clearCachedTemplateMetadata();
             await provider.clearCachedTemplates();
-            provider.clearSessionProjKey();
+            provider.projKeyMayHaveChanged();
         }
         const key: string = this.getProvidersKey(projectPath, language, version);
         const cachedProviders = this._providersMap.get(key);
@@ -106,12 +107,34 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
+    public async getProjectTemplateKey(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<string> {
+        const cachedProviders = await this.getCachedProviders(projectPath, language, version, projectTemplateKey);
+        const provider = nonNullValue(cachedProviders.providers[0], 'firstProvider');
+        return await provider.getProjKey();
+    }
+
     private getProvidersKey(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): string {
         let key: string = language + version;
         if (projectPath) {
             key += projectPath;
         }
         return key;
+    }
+
+    private async getCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
+        const key: string = this.getProvidersKey(projectPath, language, version);
+        let cachedProviders = this._providersMap.get(key);
+        if (!cachedProviders) {
+            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, version, projectTemplateKey) };
+            this._providersMap.set(key, cachedProviders);
+        } else {
+            await Promise.all(cachedProviders.providers.map(async p => {
+                if (await p.updateProjKeyIfChanged(projectTemplateKey)) {
+                    delete cachedProviders?.templatesTask;
+                }
+            }));
+        }
+        return cachedProviders;
     }
 
     /**
@@ -121,25 +144,12 @@ export class CentralTemplateProvider implements Disposable {
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;
 
-        const key: string = this.getProvidersKey(projectPath, language, version);
-        let cachedProviders = this._providersMap.get(key);
-        if (!cachedProviders) {
-            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, version) };
-            this._providersMap.set(key, cachedProviders);
-        } else {
-            await Promise.all(cachedProviders.providers.map(async p => {
-                if (await p.hasProjKeyChanged(projectTemplateKey)) {
-                    delete cachedProviders?.templatesTask;
-                    p.clearSessionProjKey();
-                }
-            }));
-        }
-
+        const cachedProviders = await this.getCachedProviders(projectPath, language, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
             return await templatesTask;
         } else {
-            templatesTask = this.refreshTemplates(context, cachedProviders.providers, projectTemplateKey);
+            templatesTask = this.refreshTemplates(context, cachedProviders.providers);
             cachedProviders.templatesTask = templatesTask;
             try {
                 return await templatesTask;
@@ -151,9 +161,9 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private async refreshTemplates(context: IActionContext, providers: TemplateProviderBase[], projectTemplateKey: string | undefined): Promise<ITemplates> {
+    private async refreshTemplates(context: IActionContext, providers: TemplateProviderBase[]): Promise<ITemplates> {
         return (await Promise.all(providers.map(async provider => {
-            return await this.refreshTemplatesForProvider(context, provider, projectTemplateKey);
+            return await this.refreshTemplatesForProvider(context, provider);
         }))).reduce((t1: ITemplates, t2: ITemplates) => {
             return {
                 functionTemplates: t1.functionTemplates.concat(t2.functionTemplates),
@@ -162,9 +172,7 @@ export class CentralTemplateProvider implements Disposable {
         });
     }
 
-    private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase, projectTemplateKey: string | undefined): Promise<ITemplates> {
-        provider.sessionProjKey = projectTemplateKey;
-
+    private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase): Promise<ITemplates> {
         let result: ITemplates | undefined;
         let latestErrorMessage: string | undefined;
         try {
