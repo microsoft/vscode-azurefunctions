@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
@@ -100,12 +99,11 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
     if (functionProject === undefined) {
         return;
     }
-    const projectFiles: string[] = await dotnetUtils.getProjFiles(language, functionProject);
+    const projectFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, functionProject);
     if (projectFiles.length !== 1) {
         return;
     }
-    const mainProject: string = path.join(functionProject, projectFiles[0]);
-    const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(mainProject);
+    const platformTarget: string | undefined = await dotnetUtils.tryGetPlatformTarget(projectFiles[0]);
     if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
         const message: string = localize('overwriteSetting', 'The remote app targets "{0}", but your local project targets "{1}". Update remote app to "{1}"?', '32 bit', '64 bit');
         const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };

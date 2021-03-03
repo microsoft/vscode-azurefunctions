@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { ProgressLocation, window } from 'vscode';
 import { IFunctionKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
@@ -17,16 +17,16 @@ import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
-    private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string) {
-        super(parent, config, name);
+    private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string, func: WebSiteManagementModels.FunctionEnvelope) {
+        super(parent, config, name, func);
     }
 
-    public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
+    public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope, context: IActionContext): Promise<RemoteFunctionTreeItem> {
         const config: ParsedFunctionJson = new ParsedFunctionJson(func.config);
         const name: string = getFunctionNameFromId(nonNullProp(func, 'id'));
-        const ti: RemoteFunctionTreeItem = new RemoteFunctionTreeItem(parent, config, name);
+        const ti: RemoteFunctionTreeItem = new RemoteFunctionTreeItem(parent, config, name, func);
         // initialize
-        await ti.refreshImpl();
+        await ti.refreshImpl(context, true);
         return ti;
     }
 
@@ -59,18 +59,28 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         });
     }
 
+    public async refreshFuncEnvelope(): Promise<WebSiteManagementModels.FunctionEnvelope | undefined> {
+        return await this.parent.parent.client.getFunction(this.name);
+    }
+
     public async getKey(): Promise<string | undefined> {
-        switch (this.config.authLevel) {
-            case HttpAuthLevel.admin:
-                const hostKeys: WebSiteManagementModels.HostKeys = await this.client.listHostKeys();
-                return nonNullProp(hostKeys, 'masterKey');
-            case HttpAuthLevel.function:
+        if (this._config.authLevel === HttpAuthLevel.anonymous) {
+            return undefined;
+        } else if (this._config.authLevel === HttpAuthLevel.function) {
+            try {
                 const functionKeys: IFunctionKeys = await this.client.listFunctionKeys(this.name);
                 return nonNullProp(functionKeys, 'default');
-            case HttpAuthLevel.anonymous:
-            default:
-                return undefined;
+            } catch (error) {
+                if (parseError(error).errorType === 'NotFound') {
+                    // There are no function-specific keys, fall through to admin key
+                } else {
+                    throw error;
+                }
+            }
         }
+
+        const hostKeys: WebSiteManagementModels.HostKeys = await this.client.listHostKeys();
+        return nonNullProp(hostKeys, 'masterKey');
     }
 }
 

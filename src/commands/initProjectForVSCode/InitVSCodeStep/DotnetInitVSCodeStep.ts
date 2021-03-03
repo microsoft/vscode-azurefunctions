@@ -47,11 +47,11 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const projectPath: string = context.projectPath;
         const language: ProjectLanguage = nonNullProp(context, 'language');
 
-        let projFileName: string;
-        const projFiles: string[] = await dotnetUtils.getProjFiles(language, projectPath);
+        let projFile: dotnetUtils.ProjectFile;
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, projectPath);
         const fileExt: string = language === ProjectLanguage.FSharp ? 'fsproj' : 'csproj';
         if (projFiles.length === 1) {
-            projFileName = projFiles[0];
+            projFile = projFiles[0];
         } else if (projFiles.length === 0) {
             context.errorHandling.suppressReportIssue = true;
             throw new Error(localize('projNotFound', 'Failed to find {0} file in folder "{1}".', fileExt, path.basename(projectPath)));
@@ -60,9 +60,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             throw new Error(localize('projNotFound', 'Expected to find a single {0} file in folder "{1}", but found multiple instead: {2}.', fileExt, path.basename(projectPath), projFiles.join(', ')));
         }
 
-        const projFilePath: string = path.join(projectPath, projFileName);
-
-        const versionInProjFile: string | undefined = await dotnetUtils.tryGetFuncVersion(projFilePath);
+        const versionInProjFile: string | undefined = await dotnetUtils.tryGetFuncVersion(projFile);
         context.telemetry.properties.versionInProjFile = versionInProjFile;
         // The version from the proj file takes precedence over whatever was set in `context` before this
         context.version = tryParseFuncVersion(versionInProjFile) || context.version;
@@ -87,7 +85,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
             }
         }
 
-        const targetFramework: string = await dotnetUtils.getTargetFramework(projFilePath);
+        const targetFramework: string = await dotnetUtils.getTargetFramework(projFile);
         this.setDeploySubpath(context, `bin/Release/${targetFramework}/publish`);
         this._debugSubpath = dotnetUtils.getDotnetDebugSubpath(targetFramework);
     }

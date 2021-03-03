@@ -7,7 +7,6 @@ import * as retry from 'p-retry';
 import { MessageItem, window } from 'vscode';
 import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
-import { HttpAuthLevel } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
@@ -64,7 +63,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
     const logOptions: {} = { resourceName: node.client.fullName };
     let hasHttpTriggers: boolean = false;
     const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
-    const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel === HttpAuthLevel.anonymous);
+    const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && f.isAnonymous);
     if (anonFunctions.length > 0) {
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
@@ -73,7 +72,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         }
     }
 
-    if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.config.isHttpTrigger && f.config.authLevel !== HttpAuthLevel.anonymous)) {
+    if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && !f.isAnonymous)) {
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'), logOptions);
     }

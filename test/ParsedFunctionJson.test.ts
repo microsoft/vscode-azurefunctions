@@ -9,7 +9,7 @@ import { HttpAuthLevel, ParsedFunctionJson } from '../extension.bundle';
 suite('ParsedFunctionJson', () => {
     test('null', () => {
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson(null);
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 0);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, undefined);
@@ -19,7 +19,7 @@ suite('ParsedFunctionJson', () => {
 
     test('undefined', () => {
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson(undefined);
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 0);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, undefined);
@@ -29,7 +29,7 @@ suite('ParsedFunctionJson', () => {
 
     test('empty object', () => {
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({});
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 0);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, undefined);
@@ -39,7 +39,7 @@ suite('ParsedFunctionJson', () => {
 
     test('bindings is not array', () => {
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: 'test' });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 0);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, undefined);
@@ -51,7 +51,7 @@ suite('ParsedFunctionJson', () => {
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({
             disabled: true
         });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 0);
         assert.equal(funcJson.disabled, true);
         assert.equal(funcJson.triggerBinding, undefined);
@@ -65,7 +65,7 @@ suite('ParsedFunctionJson', () => {
             type: 'testTrigger'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);
@@ -79,7 +79,7 @@ suite('ParsedFunctionJson', () => {
             type: 'httpTrigger'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);
@@ -93,7 +93,7 @@ suite('ParsedFunctionJson', () => {
             type: 'hTtpTrigGer'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);
@@ -107,7 +107,7 @@ suite('ParsedFunctionJson', () => {
             type: 'timerTrigger'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);
@@ -121,7 +121,7 @@ suite('ParsedFunctionJson', () => {
             type: 'TiMerTriggER'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.equal(funcJson.authLevel, HttpAuthLevel.function);
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);
@@ -181,10 +181,7 @@ suite('ParsedFunctionJson', () => {
             authLevel: 'testAuthLevel'
         };
         const funcJson: ParsedFunctionJson = new ParsedFunctionJson({ bindings: [triggerBinding] });
-        assert.throws(
-            () => funcJson.authLevel,
-            (error: Error) => error.message.includes('Unrecognized') && error.message.includes('testAuthLevel')
-        );
+        assert.equal(funcJson.authLevel, undefined);
         assert.equal(funcJson.bindings.length, 1);
         assert.equal(funcJson.disabled, false);
         assert.equal(funcJson.triggerBinding, triggerBinding);

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage } from '../constants';
@@ -16,12 +15,12 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
     const settingKey: string = 'showTargetFrameworkWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
-        const projFiles: string[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
         if (projFiles.length === 1) {
 
             let targetFramework: string;
             try {
-                targetFramework = await dotnetUtils.getTargetFramework(path.join(projectPath, projFiles[0]));
+                targetFramework = await dotnetUtils.getTargetFramework(projFiles[0]);
             } catch {
                 // ignore
                 return;

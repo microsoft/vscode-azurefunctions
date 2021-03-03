@@ -18,6 +18,9 @@ export async function viewProperties(context: IActionContext, node?: SlotTreeIte
     }
 
     if (node instanceof LocalFunctionTreeItem) {
+        if (!node.functionJsonPath) {
+            throw new Error(localize('viewPropsNotSupported', 'View function properties is not supported for this project type.'));
+        }
         await window.showTextDocument(Uri.file(node.functionJsonPath));
     } else {
         let data: {};
@@ -29,7 +32,7 @@ export async function viewProperties(context: IActionContext, node?: SlotTreeIte
             });
             data = node.site;
         } else {
-            data = node.config.data;
+            data = node.rawConfig;
         }
 
         await openReadOnlyJson(node, data);

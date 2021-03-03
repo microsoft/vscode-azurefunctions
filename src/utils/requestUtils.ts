@@ -49,4 +49,37 @@ export namespace requestUtils {
             stream.pipe(fse.createWriteStream(filePath).on('finish', resolve).on('error', reject));
         });
     }
+
+    /**
+     * Mimics what the azure sdk does under the covers to create standardized property names
+     */
+    export function convertToAzureSdkObject(data: {}): {} {
+        const result = {};
+        for (const key of Object.keys(data)) {
+            result[convertPropertyName(key)] = convertPropertyValue(data[key]);
+        }
+        return result;
+    }
+
+    /**
+     * Converts property name like "function_app_id" to "functionAppId"
+     */
+    function convertPropertyName(name: string): string {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const match: RegExpMatchArray | null = /_([a-z])/g.exec(name);
+            if (match) {
+                name = name.replace(match[0], match[1].toUpperCase());
+            } else {
+                return name;
+            }
+        }
+    }
+
+    /**
+     * The azure sdk types all use undefined instead of null, so ensure we align with that
+     */
+    function convertPropertyValue(value: string | null | undefined): string | undefined {
+        return value === null ? undefined : value;
+    }
 }
