@@ -11,9 +11,6 @@ import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
 export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<PackageManager[]> {
     const result: PackageManager[] = [];
     switch (process.platform) {
-        case 'linux':
-            // https://github.com/Microsoft/vscode-azurefunctions/issues/311
-            break;
         case 'darwin':
             if (await hasBrew(isFuncInstalled)) {
                 result.push(PackageManager.brew);

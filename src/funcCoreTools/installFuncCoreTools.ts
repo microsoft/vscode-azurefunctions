@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as sudoPrompt from 'sudo-prompt';
+import { parseError } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
@@ -19,7 +21,27 @@ export async function installFuncCoreTools(packageManagers: PackageManager[], ve
     switch (packageManagers[0]) {
         case PackageManager.npm:
             const distTag: INpmDistTag = await getNpmDistTag(version);
-            await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
+            try {
+                await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
+            } catch (err) {
+                if (parseError(err).errorType === 'EACCES') {
+                    await ext.ui.showWarningMessage(`Failed with ${parseError(err).message}`, { title: 'Install with sudo' };)
+                    sudoPrompt.exec(`npm install -g ${funcPackageName}@${distTag.tag}`, {}, (error, stdout) => {
+                        if (error) {
+                            throw error;
+                        }
+
+                        if (stdout) {
+                            if (stdout instanceof Buffer) {
+                                stdout = stdout.toString()
+                            }
+                            ext.outputChannel.appendLog(stdout);
+                        }
+                    });
+                } else {
+                    throw err;
+                }
+            }
             break;
         case PackageManager.brew:
             const brewPackageName: string = getBrewPackageName(version);
