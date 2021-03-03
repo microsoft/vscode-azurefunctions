@@ -163,7 +163,9 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     private async refreshTemplatesForProvider(context: IActionContext, provider: TemplateProviderBase, projectTemplateKey: string | undefined): Promise<ITemplates> {
-        provider.sessionProjKey = projectTemplateKey;
+        if (projectTemplateKey) {
+            provider.sessionProjKey = projectTemplateKey;
+        }
 
         let result: ITemplates | undefined;
         let latestErrorMessage: string | undefined;

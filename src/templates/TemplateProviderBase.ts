@@ -172,7 +172,7 @@ export abstract class TemplateProviderBase implements Disposable {
             return false; // proj keys not supported, so it's impossible to have changed
         }
 
-        if (this.sessionProjKey !== projKey) {
+        if (projKey && this.sessionProjKey !== projKey) {
             return true;
         }
 
