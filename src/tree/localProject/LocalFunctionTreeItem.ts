@@ -4,9 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ParsedFunctionJson } from '../../funcConfig/function';
-import { requestUtils } from '../../utils/requestUtils';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
 
@@ -19,24 +17,10 @@ export class LocalFunctionTreeItem extends FunctionTreeItemBase {
         this.functionJsonPath = functionJsonPath;
     }
 
-    public static async create(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string | undefined, func: WebSiteManagementModels.FunctionEnvelope | undefined, context: IActionContext): Promise<LocalFunctionTreeItem> {
+    public static async create(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string | undefined, func: WebSiteManagementModels.FunctionEnvelope | undefined): Promise<LocalFunctionTreeItem> {
         const ti: LocalFunctionTreeItem = new LocalFunctionTreeItem(parent, name, config, functionJsonPath, func);
-        // initialize
-        await ti.refreshImpl(context, true);
+        await ti.initAsync();
         return ti;
-    }
-
-    public async refreshFuncEnvelope(): Promise<WebSiteManagementModels.FunctionEnvelope | undefined> {
-        try {
-            const response = await requestUtils.sendRequestWithExtTimeout({
-                url: `${this.parent.parent.hostUrl}/admin/functions/${this.name}`,
-                method: 'GET'
-            });
-            return requestUtils.convertToAzureSdkObject(response.parsedBody);
-        } catch {
-            // project isn't running
-            return undefined;
-        }
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await

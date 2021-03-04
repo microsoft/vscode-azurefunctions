@@ -36,7 +36,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         return !!this._nextLink;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
@@ -55,7 +55,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
-            async (fe: WebSiteManagementModels.FunctionEnvelope) => await RemoteFunctionTreeItem.create(this, fe, context),
+            async (fe: WebSiteManagementModels.FunctionEnvelope) => await RemoteFunctionTreeItem.create(this, fe),
             (fe: WebSiteManagementModels.FunctionEnvelope) => {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }

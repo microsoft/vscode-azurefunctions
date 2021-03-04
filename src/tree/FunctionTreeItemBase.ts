@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as url from 'url';
-import { AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
@@ -101,19 +101,13 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
 
     public abstract getKey(): Promise<string | undefined>;
 
-    public async refreshImpl(_context: IActionContext, isInitializing?: boolean): Promise<void> {
-        if (!isInitializing) { // no need to refresh "_func" if we're initializing the class since it's set in the constructor
-            this._func = await this.refreshFuncEnvelope();
-        }
-
+    public async initAsync(): Promise<void> {
         if (this.isHttpTrigger) {
             await this.refreshTriggerUrl();
         }
 
         await this.refreshDisabledState();
     }
-
-    public abstract refreshFuncEnvelope(): Promise<WebSiteManagementModels.FunctionEnvelope | undefined>;
 
     private async refreshTriggerUrl(): Promise<void> {
         const hostUrl = new url.URL(this.parent.parent.hostUrl);

@@ -21,12 +21,11 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         super(parent, config, name, func);
     }
 
-    public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope, context: IActionContext): Promise<RemoteFunctionTreeItem> {
+    public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
         const config: ParsedFunctionJson = new ParsedFunctionJson(func.config);
         const name: string = getFunctionNameFromId(nonNullProp(func, 'id'));
         const ti: RemoteFunctionTreeItem = new RemoteFunctionTreeItem(parent, config, name, func);
-        // initialize
-        await ti.refreshImpl(context, true);
+        await ti.initAsync();
         return ti;
     }
 
@@ -59,12 +58,8 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         });
     }
 
-    public async refreshFuncEnvelope(): Promise<WebSiteManagementModels.FunctionEnvelope | undefined> {
-        return await this.parent.parent.client.getFunction(this.name);
-    }
-
     public async getKey(): Promise<string | undefined> {
-        if (this._config.authLevel === HttpAuthLevel.anonymous) {
+        if (this.isAnonymous) {
             return undefined;
         } else if (this._config.authLevel === HttpAuthLevel.function) {
             try {
