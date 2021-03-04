@@ -10,7 +10,7 @@ import { IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vsco
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
+import { getFuncPortFromTask, IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -18,8 +18,8 @@ import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
-const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
-export const onDotnetFuncTaskStarted = funcTaskStartedEmitter.event;
+const funcTaskReadyEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
+export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
 
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
@@ -67,10 +67,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
 
-    const debugPort = getDebugPort(funcTask);
-    const portAsInt = parseInt(debugPort);
-    ext.debugPorts.set(workspaceFolder, isNaN(portAsInt) ? undefined : portAsInt);
-
     let taskError: Error | undefined;
     const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
         if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
@@ -87,7 +83,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
-        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${debugPort}/admin/host/status`, method: 'GET' };
+        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${getFuncPortFromTask(funcTask)}/admin/host/status`, method: 'GET' };
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
@@ -102,7 +98,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                     const response: HttpOperationResponse = await sendRequestWithTimeout(statusRequest, statusRequestTimeout);
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
-                        funcTaskStartedEmitter.fire(workspaceFolder);
+                        funcTaskReadyEmitter.fire(workspaceFolder);
                         return taskInfo.processId.toString();
                     }
                 } catch (error) {
@@ -123,18 +119,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     } finally {
         errorListener.dispose();
     }
-}
-
-function getDebugPort(funcTask: vscode.Task): string {
-    let port: string = '7071';
-    if (typeof funcTask.definition.command === 'string') {
-        const match: RegExpMatchArray | null = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
-        if (match) {
-            port = match[1];
-        }
-    }
-
-    return port;
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };

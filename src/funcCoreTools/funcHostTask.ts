@@ -13,6 +13,12 @@ export interface IRunningFuncTask {
 
 export const runningFuncTaskMap: Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask> = new Map<vscode.WorkspaceFolder | vscode.TaskScope, IRunningFuncTask>();
 
+const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | vscode.TaskScope | undefined>();
+export const onFuncTaskStarted = funcTaskStartedEmitter.event;
+
+export const runningFuncPortMap = new Map<vscode.WorkspaceFolder | vscode.TaskScope | undefined, string>();
+export const defaultFuncPort: string = '7071';
+
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
     return /func (host )?start/i.test(commandLine || '');
@@ -24,6 +30,8 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
+            runningFuncPortMap.set(e.execution.task.scope, getFuncPortFromTask(e.execution.task));
+            funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
 
@@ -52,4 +60,16 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
         // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
         process.kill(runningFuncTask.processId);
     }
+}
+
+export function getFuncPortFromTask(funcTask: vscode.Task | undefined): string {
+    let port: string = defaultFuncPort;
+    if (funcTask && typeof funcTask.definition.command === 'string') {
+        const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+        if (match) {
+            port = match[1];
+        }
+    }
+
+    return port;
 }
