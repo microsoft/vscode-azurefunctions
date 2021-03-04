@@ -6,8 +6,8 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
-import { runForAllTemplateSources } from '../global.test';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
+import { allTemplateSources } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
@@ -16,8 +16,8 @@ class CSharpFunctionTester extends FunctionTesterBase {
     private _targetFramework: string;
     private _isIsolated: boolean;
 
-    public constructor(version: FuncVersion, targetFramework: string, isIsolated: boolean) {
-        super(version);
+    public constructor(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated: boolean) {
+        super(version, source);
         this._targetFramework = targetFramework;
         this._isIsolated = isIsolated;
     }
@@ -39,12 +39,15 @@ class CSharpFunctionTester extends FunctionTesterBase {
     }
 }
 
-addSuite(FuncVersion.v2, 'netcoreapp2.1');
-addSuite(FuncVersion.v3, 'netcoreapp3.1');
-addSuite(FuncVersion.v3, 'net5.0', true);
+for (const source of allTemplateSources) {
+    addSuite(FuncVersion.v2, 'netcoreapp2.1', source);
+    addSuite(FuncVersion.v3, 'netcoreapp3.1', source);
+    addSuite(FuncVersion.v3, 'net5.0', source, true);
+}
 
-function addSuite(version: FuncVersion, targetFramework: string, isIsolated?: boolean): void {
-    let suiteName: string = `Create Function C# ${version} ${targetFramework}`;
+function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {
+    const csTester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
+    let suiteName: string = csTester.suiteName + ` ${targetFramework}`;
     if (isIsolated) {
         suiteName += ' Isolated';
     }
@@ -52,7 +55,6 @@ function addSuite(version: FuncVersion, targetFramework: string, isIsolated?: bo
     suite(suiteName, function (this: Mocha.Suite): void {
         this.timeout(40 * 1000);
 
-        const csTester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, !!isIsolated);
 
         suiteSetup(async function (this: Mocha.Context): Promise<void> {
             this.timeout(120 * 1000);
@@ -64,7 +66,10 @@ function addSuite(version: FuncVersion, targetFramework: string, isIsolated?: bo
         });
 
         const blobTrigger: string = 'BlobTrigger';
-        test(blobTrigger, async () => {
+        test(blobTrigger, async function (this: Mocha.Context): Promise<void> {
+            // the first function created can take a lot longer - likely related to the dotnet cli's cache
+            this.timeout(150 * 1000);
+
             await csTester.testCreateFunction(
                 blobTrigger,
                 'TestCompany.TestFunction',
@@ -179,22 +184,19 @@ function addSuite(version: FuncVersion, targetFramework: string, isIsolated?: bo
         if (version === FuncVersion.v2) {
             // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
             test('createFunction API (deprecated)', async () => {
-                await runForAllTemplateSources(async (source) => {
-                    // Intentionally testing IoTHub trigger since a partner team plans to use that
-                    const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
-                    const functionName: string = 'createFunctionApi';
-                    const namespace: string = 'TestCompany.TestFunction';
-                    const iotPath: string = 'messages/events';
-                    const connection: string = 'IoTHub_Setting';
-                    const projectPath: string = path.join(csTester.baseTestFolder, source);
-                    await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
-                        await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
-                            // Intentionally testing weird casing
-                            await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
-                        });
+                // Intentionally testing IoTHub trigger since a partner team plans to use that
+                const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
+                const functionName: string = 'createFunctionApi';
+                const namespace: string = 'TestCompany.TestFunction';
+                const iotPath: string = 'messages/events';
+                const connection: string = 'IoTHub_Setting';
+                await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
+                    await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
+                        // Intentionally testing weird casing
+                        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
                     });
-                    await csTester.validateFunction(projectPath, functionName, [namespace, iotPath, connection]);
                 });
+                await csTester.validateFunction(csTester.projectPath, functionName, [namespace, iotPath, connection]);
             });
         }
     });

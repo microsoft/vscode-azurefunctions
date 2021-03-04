@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
-import { runForAllTemplateSources } from '../global.test';
+import { allTemplateSources } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -59,14 +59,16 @@ addSuitesForVersion(FuncVersion.v2);
 addSuitesForVersion(FuncVersion.v3);
 
 function addSuitesForVersion(version: FuncVersion): void {
-    addSuite(new JavaScriptFunctionTester(version));
-    addSuite(new TypeScriptFunctionTester(version));
-    addSuite(new PythonFunctionTester(version));
-    addSuite(new PowerShellFunctionTester(version));
+    for (const source of allTemplateSources) {
+        addSuite(new JavaScriptFunctionTester(version, source));
+        addSuite(new TypeScriptFunctionTester(version, source));
+        addSuite(new PythonFunctionTester(version, source));
+        addSuite(new PowerShellFunctionTester(version, source));
+    }
 }
 
 function addSuite(tester: FunctionTesterBase): void {
-    suite(`Create Function ${tester.language} ${tester.version}`, function (this: Mocha.Suite): void {
+    suite(tester.suiteName, function (this: Mocha.Suite): void {
         suiteSetup(async () => {
             await tester.initAsync();
         });
@@ -210,19 +212,16 @@ function addSuite(tester: FunctionTesterBase): void {
 
         // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
         test('createFunction API (deprecated)', async () => {
-            await runForAllTemplateSources(async (source) => {
-                const templateId: string = `HttpTrigger-${tester.language}`;
-                const functionName: string = 'createFunctionApi';
-                const authLevel: string = 'Anonymous';
-                const projectPath: string = path.join(tester.baseTestFolder, source);
-                // Intentionally testing weird casing for authLevel
-                await runWithFuncSetting(projectLanguageSetting, tester.language, async () => {
-                    await runWithFuncSetting(funcVersionSetting, tester.version, async () => {
-                        await vscode.commands.executeCommand('azureFunctions.createFunction', projectPath, templateId, functionName, { aUtHLevel: authLevel });
-                    });
+            const templateId: string = `HttpTrigger-${tester.language}`;
+            const functionName: string = 'createFunctionApi';
+            const authLevel: string = 'Anonymous';
+            // Intentionally testing weird casing for authLevel
+            await runWithFuncSetting(projectLanguageSetting, tester.language, async () => {
+                await runWithFuncSetting(funcVersionSetting, tester.version, async () => {
+                    await vscode.commands.executeCommand('azureFunctions.createFunction', tester.projectPath, templateId, functionName, { aUtHLevel: authLevel });
                 });
-                await tester.validateFunction(projectPath, functionName, [authLevel]);
             });
+            await tester.validateFunction(tester.projectPath, functionName, [authLevel]);
         });
     });
 }

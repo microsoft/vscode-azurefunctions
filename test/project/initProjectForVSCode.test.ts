@@ -7,11 +7,15 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
-import { createTestActionContext, testFolderPath, testUserInput } from '../global.test';
+import { cleanTestWorkspace, createTestActionContext, testFolderPath, testUserInput } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
     this.timeout(30 * 1000);
+
+    suiteSetup(async () => {
+        await cleanTestWorkspace();
+    });
 
     test('JavaScript', async () => {
         await initAndValidateProject({ ...getJavaScriptValidateOptions(), mockFiles: [['HttpTriggerJs', 'index.js']] });
