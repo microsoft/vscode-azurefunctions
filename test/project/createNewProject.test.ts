@@ -5,11 +5,15 @@
 
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
-import { longRunningTestsEnabled, runForAllTemplateSources } from '../global.test';
+import { allTemplateSources, cleanTestWorkspace, longRunningTestsEnabled, runForTemplateSource } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
 suite('Create New Project', () => {
+    suiteSetup(async () => {
+        await cleanTestWorkspace();
+    });
+
     const testCases: ICreateProjectTestCase[] = [
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp2.1', FuncVersion.v2) },
         { ...getCSharpValidateOptions('C#Project', 'netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
@@ -59,21 +63,24 @@ interface ICreateProjectTestCase extends ICreateProjectTestOptions {
 }
 
 function addTest(testCase: ICreateProjectTestCase): void {
-    let testName = `${testCase.language} ${testCase.version}`;
-    if (testCase.description) {
-        testName += ` ${testCase.description}`;
-    }
-    test(testName, async function (this: Mocha.Context): Promise<void> {
-        if (testCase.timeout !== undefined) {
-            if (longRunningTestsEnabled) {
-                this.timeout(testCase.timeout);
-            } else {
-                this.skip();
-            }
+    for (const source of allTemplateSources) {
+        let testName = `${testCase.language} ${testCase.version}`;
+        if (testCase.description) {
+            testName += ` ${testCase.description}`;
         }
+        testName += ` (${source})`
+        test(testName, async function (this: Mocha.Context): Promise<void> {
+            if (testCase.timeout !== undefined) {
+                if (longRunningTestsEnabled) {
+                    this.timeout(testCase.timeout);
+                } else {
+                    this.skip();
+                }
+            }
 
-        await runForAllTemplateSources(async () => {
-            await createAndValidateProject(testCase);
+            await runForTemplateSource(source, async () => {
+                await createAndValidateProject(testCase);
+            });
         });
-    });
+    }
 }

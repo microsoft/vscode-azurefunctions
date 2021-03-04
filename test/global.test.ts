@@ -56,13 +56,13 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (!updateBackupTemplates) {
         await preLoadTemplates(ext.templateProvider);
         templateProviderMap = new Map();
-        for (const source of Object.values(TemplateSource)) {
+        for (const source of allTemplateSources) {
             if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
                 templateProviderMap.set(source, new CentralTemplateProvider(source));
             }
-        }
 
-        await runForAllTemplateSources(async (_source, provider) => await preLoadTemplates(provider));
+            await runForTemplateSource(source, preLoadTemplates);
+        }
     }
 
     longRunningTestsEnabled = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
@@ -97,12 +97,7 @@ async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void
     }
 }
 
-export async function runForAllTemplateSources(callback: (source: TemplateSource, templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
-    for (const source of templateProviderMap.keys()) {
-        await runForTemplateSource(source, (templateProvider: CentralTemplateProvider) => callback(source, templateProvider));
-    }
-}
-
+export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
 export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
     const oldProvider: CentralTemplateProvider = ext.templateProvider;
     try {
