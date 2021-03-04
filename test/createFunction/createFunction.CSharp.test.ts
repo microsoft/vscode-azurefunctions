@@ -66,7 +66,10 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
         });
 
         const blobTrigger: string = 'BlobTrigger';
-        test(blobTrigger, async () => {
+        test(blobTrigger, async function (this: Mocha.Context): Promise<void> {
+            // the first function created can take a lot longer - likely related to the dotnet cli's cache
+            this.timeout(150 * 1000);
+
             await csTester.testCreateFunction(
                 blobTrigger,
                 'TestCompany.TestFunction',
