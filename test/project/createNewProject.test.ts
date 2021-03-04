@@ -35,7 +35,7 @@ suite('Create New Project', () => {
         testCases.push({
             ...getPythonValidateOptions('.venv', version),
             timeout: 2 * 60 * 1000,
-            inputs: [/3\.6/]
+            inputs: [/3\.7/]
         });
 
         const appName: string = 'javaApp';

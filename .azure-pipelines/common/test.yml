@@ -8,9 +8,9 @@ steps:
   condition: eq(variables['Agent.OS'], 'Linux')
 
 - task: UsePythonVersion@0
-  displayName: 'Use Python 3.6.x'
+  displayName: 'Use Python 3.7.x'
   inputs:
-    versionSpec: 3.6.x
+    versionSpec: 3.7.x
 
 - task: Npm@1
   displayName: 'Test'

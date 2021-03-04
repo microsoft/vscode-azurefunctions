@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
 import { createGenericClient, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
+import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
@@ -38,15 +38,20 @@ suite('Create Project and Deploy', function (this: Mocha.Suite): void {
         await testCreateProjectAndDeploy({ ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion()] });
     });
 
-    test('CSharp', async () => {
+    test('C# .NET Core 3.1', async () => {
         const namespace: string = 'Company.Function';
-        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp3.1'), deployInputs: [/net.*3\.1/i], createFunctionInputs: [namespace] });
+        const net3RegExp = /net.*3/i;
+        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'netcoreapp3.1'), createProjectInputs: [net3RegExp], deployInputs: [net3RegExp], createFunctionInputs: [namespace] });
+    });
+
+    test('C# .NET 5', async () => {
+        const namespace: string = 'Company.Function';
+        const net5RegExp = /net.*5/i;
+        await testCreateProjectAndDeploy({ ...getCSharpValidateOptions('testWorkspace', 'net5.0'), createProjectInputs: [net5RegExp], deployInputs: [net5RegExp], createFunctionInputs: [namespace] });
     });
 
     test('PowerShell', async function (this: Mocha.Context): Promise<void> {
-        // Skipping until we fix this: https://github.com/microsoft/vscode-azurefunctions/issues/1659
-        this.skip();
-
+        await testCreateProjectAndDeploy({ ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7/i] });
     });
 
     test('Python', async function (this: Mocha.Context): Promise<void> {
@@ -55,7 +60,7 @@ suite('Create Project and Deploy', function (this: Mocha.Suite): void {
             this.skip();
         }
 
-        await testCreateProjectAndDeploy({ ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.6/], deployInputs: [getRotatingPythonVersion()] });
+        await testCreateProjectAndDeploy({ ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.7/], deployInputs: [getRotatingPythonVersion()] });
     });
 });
 
@@ -118,5 +123,5 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
     const client: ServiceClient = await createGenericClient();
     const response: HttpOperationResponse = await client.sendRequest({ method: 'POST', url: functionUrl, body: { name: "World" } });
     const body: string = nonNullProp(response, 'bodyAsText');
-    assert.ok(body.includes('Hello') && body.includes('World'), 'Expected function response to include "Hello" and "World"');
+    assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');
 }

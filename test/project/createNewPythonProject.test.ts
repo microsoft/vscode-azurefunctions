@@ -22,7 +22,7 @@ suite('Create New Python Project', () => {
         }
         this.timeout(2 * 60 * 1000);
 
-        const alias: string = process.platform === 'win32' ? 'py -3.6' : 'python3.6';
+        const alias: string = process.platform === 'win32' ? 'py -3.7' : 'python3.7';
         await createAndValidateProject({ ...getPythonValidateOptions('.venv', FuncVersion.v2), inputs: [/enter/i, alias] });
     });
 
