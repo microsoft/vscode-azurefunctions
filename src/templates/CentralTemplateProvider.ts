@@ -109,6 +109,8 @@ export class CentralTemplateProvider implements Disposable {
 
     public async getProjectTemplateKey(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<string> {
         const cachedProviders = await this.getCachedProviders(projectPath, language, version, projectTemplateKey);
+        // .NET is the only language that supports project template keys and they only have one provider
+        // We probably need to do something better here once multi-provider languages support project template keys
         const provider = nonNullValue(cachedProviders.providers[0], 'firstProvider');
         return await provider.getProjKey();
     }
