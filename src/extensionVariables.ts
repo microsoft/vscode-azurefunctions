@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExtensionContext, TreeView } from "vscode";
+import { ExtensionContext, TreeView, WorkspaceFolder } from "vscode";
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel, IAzureUserInput, IExperimentationServiceAdapter } from "vscode-azureextensionui";
 import { func } from "./constants";
 import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
@@ -25,6 +25,7 @@ export namespace ext {
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureFunctions';
     export let experimentationService: IExperimentationServiceAdapter;
+    export const debugPorts = new Map<WorkspaceFolder | undefined, number | undefined>();
 }
 
 export enum TemplateSource {

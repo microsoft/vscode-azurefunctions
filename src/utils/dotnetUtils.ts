@@ -13,6 +13,24 @@ import { cliFeedUtils } from './cliFeedUtils';
 export namespace dotnetUtils {
     export const isolatedSdkName: string = 'Microsoft.Azure.Functions.Worker.Sdk';
 
+    export class ProjectFile {
+        public name: string;
+        public fullPath: string;
+        // We likely need to check a few things in quick succession, so we'll cache the contents here
+        private _cachedContents: string | undefined;
+        constructor(name: string, projectPath: string) {
+            this.name = name;
+            this.fullPath = path.join(projectPath, name);
+        }
+
+        public async getContents(): Promise<string> {
+            if (this._cachedContents === undefined) {
+                this._cachedContents = (await fse.readFile(this.fullPath)).toString();
+            }
+            return this._cachedContents;
+        }
+    }
+
     export function getDotnetDebugSubpath(targetFramework: string): string {
         return path.posix.join('bin', 'Debug', targetFramework);
     }
@@ -20,38 +38,45 @@ export namespace dotnetUtils {
     /**
      * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
      */
-    export async function getProjFiles(projectLanguage: ProjectLanguage, projectPath: string): Promise<string[]> {
+    export async function getProjFiles(projectLanguage: ProjectLanguage, projectPath: string): Promise<ProjectFile[]> {
         const regexp: RegExp = projectLanguage === ProjectLanguage.FSharp ? /\.fsproj$/i : /\.csproj$/i;
         const files: string[] = await fse.readdir(projectPath);
-        return files.filter((f: string) => regexp.test(f) && !/^extensions\.csproj$/i.test(f));
+        return files.filter((f: string) => regexp.test(f) && !/^extensions\.csproj$/i.test(f)).map(f => new ProjectFile(f, projectPath));
     }
 
-    export async function getTargetFramework(projFilePath: string): Promise<string> {
-        return await getPropertyInProjFile(projFilePath, 'TargetFramework');
+    export async function getTargetFramework(projFile: ProjectFile): Promise<string> {
+        return await getPropertyInProjFile(projFile, 'TargetFramework');
     }
 
-    export async function tryGetFuncVersion(projFilePath: string): Promise<string | undefined> {
+    export async function tryGetFuncVersion(projFile: ProjectFile): Promise<string | undefined> {
         try {
-            return await getPropertyInProjFile(projFilePath, 'AzureFunctionsVersion');
+            return await getPropertyInProjFile(projFile, 'AzureFunctionsVersion');
         } catch {
             return undefined;
         }
     }
 
-    export async function tryGetPlatformTarget(projFilePath: string): Promise<string | undefined> {
+    export async function tryGetPlatformTarget(projFile: ProjectFile): Promise<string | undefined> {
         try {
-            return await getPropertyInProjFile(projFilePath, 'PlatformTarget');
+            return await getPropertyInProjFile(projFile, 'PlatformTarget');
         } catch {
             return undefined;
         }
     }
 
-    async function getPropertyInProjFile(projFilePath: string, prop: string): Promise<string> {
-        const projContents: string = (await fse.readFile(projFilePath)).toString();
+    export async function getIsIsolated(projFile: ProjectFile): Promise<boolean> {
+        try {
+            return (await projFile.getContents()).toLowerCase().includes(isolatedSdkName.toLowerCase());
+        } catch {
+            return false;
+        }
+    }
+
+    async function getPropertyInProjFile(projFile: ProjectFile, prop: string): Promise<string> {
         const regExp: RegExp = new RegExp(`<${prop}>(.*)<\\/${prop}>`);
-        const matches: RegExpMatchArray | null = projContents.match(regExp);
+        const matches: RegExpMatchArray | null = (await projFile.getContents()).match(regExp);
         if (!matches) {
-            throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFilePath));
+            throw new Error(localize('failedToFindProp', 'Failed to find "{0}" in project file "{1}".', prop, projFile.name));
         } else {
             return matches[1];
         }
@@ -75,11 +100,8 @@ export namespace dotnetUtils {
         if (projectPath && await fse.pathExists(projectPath)) {
             const projFiles = await getProjFiles(language, projectPath);
             if (projFiles.length === 1) {
-                const projFile = path.join(projectPath, projFiles[0]);
-                targetFramework = await getTargetFramework(projFile);
-
-                const projContents: string = (await fse.readFile(projFile)).toString();
-                isIsolated = projContents.toLowerCase().includes(isolatedSdkName.toLowerCase());
+                targetFramework = await getTargetFramework(projFiles[0]);
+                isIsolated = await getIsIsolated(projFiles[0]);
             }
         }
 

@@ -18,6 +18,9 @@ import { taskUtils } from '../utils/taskUtils';
 import { getWindowsProcessTree, IProcessInfo, IWindowsProcessTree, ProcessDataFlag } from '../utils/windowsProcessTree';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
+const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder>();
+export const onDotnetFuncTaskStarted = funcTaskStartedEmitter.event;
+
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
     if (!result.shouldContinue) {
@@ -64,6 +67,10 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
     context.telemetry.properties.timeoutInSeconds = timeoutInSeconds.toString();
 
+    const debugPort = getDebugPort(funcTask);
+    const portAsInt = parseInt(debugPort);
+    ext.debugPorts.set(workspaceFolder, isNaN(portAsInt) ? undefined : portAsInt);
+
     let taskError: Error | undefined;
     const errorListener: vscode.Disposable = vscode.tasks.onDidEndTaskProcess((e: vscode.TaskProcessEndEvent) => {
         if (e.execution.task.scope === workspaceFolder && e.exitCode !== 0) {
@@ -80,7 +87,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
-        const statusRequest: RequestPrepareOptions = getStatusRequest(funcTask);
+        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${debugPort}/admin/host/status`, method: 'GET' };
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
@@ -95,6 +102,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                     const response: HttpOperationResponse = await sendRequestWithTimeout(statusRequest, statusRequestTimeout);
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
+                        funcTaskStartedEmitter.fire(workspaceFolder);
                         return taskInfo.processId.toString();
                     }
                 } catch (error) {
@@ -117,7 +125,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
     }
 }
 
-function getStatusRequest(funcTask: vscode.Task): RequestPrepareOptions {
+function getDebugPort(funcTask: vscode.Task): string {
     let port: string = '7071';
     if (typeof funcTask.definition.command === 'string') {
         const match: RegExpMatchArray | null = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
@@ -126,7 +134,7 @@ function getStatusRequest(funcTask: vscode.Task): RequestPrepareOptions {
         }
     }
 
-    return { url: `http://localhost:${port}/admin/host/status`, method: 'GET' };
+    return port;
 }
 
 type OSAgnosticProcess = { command: string | undefined; pid: number | string };

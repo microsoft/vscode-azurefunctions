@@ -78,15 +78,17 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                     } else {
                         let preCompiledProjectPath: string | undefined;
                         let effectiveProjectPath: string;
-                        const compiledProjectPath: string | undefined = await getCompiledProjectPath(projectPath, language);
-                        if (compiledProjectPath) {
+                        let isIsolated: boolean | undefined;
+                        const compiledProjectInfo: CompiledProjectInfo | undefined = await getCompiledProjectInfo(projectPath, language);
+                        if (compiledProjectInfo) {
                             preCompiledProjectPath = projectPath;
-                            effectiveProjectPath = compiledProjectPath;
+                            effectiveProjectPath = compiledProjectInfo.compiledProjectPath;
+                            isIsolated = compiledProjectInfo.isIsolated;
                         } else {
                             effectiveProjectPath = projectPath;
                         }
 
-                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath });
+                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated });
                         this._projectDisposables.push(treeItem);
                         children.push(treeItem);
                     }
@@ -142,12 +144,15 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
     }
 }
 
-async function getCompiledProjectPath(projectPath: string, projectLanguage: ProjectLanguage): Promise<string | undefined> {
+type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
+
+async function getCompiledProjectInfo(projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
-        const projFiles: string[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
         if (projFiles.length === 1) {
-            const targetFramework: string = await dotnetUtils.getTargetFramework(path.join(projectPath, projFiles[0]));
-            return path.join(projectPath, dotnetUtils.getDotnetDebugSubpath(targetFramework));
+            const targetFramework: string = await dotnetUtils.getTargetFramework(projFiles[0]);
+            const isIsolated = await dotnetUtils.getIsIsolated(projFiles[0]);
+            return { compiledProjectPath: path.join(projectPath, dotnetUtils.getDotnetDebugSubpath(targetFramework)), isIsolated };
         } else {
             throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
         }
@@ -156,7 +161,7 @@ async function getCompiledProjectPath(projectPath: string, projectLanguage: Proj
         if (!functionAppName) {
             throw new Error(localize('unableToGetFunctionAppName', 'Unable to detect property "functionAppName" in pom.xml.'));
         } else {
-            return path.join(projectPath, getJavaDebugSubpath(functionAppName));
+            return { compiledProjectPath: path.join(projectPath, getJavaDebugSubpath(functionAppName)), isIsolated: false };
         }
     } else {
         return undefined;

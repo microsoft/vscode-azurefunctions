@@ -3,12 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
+import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
+import { nonNullProp } from '../../utils/nonNull';
+import { requestUtils } from '../../utils/requestUtils';
 import { treeUtils } from '../../utils/treeUtils';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
@@ -27,32 +31,36 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean): Promise<AzExtTreeItem[]> {
-        const functions: string[] = await getFunctionFolders(this.parent.effectiveProjectPath);
-        const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
-            functions,
-            'azFuncInvalidLocalFunction',
-            async func => {
-                const functionJsonPath: string = path.join(this.parent.effectiveProjectPath, func, functionJsonFileName);
-                const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
-                return LocalFunctionTreeItem.create(this, func, config, functionJsonPath);
-            },
-            (func: string) => func
-        );
+    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        if (this.parent.isIsolated) {
+            return await this.getChildrenForIsolatedProject();
+        } else {
+            const functions: string[] = await getFunctionFolders(this.parent.effectiveProjectPath);
+            const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
+                functions,
+                'azFuncInvalidLocalFunction',
+                async func => {
+                    const functionJsonPath: string = path.join(this.parent.effectiveProjectPath, func, functionJsonFileName);
+                    const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
+                    return LocalFunctionTreeItem.create(this, func, config, functionJsonPath, undefined);
+                },
+                (func: string) => func
+            );
 
-        if (this.parent.preCompiledProjectPath) {
-            const ti: GenericTreeItem = new GenericTreeItem(this, {
-                label: localize('runBuildTask', 'Run build task to update this list...'),
-                iconPath: treeUtils.getThemedIconPath('info'),
-                commandId: 'workbench.action.tasks.build',
-                contextValue: 'runBuildTask'
-            });
-            // By default `GenericTreeItem` will pass itself as the args, but VS Code doesn't seem to like that so pass empty array
-            ti.commandArgs = [];
-            children.push(ti);
+            if (this.parent.preCompiledProjectPath) {
+                const ti: GenericTreeItem = new GenericTreeItem(this, {
+                    label: localize('runBuildTask', 'Run build task to update this list...'),
+                    iconPath: treeUtils.getThemedIconPath('info'),
+                    commandId: 'workbench.action.tasks.build',
+                    contextValue: 'runBuildTask'
+                });
+                // By default `GenericTreeItem` will pass itself as the args, but VS Code doesn't seem to like that so pass empty array
+                ti.commandArgs = [];
+                children.push(ti);
+            }
+
+            return children;
         }
-
-        return children;
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
@@ -62,6 +70,37 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
             return 1;
         } else {
             return super.compareChildrenImpl(item1, item2);
+        }
+    }
+
+    /**
+     * .NET Isolated projects don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
+     */
+    private async getChildrenForIsolatedProject(): Promise<AzExtTreeItem[]> {
+        if (runningFuncTaskMap.has(this.parent.workspaceFolder)) {
+            const functions = await requestUtils.sendRequestWithExtTimeout({
+                url: `${this.parent.hostUrl}/admin/functions`,
+                method: 'GET'
+            });
+            return await this.createTreeItemsWithErrorHandling(
+                <WebSiteManagementModels.FunctionEnvelope[]>functions.parsedBody,
+                'azFuncInvalidLocalFunction',
+                async func => {
+                    func = requestUtils.convertToAzureSdkObject(func);
+                    return LocalFunctionTreeItem.create(this, nonNullProp(func, 'name'), func.config, undefined, func);
+                },
+                func => func.name
+            );
+        } else {
+            const ti: GenericTreeItem = new GenericTreeItem(this, {
+                label: localize('startDebugging', 'Start debugging to update this list...'),
+                iconPath: treeUtils.getThemedIconPath('info'),
+                commandId: 'workbench.action.debug.start',
+                contextValue: 'startDebugging'
+            });
+            // By default `GenericTreeItem` will pass itself as the args, but VS Code doesn't seem to like that so pass empty array
+            ti.commandArgs = [];
+            return [ti];
         }
     }
 }

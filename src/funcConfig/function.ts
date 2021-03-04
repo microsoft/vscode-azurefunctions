@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from "../localize";
-
 export interface IFunctionJson {
     disabled?: boolean;
     scriptFile?: string;
@@ -67,16 +65,11 @@ export class ParsedFunctionJson {
         return !!this.triggerBinding && !!this.triggerBinding.type && /^timer/i.test(this.triggerBinding.type);
     }
 
-    public get authLevel(): HttpAuthLevel {
+    public get authLevel(): HttpAuthLevel | undefined {
         if (this.triggerBinding && this.triggerBinding.authLevel) {
-            const authLevel: HttpAuthLevel | undefined = <HttpAuthLevel>HttpAuthLevel[this.triggerBinding.authLevel.toLowerCase()];
-            if (authLevel === undefined) {
-                throw new Error(localize('unrecognizedAuthLevel', 'Unrecognized auth level "{0}".', this.triggerBinding.authLevel));
-            } else {
-                return authLevel;
-            }
+            return <HttpAuthLevel | undefined>HttpAuthLevel[this.triggerBinding.authLevel.toLowerCase()];
         } else {
-            return HttpAuthLevel.function;
+            return undefined;
         }
     }
 }

@@ -7,14 +7,13 @@ import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, Work
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
 import { hostStartTaskName } from '../constants';
+import { ext } from '../extensionVariables';
 import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
     public abstract workerArgKey: string;
     protected abstract defaultPortOrPipeName: number | string;
     protected abstract debugConfig: DebugConfiguration;
-
-    private readonly _debugPorts: Map<WorkspaceFolder | undefined, number | undefined> = new Map<WorkspaceFolder | undefined, number | undefined>();
 
     public abstract getWorkerArgValue(folder: WorkspaceFolder): Promise<string>;
 
@@ -45,7 +44,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
 
-            this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
+            ext.debugPorts.set(folder, <number | undefined>debugConfiguration.port);
             if (debugConfiguration.preLaunchTask === hostStartTaskName) {
                 context.telemetry.properties.isActivationEvent = 'false';
                 context.telemetry.suppressIfSuccessful = false;
@@ -63,6 +62,6 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
     }
 
     protected getDebugPortOrPipeName(folder: WorkspaceFolder): number | string {
-        return this._debugPorts.get(folder) || this.defaultPortOrPipeName;
+        return ext.debugPorts.get(folder) || this.defaultPortOrPipeName;
     }
 }

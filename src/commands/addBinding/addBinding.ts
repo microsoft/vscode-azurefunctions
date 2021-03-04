@@ -39,6 +39,9 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
             data = await ext.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
         }
 
+        if (!data.functionJsonPath) {
+            throw new Error(localize('addBindingNotSupported', 'Add binding is not supported for this project type.'));
+        }
         functionJsonPath = data.functionJsonPath;
 
         const projectTi: LocalProjectTreeItem = data.parent.parent;

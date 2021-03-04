@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { isArray } from 'util';
-import { AzExtTreeItem } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { SlotTreeItemBase } from '../SlotTreeItemBase';
@@ -36,7 +36,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         return !!this._nextLink;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
