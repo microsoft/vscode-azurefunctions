@@ -5,13 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Disposable, WorkspaceFolder } from 'vscode';
+import { Disposable, TaskScope, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
-import { onDotnetFuncTaskStarted } from '../../commands/pickFuncProcess';
+import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
-import { ext } from '../../extensionVariables';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
+import { onFuncTaskStarted, runningFuncPortMap } from '../../funcCoreTools/funcHostTask';
 import { FuncVersion } from '../../FuncVersion';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
@@ -26,6 +26,7 @@ export type LocalProjectOptions = {
     language: ProjectLanguage;
     preCompiledProjectPath?: string
     isIsolated?: boolean;
+    funcPort: string;
 }
 
 export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {
@@ -42,6 +43,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
+    private readonly _funcPort: string;
 
     public constructor(parent: AzExtParentTreeItem, options: LocalProjectOptions) {
         super(parent, options.preCompiledProjectPath || options.effectiveProjectPath);
@@ -52,25 +54,19 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this.version = options.version;
         this.langauge = options.language;
         this.isIsolated = !!options.isIsolated;
+        this._funcPort = options.funcPort;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
 
-        this._disposables.push(onDotnetFuncTaskStarted(async scope => {
-            if (this.workspaceFolder === scope) {
-                await callWithTelemetryAndErrorHandling('onDotnetFuncTaskStarted', async (context: IActionContext) => {
-                    context.errorHandling.suppressDisplay = true;
-                    context.telemetry.suppressIfSuccessful = true;
-                    await this.refresh(context);
-                });
-            }
-        }));
+        this._disposables.push(onFuncTaskStarted(async scope => this.onFuncTaskChanged(scope)));
+        this._disposables.push(onDotnetFuncTaskReady(async scope => this.onFuncTaskChanged(scope)));
 
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
     }
 
     public get hostUrl(): string {
-        const port = ext.debugPorts.get(this.workspaceFolder) || 7071;
+        const port = runningFuncPortMap.get(this.workspaceFolder) || this._funcPort;
         return `http://localhost:${port}`;
     }
 
@@ -120,5 +116,15 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     public async setApplicationSetting(key: string, value: string): Promise<void> {
         await setLocalAppSetting(this.effectiveProjectPath, key, value, MismatchBehavior.Overwrite);
+    }
+
+    private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {
+        await callWithTelemetryAndErrorHandling('onFuncTaskChanged', async (context: IActionContext) => {
+            if (this.workspaceFolder === scope) {
+                context.errorHandling.suppressDisplay = true;
+                context.telemetry.suppressIfSuccessful = true;
+                await this.refresh(context);
+            }
+        });
     }
 }
