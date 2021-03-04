@@ -17,7 +17,7 @@ const funcTaskStartedEmitter = new vscode.EventEmitter<vscode.WorkspaceFolder | 
 export const onFuncTaskStarted = funcTaskStartedEmitter.event;
 
 export const runningFuncPortMap = new Map<vscode.WorkspaceFolder | vscode.TaskScope | undefined, string>();
-export const defaultFuncPort: string = '7071';
+const defaultFuncPort: string = '7071';
 
 export function isFuncHostTask(task: vscode.Task): boolean {
     const commandLine: string | undefined = task.execution && (<vscode.ShellExecution>task.execution).commandLine;
