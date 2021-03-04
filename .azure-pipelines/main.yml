@@ -24,7 +24,7 @@ jobs:
 
 - job: macOS
   pool:
-    vmImage: macOS-latest
+    vmImage: macOS-10.14
   steps:
   - template: common/build.yml
   - template: common/lint.yml
