@@ -136,6 +136,7 @@ export async function cleanTestWorkspace(): Promise<void> {
     ];
     for (const setting of settings) {
         await updateWorkspaceSetting(setting, undefined, testWorkspacePath);
+        await updateGlobalSetting(setting, undefined);
     }
 
     await fse.emptyDir(testWorkspacePath);
