@@ -60,7 +60,7 @@ suite('Create Project and Deploy', function (this: Mocha.Suite): void {
             this.skip();
         }
 
-        await testCreateProjectAndDeploy({ ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.7/], deployInputs: [getRotatingPythonVersion()] });
+        await testCreateProjectAndDeploy({ ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.6/], deployInputs: [getRotatingPythonVersion()] });
     });
 });
 
