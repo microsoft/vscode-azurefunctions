@@ -1,8 +1,16 @@
 # Change Log
 
-## Unreleased
+## 1.3.0 - 2021-03-08
 ### Added
+- .NET 5 support for creating projects/functions, copying http trigger urls, and creating a Function App in Azure
 - Now depends on the "Azure Resources" extension, which provides a "Resource Groups" and "Help and Feedback" view
+
+### Changed
+- TypeScript projects default to TypeScript v4.0
+
+### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.3.0%22+is%3Aclosed)
+- Extension may become unresponsive when deploying on WSL or Codespaces
+- Debugging a C# project on Mac/Linux may take ~30 seconds longer than before v1.2.1 of the extension
 
 ## 1.2.1 - 2021-02-09
 
