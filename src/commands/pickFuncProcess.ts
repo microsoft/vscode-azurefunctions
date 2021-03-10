@@ -40,8 +40,8 @@ export async function pickFuncProcess(context: IActionContext, debugConfig: vsco
         throw new Error(localize('noFuncTask', 'Failed to find "{0}" task.', preLaunchTaskName || hostStartTaskName));
     }
 
-    const pid: string = await startFuncTask(context, result.workspace, funcTask);
-    return await pickChildProcess(pid);
+    const taskInfo = await startFuncTask(context, result.workspace, funcTask);
+    return await pickChildProcess(taskInfo);
 }
 
 async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
@@ -58,7 +58,7 @@ async function waitForPrevFuncTaskToStop(workspaceFolder: vscode.WorkspaceFolder
     throw new Error(localize('failedToFindFuncHost', 'Failed to stop previous running Functions host within "{0}" seconds. Make sure the task has stopped before you debug again.', timeoutInSeconds));
 }
 
-async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<string> {
+async function startFuncTask(context: IActionContext, workspaceFolder: vscode.WorkspaceFolder, funcTask: vscode.Task): Promise<IRunningFuncTask> {
     const settingKey: string = 'pickProcessTimeout';
     const settingValue: number | undefined = getWorkspaceSetting<number>(settingKey);
     const timeoutInSeconds: number = Number(settingValue);
@@ -99,7 +99,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
                         funcTaskReadyEmitter.fire(workspaceFolder);
-                        return taskInfo.processId.toString();
+                        return taskInfo;
                     }
                 } catch (error) {
                     if (requestUtils.isTimeoutError(error)) {
@@ -130,19 +130,27 @@ type OSAgnosticProcess = { command: string | undefined; pid: number | string };
  * 3. Starting with the .NET 5 worker, Windows sometimes has an inner process we _don't_ want like 'conhost.exe'
  * The only processes we should want to attach to are the "func" process itself or a "dotnet" process running a dll, so we will pick the innermost one of those
  */
-async function pickChildProcess(rootPid: string): Promise<string> {
-    const children: OSAgnosticProcess[] = process.platform === 'win32' ? await getWindowsChildren(rootPid) : await getUnixChildren(rootPid);
+async function pickChildProcess(taskInfo: IRunningFuncTask): Promise<string> {
+    // Workaround for https://github.com/microsoft/vscode-azurefunctions/issues/2656
+    if (!isRunning(taskInfo.processId) && vscode.window.activeTerminal) {
+        const terminalPid = await vscode.window.activeTerminal.processId
+        if (terminalPid) {
+            // NOTE: Intentionally updating the object so that `runningFuncTaskMap` is affected, too
+            taskInfo.processId = terminalPid;
+        }
+    }
+    const children: OSAgnosticProcess[] = process.platform === 'win32' ? await getWindowsChildren(taskInfo.processId) : await getUnixChildren(taskInfo.processId);
     const child: OSAgnosticProcess | undefined = children.reverse().find(c => /(dotnet|func)(\.exe|)$/i.test(c.command || ''));
-    return child ? child.pid.toString() : rootPid;
+    return child ? child.pid.toString() : String(taskInfo.processId);
 }
 
 // Looks like this bug was fixed, but never merged:
 // https://github.com/indexzero/ps-tree/issues/18
 type ActualUnixPS = unixPsTree.PS & { COMM?: string };
 
-async function getUnixChildren(pid: string): Promise<OSAgnosticProcess[]> {
+async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
     const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
-        unixPsTree(parseInt(pid), (error: Error | undefined, result: unixPsTree.PS[]) => {
+        unixPsTree(pid, (error: Error | undefined, result: unixPsTree.PS[]) => {
             if (error) {
                 reject(error);
             } else {
@@ -153,10 +161,22 @@ async function getUnixChildren(pid: string): Promise<OSAgnosticProcess[]> {
     return processes.map(c => { return { command: c.COMMAND || c.COMM, pid: c.PID }; });
 }
 
-async function getWindowsChildren(pid: string): Promise<OSAgnosticProcess[]> {
+async function getWindowsChildren(pid: number): Promise<OSAgnosticProcess[]> {
     const windowsProcessTree: IWindowsProcessTree = getWindowsProcessTree();
-    const processes: IProcessInfo[] = await new Promise((resolve): void => {
-        windowsProcessTree.getProcessList(Number(pid), resolve, ProcessDataFlag.None);
+    const processes: (IProcessInfo[] | undefined) = await new Promise((resolve): void => {
+        windowsProcessTree.getProcessList(pid, resolve, ProcessDataFlag.None);
     });
-    return processes.map(c => { return { command: c.name, pid: c.pid }; });
+    return (processes || []).map(c => { return { command: c.name, pid: c.pid }; });
+}
+
+function isRunning(pid: number): boolean {
+    try {
+        // https://nodejs.org/api/process.html#process_process_kill_pid_signal
+        // This method will throw an error if the target pid does not exist. As a special case, a signal of 0 can be used to test for the existence of a process.
+        // Even though the name of this function is process.kill(), it is really just a signal sender, like the kill system call.
+        process.kill(pid, 0);
+        return true;
+    } catch {
+        return false;
+    }
 }
