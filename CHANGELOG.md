@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.3.0 - 2021-03-08
+## 1.3.0 - 2021-03-10
 ### Added
 - .NET 5 support for creating projects/functions, copying http trigger urls, and creating a Function App in Azure
 - Now depends on the "Azure Resources" extension, which provides a "Resource Groups" and "Help and Feedback" view
