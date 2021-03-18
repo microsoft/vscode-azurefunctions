@@ -9,10 +9,15 @@ import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class BooleanPromptStep extends BindingSettingStepBase {
     public async promptCore(context: IBindingWizardContext): Promise<string> {
-        const picks: QuickPickItem[] = [
+        let picks: QuickPickItem[] = [
             { label: 'true', description: '' },
             { label: 'false', description: '' }
         ];
-        return (await context.ui.showQuickPick(picks, { placeHolder: this._setting.label })).label;
+
+        if (this._setting.defaultValue?.toLowerCase() === 'false') {
+            picks = picks.reverse();
+        }
+
+        return (await context.ui.showQuickPick(picks, { placeHolder: this._setting.description || this._setting.label })).label;
     }
 }
