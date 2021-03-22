@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "vscode-azureextensionui";
+import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
@@ -13,7 +14,7 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
     functionName?: string;
 }
 
-export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: string | undefined): void {
+export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: BindingSettingValue): void {
     context[setting.name.toLowerCase()] = value;
 }
 

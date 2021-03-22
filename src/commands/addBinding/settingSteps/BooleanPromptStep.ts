@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { QuickPickItem } from "vscode";
+import { IAzureQuickPickItem } from "vscode-azureextensionui";
+import { BindingSettingValue } from "../../../funcConfig/function";
+import { envUtils } from "../../../utils/envUtils";
 import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";
 
 export class BooleanPromptStep extends BindingSettingStepBase {
-    public async promptCore(context: IBindingWizardContext): Promise<string> {
-        let picks: QuickPickItem[] = [
-            { label: 'true', description: '' },
-            { label: 'false', description: '' }
-        ];
+    public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
+        let picks: IAzureQuickPickItem<boolean>[] = [true, false].map(v => { return { label: String(v), data: v }; });
 
-        if (this._setting.defaultValue?.toLowerCase() === 'false') {
+        // Make sure the correct default value is at the top of the list
+        if (!envUtils.isEnvironmentVariableSet(this._setting.defaultValue)) {
             picks = picks.reverse();
         }
 
-        return (await context.ui.showQuickPick(picks, { placeHolder: this._setting.description || this._setting.label })).label;
+        return (await context.ui.showQuickPick(picks, { placeHolder: this._setting.description || this._setting.label })).data;
     }
 }

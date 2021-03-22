@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { BindingSettingValue } from "../funcConfig/function";
+
 /**
  * Describes a template used for creating a binding
  */
@@ -21,7 +23,7 @@ export interface IBindingTemplate {
 export interface IBindingSetting {
     resourceType: ResourceType | undefined;
     valueType: ValueType | undefined;
-    defaultValue: string | undefined;
+    defaultValue: BindingSettingValue;
     required: boolean | undefined;
     enums: IEnumValue[];
     label: string;

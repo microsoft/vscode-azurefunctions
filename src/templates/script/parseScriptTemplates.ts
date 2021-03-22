@@ -205,7 +205,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
                 if (bindingTemplate) {
                     const setting: IBindingSetting | undefined = bindingTemplate.settings.find((bs: IBindingSetting) => bs.name === settingName);
                     if (setting) {
-                        const functionSpecificDefaultValue: string | undefined = triggerBinding[setting.name];
+                        const functionSpecificDefaultValue = triggerBinding[setting.name];
                         if (functionSpecificDefaultValue) {
                             // overwrite common default value with the function-specific default value
                             setting.defaultValue = functionSpecificDefaultValue;

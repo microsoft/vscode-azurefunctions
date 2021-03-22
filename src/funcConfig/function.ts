@@ -15,8 +15,10 @@ export interface IFunctionBinding {
     route?: string;
     direction?: string;
     authLevel?: string;
-    [propertyName: string]: string | undefined;
+    [propertyName: string]: BindingSettingValue;
 }
+
+export type BindingSettingValue = string | boolean | number | undefined;
 
 export enum HttpAuthLevel {
     admin = 'admin',

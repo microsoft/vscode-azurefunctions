@@ -7,6 +7,7 @@ import * as path from 'path';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, ISubscriptionWizardContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { BindingSettingValue } from '../../../funcConfig/function';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { ResourceType } from '../../../templates/IBindingTemplate';
@@ -27,7 +28,7 @@ import { ServiceBusListStep } from './serviceBus/ServiceBusListStep';
 import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 
 export class LocalAppSettingListStep extends BindingSettingStepBase {
-    public async promptCore(context: IBindingWizardContext): Promise<string | undefined> {
+    public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
         const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];

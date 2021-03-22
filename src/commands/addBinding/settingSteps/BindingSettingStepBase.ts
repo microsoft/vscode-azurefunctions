@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep } from "vscode-azureextensionui";
+import { BindingSettingValue } from "../../../funcConfig/function";
 import { IBindingSetting } from "../../../templates/IBindingTemplate";
 import { getBindingSetting, setBindingSetting } from "../../createFunction/IFunctionWizardContext";
 import { IBindingWizardContext } from "../IBindingWizardContext";
@@ -18,7 +19,7 @@ export abstract class BindingSettingStepBase extends AzureWizardPromptStep<IBind
         this._setting = setting;
     }
 
-    public abstract promptCore(context: IBindingWizardContext): Promise<string | undefined>;
+    public abstract promptCore(context: IBindingWizardContext): Promise<BindingSettingValue>;
 
     public async prompt(context: IBindingWizardContext): Promise<void> {
         setBindingSetting(context, this._setting, await this.promptCore(context));
