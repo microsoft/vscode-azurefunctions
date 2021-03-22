@@ -37,7 +37,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         args.push(cpUtils.wrapArgInQuotes(nonNullProp(context, 'namespace')));
 
         for (const setting of template.userPromptedSettings) {
-            const value: string | undefined = getBindingSetting(context, setting);
+            const value = getBindingSetting(context, setting);
             // NOTE: Explicitly checking against undefined. Empty string is a valid value
             if (value !== undefined) {
                 args.push(`--arg:${setting.name}`);

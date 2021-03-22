@@ -27,7 +27,7 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
 
         const args: string[] = [];
         for (const setting of template.userPromptedSettings) {
-            const value: string | undefined = getBindingSetting(context, setting);
+            const value = getBindingSetting(context, setting);
             // NOTE: Explicitly checking against undefined. Empty string is a valid value
             if (value !== undefined) {
                 args.push(mavenUtils.formatMavenArg(`D${setting.name}`, value));

@@ -18,12 +18,7 @@ export function setBindingSetting(context: IFunctionWizardContext, setting: IBin
     context[setting.name.toLowerCase()] = value;
 }
 
-export function getBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting): string | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const value: string | undefined = context[setting.name.toLowerCase()];
-    if (value) {
-        return value;
-    } else {
-        return setting.required ? '' : undefined;
-    }
+export function getBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting): BindingSettingValue {
+    const value = <BindingSettingValue>context[setting.name.toLowerCase()];
+    return value === undefined && setting.required ? '' : value;
 }
