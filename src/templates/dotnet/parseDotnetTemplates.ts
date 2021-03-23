@@ -35,10 +35,22 @@ interface IRawSetting {
 }
 
 function parseDotnetSetting(rawSetting: IRawSetting): IBindingSetting {
+    let valueType: ValueType;
+    switch (rawSetting.DataType?.toLowerCase()) {
+        case 'choice':
+            valueType = ValueType.enum;
+            break;
+        case 'bool':
+            valueType = ValueType.boolean;
+            break;
+        default:
+            valueType = ValueType.string;
+    }
+
     return {
         name: rawSetting.Name,
         resourceType: undefined, // Dotnet templates do not give us resourceType information
-        valueType: rawSetting.DataType === 'choice' ? ValueType.enum : ValueType.string,
+        valueType,
         defaultValue: rawSetting.DefaultValue,
         required: true, // Dotnet templates do not give us this information. Assume it's required
         label: rawSetting.Name,

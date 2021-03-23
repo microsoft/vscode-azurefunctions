@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "vscode-azureextensionui";
+import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
 import { IProjectWizardContext } from "../createNewProject/IProjectWizardContext";
@@ -13,16 +14,11 @@ export interface IFunctionWizardContext extends Partial<ISubscriptionContext>, I
     functionName?: string;
 }
 
-export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: string | undefined): void {
+export function setBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting, value: BindingSettingValue): void {
     context[setting.name.toLowerCase()] = value;
 }
 
-export function getBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting): string | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const value: string | undefined = context[setting.name.toLowerCase()];
-    if (value) {
-        return value;
-    } else {
-        return setting.required ? '' : undefined;
-    }
+export function getBindingSetting(context: IFunctionWizardContext, setting: IBindingSetting): BindingSettingValue {
+    const value = <BindingSettingValue>context[setting.name.toLowerCase()];
+    return value === undefined && setting.required ? '' : value;
 }

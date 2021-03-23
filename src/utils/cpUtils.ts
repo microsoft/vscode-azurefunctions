@@ -86,7 +86,7 @@ export namespace cpUtils {
     /**
      * Ensures spaces and special characters (most notably $) are preserved
      */
-    export function wrapArgInQuotes(arg: string): string {
-        return quotationMark + arg + quotationMark;
+    export function wrapArgInQuotes(arg: string | boolean | number): string {
+        return typeof arg === 'string' ? quotationMark + arg + quotationMark : String(arg);
     }
 }

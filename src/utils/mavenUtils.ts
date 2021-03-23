@@ -78,7 +78,7 @@ export namespace mavenUtils {
         return result.cmdOutput;
     }
 
-    export function formatMavenArg(key: string, value: string): string {
+    export function formatMavenArg(key: string, value: string | number | boolean): string {
         return `-${key}=${cpUtils.wrapArgInQuotes(value)}`;
     }
 }
