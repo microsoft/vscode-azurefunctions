@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+### Changed
+- Minimum version of VS Code is now 1.53.0
+
 ## 1.3.0 - 2021-03-10
 ### Added
 - .NET 5 support for creating projects/functions, copying http trigger urls, and creating a Function App in Azure
