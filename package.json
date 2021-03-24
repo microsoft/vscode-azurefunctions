@@ -7,7 +7,7 @@
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "engines": {
-        "vscode": "^1.48.0"
+        "vscode": "^1.53.0"
     },
     "repository": {
         "type": "git",
@@ -1075,7 +1075,7 @@
         "@types/ps-tree": "^1.1.0",
         "@types/request": "2.0.7",
         "@types/semver": "^5.5.0",
-        "@types/vscode": "1.48.0",
+        "@types/vscode": "1.53.0",
         "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "^3.0.30",
