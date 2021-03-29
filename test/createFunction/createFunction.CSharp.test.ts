@@ -65,7 +65,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             await csTester.dispose();
         });
 
-        const blobTrigger: string = 'BlobTrigger';
+        const blobTrigger: string = 'Azure Blob Storage trigger';
         test(blobTrigger, async function (this: Mocha.Context): Promise<void> {
             // the first function created can take a lot longer - likely related to the dotnet cli's cache
             this.timeout(150 * 1000);
@@ -78,7 +78,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             );
         });
 
-        const cosmosTrigger: string = 'CosmosDBTrigger';
+        const cosmosTrigger: string = 'Azure Cosmos DB trigger';
         test(cosmosTrigger, async () => {
             await csTester.testCreateFunction(
                 cosmosTrigger,
@@ -101,7 +101,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
 
         // Doesn't work on v2: https://github.com/microsoft/vscode-azurefunctions/issues/792
         if (version !== FuncVersion.v2) {
-            const eventGridTrigger: string = 'EventGridTrigger';
+            const eventGridTrigger: string = 'Azure Event Grid trigger';
             test(eventGridTrigger, async () => {
                 await csTester.testCreateFunction(
                     eventGridTrigger,
@@ -110,7 +110,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             });
         }
 
-        const eventHubTrigger: string = 'EventHubTrigger';
+        const eventHubTrigger: string = 'Azure Event Hub trigger';
         test(eventHubTrigger, async () => {
             await csTester.testCreateFunction(
                 eventHubTrigger,
@@ -121,7 +121,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
         });
 
         if (!isIsolated) {
-            const iotHubTrigger: string = 'IotHubTrigger';
+            const iotHubTrigger: string = 'IoT Hub (Event Hub)';
             test(iotHubTrigger, async () => {
                 await csTester.testCreateFunction(
                     iotHubTrigger,
@@ -132,7 +132,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             });
         }
 
-        const httpTrigger: string = 'HttpTrigger';
+        const httpTrigger: string = 'HTTP trigger';
         test(httpTrigger, async () => {
             await csTester.testCreateFunction(
                 httpTrigger,
@@ -141,7 +141,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             );
         });
 
-        const queueTrigger: string = 'QueueTrigger';
+        const queueTrigger: string = 'Azure Queue Storage trigger';
         test(queueTrigger, async () => {
             await csTester.testCreateFunction(
                 queueTrigger,
@@ -151,7 +151,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             );
         });
 
-        const serviceBusQueueTrigger: string = 'ServiceBusQueueTrigger';
+        const serviceBusQueueTrigger: string = 'Azure Service Bus Queue trigger';
         test(serviceBusQueueTrigger, async () => {
             await csTester.testCreateFunction(
                 serviceBusQueueTrigger,
@@ -161,7 +161,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             );
         });
 
-        const serviceBusTopicTrigger: string = 'ServiceBusTopicTrigger';
+        const serviceBusTopicTrigger: string = 'Azure Service Bus Topic trigger';
         test(serviceBusTopicTrigger, async () => {
             await csTester.testCreateFunction(
                 serviceBusTopicTrigger,
@@ -172,7 +172,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             );
         });
 
-        const timerTrigger: string = 'TimerTrigger';
+        const timerTrigger: string = 'Timer trigger';
         test(timerTrigger, async () => {
             await csTester.testCreateFunction(
                 timerTrigger,

@@ -123,7 +123,7 @@ function filterTemplatesByVersion(templates: IFunctionTemplate[], version: FuncV
 }
 
 /**
- * The dotnet templates do not provide the validation and resourceType information that we desire
+ * The dotnet templates do not provide the validation, resourceType, and display information that we desire
  * As a workaround, we can check for the exact same JavaScript template/setting and leverage that information
  */
 async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], version: FuncVersion): Promise<void> {
@@ -136,6 +136,8 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         for (const csharpTemplate of csharpTemplates) {
             const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
             if (jsTemplate) {
+                csharpTemplate.name = jsTemplate.name;
+                csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;
                 for (const cSharpSetting of csharpTemplate.userPromptedSettings) {
                     const jsSetting: IBindingSetting | undefined = jsTemplate.userPromptedSettings.find((t: IBindingSetting) => normalizeName(t.name) === normalizeName(cSharpSetting.name));
                     if (jsSetting) {
