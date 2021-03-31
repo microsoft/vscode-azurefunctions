@@ -72,7 +72,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 try {
                     const result: MessageItem = await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                     if (result === DialogResponses.learnMore) {
-                        openUrl('https://aka.ms/azFunc64bit');
+                        await openUrl('https://aka.ms/azFunc64bit');
                     } else if (result === DialogResponses.dontWarnAgain) {
                         await updateGlobalSetting(settingKey, false);
                     }

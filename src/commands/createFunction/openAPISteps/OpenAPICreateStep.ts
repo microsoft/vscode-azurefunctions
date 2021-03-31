@@ -53,7 +53,6 @@ export class OpenAPICreateStep extends AzureWizardExecuteStep<IFunctionWizardCon
                 break;
             default:
                 throw new Error(localize('notSupported', 'Not a supported language. We currently support C#, Java, Python, and Typescript'));
-                break;
         }
 
         args.push('--generate-metadata:false');
@@ -83,9 +82,9 @@ async function validateAutorestInstalled(context: IActionContext): Promise<void>
     } catch (error) {
         const message: string = localize('autorestNotFound', 'Failed to find "autorest" | Extension needs AutoRest to generate a function app from an OpenAPI specification. Click "Learn more" for more details on installation steps.');
         if (!context.errorHandling.suppressDisplay) {
-            void window.showErrorMessage(message, DialogResponses.learnMore).then(result => {
+            void window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
                 if (result === DialogResponses.learnMore) {
-                    openUrl('https://aka.ms/autorest');
+                    await openUrl('https://aka.ms/autorest');
                 }
             });
             context.errorHandling.suppressDisplay = true;
