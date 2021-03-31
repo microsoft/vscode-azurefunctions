@@ -33,7 +33,7 @@ export async function promptForFuncVersion(message?: string): Promise<FuncVersio
     while (true) {
         const version: FuncVersion | undefined = (await ext.ui.showQuickPick(picks, options)).data;
         if (version === undefined) {
-            openUrl('https://aka.ms/AA1tpij');
+            await openUrl('https://aka.ms/AA1tpij');
         } else {
             return version;
         }

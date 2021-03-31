@@ -21,9 +21,9 @@ export namespace mavenUtils {
 
             if (!context.errorHandling.suppressDisplay) {
                 // don't wait
-                void vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(result => {
+                void vscode.window.showErrorMessage(message, DialogResponses.learnMore).then(async result => {
                     if (result === DialogResponses.learnMore) {
-                        openUrl('https://aka.ms/azurefunction_maven');
+                        await openUrl('https://aka.ms/azurefunction_maven');
                     }
                 });
                 context.errorHandling.suppressDisplay = true;

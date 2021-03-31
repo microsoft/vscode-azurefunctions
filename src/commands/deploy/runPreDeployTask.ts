@@ -45,7 +45,7 @@ async function promptToBuildNativeDeps(context: IActionContext, deployFsPath: st
         return await tryRunPreDeployTask(context, deployFsPath, scmType);
     } else if (result === DialogResponses.learnMore) {
         context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';
-        openUrl('https://aka.ms/func-python-publish');
+        await openUrl('https://aka.ms/func-python-publish');
         throw new UserCancelledError();
     } else {
         context.telemetry.properties.preDeployTaskResponse = 'cancel';
