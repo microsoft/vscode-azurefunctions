@@ -737,16 +737,16 @@
         },
         "jsonValidation": [
             {
-                "fileMatch": "/function.json",
-                "url": "http://json.schemastore.org/function"
+                "fileMatch": "function.json",
+                "url": "https://json.schemastore.org/function.json"
             },
             {
-                "fileMatch": "/host.json",
-                "url": "http://json.schemastore.org/host"
+                "fileMatch": "host.json",
+                "url": "https://json.schemastore.org/host.json"
             },
             {
-                "fileMatch": "/proxies.json",
-                "url": "http://json.schemastore.org/proxies"
+                "fileMatch": "proxies.json",
+                "url": "https://json.schemastore.org/proxies.json"
             }
         ],
         "taskDefinitions": [
