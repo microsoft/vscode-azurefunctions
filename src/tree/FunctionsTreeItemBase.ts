@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ThemeIcon } from 'vscode';
 import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../localize';
-import { treeUtils } from '../utils/treeUtils';
 import { IProjectTreeItem } from './IProjectTreeItem';
 import { getProjectContextValue, ProjectAccess, ProjectResource } from './projectContextValues';
 
@@ -37,6 +37,6 @@ export abstract class FunctionsTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getThemedIconPath('list-unordered');
+        return new ThemeIcon('list-unordered');
     }
 }

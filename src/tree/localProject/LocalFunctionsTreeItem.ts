@@ -6,6 +6,7 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { ThemeIcon } from 'vscode';
 import { AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
@@ -13,7 +14,6 @@ import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { requestUtils } from '../../utils/requestUtils';
-import { treeUtils } from '../../utils/treeUtils';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalProjectTreeItem } from './LocalProjectTreeItem';
@@ -50,7 +50,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
             if (this.parent.preCompiledProjectPath) {
                 const ti: GenericTreeItem = new GenericTreeItem(this, {
                     label: localize('runBuildTask', 'Run build task to update this list...'),
-                    iconPath: treeUtils.getThemedIconPath('info'),
+                    iconPath: new ThemeIcon('info'),
                     commandId: 'workbench.action.tasks.build',
                     contextValue: 'runBuildTask'
                 });
@@ -94,7 +94,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         } else {
             const ti: GenericTreeItem = new GenericTreeItem(this, {
                 label: localize('startDebugging', 'Start debugging to update this list...'),
-                iconPath: treeUtils.getThemedIconPath('info'),
+                iconPath: new ThemeIcon('info'),
                 commandId: 'workbench.action.debug.start',
                 contextValue: 'startDebugging'
             });

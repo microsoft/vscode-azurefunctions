@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ThemeIcon } from 'vscode';
 import { getFile, ISiteFile, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
 import { AzureParentTreeItem, AzureTreeItem, DialogResponses, IActionContext, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
-import { treeUtils } from '../utils/treeUtils';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
@@ -45,7 +45,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getThemedIconPath('list-unordered');
+        return new ThemeIcon('list-unordered');
     }
 
     public get readOnly(): boolean {

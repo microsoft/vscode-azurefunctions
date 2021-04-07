@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ThemeIcon } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
-import { treeUtils } from '../../utils/treeUtils';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
@@ -28,7 +28,7 @@ export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
             contextValue: 'initProject',
             label: localize('initProject', 'Initialize Project for Use with VS Code...'),
             commandId: 'azureFunctions.initProjectForVSCode',
-            iconPath: treeUtils.getThemedIconPath('warning')
+            iconPath: new ThemeIcon('warning')
         });
         ti.commandArgs = [this._projectPath];
         return [ti];

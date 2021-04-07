@@ -90,19 +90,13 @@
             {
                 "command": "azureFunctions.selectSubscriptions",
                 "title": "Select Subscriptions...",
-                "icon": {
-                    "light": "resources/light/filter.svg",
-                    "dark": "resources/dark/filter.svg"
-                }
+                "icon": "$(filter)"
             },
             {
                 "command": "azureFunctions.refresh",
                 "title": "%azureFunctions.refresh%",
                 "category": "Azure Functions",
-                "icon": {
-                    "light": "resources/light/Refresh.svg",
-                    "dark": "resources/dark/Refresh.svg"
-                }
+                "icon": "$(refresh)"
             },
             {
                 "command": "azureFunctions.loadMore",
@@ -181,10 +175,7 @@
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
-                "icon": {
-                    "light": "resources/light/Deploy.svg",
-                    "dark": "resources/dark/Deploy.svg"
-                }
+                "icon": "$(cloud-upload)"
             },
             {
                 "command": "azureFunctions.deploySlot",
@@ -350,10 +341,7 @@
                 "command": "azureFunctions.toggleAppSettingVisibility",
                 "title": "%azureFunctions.toggleAppSettingVisibility%",
                 "category": "Azure Functions",
-                "icon": {
-                    "light": "resources/light/Visible.svg",
-                    "dark": "resources/dark/Visible.svg"
-                }
+                "icon": "$(eye)"
             },
             {
                 "command": "azureFunctions.addBinding",
@@ -1121,8 +1109,8 @@
         "portfinder": "^1.0.23",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.76.0",
-        "vscode-azureextensionui": "^0.41.1",
+        "vscode-azureappservice": "^0.76.1",
+        "vscode-azureextensionui": "^0.41.3",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "vscode-tas-client": "^0.1.17",
