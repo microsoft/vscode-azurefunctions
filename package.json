@@ -1086,7 +1086,7 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.87.0",
-        "vscode-azureextensiondev": "^0.9.1",
+        "vscode-azureextensiondev": "^0.9.2",
         "vscode-test": "^1.5.2",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
