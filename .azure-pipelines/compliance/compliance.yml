@@ -20,6 +20,7 @@ steps:
 - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@3
   displayName: 'AntiMalware Scanner'
   inputs:
+    FileDirPath: '$(Build.SourcesDirectory)'
     EnableServices: true
   continueOnError: true
   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
