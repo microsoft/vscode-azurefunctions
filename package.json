@@ -1113,7 +1113,6 @@
         "vscode-azureextensionui": "^0.41.3",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
-        "vscode-tas-client": "^0.1.17",
         "websocket": "^1.0.29",
         "xml2js": "^0.4.19",
         "xregexp": "^4.0.0"
