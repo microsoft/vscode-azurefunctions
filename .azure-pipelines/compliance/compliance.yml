@@ -19,6 +19,8 @@ steps:
 
 - task: securedevelopmentteam.vss-secure-development-tools.build-task-antimalware.AntiMalware@3
   displayName: 'AntiMalware Scanner'
+  inputs:
+    EnableServices: true
   continueOnError: true
   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
