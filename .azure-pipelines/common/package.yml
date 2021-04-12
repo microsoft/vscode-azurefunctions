@@ -22,4 +22,5 @@ steps:
   inputs:
     PathtoPublish: '$(build.artifactstagingdirectory)'
     ArtifactName: vsix
-  condition: ne(variables['System.PullRequest.IsFork'], 'True')
+  # Only publish vsix from linux build since we use this to release and want to stay consistent
+  condition: and(eq(variables['Agent.OS'], 'Linux'), ne(variables['System.PullRequest.IsFork'], 'True'))
