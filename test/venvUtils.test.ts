@@ -5,7 +5,6 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
-import { ITestCallbackContext } from 'mocha';
 import * as path from 'path';
 import { cpUtils, ext, getGlobalSetting, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
@@ -34,7 +33,7 @@ suite('venvUtils', () => {
         await updateGlobalSetting(pythonVenvSetting, oldVenvValue);
     });
 
-    test('venvExists true', async function (this: ITestCallbackContext): Promise<void> {
+    test('venvExists true', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }
@@ -54,7 +53,7 @@ suite('venvUtils', () => {
         assert.equal(await venvUtils.venvExists(folderName, testFolder), false);
     });
 
-    test('runCommandInVenv', async function (this: ITestCallbackContext): Promise<void> {
+    test('runCommandInVenv', async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
             this.skip();
         }
@@ -62,7 +61,7 @@ suite('venvUtils', () => {
         await venvUtils.runCommandInVenv('python --version', venvName, testFolder);
     });
 
-    test('convertToVenvCommand Windows powershell', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Windows powershell', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'win32') {
             this.skip();
         }
@@ -72,7 +71,7 @@ suite('venvUtils', () => {
         });
     });
 
-    test('convertToVenvCommand Windows pwsh', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Windows pwsh', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'win32') {
             this.skip();
         }
@@ -82,7 +81,7 @@ suite('venvUtils', () => {
         });
     });
 
-    test('convertToVenvCommand Windows cmd', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Windows cmd', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'win32') {
             this.skip();
         }
@@ -92,7 +91,7 @@ suite('venvUtils', () => {
         });
     });
 
-    test('convertToVenvCommand Windows git bash', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Windows git bash', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'win32') {
             this.skip();
         }
@@ -102,7 +101,7 @@ suite('venvUtils', () => {
         });
     });
 
-    test('convertToVenvCommand Windows bash', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Windows bash', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'win32') {
             this.skip();
         }
@@ -112,7 +111,7 @@ suite('venvUtils', () => {
         });
     });
 
-    test('convertToVenvCommand Mac', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Mac', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'darwin') {
             this.skip();
         }
@@ -120,7 +119,7 @@ suite('venvUtils', () => {
         assert.equal(venvUtils.convertToVenvPythonCommand(command, venvName, 'darwin'), '.venv/bin/python -m do a thing');
     });
 
-    test('convertToVenvCommand Linux', async function (this: ITestCallbackContext): Promise<void> {
+    test('convertToVenvCommand Linux', async function (this: Mocha.Context): Promise<void> {
         if (process.platform !== 'linux') {
             this.skip();
         }
