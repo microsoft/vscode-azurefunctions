@@ -1066,7 +1066,7 @@
         "@types/vscode": "1.53.0",
         "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
-        "@types/xregexp": "^3.0.30",
+        "@types/xregexp": "4.3.0",
         "@typescript-eslint/eslint-plugin": "^4.14.2",
         "@typescript-eslint/parser": "^4.14.2",
         "copy-webpack-plugin": "^6.0.3",
@@ -1115,7 +1115,7 @@
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
         "xml2js": "^0.4.19",
-        "xregexp": "^4.0.0"
+        "xregexp": "4.3.0"
     },
     "extensionDependencies": [
         "ms-vscode.azure-account",
