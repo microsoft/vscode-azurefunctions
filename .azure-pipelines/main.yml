@@ -9,6 +9,7 @@ jobs:
     vmImage: windows-latest
   steps:
   - template: common/build.yml
+  - template: common/package.yml
   - template: common/lint.yml
   - template: compliance/compliance.yml # Only works on Windows
   - template: common/test.yml
@@ -18,7 +19,7 @@ jobs:
     vmImage: ubuntu-latest
   steps:
   - template: common/build.yml
-  - template: common/publish-vsix.yml # Only publish vsix from linux build since we use this to release and want to stay consistent
+  - template: common/package.yml
   - template: common/lint.yml
   - template: common/test.yml
 
@@ -27,6 +28,7 @@ jobs:
     vmImage: macOS-10.14 # Using 10.14 instead of latest (10.15) because of "ENOTCONN" errors during tests
   steps:
   - template: common/build.yml
+  - template: common/package.yml
   - template: common/lint.yml
   - template: common/test.yml
 
