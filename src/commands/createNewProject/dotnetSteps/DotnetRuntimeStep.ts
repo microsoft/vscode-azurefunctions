@@ -28,6 +28,12 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
         } else if (runtimes.length === 1) {
             // No need to prompt if it only supports one
             setWorkerRuntime(context, runtimes[0]);
+        } else if (context.targetNetwork) {
+            // if a targetNetwork was provided from createNewProject
+            const workerRuntime = runtimes.find(runtime => runtime.targetFramework === context.targetNetwork);
+            if (workerRuntime) {
+                setWorkerRuntime(context, workerRuntime);
+            }
         }
         return new DotnetRuntimeStep(runtimes);
     }

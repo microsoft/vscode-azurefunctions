@@ -15,6 +15,7 @@ export interface AzureFunctionsExtensionApi {
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
 export type ProjectVersion = '~1' | '~2' | '~3';
+export type TargetFramework = 'netcoreapp3.1' | 'net5.0';
 
 export interface IAppSettingsClient {
     fullName: string;
@@ -78,4 +79,9 @@ export interface ICreateFunctionOptions {
      * If set to true, it will not try to open the folder after create finishes. Defaults to false
      */
     suppressOpenFolder?: boolean;
+
+    /**
+     * If set, it will automatically select the worker runtime for .NET with the matching targetNetwork
+     */
+    targetNetwork?: TargetFramework;
 }
