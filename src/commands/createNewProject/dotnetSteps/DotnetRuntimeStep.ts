@@ -28,12 +28,14 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
         } else if (runtimes.length === 1) {
             // No need to prompt if it only supports one
             setWorkerRuntime(context, runtimes[0]);
-        } else if (context.targetNetwork) {
-            // if a targetNetwork was provided from createNewProject
-            const workerRuntime = runtimes.find(runtime => runtime.targetFramework === context.targetNetwork);
-            if (workerRuntime) {
-                setWorkerRuntime(context, workerRuntime);
+        } else if (context.targetFramework) {
+            // if a targetFramework was provided from createNewProject
+            const workerRuntime = runtimes.find(runtime => runtime.targetFramework === context.targetFramework);
+            if (!workerRuntime) {
+                throw new Error(localize('unknownFramework', 'Unrecognized target framework "{0}". Available frameworks: "{1}".', context.targetFramework, runtimes.join(', ')));
             }
+
+            setWorkerRuntime(context, workerRuntime);
         }
         return new DotnetRuntimeStep(runtimes);
     }

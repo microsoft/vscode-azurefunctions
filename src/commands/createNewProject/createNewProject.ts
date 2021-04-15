@@ -49,7 +49,6 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
     const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version), projectTemplateKey });
-    wizardContext.targetNetwork = options.targetNetwork;
 
     if (options.folderPath) {
         FolderListStep.setProjectPath(wizardContext, options.folderPath);
