@@ -78,4 +78,9 @@ export interface ICreateFunctionOptions {
      * If set to true, it will not try to open the folder after create finishes. Defaults to false
      */
     suppressOpenFolder?: boolean;
+
+    /**
+     * If set, it will automatically select the worker runtime for .NET with the matching targetFramework
+     */
+    targetFramework?: string;
 }

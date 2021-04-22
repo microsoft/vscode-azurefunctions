@@ -23,6 +23,8 @@ export interface IProjectWizardContext extends IActionContext {
 
     generateFromOpenAPI?: boolean;
     openApiSpecificationFile?: Uri[];
+
+    targetFramework?: string;
 }
 
 export type OpenBehavior = 'AddToWorkspace' | 'OpenInNewWindow' | 'OpenInCurrentWindow' | 'AlreadyOpen' | 'DontOpen';
