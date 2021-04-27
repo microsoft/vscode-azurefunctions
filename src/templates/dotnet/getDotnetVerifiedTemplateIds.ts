@@ -9,6 +9,7 @@ export function getDotnetVerifiedTemplateIds(version: string): string[] {
     let verifiedTemplateIds: string[] = [
         'EventHubTrigger',
         'HttpTrigger',
+        'HttpTriggerWithOpenAPI',
         'BlobTrigger',
         'QueueTrigger',
         'TimerTrigger',

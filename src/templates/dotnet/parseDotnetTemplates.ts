@@ -7,6 +7,7 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azuree
 import { ProjectLanguage, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
+import { localize } from '../../localize';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
@@ -102,7 +103,7 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
         // https://github.com/microsoft/vscode-azurefunctions/issues/1602
         const v2Templates: IFunctionTemplate[] = filterTemplatesByVersion(functionTemplates, FuncVersion.v2);
         for (const v2Template of v2Templates) {
-            if (!filteredTemplates.find(t => normalizeId(t.id) === normalizeId(v2Template.id))) {
+            if (!filteredTemplates.find(t => normalizeDotnetId(t.id) === normalizeDotnetId(v2Template.id))) {
                 filteredTemplates.push(v2Template);
             }
         }
@@ -134,7 +135,8 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
 
         const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
-            const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeId(t.id) === normalizeId(csharpTemplate.id));
+            const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
+            const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);
             if (jsTemplate) {
                 csharpTemplate.name = jsTemplate.name;
                 csharpTemplate.defaultFunctionName = jsTemplate.defaultFunctionName;
@@ -145,19 +147,37 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
                         cSharpSetting.validateSetting = jsSetting.validateSetting;
                     }
                 }
+            } else {
+                // Verified templates without a matching JS template
+                switch (normalizedDotnetId) {
+                    case 'httpwithopenapi':
+                        csharpTemplate.name = localize('httpWithOpenApiName', 'HTTP trigger with OpenAPI');
+                        break;
+                    case 'durablefunctionsorchestration':
+                        csharpTemplate.name = localize('durableFunctionsOrchestrationName', 'Durable Functions Orchestration');
+                        break;
+                }
             }
         }
     });
 }
 
 /**
- * Converts ids like "Azure.Function.CSharp.QueueTrigger.2.x" or "QueueTrigger-JavaScript" to "queuetrigger"
+ * Converts ids like "Azure.Function.CSharp.QueueTrigger.2.x" to "queue"
  */
-function normalizeId(id: string): string {
-    const match: RegExpMatchArray | null = id.match(/[a-z]+Trigger/i);
-    return normalizeName(match ? match[0] : id);
+function normalizeDotnetId(id: string): string {
+    const match: RegExpMatchArray | null = id.match(/^azure\.function\.(?:c|f)sharp\.(?:isolated\.|)([a-z]+)\./i);
+    return normalizeName(match ? match[1] : id);
+}
+
+/**
+ * Converts ids like "QueueTrigger-JavaScript" to "queue"
+ */
+function normalizeScriptId(id: string): string {
+    const match: RegExpMatchArray | null = id.match(/^([a-z]+)-/i);
+    return normalizeName(match ? match[1] : id);
 }
 
 function normalizeName(name: string): string {
-    return name.toLowerCase().replace(/\s/g, '');
+    return name.toLowerCase().replace(/\s/g, '').replace(/trigger/i, '');
 }

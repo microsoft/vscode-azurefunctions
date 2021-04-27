@@ -90,7 +90,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
         });
 
         if (!isIsolated) {
-            const durableTrigger: string = 'DurableFunctionsOrchestration';
+            const durableTrigger: string = 'Durable Functions Orchestration';
             test(durableTrigger, async () => {
                 await csTester.testCreateFunction(
                     durableTrigger,
@@ -140,6 +140,17 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
                 'Admin'
             );
         });
+
+        if (version !== FuncVersion.v2 && !isIsolated) { // not supported on V2 or Isolated
+            const httpTriggerWithOpenAPI: string = 'HTTP trigger with OpenAPI';
+            test(httpTriggerWithOpenAPI, async () => {
+                await csTester.testCreateFunction(
+                    httpTriggerWithOpenAPI,
+                    'TestCompany.TestFunction',
+                    'Admin'
+                );
+            });
+        }
 
         const queueTrigger: string = 'Azure Queue Storage trigger';
         test(queueTrigger, async () => {

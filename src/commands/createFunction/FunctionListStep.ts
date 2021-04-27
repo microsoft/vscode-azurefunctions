@@ -246,12 +246,14 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
 function sortTemplates(a: IFunctionTemplate, b: IFunctionTemplate, templateFilter: TemplateFilter): number {
     if (templateFilter === TemplateFilter.Verified) {
         function getPriority(id: string): number {
-            if (/\bhttptrigger\b/i.test(id)) {
+            if (/\bhttptrigger\b/i.test(id)) { // Plain http trigger
                 return 1;
-            } else if (/\btimertrigger\b/i.test(id)) {
+            } else if (/\bhttptrigger/i.test(id)) { // Http trigger with any extra pizazz
                 return 2;
-            } else {
+            } else if (/\btimertrigger\b/i.test(id)) {
                 return 3;
+            } else {
+                return 4;
             }
         }
         return getPriority(a.id) - getPriority(b.id);
