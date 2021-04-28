@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { IActionContext, registerEvent } from 'vscode-azureextensionui';
+import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
+import { localSettingsFileName } from '../constants';
+import { getLocalSettingsJson } from '../funcConfig/local.settings';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 
 export interface IRunningFuncTask {
@@ -25,12 +29,12 @@ export function isFuncHostTask(task: vscode.Task): boolean {
 }
 
 export function registerFuncHostTaskEvents(): void {
-    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
+    registerEvent('azureFunctions.onDidStartTask', vscode.tasks.onDidStartTaskProcess, async (context: IActionContext, e: vscode.TaskProcessStartEvent) => {
         context.errorHandling.suppressDisplay = true;
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
-            runningFuncPortMap.set(e.execution.task.scope, getFuncPortFromTask(e.execution.task));
+            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTask(e.execution.task, e.execution.task.scope));
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
@@ -62,14 +66,33 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
     }
 }
 
-export function getFuncPortFromTask(funcTask: vscode.Task | undefined): string {
-    let port: string = defaultFuncPort;
+export async function getFuncPortFromTask(funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
+    // First, check the task itself
     if (funcTask && typeof funcTask.definition.command === 'string') {
         const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
         if (match) {
-            port = match[1];
+            return match[1];
         }
     }
 
-    return port;
+    // Second, check local.settings.json
+    let projectPath: string | undefined;
+    if (typeof projectPathOrTaskScope === 'string') {
+        projectPath = projectPathOrTaskScope;
+    } else if (typeof projectPathOrTaskScope === 'object') {
+        projectPath = await tryGetFunctionProjectRoot(projectPathOrTaskScope.uri.fsPath, true /* suppressPrompt */);
+    }
+
+    if (projectPath) {
+        const localSettings = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+        if (localSettings.Host) {
+            const key = Object.keys(localSettings.Host).find(k => k.toLowerCase() === 'localhttpport');
+            if (key && localSettings.Host[key]) {
+                return localSettings.Host[key];
+            }
+        }
+    }
+
+    // Finally, fall back to the default port
+    return defaultFuncPort;
 }

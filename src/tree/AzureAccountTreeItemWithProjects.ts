@@ -90,7 +90,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         }
 
                         const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === folder && isFuncHostTask(t));
-                        const funcPort = getFuncPortFromTask(funcTask);
+                        const funcPort = await getFuncPortFromTask(funcTask, projectPath);
 
                         const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated, funcPort });
                         this._projectDisposables.push(treeItem);
