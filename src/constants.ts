@@ -16,6 +16,7 @@ export const pythonVenvSetting: string = 'pythonVenv';
 export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
+export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
