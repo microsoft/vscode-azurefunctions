@@ -10,6 +10,7 @@ import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullValue } from '../utils/nonNull';
+import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
 import { IBindingTemplate } from './IBindingTemplate';
@@ -31,7 +32,7 @@ export class CentralTemplateProvider implements Disposable {
     private _disposables: Disposable[] = [];
 
     public constructor(templateSource?: TemplateSource) {
-        this.templateSource = templateSource;
+        this.templateSource = templateSource || getWorkspaceSetting('templateSource');
         this._disposables.push(workspace.onDidChangeConfiguration(e => this.onConfigChanged(e)));
     }
 

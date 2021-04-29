@@ -144,9 +144,14 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         let templateFilter: TemplateFilter = getWorkspaceSetting<TemplateFilter>(templateFilterSetting, context.projectPath) || TemplateFilter.Verified;
 
         while (!context.functionTemplate) {
-            const placeHolder: string = this._isProjectWizard ?
+            let placeHolder: string = this._isProjectWizard ?
                 localize('selectFirstFuncTemplate', "Select a template for your project's first function") :
                 localize('selectFuncTemplate', 'Select a template for your function');
+
+            if (ext.templateProvider.templateSource) {
+                placeHolder += localize('templateSource', ' (Template source: "{0}")', ext.templateProvider.templateSource)
+            }
+
             const result: IFunctionTemplate | TemplatePromptResult = (await context.ui.showQuickPick(this.getPicks(context, templateFilter), { placeHolder })).data;
             if (result === 'skipForNow') {
                 context.telemetry.properties.templateId = 'skipForNow';
