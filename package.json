@@ -1031,6 +1031,20 @@
                         "type": "boolean",
                         "description": "Enable download content and setup project feature using handle uri (experimental)",
                         "default": false
+                    },
+                    "azureFunctions.templateSource": {
+                        "type": "string",
+                        "description": "%azureFunctions.templateSource%",
+                        "enum": [
+                            "",
+                            "Staging",
+                            "Backup"
+                        ],
+                        "enumDescriptions": [
+                            "%azureFunctions.templateSource.default%",
+                            "%azureFunctions.templateSource.staging%",
+                            "%azureFunctions.templateSource.backup%"
+                        ]
                     }
                 }
             }
