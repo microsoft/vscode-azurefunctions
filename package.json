@@ -428,49 +428,49 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureFunctions.startFunctionApp",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "2@1"
-                },
-                {
-                    "command": "azureFunctions.stopFunctionApp",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "2@2"
-                },
-                {
-                    "command": "azureFunctions.restartFunctionApp",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "2@3"
-                },
-                {
-                    "command": "azureFunctions.swapSlot",
-                    "when": "view == azFuncTree && viewItem == azFuncSlot",
-                    "group": "2@4"
-                },
-                {
-                    "command": "azureFunctions.deleteFunctionApp",
-                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
-                    "group": "2@5"
-                },
-                {
-                    "command": "azureFunctions.deleteSlot",
-                    "when": "view == azFuncTree && viewItem == azFuncSlot",
-                    "group": "2@5"
-                },
-                {
                     "command": "azureFunctions.deploy",
                     "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
-                    "group": "3@1"
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.deploySlot",
                     "when": "view == azFuncTree && viewItem == azFuncSlot",
-                    "group": "3@1"
+                    "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "2@2"
+                },
+                {
+                    "command": "azureFunctions.startFunctionApp",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "3@1"
+                },
+                {
+                    "command": "azureFunctions.stopFunctionApp",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "3@2"
+                },
+                {
+                    "command": "azureFunctions.restartFunctionApp",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "3@3"
+                },
+                {
+                    "command": "azureFunctions.swapSlot",
+                    "when": "view == azFuncTree && viewItem == azFuncSlot",
+                    "group": "3@4"
+                },
+                {
+                    "command": "azureFunctions.deleteFunctionApp",
+                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
+                    "group": "3@5"
+                },
+                {
+                    "command": "azureFunctions.deleteSlot",
+                    "when": "view == azFuncTree && viewItem == azFuncSlot",
+                    "group": "3@5"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
