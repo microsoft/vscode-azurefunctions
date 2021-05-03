@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { handleFailedPreDeployTask, IPreDeployTaskResult, tryRunPreDeployTask } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
+import { handleFailedPreDeployTask, IDeployContext, IPreDeployTaskResult, tryRunPreDeployTask } from 'vscode-azureappservice';
+import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
 import { buildNativeDeps, packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -13,7 +13,7 @@ import { localize } from '../../localize';
 import { openUrl } from '../../utils/openUrl';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 
-export async function runPreDeployTask(context: IActionContext, deployFsPath: string, scmType: string | undefined): Promise<void> {
+export async function runPreDeployTask(context: IDeployContext, deployFsPath: string, scmType: string | undefined): Promise<void> {
     const preDeployTask: string | undefined = getWorkspaceSetting(preDeployTaskSetting, deployFsPath);
     if (preDeployTask && preDeployTask.startsWith('func:')) {
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run preDeployTask "{0}".', preDeployTask);
@@ -36,7 +36,7 @@ export async function runPreDeployTask(context: IActionContext, deployFsPath: st
     }
 }
 
-async function promptToBuildNativeDeps(context: IActionContext, deployFsPath: string, scmType: string | undefined): Promise<IPreDeployTaskResult> {
+async function promptToBuildNativeDeps(context: IDeployContext, deployFsPath: string, scmType: string | undefined): Promise<IPreDeployTaskResult> {
     const message: string = localize('funcPackFailed', 'Failed to package your project. Use a Docker container to build incompatible dependencies?');
     const result: vscode.MessageItem | undefined = await vscode.window.showErrorMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
     if (result === DialogResponses.yes) {

@@ -7,7 +7,7 @@ import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { deploySubpathSetting, ProjectLanguage, ScmType } from '../../constants';
+import { deploySubpathSetting, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
@@ -49,10 +49,24 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    await validateRemoteBuild(context, node.root.client, context.workspaceFolder.uri.fsPath, language);
-
     const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
-    const isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig !== ScmType.GitHub;
+    const isConsumption: boolean = await node.root.client.getIsConsumption();
+    let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
+    if (!isZipDeploy && node.root.client.isLinux && isConsumption) {
+        ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: node.root.client.fullName });
+        isZipDeploy = true;
+        context.deployMethod = 'zip';
+    }
+
+    const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
+    actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
+    if (doRemoteBuild) {
+        await validateRemoteBuild(context, node.root.client, context.workspaceFolder.uri.fsPath, language);
+    }
+
+    if (isZipDeploy && node.root.client.isLinux && isConsumption && !doRemoteBuild) {
+        context.deployMethod = 'storage';
+    }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
         await showDeployConfirmation(context, node.root.client, 'azureFunctions.deploy');
@@ -68,7 +82,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
     }
 
-    await verifyAppSettings(context, node, version, language);
+    if (isZipDeploy) {
+        await verifyAppSettings(context, node, version, language, { doRemoteBuild, isConsumption });
+    }
 
     await node.runWithTemporaryDescription(
         context,

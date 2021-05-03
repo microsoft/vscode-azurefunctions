@@ -14,17 +14,24 @@ import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { getFunctionsWorkerRuntime, isKnownWorkerRuntime } from '../../vsCodeConfig/settings';
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage): Promise<void> {
+/**
+ * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
+ */
+type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
+
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
         await verifyVersionAndLanguage(context, node.root.client.fullName, version, language, appSettings.properties);
 
         let updateAppSettings: boolean = false;
         if (node.root.client.isLinux) {
-            const isConsumption: boolean = await node.getIsConsumption();
-            if (isConsumption) {
+            if (bools.isConsumption) {
                 updateAppSettings = await verifyWebContentSettings(context, appSettings.properties);
             }
+
+            const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
+            updateAppSettings = updateAppSettings || remoteBuildSettingsChanged;
         } else {
             updateAppSettings = verifyRunFromPackage(context, node.root.client, appSettings.properties);
         }
@@ -91,3 +98,45 @@ async function verifyWebContentSettings(context: IActionContext, remotePropertie
     context.telemetry.properties.webContentSettingsRemoved = String(shouldRemoveSettings);
     return shouldRemoveSettings;
 }
+
+function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {
+    let hasChanged: boolean = false;
+
+    const keysToRemove: string[] = [];
+
+    if (bools.doRemoteBuild) {
+        keysToRemove.push(
+            'WEBSITE_RUN_FROM_ZIP',
+            'WEBSITE_RUN_FROM_PACKAGE'
+        );
+    }
+
+    if (!bools.isConsumption) {
+        const dedicatedBuildSettings: [string, string][] = [
+            ['ENABLE_ORYX_BUILD', 'true'],
+            ['SCM_DO_BUILD_DURING_DEPLOYMENT', '1'],
+            ['BUILD_FLAGS', 'UseExpressBuild'],
+            ['XDG_CACHE_HOME', '/tmp/.cache']
+        ];
+
+        for (const [key, value] of dedicatedBuildSettings) {
+            if (!bools.doRemoteBuild) {
+                keysToRemove.push(key);
+            } else if (remoteProperties[key] !== value) {
+                remoteProperties[key] = value;
+                hasChanged = true;
+            }
+        }
+    }
+
+    for (const key of keysToRemove) {
+        if (remoteProperties[key]) {
+            delete remoteProperties[key];
+            hasChanged = true;
+        }
+    }
+
+    context.telemetry.properties.linuxBuildSettingsChanged = String(hasChanged);
+    return hasChanged;
+}
+
