@@ -10,7 +10,7 @@ import { IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vsco
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
-import { getFuncPortFromTask, IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
+import { getFuncPortFromTaskOrProject, IRunningFuncTask, isFuncHostTask, runningFuncTaskMap, stopFuncTaskIfRunning } from '../funcCoreTools/funcHostTask';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { requestUtils } from '../utils/requestUtils';
@@ -83,7 +83,8 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
-        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${getFuncPortFromTask(funcTask)}/admin/host/status`, method: 'GET' };
+        const funcPort: string = await getFuncPortFromTaskOrProject(funcTask, workspaceFolder);
+        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${funcPort}/admin/host/status`, method: 'GET' };
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {

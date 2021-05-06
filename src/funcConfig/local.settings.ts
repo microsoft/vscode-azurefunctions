@@ -16,6 +16,7 @@ import { parseJson } from '../utils/parseJson';
 export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
     Values?: { [key: string]: string };
+    Host?: { [key: string]: string };
     ConnectionStrings?: { [key: string]: string };
 }
 
