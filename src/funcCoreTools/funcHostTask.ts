@@ -34,7 +34,7 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
-            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTask(e.execution.task, e.execution.task.scope));
+            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTaskOrProject(e.execution.task, e.execution.task.scope));
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
@@ -66,7 +66,7 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
     }
 }
 
-export async function getFuncPortFromTask(funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
+export async function getFuncPortFromTaskOrProject(funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
     // First, check the task itself
     if (funcTask && typeof funcTask.definition.command === 'string') {
         const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);

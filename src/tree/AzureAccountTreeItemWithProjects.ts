@@ -10,7 +10,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
 import { funcVersionSetting, hostFileName, pomXmlFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
-import { getFuncPortFromTask, isFuncHostTask } from '../funcCoreTools/funcHostTask';
+import { getFuncPortFromTaskOrProject, isFuncHostTask } from '../funcCoreTools/funcHostTask';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
@@ -90,7 +90,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         }
 
                         const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === folder && isFuncHostTask(t));
-                        const funcPort = await getFuncPortFromTask(funcTask, projectPath);
+                        const funcPort = await getFuncPortFromTaskOrProject(funcTask, projectPath);
 
                         const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated, funcPort });
                         this._projectDisposables.push(treeItem);
