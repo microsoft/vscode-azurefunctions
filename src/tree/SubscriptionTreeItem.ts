@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, IAppServiceWizardContext, SiteClient, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, CustomLocationListStep, IAppServiceWizardContext, SiteClient, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
-import { funcVersionSetting, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
@@ -91,7 +91,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
         promptSteps.push(new SiteNameStep());
         promptSteps.push(new FunctionAppStackStep());
-        promptSteps.push(new FunctionAppHostingPlanStep());
 
         const storageAccountCreateOptions: INewStorageAccountDefaults = {
             kind: StorageAccountKind.Storage,
@@ -104,12 +103,15 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         if (!context.advancedCreation) {
+            LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
             wizardContext.stackFilter = getFunctionsWorkerRuntime(language);
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
             executeSteps.push(new AppInsightsCreateStep());
         } else {
+            CustomLocationListStep.addStep(wizardContext, promptSteps);
+            promptSteps.push(new FunctionAppHostingPlanStep());
             promptSteps.push(new ResourceGroupListStep());
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
@@ -128,9 +130,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ));
             promptSteps.push(new AppInsightsListStep());
         }
-        LocationListStep.addStep(wizardContext, promptSteps);
 
-        executeSteps.push(new VerifyProvidersStep(['Microsoft.Web', 'Microsoft.Storage', 'Microsoft.Insights']));
+        const storageProvider = 'Microsoft.Storage';
+        LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
+        executeSteps.push(new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights']));
         executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');

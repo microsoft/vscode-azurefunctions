@@ -5,9 +5,9 @@
 
 import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
-import { SiteClient, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardExecuteStep, parseError } from 'vscode-azureextensionui';
-import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey } from '../../constants';
+import { IAppServiceWizardContext, SiteClient, WebsiteOS } from 'vscode-azureappservice';
+import { AzureWizardExecuteStep, LocationListStep, parseError } from 'vscode-azureextensionui';
+import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
@@ -40,12 +40,12 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
-        const locationName: string = nonNullProp(nonNullProp(context, 'location'), 'name');
+        const locationName: string = (await LocationListStep.getLocation(context, webProvider)).name;
 
         const client: WebSiteManagementClient = await createWebSiteClient(context);
         context.site = await client.webApps.createOrUpdate(rgName, siteName, {
             name: siteName,
-            kind: context.newSiteKind,
+            kind: getSiteKind(context),
             location: locationName,
             serverFarmId: context.plan?.id,
             clientAffinityEnabled: false,
@@ -146,4 +146,12 @@ function getNewFileShareName(siteName: string): string {
     const randomLetters: number = 6;
     const maxFileShareNameLength: number = 63;
     return siteName.toLowerCase().substr(0, maxFileShareNameLength - randomLetters) + getRandomHexString(randomLetters);
+}
+
+function getSiteKind(context: IAppServiceWizardContext): string {
+    let kind: string = context.newSiteKind;
+    if (context.customLocation) {
+        kind += ',kubernetes';
+    }
+    return kind;
 }
