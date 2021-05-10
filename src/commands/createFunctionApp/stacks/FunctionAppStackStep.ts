@@ -12,7 +12,7 @@ import { getStackPicks } from './getStackPicks';
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
-        context.newSiteStack = (await context.ui.showQuickPick(getStackPicks(context), { placeHolder })).data;
+        context.newSiteStack = (await context.ui.showQuickPick(getStackPicks(context), { placeHolder, enableGrouping: true })).data;
 
         if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
             context.newSiteOS = WebsiteOS.windows;

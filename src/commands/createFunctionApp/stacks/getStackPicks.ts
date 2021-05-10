@@ -34,6 +34,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                 picks.push({
                     label: minorVersion.displayText,
                     description,
+                    group: stack.displayText,
                     data: { stack, majorVersion, minorVersion }
                 });
             }

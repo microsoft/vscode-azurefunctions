@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as url from 'url';
-import { AzExtTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
@@ -101,15 +101,15 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
 
     public abstract getKey(): Promise<string | undefined>;
 
-    public async initAsync(): Promise<void> {
+    public async initAsync(context: IActionContext): Promise<void> {
         if (this.isHttpTrigger) {
-            await this.refreshTriggerUrl();
+            await this.refreshTriggerUrl(context);
         }
 
         await this.refreshDisabledState();
     }
 
-    private async refreshTriggerUrl(): Promise<void> {
+    private async refreshTriggerUrl(context: IActionContext): Promise<void> {
         const hostUrl = new url.URL(this.parent.parent.hostUrl);
         let triggerUrl: url.URL;
         if (this._func?.invokeUrlTemplate) {
@@ -118,7 +118,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
         } else {
             triggerUrl = hostUrl;
             const route: string = (this._config.triggerBinding && this._config.triggerBinding.route) || this.name;
-            const hostJson: IParsedHostJson = await this.parent.parent.getHostJson();
+            const hostJson: IParsedHostJson = await this.parent.parent.getHostJson(context);
             triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
         }
 

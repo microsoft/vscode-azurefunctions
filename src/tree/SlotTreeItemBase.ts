@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureParentTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { runFromPackageKey } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -112,14 +112,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return result;
     }
 
-    public async getHostJson(): Promise<IParsedHostJson> {
+    public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
         let result: IParsedHostJson | undefined = this._cachedHostJson;
         if (!result) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let data: any;
             try {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                data = JSON.parse((await getFile(this.client, 'site/wwwroot/host.json')).data);
+                data = JSON.parse((await getFile(context, this.client, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
             }

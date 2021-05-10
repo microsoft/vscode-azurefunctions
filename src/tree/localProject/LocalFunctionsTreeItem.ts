@@ -31,9 +31,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (this.parent.isIsolated) {
-            return await this.getChildrenForIsolatedProject();
+            return await this.getChildrenForIsolatedProject(context);
         } else {
             const functions: string[] = await getFunctionFolders(this.parent.effectiveProjectPath);
             const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
@@ -42,7 +42,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
                 async func => {
                     const functionJsonPath: string = path.join(this.parent.effectiveProjectPath, func, functionJsonFileName);
                     const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
-                    return LocalFunctionTreeItem.create(this, func, config, functionJsonPath, undefined);
+                    return LocalFunctionTreeItem.create(context, this, func, config, functionJsonPath, undefined);
                 },
                 (func: string) => func
             );
@@ -76,7 +76,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     /**
      * .NET Isolated projects don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
      */
-    private async getChildrenForIsolatedProject(): Promise<AzExtTreeItem[]> {
+    private async getChildrenForIsolatedProject(context: IActionContext): Promise<AzExtTreeItem[]> {
         if (runningFuncTaskMap.has(this.parent.workspaceFolder)) {
             const functions = await requestUtils.sendRequestWithExtTimeout({
                 url: `${this.parent.hostUrl}/admin/functions`,
@@ -87,7 +87,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
                 'azFuncInvalidLocalFunction',
                 async func => {
                     func = requestUtils.convertToAzureSdkObject(func);
-                    return LocalFunctionTreeItem.create(this, nonNullProp(func, 'name'), func.config, undefined, func);
+                    return LocalFunctionTreeItem.create(context, this, nonNullProp(func, 'name'), func.config, undefined, func);
                 },
                 func => func.name
             );

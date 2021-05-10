@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
@@ -17,9 +18,9 @@ export class LocalFunctionTreeItem extends FunctionTreeItemBase {
         this.functionJsonPath = functionJsonPath;
     }
 
-    public static async create(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string | undefined, func: WebSiteManagementModels.FunctionEnvelope | undefined): Promise<LocalFunctionTreeItem> {
+    public static async create(context: IActionContext, parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string | undefined, func: WebSiteManagementModels.FunctionEnvelope | undefined): Promise<LocalFunctionTreeItem> {
         const ti: LocalFunctionTreeItem = new LocalFunctionTreeItem(parent, name, config, functionJsonPath, func);
-        await ti.initAsync();
+        await ti.initAsync(context);
         return ti;
     }
 

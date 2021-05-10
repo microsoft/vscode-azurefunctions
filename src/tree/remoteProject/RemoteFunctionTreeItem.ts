@@ -21,11 +21,11 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         super(parent, config, name, func);
     }
 
-    public static async create(parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
+    public static async create(context: IActionContext, parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
         const config: ParsedFunctionJson = new ParsedFunctionJson(func.config);
         const name: string = getFunctionNameFromId(nonNullProp(func, 'id'));
         const ti: RemoteFunctionTreeItem = new RemoteFunctionTreeItem(parent, config, name, func);
-        await ti.initAsync();
+        await ti.initAsync(context);
         return ti;
     }
 
