@@ -110,9 +110,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
             executeSteps.push(new AppInsightsCreateStep());
         } else {
+            promptSteps.push(new ResourceGroupListStep());
             CustomLocationListStep.addStep(wizardContext, promptSteps);
             promptSteps.push(new FunctionAppHostingPlanStep());
-            promptSteps.push(new ResourceGroupListStep());
             promptSteps.push(new StorageAccountListStep(
                 storageAccountCreateOptions,
                 {

@@ -21,6 +21,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     let rgName: string;
     let saName: string;
     let aiName: string;
+    let location: string;
 
     suiteSetup(async function (this: Mocha.Context): Promise<void> {
         if (!longRunningTestsEnabled) {
@@ -36,10 +37,11 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         resourceGroupsToDelete.push(rgName);
         saName = getRandomHexString().toLowerCase(); // storage account must have lower case name
         aiName = getRandomHexString();
+        location = getRotatingLocation();
     });
 
     test('Create - Advanced', async () => {
-        const testInputs: (string | RegExp)[] = [appName, /\.net/i, 'Windows', 'Consumption', '$(plus) Create new resource group', rgName, '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName, getRotatingLocation()];
+        const testInputs: (string | RegExp)[] = [appName, /\.net/i, 'Windows', '$(plus) Create new resource group', rgName, location, 'Consumption', '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
@@ -48,7 +50,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
-        const testInputs: (string | RegExp)[] = [app2Name, /\.net/i, 'Windows', 'Consumption', rgName, saName, aiName];
+        const testInputs: (string | RegExp)[] = [app2Name, /\.net/i, 'Windows', rgName, location, 'Consumption', saName, aiName];
         await testUserInput.runWithInputs(testInputs, async () => {
             await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
         });
