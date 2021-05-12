@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementModels as SiteModels } from '@azure/arm-appservice';
+import { WebSiteManagementClient, WebSiteManagementMappers, WebSiteManagementModels as SiteModels, WebSiteManagementModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
-import { IAppServiceWizardContext, SiteClient, WebsiteOS } from 'vscode-azureappservice';
+import { CustomLocation, IAppServiceWizardContext, SiteClient, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, LocationListStep, parseError } from 'vscode-azureextensionui';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -40,18 +40,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const siteName: string = nonNullProp(context, 'newSiteName');
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
-        const locationName: string = (await LocationListStep.getLocation(context, webProvider)).name;
 
         const client: WebSiteManagementClient = await createWebSiteClient(context);
-        context.site = await client.webApps.createOrUpdate(rgName, siteName, {
-            name: siteName,
-            kind: getSiteKind(context),
-            location: locationName,
-            serverFarmId: context.plan?.id,
-            clientAffinityEnabled: false,
-            siteConfig: await this.getNewSiteConfig(context, stack),
-            reserved: os === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
-        });
+        context.site = await client.webApps.createOrUpdate(rgName, siteName, await this.getNewSite(context, stack));
 
         context.siteClient = new SiteClient(context.site, context);
         if (!context.siteClient.isLinux) { // not supported on linux
@@ -68,6 +59,55 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {
         return !context.site;
+    }
+
+    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<WebSiteManagementModels.Site> {
+        const location = await LocationListStep.getLocation(context, webProvider);
+        const site: WebSiteManagementModels.Site = {
+            name: context.newSiteName,
+            kind: getSiteKind(context),
+            location: nonNullProp(location, 'name'),
+            serverFarmId: context.plan?.id,
+            clientAffinityEnabled: false,
+            siteConfig: await this.getNewSiteConfig(context, stack),
+            reserved: context.newSiteOS === WebsiteOS.linux  // The secret property - must be set to true to make it a Linux plan. Confirmed by the team who owns this API.
+        };
+
+        if (context.customLocation) {
+            this.addCustomLocationProperties(site, context.customLocation);
+        }
+
+        return site;
+    }
+
+    /**
+     * Has a few temporary workarounds so that the sdk allows some newer properties on the plan
+     */
+    private addCustomLocationProperties(site: WebSiteManagementModels.Site, customLocation: CustomLocation): void {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        WebSiteManagementMappers.Site.type.modelProperties!.extendedLocation = {
+            serializedName: 'extendedLocation',
+            type: {
+                name: "Composite",
+                modelProperties: {
+                    name: {
+                        serializedName: "name",
+                        type: {
+                            name: "String"
+                        }
+                    },
+                    type: {
+                        serializedName: "type",
+                        type: {
+                            name: "String"
+                        }
+                    }
+                }
+            }
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        (<any>site).extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
 
     private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteModels.SiteConfig> {
@@ -150,6 +190,9 @@ function getNewFileShareName(siteName: string): string {
 
 function getSiteKind(context: IAppServiceWizardContext): string {
     let kind: string = context.newSiteKind;
+    if (context.newSiteOS === 'linux') {
+        kind += ',linux';
+    }
     if (context.customLocation) {
         kind += ',kubernetes';
     }
