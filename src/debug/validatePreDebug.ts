@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as azureStorage from "azure-storage";
+import { BlobServiceClient } from '@azure/storage-blob';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -138,13 +138,8 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
     const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(projectPath);
     if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localEmulatorConnectionString.toLowerCase()) {
         try {
-            const client: azureStorage.BlobService = azureStorage.createBlobService(azureWebJobsStorage);
-            await new Promise((resolve, reject): void => {
-                // Checking against a common container for functions, but doesn't really matter what call we make here
-                client.doesContainerExist('azure-webjob-hosts', (err: Error | undefined) => {
-                    err ? reject(err) : resolve();
-                });
-            });
+            const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage);
+            await client.getProperties();
         } catch (error) {
             const message: string = localize('failedToConnectEmulator', 'Failed to verify "{0}" connection specified in "{1}". Is the local emulator installed and running?', azureWebJobsStorageKey, localSettingsFileName);
             const learnMoreLink: string = process.platform === 'win32' ? 'https://aka.ms/AA4ym56' : 'https://aka.ms/AA4yef8';
