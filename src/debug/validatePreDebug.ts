@@ -138,7 +138,7 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
     const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(projectPath);
     if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localEmulatorConnectionString.toLowerCase()) {
         try {
-            const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage);
+            const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
         } catch (error) {
             const message: string = localize('failedToConnectEmulator', 'Failed to verify "{0}" connection specified in "{1}". Is the local emulator installed and running?', azureWebJobsStorageKey, localSettingsFileName);
