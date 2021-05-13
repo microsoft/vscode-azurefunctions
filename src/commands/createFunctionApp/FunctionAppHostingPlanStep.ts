@@ -6,6 +6,7 @@
 import { AppServicePlanListStep, IAppServiceWizardContext, setLocationsTask } from 'vscode-azureappservice';
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
+import { getRandomHexString } from '../../utils/fs';
 
 export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
     public async prompt(context: IAppServiceWizardContext): Promise<void> {
@@ -18,18 +19,21 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
 
         [context.useConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
         await setLocationsTask(context);
+        if (context.useConsumptionPlan) {
+            setConsumptionPlanProperties(context);
+        }
     }
 
     public shouldPrompt(context: IAppServiceWizardContext): boolean {
         return context.useConsumptionPlan === undefined;
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    public async getSubWizard(context: IAppServiceWizardContext): Promise<IWizardOptions<IAppServiceWizardContext> | undefined> {
-        if (!context.useConsumptionPlan) {
-            return { promptSteps: [new AppServicePlanListStep()] };
-        } else {
-            return undefined;
-        }
+    public async getSubWizard(_context: IAppServiceWizardContext): Promise<IWizardOptions<IAppServiceWizardContext> | undefined> {
+        return { promptSteps: [new AppServicePlanListStep()] };
     }
+}
+
+export function setConsumptionPlanProperties(context: IAppServiceWizardContext): void {
+    context.newPlanName = `ASP-${context.newSiteName}-${getRandomHexString(4)}`;
+    context.newPlanSku = { name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 };
 }
