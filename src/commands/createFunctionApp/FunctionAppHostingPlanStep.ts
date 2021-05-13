@@ -7,6 +7,7 @@ import { AppServicePlanListStep, IAppServiceWizardContext, setLocationsTask } fr
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
+import { nonNullProp } from '../../utils/nonNull';
 
 export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
     public async prompt(context: IAppServiceWizardContext): Promise<void> {
@@ -34,6 +35,6 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
 }
 
 export function setConsumptionPlanProperties(context: IAppServiceWizardContext): void {
-    context.newPlanName = `ASP-${context.newSiteName}-${getRandomHexString(4)}`;
+    context.newPlanName = `ASP-${nonNullProp(context, 'newSiteName')}-${getRandomHexString(4)}`;
     context.newPlanSku = { name: 'Y1', tier: 'Dynamic', size: 'Y1', family: 'Y', capacity: 0 };
 }
