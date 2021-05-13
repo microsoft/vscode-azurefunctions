@@ -6,7 +6,7 @@
 import { WebSiteManagementClient, WebSiteManagementMappers, WebSiteManagementModels as SiteModels, WebSiteManagementModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
 import { CustomLocation, IAppServiceWizardContext, SiteClient, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardExecuteStep, LocationListStep, parseError } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, IActionContext, LocationListStep, parseError } from 'vscode-azureextensionui';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
@@ -14,6 +14,7 @@ import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getStorageConnectionString } from '../../utils/azure';
 import { createWebSiteClient } from '../../utils/azureClients';
+import { delay } from '../../utils/delay';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
 import { enableFileLogging } from '../logstream/enableFileLogging';
@@ -53,6 +54,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
                 context.telemetry.properties.fileLoggingError = parseError(error).message;
             }
         }
+
+        await verifyPlanExists(context, context.siteClient);
 
         showSiteCreated(context.siteClient, context);
     }
@@ -197,4 +200,23 @@ function getSiteKind(context: IAppServiceWizardContext): string {
         kind += ',kubernetes';
     }
     return kind;
+}
+
+/**
+ * Often times the app has completed creating, but ARM still returns "undefined" for the plan
+ * This is likely because we don't always create the plan ourselves, and it may not have completely finished creating in Azure yet
+ * Just to be safe, we'll wait for the plan to exist before we say the app has completed since the plan's information can affect subsequent behavior (like deploy)
+ */
+async function verifyPlanExists(context: IActionContext, siteClient: SiteClient): Promise<void> {
+    const startTime = Date.now();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        const plan = await siteClient.getAppServicePlan();
+        if (plan || Date.now() > startTime + 60 * 1000) {
+            context.telemetry.measurements.planExistsDuration = Math.round((Date.now() - startTime) / 1000);
+            return;
+        } else {
+            await delay(5 * 1000);
+        }
+    }
 }
