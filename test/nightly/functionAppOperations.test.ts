@@ -104,14 +104,14 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
     });
 
     test('Delete', async () => {
-        await testUserInput.runWithInputs([appName, DialogResponses.deleteResponse.title], async () => {
+        await testUserInput.runWithInputs([appName, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
         const site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         assert.equal(site, undefined);
     });
 
-    test('Delete - Last App on Plan', async () => {
+    test('Delete - Existing RG/SA/AI', async () => {
         await testUserInput.runWithInputs([app2Name, DialogResponses.deleteResponse.title, DialogResponses.yes.title], async () => {
             await vscode.commands.executeCommand('azureFunctions.deleteFunctionApp');
         });
