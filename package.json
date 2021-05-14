@@ -1122,7 +1122,7 @@
         "portfinder": "^1.0.23",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.80.2",
+        "vscode-azureappservice": "^0.80.3",
         "vscode-azureextensionui": "^0.43.4",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
