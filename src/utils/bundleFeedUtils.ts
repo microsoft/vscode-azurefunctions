@@ -90,10 +90,12 @@ export namespace bundleFeedUtils {
         let url: string;
         if (!envVarUri && bundleId === defaultBundleId && ext.templateProvider.templateSource !== TemplateSource.Staging) {
             url = 'https://aka.ms/AA66i2x';
+            url = 'https://functionscdn.azureedge.net/public/cli-feed-v4.json';
         } else {
             const suffix: string = ext.templateProvider.templateSource === TemplateSource.Staging ? 'staging' : '';
             const baseUrl: string = envVarUri || `https://functionscdn${suffix}.azureedge.net/public`;
             url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
+            url = 'https://functionscdn.azureedge.net/public/cli-feed-v4.json';
         }
 
         return feedUtils.getJsonFeed(url);
