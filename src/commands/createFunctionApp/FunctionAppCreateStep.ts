@@ -84,6 +84,8 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
      * Has a few temporary workarounds so that the sdk allows some newer properties on the plan
      */
     private addCustomLocationProperties(site: WebSiteManagementModels.Site, customLocation: CustomLocation): void {
+        nonNullProp(site, 'siteConfig').alwaysOn = true;
+
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         WebSiteManagementMappers.Site.type.modelProperties!.extendedLocation = {
             serializedName: 'extendedLocation',
