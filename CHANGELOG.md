@@ -2,7 +2,7 @@
 
 ## 1.4.0 - 2021-05-25
 ### Added
-- Support Azure Functions on Kubernetes via Azure Arc (Preview)
+- Support Azure Functions on Kubernetes with Azure Arc (Preview)
 
 ### Changed
 - Minimum version of VS Code is now 1.53.0
