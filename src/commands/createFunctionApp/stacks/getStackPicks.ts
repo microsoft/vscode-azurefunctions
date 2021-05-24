@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
-import { createGenericClient, IAzureQuickPickItem } from 'vscode-azureextensionui';
+import { createGenericClient, IAzureQuickPickItem, parseError } from 'vscode-azureextensionui';
 import { hiddenStacksSetting } from '../../../constants';
 import { localize } from '../../../localize';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { backupStacks } from './backupStacks';
 import { AppStackMinorVersion } from './models/AppStackModel';
 import { FunctionAppRuntimes, FunctionAppStack } from './models/FunctionAppStackModel';
 
@@ -95,16 +96,26 @@ function getPriority(ss: FunctionAppRuntimes): number {
 type StacksArmResponse = { value: { properties: FunctionAppStack }[] };
 async function getStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
     if (!context._stacks) {
-        const client: ServiceClient = await createGenericClient(context);
-        const result: HttpOperationResponse = await client.sendRequest({
-            method: 'GET',
-            pathTemplate: '/providers/Microsoft.Web/functionappstacks',
-            queryParameters: {
-                'api-version': '2020-10-01',
-                removeDeprecatedStacks: 'true'
-            }
-        });
-        context._stacks = (<StacksArmResponse>result.parsedBody).value.map(d => d.properties);
+        let stacksArmResponse: StacksArmResponse;
+        try {
+            const client: ServiceClient = await createGenericClient(context);
+            const result: HttpOperationResponse = await client.sendRequest({
+                method: 'GET',
+                pathTemplate: '/providers/Microsoft.Web/functionappstacks',
+                queryParameters: {
+                    'api-version': '2020-10-01',
+                    removeDeprecatedStacks: 'true'
+                }
+            });
+            stacksArmResponse = <StacksArmResponse>result.parsedBody;
+        } catch (error) {
+            // Some environments (like Azure Germany/Mooncake) don't support the stacks ARM API yet
+            // And since the stacks don't change _that_ often, we'll just use a backup hard-coded value
+            stacksArmResponse = <StacksArmResponse>JSON.parse(backupStacks);
+            context.telemetry.properties.getStacksError = parseError(error).message;
+        }
+
+        context._stacks = stacksArmResponse.value.map(d => d.properties);
 
         removeHiddenStacks(context._stacks);
     }
