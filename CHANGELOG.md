@@ -1,9 +1,15 @@
 # Change Log
 
-## Unreleased
+## 1.4.0 - 2021-05-25
+### Added
+- Support Azure Functions on Kubernetes with Azure Arc (Preview)
+
 ### Changed
 - Minimum version of VS Code is now 1.53.0
 - Icons updated to match VS Code's theme. Install new product icon themes [here](https://marketplace.visualstudio.com/search?term=tag%3Aproduct-icon-theme&target=VSCode)
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.4.0%22+is%3Aclosed)
 
 ## 1.3.0 - 2021-03-10
 ### Added
