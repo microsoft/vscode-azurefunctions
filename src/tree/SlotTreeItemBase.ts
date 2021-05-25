@@ -10,6 +10,7 @@ import { runFromPackageKey } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { envUtils } from '../utils/envUtils';
+import { nonNullValue } from '../utils/nonNull';
 import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
@@ -22,13 +23,12 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
-    public readonly site: WebSiteManagementModels.Site;
+    public site: WebSiteManagementModels.Site;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
 
     private readonly _root: ISiteTreeRoot;
-    private _state?: string;
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
     private readonly _logFilesTreeItem: LogFilesTreeItem;
@@ -41,7 +41,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         super(parent);
         this.site = site;
         this._root = Object.assign({}, parent.root, { client });
-        this._state = client.initialState;
         this.appSettingsTreeItem = new AppSettingsTreeItem(this, client);
         this._siteFilesTreeItem = new SiteFilesTreeItem(this, client, true);
         this._logFilesTreeItem = new LogFilesTreeItem(this, client);
@@ -69,11 +68,15 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     public get description(): string | undefined {
-        return this._state && this._state.toLowerCase() !== 'running' ? this._state : undefined;
+        return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
     }
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath(this.contextValue);
+    }
+
+    private get _state(): string | undefined {
+        return this.site.state;
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -88,11 +91,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this._cachedHostJson = undefined;
         this._cachedIsConsumption = undefined;
 
-        try {
-            this._state = await this.root.client.getState();
-        } catch {
-            this._state = 'Unknown';
-        }
+        this.site = nonNullValue(await this.root.client.getSite(), 'site');
     }
 
     public async getVersion(): Promise<FuncVersion> {
