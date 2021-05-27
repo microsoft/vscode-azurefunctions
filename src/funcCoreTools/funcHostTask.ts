@@ -67,30 +67,34 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
 }
 
 export async function getFuncPortFromTaskOrProject(funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
-    // First, check the task itself
-    if (funcTask && typeof funcTask.definition.command === 'string') {
-        const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
-        if (match) {
-            return match[1];
-        }
-    }
-
-    // Second, check local.settings.json
-    let projectPath: string | undefined;
-    if (typeof projectPathOrTaskScope === 'string') {
-        projectPath = projectPathOrTaskScope;
-    } else if (typeof projectPathOrTaskScope === 'object') {
-        projectPath = await tryGetFunctionProjectRoot(projectPathOrTaskScope.uri.fsPath, true /* suppressPrompt */);
-    }
-
-    if (projectPath) {
-        const localSettings = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
-        if (localSettings.Host) {
-            const key = Object.keys(localSettings.Host).find(k => k.toLowerCase() === 'localhttpport');
-            if (key && localSettings.Host[key]) {
-                return localSettings.Host[key];
+    try {
+        // First, check the task itself
+        if (funcTask && typeof funcTask.definition.command === 'string') {
+            const match = funcTask.definition.command.match(/\s+(?:"|'|)(?:-p|--port)(?:"|'|)\s+(?:"|'|)([0-9]+)/i);
+            if (match) {
+                return match[1];
             }
         }
+
+        // Second, check local.settings.json
+        let projectPath: string | undefined;
+        if (typeof projectPathOrTaskScope === 'string') {
+            projectPath = projectPathOrTaskScope;
+        } else if (typeof projectPathOrTaskScope === 'object') {
+            projectPath = await tryGetFunctionProjectRoot(projectPathOrTaskScope.uri.fsPath, true /* suppressPrompt */);
+        }
+
+        if (projectPath) {
+            const localSettings = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+            if (localSettings.Host) {
+                const key = Object.keys(localSettings.Host).find(k => k.toLowerCase() === 'localhttpport');
+                if (key && localSettings.Host[key]) {
+                    return localSettings.Host[key];
+                }
+            }
+        }
+    } catch {
+        // ignore and use default
     }
 
     // Finally, fall back to the default port

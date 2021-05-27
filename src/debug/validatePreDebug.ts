@@ -56,10 +56,13 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
             }
         }
     } catch (error) {
-        if (parseError(error).isUserCancelledError) {
+        const pe = parseError(error);
+        if (pe.isUserCancelledError) {
             shouldContinue = false;
         } else {
-            throw error;
+            // Don't block debugging for "unexpected" errors. The func cli might still work
+            shouldContinue = true;
+            context.telemetry.properties.preDebugValidateError = pe.message;
         }
     }
 
