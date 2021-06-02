@@ -63,6 +63,7 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
         // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
         // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
         process.kill(runningFuncTask.processId);
+        runningFuncTaskMap.delete(workspaceFolder);
     }
 }
 
