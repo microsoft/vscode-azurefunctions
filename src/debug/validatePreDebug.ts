@@ -13,7 +13,6 @@ import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJ
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, ProjectLanguage, projectLanguageSetting, workerRuntimeKey } from "../constants";
-import { ext } from "../extensionVariables";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
@@ -35,24 +34,24 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
     try {
         context.telemetry.properties.lastValidateStep = 'funcInstalled';
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to debug your local functions.');
-        shouldContinue = await validateFuncCoreToolsInstalled(message, workspace.uri.fsPath);
+        shouldContinue = await validateFuncCoreToolsInstalled(context, message, workspace.uri.fsPath);
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(workspace.uri.fsPath, true /* suppressPrompt */);
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspace.uri.fsPath, true /* suppressPrompt */);
 
             if (projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
                 context.telemetry.properties.projectLanguage = projectLanguage;
 
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
-                await validateWorkerRuntime(projectLanguage, projectPath);
+                await validateWorkerRuntime(context, projectLanguage, projectPath);
 
                 context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
                 await validateAzureWebJobsStorage(context, projectLanguage, projectPath);
 
                 context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                shouldContinue = await validateEmulatorIsRunning(projectPath);
+                shouldContinue = await validateEmulatorIsRunning(context, projectPath);
             }
         }
     } catch (error) {
@@ -103,17 +102,17 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
 /**
  * Automatically add worker runtime setting since it's required to debug, but often gets deleted since it's stored in "local.settings.json" which isn't tracked in source control
  */
-async function validateWorkerRuntime(projectLanguage: string | undefined, projectPath: string): Promise<void> {
+async function validateWorkerRuntime(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<void> {
     const runtime: string | undefined = getFunctionsWorkerRuntime(projectLanguage);
     if (runtime) {
         // Not worth handling mismatched runtimes since it's so unlikely
-        await setLocalAppSetting(projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
+        await setLocalAppSetting(context, projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);
     }
 }
 
 async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<void> {
     if (canValidateAzureWebJobStorageOnDebug(projectLanguage)) {
-        const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(projectPath);
+        const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(context, projectPath);
         if (!azureWebJobsStorage) {
             const functionFolders: string[] = await getFunctionFolders(projectPath);
             const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
@@ -137,8 +136,8 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
 /**
  * If AzureWebJobsStorage is set, pings the emulator to make sure it's actually running
  */
-async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> {
-    const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(projectPath);
+async function validateEmulatorIsRunning(context: IActionContext, projectPath: string): Promise<boolean> {
+    const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(context, projectPath);
     if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localEmulatorConnectionString.toLowerCase()) {
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
@@ -147,7 +146,7 @@ async function validateEmulatorIsRunning(projectPath: string): Promise<boolean> 
             const message: string = localize('failedToConnectEmulator', 'Failed to verify "{0}" connection specified in "{1}". Is the local emulator installed and running?', azureWebJobsStorageKey, localSettingsFileName);
             const learnMoreLink: string = process.platform === 'win32' ? 'https://aka.ms/AA4ym56' : 'https://aka.ms/AA4yef8';
             const debugAnyway: vscode.MessageItem = { title: localize('debugAnyway', 'Debug anyway') };
-            const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { learnMoreLink, modal: true }, debugAnyway);
+            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink, modal: true }, debugAnyway);
             return result === debugAnyway;
         }
     }

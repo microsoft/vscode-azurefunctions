@@ -74,7 +74,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         await super.executeCore(context, progress);
 
         const profileps1Path: string = path.join(context.projectPath, profileps1FileName);
-        if (await confirmOverwriteFile(profileps1Path)) {
+        if (await confirmOverwriteFile(context, profileps1Path)) {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
@@ -90,7 +90,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
 
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
-        if (await confirmOverwriteFile(requirementspsd1Path)) {
+        if (await confirmOverwriteFile(context, requirementspsd1Path)) {
             if (majorVersion !== undefined) {
                 await fse.writeFile(requirementspsd1Path, requirementspsd1Online(majorVersion));
             } else {

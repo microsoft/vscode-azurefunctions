@@ -111,7 +111,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
-    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context.workspaceFolder.uri.fsPath);
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder.uri.fsPath);
     if (functionProject === undefined) {
         return;
     }

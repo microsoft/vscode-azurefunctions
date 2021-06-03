@@ -67,7 +67,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(folder.uri.fsPath, true /* suppressPrompt */);
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder.uri.fsPath, true /* suppressPrompt */);
             if (projectPath) {
                 try {
                     hasLocalProject = true;
@@ -90,7 +90,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         }
 
                         const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === folder && isFuncHostTask(t));
-                        const funcPort = await getFuncPortFromTaskOrProject(funcTask, projectPath);
+                        const funcPort = await getFuncPortFromTaskOrProject(context, funcTask, projectPath);
 
                         const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated, funcPort });
                         this._projectDisposables.push(treeItem);

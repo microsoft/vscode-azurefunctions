@@ -31,10 +31,10 @@ export async function downloadAppSettings(context: IActionContext, node?: AppSet
 
 export async function downloadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the destination file for your downloaded settings.');
-    const localSettingsPath: string = await getLocalSettingsFile(message);
+    const localSettingsPath: string = await getLocalSettingsFile(context, message);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
-    let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
+    let localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath, true /* allowOverwrite */);
 
     const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
     if (localSettings.IsEncrypted) {
@@ -51,7 +51,7 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
 
         ext.outputChannel.appendLog(localize('downloadingSettings', 'Downloading settings...'), { resourceName: client.fullName });
         if (remoteSettings.properties) {
-            await confirmOverwriteSettings(remoteSettings.properties, localSettings.Values, localSettingsFileName);
+            await confirmOverwriteSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
         }
 
         await fse.ensureFile(localSettingsPath);

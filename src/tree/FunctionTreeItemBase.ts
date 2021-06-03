@@ -106,7 +106,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             await this.refreshTriggerUrl(context);
         }
 
-        await this.refreshDisabledState();
+        await this.refreshDisabledState(context);
     }
 
     private async refreshTriggerUrl(context: IActionContext): Promise<void> {
@@ -133,7 +133,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     /**
      * https://docs.microsoft.com/azure/azure-functions/disable-function
      */
-    private async refreshDisabledState(): Promise<void> {
+    private async refreshDisabledState(context: IActionContext): Promise<void> {
         if (this._func) {
             this._disabled = !!this._func.isDisabled;
         } else {
@@ -141,7 +141,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             if (version === FuncVersion.v1) {
                 this._disabled = this._config.disabled;
             } else {
-                const appSettings: ApplicationSettings = await this.parent.parent.getApplicationSettings();
+                const appSettings: ApplicationSettings = await this.parent.parent.getApplicationSettings(context);
 
                 /**
                  * The docs only officially mentioned 'true' and 'false', but here is what I found:

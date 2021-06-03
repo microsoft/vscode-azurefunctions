@@ -108,7 +108,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     break;
             }
 
-            if (!template.isHttpTrigger && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context.projectPath)) {
+            if (!template.isHttpTrigger && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context, context.projectPath)) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
                 executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }

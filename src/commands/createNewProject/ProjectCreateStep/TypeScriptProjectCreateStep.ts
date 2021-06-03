@@ -28,7 +28,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         await super.executeCore(context, progress);
 
         const tsconfigPath: string = path.join(context.projectPath, tsConfigFileName);
-        if (await confirmOverwriteFile(tsconfigPath)) {
+        if (await confirmOverwriteFile(context, tsconfigPath)) {
             await writeFormattedJson(tsconfigPath, {
                 compilerOptions: {
                     module: 'commonjs',

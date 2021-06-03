@@ -37,7 +37,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
         await super.executeCore(context, progress);
 
         const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
-        if (await confirmOverwriteFile(requirementsPath)) {
+        if (await confirmOverwriteFile(context, requirementsPath)) {
             let isOldFuncCli: boolean;
             try {
                 const currentVersion: string | null = await getLocalFuncCoreToolsVersion();

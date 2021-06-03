@@ -11,9 +11,9 @@ import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 import { getLocalSettingsFile } from './getLocalSettingsFile';
 
-export async function encryptLocalSettings(_context: IActionContext, uri?: Uri): Promise<void> {
+export async function encryptLocalSettings(context: IActionContext, uri?: Uri): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the settings file to encrypt.');
-    const localSettingsPath: string = uri ? uri.fsPath : await getLocalSettingsFile(message);
+    const localSettingsPath: string = uri ? uri.fsPath : await getLocalSettingsFile(context, message);
     ext.outputChannel.show(true);
     await cpUtils.executeCommand(ext.outputChannel, path.dirname(localSettingsPath), 'func', 'settings', 'encrypt');
 }
