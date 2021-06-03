@@ -1123,7 +1123,7 @@
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
         "vscode-azureappservice": "^0.80.5",
-        "vscode-azureextensionui": "^0.43.7",
+        "vscode-azureextensionui": "^0.43.8",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",
