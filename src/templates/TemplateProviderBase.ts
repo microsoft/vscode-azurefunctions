@@ -69,7 +69,7 @@ export abstract class TemplateProviderBase implements Disposable {
         return ext.context.globalState.get<T>(await this.getCacheKey(key));
     }
 
-    public abstract getLatestTemplateVersion(): Promise<string>;
+    public abstract getLatestTemplateVersion(context: IActionContext): Promise<string>;
     public abstract getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates>;
     public abstract getCachedTemplates(context: IActionContext): Promise<ITemplates | undefined>;
     public abstract getBackupTemplates(context: IActionContext): Promise<ITemplates>;

@@ -41,11 +41,12 @@ suite('Backup templates', () => {
 
                 const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, version, worker.projectTemplateKey);
 
+                const context = createTestActionContext();
                 for (const provider of providers) {
-                    const templateVersion: string = await provider.getLatestTemplateVersion();
+                    const templateVersion: string = await provider.getLatestTemplateVersion(context);
 
                     async function updateBackupTemplatesInternal(): Promise<void> {
-                        await provider.getLatestTemplates(createTestActionContext(), templateVersion);
+                        await provider.getLatestTemplates(context, templateVersion);
                         await provider.updateBackupTemplates();
                     }
 
