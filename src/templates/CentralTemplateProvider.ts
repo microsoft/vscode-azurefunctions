@@ -179,7 +179,7 @@ export class CentralTemplateProvider implements Disposable {
         let result: ITemplates | undefined;
         let latestErrorMessage: string | undefined;
         try {
-            const latestTemplateVersion: string = await provider.getLatestTemplateVersion();
+            const latestTemplateVersion: string = await provider.getLatestTemplateVersion(context);
             context.telemetry.properties.latestTemplateVersion = latestTemplateVersion;
 
             const cachedTemplateVersion: string | undefined = await provider.getCachedTemplateVersion();
