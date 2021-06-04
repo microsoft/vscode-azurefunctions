@@ -15,16 +15,16 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(message: string, fsPath: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, fsPath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
 
-    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (context: IActionContext) => {
-        context.errorHandling.suppressDisplay = true;
+    await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (innerContext: IActionContext) => {
+        innerContext.errorHandling.suppressDisplay = true;
 
         if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', fsPath)) {
-            context.telemetry.properties.validateFuncCoreTools = 'false';
+            innerContext.telemetry.properties.validateFuncCoreTools = 'false';
             installed = true;
         } else if (await funcToolsInstalled()) {
             installed = true;
@@ -38,13 +38,13 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
             }
 
             // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
-            input = await context.ui.showWarningMessage(message, { modal: true }, ...items);
+            input = await innerContext.ui.showWarningMessage(message, { modal: true }, ...items);
 
-            context.telemetry.properties.dialogResult = input.title;
+            innerContext.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
                 const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath));
-                await installFuncCoreTools(packageManagers, version);
+                await installFuncCoreTools(innerContext, packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
                 await openUrl(getInstallUrl());
@@ -54,7 +54,7 @@ export async function validateFuncCoreToolsInstalled(message: string, fsPath: st
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        if (await ext.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        if (await context.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
             await openUrl(getInstallUrl());
         }
     }

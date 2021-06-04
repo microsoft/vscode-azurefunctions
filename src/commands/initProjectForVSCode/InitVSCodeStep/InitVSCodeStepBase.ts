@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, WorkspaceFolder } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
+import { AzureWizardExecuteStep, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
@@ -40,9 +40,9 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await fse.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath, language);
-        await this.writeLaunchJson(context.workspaceFolder, vscodePath, version);
+        await this.writeLaunchJson(context, context.workspaceFolder, vscodePath, version);
         await this.writeSettingsJson(context, vscodePath, language, version);
-        await this.writeExtensionsJson(vscodePath, language);
+        await this.writeExtensionsJson(context, vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
         const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
@@ -106,6 +106,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         } else { // otherwise manually edit json
             const tasksJsonPath: string = path.join(vscodePath, tasksFileName);
             await confirmEditJsonFile(
+                context,
                 tasksJsonPath,
                 (data: ITasksJson): ITasksJson => {
                     if (!data.version) {
@@ -144,7 +145,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return existingTasks;
     }
 
-    private async writeLaunchJson(folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
+    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
         if (this.getDebugConfiguration) {
             const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
@@ -164,6 +165,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             } else { // otherwise manually edit json
                 const launchJsonPath: string = path.join(vscodePath, launchFileName);
                 await confirmEditJsonFile(
+                    context,
                     launchJsonPath,
                     (data: ILaunchJson): ILaunchJson => {
                         if (!data.version) {
@@ -213,6 +215,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         } else { // otherwise manually edit json
             const settingsJsonPath: string = path.join(vscodePath, settingsFileName);
             await confirmEditJsonFile(
+                context,
                 settingsJsonPath,
                 (data: {}): {} => {
                     for (const setting of settings) {
@@ -225,9 +228,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
     }
 
-    private async writeExtensionsJson(vscodePath: string, language: ProjectLanguage): Promise<void> {
+    private async writeExtensionsJson(context: IActionContext, vscodePath: string, language: ProjectLanguage): Promise<void> {
         const extensionsJsonPath: string = path.join(vscodePath, 'extensions.json');
         await confirmEditJsonFile(
+            context,
             extensionsJsonPath,
             (data: IExtensionsJson): {} => {
                 const recommendations: string[] = ['ms-azuretools.vscode-azurefunctions'];

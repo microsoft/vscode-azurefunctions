@@ -47,7 +47,7 @@ export class JavaProjectCreateStep extends ProjectCreateStepBase {
                 mavenUtils.formatMavenArg('DappName', nonNullProp(context, 'javaAppName')),
                 '-B' // in Batch Mode
             );
-            await fsUtil.copyFolder(path.join(tempFolder, artifactId), context.projectPath);
+            await fsUtil.copyFolder(context, path.join(tempFolder, artifactId), context.projectPath);
         } finally {
             await fse.remove(tempFolder);
         }

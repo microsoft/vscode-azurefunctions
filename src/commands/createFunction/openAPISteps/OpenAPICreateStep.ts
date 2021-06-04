@@ -99,7 +99,7 @@ async function addAutorestSpecificTypescriptDependencies(context: IFunctionWizar
     const coreHttpVersion: string = '^1.1.4';
     const packagePath: string = path.join(context.projectPath, 'package.json');
 
-    await confirmEditJsonFile(packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
+    await confirmEditJsonFile(context, packagePath, (data: { devDependencies?: { [key: string]: string } }): {} => {
         data.devDependencies = data.devDependencies || {};
         if (!data.devDependencies[coreHttp]) {
             data.devDependencies[coreHttp] = coreHttpVersion;

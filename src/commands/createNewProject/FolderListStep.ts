@@ -22,7 +22,7 @@ export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext>
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         const placeHolder: string = localize('selectNewProjectFolder', 'Select the folder that will contain your function project');
-        FolderListStep.setProjectPath(context, await selectWorkspaceFolder(context.ui, placeHolder));
+        FolderListStep.setProjectPath(context, await selectWorkspaceFolder(context, placeHolder));
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {

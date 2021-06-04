@@ -13,7 +13,7 @@ import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardC
 
 export async function setAzureWebJobsStorage(context: IActionContext): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select your local settings file.');
-    const localSettingsFile: string = await getLocalSettingsFile(message);
+    const localSettingsFile: string = await getLocalSettingsFile(context, message);
     const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath: path.dirname(localSettingsFile) });
     const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [new AzureWebJobsStoragePromptStep()],

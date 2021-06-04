@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
-import { ext } from './extensionVariables';
+import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions } from 'vscode-azureextensionui';
 import { localize } from './localize';
 import { openUrl } from './utils/openUrl';
 
@@ -16,7 +15,7 @@ export enum FuncVersion {
 
 export const latestGAVersion: FuncVersion = FuncVersion.v3;
 
-export async function promptForFuncVersion(message?: string): Promise<FuncVersion> {
+export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     const recommended: string = localize('recommended', '(Recommended)');
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
         { label: 'Azure Functions v3', description: recommended, data: FuncVersion.v3 },
@@ -31,7 +30,7 @@ export async function promptForFuncVersion(message?: string): Promise<FuncVersio
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), suppressPersistence: true };
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        const version: FuncVersion | undefined = (await ext.ui.showQuickPick(picks, options)).data;
+        const version: FuncVersion | undefined = (await context.ui.showQuickPick(picks, options)).data;
         if (version === undefined) {
             await openUrl('https://aka.ms/AA1tpij');
         } else {
