@@ -36,6 +36,6 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         let appSettingKey: string = `${result.name}_${nonNullProp(this._setting, 'resourceType').toUpperCase()}`;
         appSettingKey = appSettingKey.replace(/[^a-z0-9_\.]/gi, ''); // remove invalid chars
         setBindingSetting(context, this._setting, appSettingKey);
-        await setLocalAppSetting(context.projectPath, appSettingKey, result.connectionString);
+        await setLocalAppSetting(context, context.projectPath, appSettingKey, result.connectionString);
     }
 }

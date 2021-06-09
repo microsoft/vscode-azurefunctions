@@ -135,7 +135,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return appSettings.properties || {};
     }
 
-    public async setApplicationSetting(key: string, value: string): Promise<void> {
+    public async setApplicationSetting(_context: IActionContext, key: string, value: string): Promise<void> {
         const settings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
         if (!settings.properties) {
             settings.properties = {};

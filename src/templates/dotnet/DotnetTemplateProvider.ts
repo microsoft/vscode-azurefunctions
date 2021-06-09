@@ -8,10 +8,12 @@ import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
-import { FuncVersion } from '../../FuncVersion';
+import { ext } from '../../extensionVariables';
+import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { nonNullValue } from '../../utils/nonNull';
 import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';
@@ -62,30 +64,51 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         }
     }
 
-    public async getLatestTemplateVersion(): Promise<string> {
-        return await cliFeedUtils.getLatestVersion(this.version);
+    public async getLatestTemplateVersion(context: IActionContext): Promise<string> {
+        const projKey = await this.getProjKey();
+
+        let templateVersion = await cliFeedUtils.getLatestVersion(this.version);
+        let netRelease = await this.getNetRelease(projKey, templateVersion);
+        if (netRelease) {
+            return templateVersion;
+        } else {
+            for (const newVersion of Object.values(FuncVersion)) {
+                if (newVersion !== this.version) {
+                    templateVersion = await cliFeedUtils.getLatestVersion(newVersion);
+                    netRelease = await this.getNetRelease(projKey, templateVersion);
+                    if (netRelease) {
+                        context.telemetry.properties.effectiveProjectRuntime = newVersion;
+                        const oldMajorVersion = getMajorVersion(this.version);
+                        const newMajorVersion = getMajorVersion(newVersion);
+                        const warning = localize('mismatchProjKeyWarning', 'WARNING: "{0}" is not supported on Azure Functions v{1}. Using templates from v{2} instead.', projKey, oldMajorVersion, newMajorVersion);
+                        ext.outputChannel.appendLog(warning);
+                        return templateVersion;
+                    }
+                }
+            }
+            throw new Error(localize('projKeyError', '"{0}" is not supported for Azure Functions version "{1}".', projKey, this.version));
+        }
     }
 
     public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         await validateDotnetInstalled(context);
 
-        const funcRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(latestTemplateVersion);
-
         const projKey = await this.getProjKey();
         const projectFilePath: string = getDotnetProjectTemplatePath(this.version, projKey);
         const itemFilePath: string = getDotnetItemTemplatePath(this.version, projKey);
 
-        const netRelease = Object.values(funcRelease.workerRuntimes.dotnet).find(r => projKey === dotnetUtils.getTemplateKeyFromFeedEntry(r));
-        if (!netRelease) {
-            throw new Error(localize('failedToFindNetRelease', 'Failed to find templates for .NET worker "{0}".', projKey))
-        }
-
+        const netRelease = nonNullValue(await this.getNetRelease(projKey, latestTemplateVersion), 'netRelease');
         await Promise.all([
             requestUtils.downloadFile(netRelease.projectTemplates, projectFilePath),
             requestUtils.downloadFile(netRelease.itemTemplates, itemFilePath)
         ]);
 
         return await this.parseTemplates(context, projKey);
+    }
+
+    private async getNetRelease(projKey: string, templateVersion: string): Promise<cliFeedUtils.IWorkerRuntime | undefined> {
+        const funcRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(templateVersion);
+        return Object.values(funcRelease.workerRuntimes.dotnet).find(r => projKey === dotnetUtils.getTemplateKeyFromFeedEntry(r));
     }
 
     public async getBackupTemplates(context: IActionContext): Promise<ITemplates> {

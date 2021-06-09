@@ -38,6 +38,8 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
                 // download contents
                 const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
                 await setupProjectFolder(uri, filePathUri[0], context); // calls setupProjectFolder.ts
+                const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                await setupProjectFolder(uri, filePathUri[0], context);
             } else {
                 throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
             }

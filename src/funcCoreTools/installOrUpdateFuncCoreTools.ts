@@ -33,10 +33,10 @@ export async function installOrUpdateFuncCoreTools(context: IActionContext): Pro
 
         let version: FuncVersion | undefined = await tryGetLocalFuncVersion();
         if (version === undefined) {
-            version = await promptForFuncVersion(localize('selectLocalVersion', 'Failed to detect local version automatically. Select your version to update'));
+            version = await promptForFuncVersion(context, localize('selectLocalVersion', 'Failed to detect local version automatically. Select your version to update'));
         }
         await updateFuncCoreTools(packageManager, version);
     } else {
-        await installFuncCoreTools(packageManagers);
+        await installFuncCoreTools(context, packageManagers);
     }
 }

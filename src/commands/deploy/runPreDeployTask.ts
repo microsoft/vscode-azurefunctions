@@ -17,7 +17,7 @@ export async function runPreDeployTask(context: IDeployContext, deployFsPath: st
     const preDeployTask: string | undefined = getWorkspaceSetting(preDeployTaskSetting, deployFsPath);
     if (preDeployTask && preDeployTask.startsWith('func:')) {
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run preDeployTask "{0}".', preDeployTask);
-        if (!await validateFuncCoreToolsInstalled(message, deployFsPath)) {
+        if (!await validateFuncCoreToolsInstalled(context, message, deployFsPath)) {
             throw new UserCancelledError();
         }
     }

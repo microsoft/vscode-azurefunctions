@@ -44,7 +44,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
         await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
 
-        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
+        await setLocalAppSetting(context, context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }
 
     private async confirmOverwriteExisting(context: IProjectWizardContext, projName: string): Promise<void> {

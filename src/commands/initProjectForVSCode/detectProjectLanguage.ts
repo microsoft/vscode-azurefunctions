@@ -5,6 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { IActionContext } from 'vscode-azureextensionui';
 import { localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
@@ -13,7 +14,7 @@ import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/Scr
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
-export async function detectProjectLanguage(projectPath: string): Promise<ProjectLanguage | undefined> {
+export async function detectProjectLanguage(context: IActionContext, projectPath: string): Promise<ProjectLanguage | undefined> {
     let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(projectPath);
 
     if (await isJavaProject(projectPath)) {
@@ -28,7 +29,7 @@ export async function detectProjectLanguage(projectPath: string): Promise<Projec
         detectedLangs.push(ProjectLanguage.FSharp);
     }
 
-    await detectLanguageFromLocalSettings(detectedLangs, projectPath);
+    await detectLanguageFromLocalSettings(context, detectedLangs, projectPath);
 
     // de-dupe
     detectedLangs = detectedLangs.filter((pl, index) => detectedLangs.indexOf(pl) === index);
@@ -50,9 +51,9 @@ async function isFSharpProject(projectPath: string): Promise<boolean> {
 /**
  * If the user has a "local.settings.json" file, we may be able to infer the langauge from the setting "FUNCTIONS_WORKER_RUNTIME"
  */
-async function detectLanguageFromLocalSettings(detectedLangs: ProjectLanguage[], projectPath: string): Promise<void> {
+async function detectLanguageFromLocalSettings(context: IActionContext, detectedLangs: ProjectLanguage[], projectPath: string): Promise<void> {
     try {
-        const settings: ILocalSettingsJson = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+        const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
         switch (settings.Values?.[workerRuntimeKey]?.toLowerCase()) {
             case 'java':
                 detectedLangs.push(ProjectLanguage.Java);

@@ -31,7 +31,7 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
 
 export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspacePath?: string): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
-    const localSettingsPath: string = await getLocalSettingsFile(message, workspacePath);
+    const localSettingsPath: string = await getLocalSettingsFile(context, message, workspacePath);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
@@ -52,7 +52,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
-        await confirmOverwriteSettings(localSettings.Values, remoteSettings.properties, client.fullName);
+        await confirmOverwriteSettings(context, localSettings.Values, remoteSettings.properties, client.fullName);
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);

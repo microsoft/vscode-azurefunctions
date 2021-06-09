@@ -34,7 +34,7 @@ export function registerFuncHostTaskEvents(): void {
         context.telemetry.suppressIfSuccessful = true;
         if (e.execution.task.scope !== undefined && isFuncHostTask(e.execution.task)) {
             runningFuncTaskMap.set(e.execution.task.scope, { processId: e.processId });
-            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTaskOrProject(e.execution.task, e.execution.task.scope));
+            runningFuncPortMap.set(e.execution.task.scope, await getFuncPortFromTaskOrProject(context, e.execution.task, e.execution.task.scope));
             funcTaskStartedEmitter.fire(e.execution.task.scope);
         }
     });
@@ -63,10 +63,11 @@ export function stopFuncTaskIfRunning(workspaceFolder: vscode.WorkspaceFolder): 
         // Use `process.kill` because `TaskExecution.terminate` closes the terminal pane and erases all output
         // Also to hopefully fix https://github.com/microsoft/vscode-azurefunctions/issues/1401
         process.kill(runningFuncTask.processId);
+        runningFuncTaskMap.delete(workspaceFolder);
     }
 }
 
-export async function getFuncPortFromTaskOrProject(funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
+export async function getFuncPortFromTaskOrProject(context: IActionContext, funcTask: vscode.Task | undefined, projectPathOrTaskScope: string | vscode.WorkspaceFolder | vscode.TaskScope): Promise<string> {
     try {
         // First, check the task itself
         if (funcTask && typeof funcTask.definition.command === 'string') {
@@ -81,11 +82,11 @@ export async function getFuncPortFromTaskOrProject(funcTask: vscode.Task | undef
         if (typeof projectPathOrTaskScope === 'string') {
             projectPath = projectPathOrTaskScope;
         } else if (typeof projectPathOrTaskScope === 'object') {
-            projectPath = await tryGetFunctionProjectRoot(projectPathOrTaskScope.uri.fsPath, true /* suppressPrompt */);
+            projectPath = await tryGetFunctionProjectRoot(context, projectPathOrTaskScope.uri.fsPath, true /* suppressPrompt */);
         }
 
         if (projectPath) {
-            const localSettings = await getLocalSettingsJson(path.join(projectPath, localSettingsFileName));
+            const localSettings = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
             if (localSettings.Host) {
                 const key = Object.keys(localSettings.Host).find(k => k.toLowerCase() === 'localhttpport');
                 if (key && localSettings.Host[key]) {
