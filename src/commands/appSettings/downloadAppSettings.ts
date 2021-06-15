@@ -18,32 +18,51 @@ import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
+// Valen: Imported in registerCommands
 export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
+    // Valen: node is an optional parameter so this checks if it is null to set a value to it.
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: IAppSettingsClient = node.client;
+    //  Valen: runWithTemporaryDescription displays a 'Loading...' icon and temporarily changes context's
+    // description while `downloadAppSettingsInternal` is being run
     await node.runWithTemporaryDescription(context, localize('downloading', 'Downloading...'), async () => {
-        await downloadAppSettingsInternal(context, client);
+        await downloadAppSettingsInternal(context, client); // Valen: definition below
     });
 }
 
 export async function downloadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient): Promise<void> {
+    // Valen: defining variables to start, could be helpful to look at file src\funcConfig\local.settings.js
     const message: string = localize('selectLocalSettings', 'Select the destination file for your downloaded settings.');
+    // Valen: Gets the settings file for the open project
+    // Valen: choose place on computer and it needs to be a local settings file to overwrite it or any json or txt file
     const localSettingsPath: string = await getLocalSettingsFile(message);
+    //console.log(localSettingsPath)
+    // Valen: Gets the URI
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-
+    //console.log(localSettingsUri)
+    // Valen: I think this function handles the overwrite of existing settings
     let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
 
     const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
-    if (localSettings.IsEncrypted) {
+    if (localSettings.IsEncrypted) { // Valen: If local settings are encrypted, decrypt
         await decryptLocalSettings(context, localSettingsUri);
         localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
     }
-
+    /*
+    Valen: local settings object type is:
+    export interface ILocalSettingsJson {
+        IsEncrypted?: boolean;
+        Values?: { [key: string]: string };
+        Host?: { [key: string]: string };
+        ConnectionStrings?: { [key: string]: string };
+    }
+    Valen: so the object does account for connection strings
+    */
     try {
-        if (!localSettings.Values) {
+        if (!localSettings.Values) { // Valen: If values is null, set it to {}
             localSettings.Values = {};
         }
 
@@ -58,7 +77,7 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
         await fse.writeJson(localSettingsPath, localSettings, { spaces: 2 });
 
     } finally {
-        if (isEncrypted) {
+        if (isEncrypted) { // Valen: re encrypt settings if they were originally encrypted
             await encryptLocalSettings(context, localSettingsUri);
         }
     }
@@ -67,11 +86,11 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
     const openFile: string = localize('openFile', 'Open File');
     // don't wait
     void vscode.window.showInformationMessage(localize('downloadedSettingsFrom', 'Successfully downloaded settings from "{0}".', client.fullName), openFile, viewOutput).then(async result => {
-        if (result === openFile) {
+        if (result === openFile) { // Valen: asks user if they want to open the file and it will open it in vs code
             const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
             await vscode.window.showTextDocument(doc);
         } else if (result === viewOutput) {
-            ext.outputChannel.show();
+            ext.outputChannel.show(); // Valen: shows output in VSCode terminal
         }
     });
 }
