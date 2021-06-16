@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
 import { feedUtils } from './feedUtils';
@@ -49,14 +50,15 @@ export namespace cliFeedUtils {
         }
     }
 
-    export async function getLatestVersion(version: FuncVersion): Promise<string> {
+    export async function getLatestVersion(context: IActionContext, version: FuncVersion): Promise<string> {
         const cliFeed: ICliFeed = await getCliFeed();
 
         const majorVersion: string = getMajorVersion(version);
         let tag: string = 'v' + majorVersion;
+        const templateProvider = ext.templateProvider.get(context);
         if (isPreviewVersion(version)) {
             tag = tag + '-preview';
-        } else if (ext.templateProvider.templateSource === TemplateSource.Staging) {
+        } else if (templateProvider.templateSource === TemplateSource.Staging) {
             tag = tag + '-prerelease';
         }
 

@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, testFolderPath, testUserInput } from '../global.test';
+import { cleanTestWorkspace, runWithTestActionContext, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
@@ -331,8 +331,10 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
         }
     }));
 
-    await testUserInput.runWithInputs(options.inputs || [], async () => {
-        await initProjectForVSCode(createTestActionContext(), projectPath);
+    await runWithTestActionContext('initProject', async context => {
+        await context.ui.runWithInputs(options.inputs || [], async () => {
+            await initProjectForVSCode(context, projectPath);
+        });
     });
 
     await validateProject(projectPath, options);

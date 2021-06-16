@@ -25,14 +25,14 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         return bundleFeedUtils.defaultBundleId;
     }
 
-    public async getLatestTemplateVersion(): Promise<string> {
+    public async getLatestTemplateVersion(context: IActionContext): Promise<string> {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        return await bundleFeedUtils.getLatestTemplateVersion(bundleMetadata);
+        return await bundleFeedUtils.getLatestTemplateVersion(context, bundleMetadata);
     }
 
-    public async getLatestTemplates(_context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
+    public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
         const bundleMetadata: IBundleMetadata | undefined = await this.getBundleInfo();
-        const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(bundleMetadata, latestTemplateVersion);
+        const release: bundleFeedUtils.ITemplatesRelease = await bundleFeedUtils.getRelease(context, bundleMetadata, latestTemplateVersion);
 
         const language: string = this.getResourcesLanguage();
         const resourcesUrl: string = release.resources.replace('{locale}', language);

@@ -63,8 +63,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             await verifyVSCodeConfigOnActivate(actionContext, event.added);
         });
 
-        ext.templateProvider = new CentralTemplateProvider();
-        context.subscriptions.push(ext.templateProvider);
+        const templateProvider = new CentralTemplateProvider();
+        ext.templateProvider.registerExtensionVariable(templateProvider);
+        context.subscriptions.push(templateProvider);
 
         // Suppress "Report an Issue" button for all errors in favor of the command
         registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);

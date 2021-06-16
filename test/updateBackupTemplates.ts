@@ -47,7 +47,7 @@ suite('Backup templates', () => {
 
                     async function updateBackupTemplatesInternal(): Promise<void> {
                         await provider.getLatestTemplates(context, templateVersion);
-                        await provider.updateBackupTemplates();
+                        await provider.updateBackupTemplates(context);
                     }
 
                     if (worker.language === ProjectLanguage.JavaScript) {

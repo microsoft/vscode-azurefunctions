@@ -24,13 +24,30 @@ export let testWorkspacePath: string;
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
+
+/**
+ * Extension-wide TestUserInput that can't be used in parallel, unlike `createTestContext().ui`
+ */
 export const testUserInput: TestUserInput = new TestUserInput(vscode);
 
-export function createTestActionContext(): IActionContext {
-    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: testUserInput };
+export type TestActionContext = IActionContext & { ui: TestUserInput };
+export function createTestActionContext(): TestActionContext {
+    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: new TestUserInput(vscode) };
 }
 
-let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
+/**
+ * Similar to `createTestActionContext` but with some extra logging
+ */
+export async function runWithTestActionContext(callbackId: string, callback: (context: TestActionContext) => Promise<void>): Promise<void> {
+    const context = createTestActionContext();
+    try {
+        await callback(context);
+    } finally {
+        console.log(`** TELEMETRY(${callbackId}) properties=${JSON.stringify(context.telemetry.properties)}, measurements=${JSON.stringify(context.telemetry.measurements)}`);
+    }
+}
+
+const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 
 const requestTimeoutKey: string = 'requestTimeout';
 let oldRequestTimeout: number | undefined;
@@ -54,15 +71,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     updateBackupTemplates = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
     if (!updateBackupTemplates) {
-        await preLoadTemplates(ext.templateProvider);
-        templateProviderMap = new Map();
-        for (const source of allTemplateSources) {
-            if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
-                templateProviderMap.set(source, new CentralTemplateProvider(source));
-            }
-
-            await runForTemplateSource(source, preLoadTemplates);
-        }
+        await preLoadTemplates();
     }
 
     longRunningTestsEnabled = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
@@ -86,42 +95,44 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 /**
  * Pre-load templates so that the first related unit test doesn't time out
  */
-async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void> {
-    console.log(`Loading templates for source "${provider.templateSource}"`);
-    const languages: ProjectLanguage[] = [ProjectLanguage.JavaScript, ProjectLanguage.CSharp];
-
-    for (const version of Object.values(FuncVersion)) {
-        for (const language of languages) {
-            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, version, TemplateFilter.Verified, undefined);
+async function preLoadTemplates(): Promise<void> {
+    const providers = [ext.templateProvider.get(createTestActionContext())];
+    for (const source of allTemplateSources) {
+        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
+            const provider = new CentralTemplateProvider(source);
+            templateProviderMap.set(source, provider);
+            providers.push(provider);
         }
     }
+
+    const tasks: Promise<unknown>[] = [];
+    for (const provider of providers) {
+        await runWithTestActionContext('preLoadTemplates', async context => {
+            ext.templateProvider.registerActionVariable(provider, context);
+            for (const version of Object.values(FuncVersion)) {
+                for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
+                    tasks.push(provider.getFunctionTemplates(context, undefined, language, version, TemplateFilter.Verified, undefined));
+                }
+            }
+        });
+    }
+    await Promise.all(tasks);
 }
 
 export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
-export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
-    const oldProvider: CentralTemplateProvider = ext.templateProvider;
-    try {
-        let templateProvider: CentralTemplateProvider | undefined;
-        if (source === undefined) {
-            templateProvider = ext.templateProvider;
-        } else {
-            templateProvider = templateProviderMap.get(source);
-            if (!templateProvider) {
-                throw new Error(`Unrecognized source ${source}`);
-            }
-            ext.templateProvider = templateProvider;
+export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
+    let templateProvider: CentralTemplateProvider | undefined;
+    if (source === undefined) {
+        templateProvider = ext.templateProvider.get(context);
+    } else {
+        templateProvider = templateProviderMap.get(source);
+        if (!templateProvider) {
+            throw new Error(`Unrecognized source ${source}`);
         }
-
-        try {
-            await callback(templateProvider);
-        } catch (e) {
-            // Only display this when a test fails, otherwise it'll clog up the logs
-            console.log(`Test failed for template source "${source}".`);
-            throw e;
-        }
-    } finally {
-        ext.templateProvider = oldProvider;
+        ext.templateProvider.registerActionVariable(templateProvider, context);
     }
+
+    await callback(templateProvider);
 }
 
 export async function cleanTestWorkspace(): Promise<void> {

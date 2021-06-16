@@ -48,7 +48,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
 
             if (!hostJson.extensionBundle) {
                 context.telemetry.properties.bundleResult = 'addedBundle';
-                await bundleFeedUtils.addDefaultBundle(hostJson);
+                await bundleFeedUtils.addDefaultBundle(context, hostJson);
                 await writeFormattedJson(hostFilePath, hostJson);
             } else {
                 context.telemetry.properties.bundleResult = 'alreadyHasBundle';

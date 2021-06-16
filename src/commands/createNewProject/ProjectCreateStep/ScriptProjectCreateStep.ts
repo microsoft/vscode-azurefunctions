@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, proxiesFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
@@ -32,7 +33,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const version: FuncVersion = nonNullProp(context, 'version');
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(context, hostJsonPath)) {
-            const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent();
+            const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent(context);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
@@ -71,7 +72,7 @@ local.settings.json`));
         }
     }
 
-    protected async getHostContent(): Promise<IHostJsonV2> {
+    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = {
             version: '2.0',
             logging: {
@@ -84,7 +85,7 @@ local.settings.json`));
             }
         };
 
-        await bundleFeedUtils.addDefaultBundle(hostJson);
+        await bundleFeedUtils.addDefaultBundle(context, hostJson);
 
         return hostJson;
     }
