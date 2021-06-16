@@ -33,6 +33,6 @@ suite('Create New Project API (deprecated)', () => {
         const connection: string = 'IoTHub_Setting';
         const projectPath: string = path.join(testFolderPath, 'createNewProjectApiCSharp');
         await vscode.commands.executeCommand('azureFunctions.createNewProject', projectPath, 'C#', '~2', false /* openFolder */, templateId, functionName, { namespace: namespace, Path: iotPath, Connection: connection });
-        await validateProject(projectPath, getCSharpValidateOptions('createNewProjectApiCSharp', 'netcoreapp2.1', FuncVersion.v2));
+        await validateProject(projectPath, getCSharpValidateOptions('netcoreapp2.1', FuncVersion.v2));
     });
 });

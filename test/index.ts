@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as glob from 'glob';
+import * as globby from 'globby';
 import * as Mocha from 'mocha';
 import * as path from 'path';
 import { envUtils } from '../extension.bundle';
@@ -30,11 +30,7 @@ export async function run(): Promise<void> {
     if (envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES)) {
         files = ['updateBackupTemplates.js'];
     } else {
-        files = await new Promise((resolve, reject) => {
-            glob('**/**.test.js', { cwd: __dirname }, (err, result) => {
-                err ? reject(err) : resolve(result);
-            });
-        });
+        files = await globby('**/**.test.js', { cwd: __dirname })
     }
 
     files.forEach(f => mocha.addFile(path.resolve(__dirname, f)));

@@ -1068,7 +1068,6 @@
     "devDependencies": {
         "@azure/arm-resources": "^3.0.0",
         "@types/fs-extra": "^8.1.0",
-        "@types/glob": "^7.1.1",
         "@types/gulp": "^4.0.6",
         "@types/gulp-filter": "^3.0.33",
         "@types/mocha": "^8.2.2",
@@ -1085,7 +1084,7 @@
         "copy-webpack-plugin": "^6.0.3",
         "eslint": "^7.19.0",
         "eslint-plugin-import": "^2.22.1",
-        "glob": "^7.1.6",
+        "globby": "^11.0.3",
         "gulp": "^4.0.2",
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.3",

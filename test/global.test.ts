@@ -16,11 +16,6 @@ import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersi
  */
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
-/**
- * Folder for tests that require a workspace
- */
-export let testWorkspacePath: string;
-
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
@@ -52,6 +47,17 @@ const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 const requestTimeoutKey: string = 'requestTimeout';
 let oldRequestTimeout: number | undefined;
 
+let testWorkspaceFolders: string[];
+let workspaceFolderIndex = 0;
+export function getTestWorkspaceFolder(): string {
+    if (workspaceFolderIndex >= testWorkspaceFolders.length) {
+        throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".')
+    }
+    const result = testWorkspaceFolders[workspaceFolderIndex];
+    workspaceFolderIndex += 1;
+    return result;
+}
+
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(4 * 60 * 1000);
@@ -59,7 +65,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await updateGlobalSetting(requestTimeoutKey, 45);
 
     await fse.ensureDir(testFolderPath);
-    testWorkspacePath = await initTestWorkspacePath();
+    testWorkspaceFolders = await initTestWorkspaceFolders();
 
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();
@@ -136,33 +142,40 @@ export async function runForTemplateSource(context: IActionContext, source: Temp
 }
 
 export async function cleanTestWorkspace(): Promise<void> {
-    // Doing this because VS Code doesn't always register changes to settings if you just delete "settings.json"
-    const settings: string[] = [
-        projectLanguageSetting,
-        funcVersionSetting,
-        templateFilterSetting,
-        deploySubpathSetting,
-        preDeployTaskSetting,
-        pythonVenvSetting
-    ];
-    for (const setting of settings) {
-        await updateWorkspaceSetting(setting, undefined, testWorkspacePath);
-        await updateGlobalSetting(setting, undefined);
-    }
+    for (const folder of testWorkspaceFolders) {
+        // Doing this because VS Code doesn't always register changes to settings if you just delete "settings.json"
+        const settings: string[] = [
+            projectLanguageSetting,
+            funcVersionSetting,
+            templateFilterSetting,
+            deploySubpathSetting,
+            preDeployTaskSetting,
+            pythonVenvSetting
+        ];
+        for (const setting of settings) {
+            await updateWorkspaceSetting(setting, undefined, folder);
+            await updateGlobalSetting(setting, undefined);
+        }
 
-    await fse.emptyDir(testWorkspacePath);
+        await fse.emptyDir(folder);
+    }
+    workspaceFolderIndex = 0;
 }
 
-async function initTestWorkspacePath(): Promise<string> {
+async function initTestWorkspaceFolders(): Promise<string[]> {
     const workspaceFolders: readonly vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         throw new Error("No workspace is open");
     } else {
-        assert.equal(workspaceFolders.length, 1, "Expected only one workspace to be open.");
-        const workspacePath: string = workspaceFolders[0].uri.fsPath;
-        assert.equal(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
-        await fse.ensureDir(workspacePath);
-        await fse.emptyDir(workspacePath);
-        return workspacePath;
+        const folders: string[] = [];
+        for (let i = 0; i < workspaceFolders.length; i++) {
+            const workspacePath: string = workspaceFolders[i].uri.fsPath;
+            const folderName = path.basename(workspacePath);
+            assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
+            await fse.ensureDir(workspacePath);
+            await fse.emptyDir(workspacePath);
+            folders.push(workspacePath);
+        }
+        return folders;
     }
 }
