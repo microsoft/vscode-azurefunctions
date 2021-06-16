@@ -116,13 +116,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
         const newSiteConfig: SiteModels.SiteConfig = stackSettings.siteConfigPropertiesDictionary;
 
-        // Setting linuxFxVersion to "dotnet-isolated|5.0" has a bug in the platform for consumption plans
-        // Platform team said to set it to an empty string as a temporary workaround. Dedicated/Premium should work as-is
-        const isConsumption = !context.plan;
-        if (isConsumption && newSiteConfig.linuxFxVersion?.toLowerCase() === 'dotnet-isolated|5.0') {
-            newSiteConfig.linuxFxVersion = '';
-        }
-
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
         const appSettings: SiteModels.NameValuePair[] = [
