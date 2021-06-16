@@ -36,7 +36,8 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
                     void callWithTelemetryAndErrorHandling('initializeTemplates', async (templatesContext: IActionContext) => {
                         templatesContext.telemetry.properties.isActivationEvent = 'true';
                         templatesContext.errorHandling.suppressDisplay = true;
-                        await ext.templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version, TemplateFilter.Verified, undefined);
+                        const templateProvider = ext.templateProvider.get(templatesContext);
+                        await templateProvider.getFunctionTemplates(templatesContext, projectPath, language, version, TemplateFilter.Verified, undefined);
                     });
 
                     let isDotnet: boolean = false;

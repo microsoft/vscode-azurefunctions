@@ -79,11 +79,11 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    public async clearTemplateCache(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
+    public async clearTemplateCache(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
         const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version, undefined);
         for (const provider of providers) {
             await provider.clearCachedTemplateMetadata();
-            await provider.clearCachedTemplates();
+            await provider.clearCachedTemplates(context);
             provider.projKeyMayHaveChanged();
         }
         const key: string = this.getProvidersKey(projectPath, language, version);
@@ -234,7 +234,7 @@ export class CentralTemplateProvider implements Disposable {
             context.telemetry.properties.templateSource = 'latest';
             const result: ITemplates = await provider.getLatestTemplates(context, latestTemplateVersion);
             await provider.cacheTemplateMetadata(latestTemplateVersion);
-            await provider.cacheTemplates();
+            await provider.cacheTemplates(context);
             return result;
         }
 
@@ -268,7 +268,7 @@ export class CentralTemplateProvider implements Disposable {
                 context.telemetry.properties.backupTemplateVersion = backupTemplateVersion;
                 const result: ITemplates = await provider.getBackupTemplates(context);
                 await provider.cacheTemplateMetadata(backupTemplateVersion);
-                await provider.cacheTemplates();
+                await provider.cacheTemplates(context);
                 return result;
             } catch (error) {
                 const errorMessage: string = parseError(error).message;

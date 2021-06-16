@@ -5,7 +5,7 @@
 
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
-import { allTemplateSources, cleanTestWorkspace, longRunningTestsEnabled, runForTemplateSource } from '../global.test';
+import { allTemplateSources, cleanTestWorkspace, longRunningTestsEnabled, runForTemplateSource, runWithTestActionContext } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
@@ -78,8 +78,10 @@ function addTest(testCase: ICreateProjectTestCase): void {
                 }
             }
 
-            await runForTemplateSource(source, async () => {
-                await createAndValidateProject(testCase);
+            await runWithTestActionContext('createProject', async context => {
+                await runForTemplateSource(context, source, async () => {
+                    await createAndValidateProject(context, testCase);
+                });
             });
         });
     }

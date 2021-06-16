@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
-import { createTestActionContext, longRunningTestsEnabled, runForTemplateSource, skipStagingTemplateSource, testWorkspacePath } from './global.test';
+import { longRunningTestsEnabled, runForTemplateSource, runWithTestActionContext, skipStagingTemplateSource, testWorkspacePath } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
 addSuite(undefined);
@@ -55,9 +55,11 @@ function addSuite(source: TemplateSource | undefined): void {
                     await javaPreTest(this);
                 }
 
-                await runForTemplateSource(source, async (provider: CentralTemplateProvider) => {
-                    const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(createTestActionContext(), testWorkspacePath, language, version, TemplateFilter.Verified, projectTemplateKey);
-                    assert.equal(templates.length, expectedCount);
+                await runWithTestActionContext('getFunctionTemplates', async context => {
+                    await runForTemplateSource(context, source, async (provider: CentralTemplateProvider) => {
+                        const templates: IFunctionTemplate[] = await provider.getFunctionTemplates(context, testWorkspacePath, language, version, TemplateFilter.Verified, projectTemplateKey);
+                        assert.equal(templates.length, expectedCount);
+                    });
                 });
             });
         }

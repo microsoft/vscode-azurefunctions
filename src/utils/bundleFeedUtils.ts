@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../extensionVariables';
 import { IBundleMetadata, IHostJsonV2 } from '../funcConfig/host';
 import { localize } from '../localize';
@@ -36,10 +37,10 @@ export namespace bundleFeedUtils {
         resources: string;
     }
 
-    export async function getLatestTemplateVersion(bundleMetadata: IBundleMetadata | undefined): Promise<string> {
+    export async function getLatestTemplateVersion(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<string> {
         bundleMetadata = bundleMetadata || {};
 
-        const feed: IBundleFeed = await getBundleFeed(bundleMetadata);
+        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
         const validVersions: string[] = Object.keys(feed.bundleVersions).filter((v: string) => !!semver.valid(v));
         const bundleVersion: string | undefined = nugetUtils.tryGetMaxInRange(bundleMetadata.version || feed.defaultVersionRange, validVersions);
         if (!bundleVersion) {
@@ -49,8 +50,8 @@ export namespace bundleFeedUtils {
         }
     }
 
-    export async function getRelease(bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesRelease> {
-        const feed: IBundleFeed = await getBundleFeed(bundleMetadata);
+    export async function getRelease(context: IActionContext, bundleMetadata: IBundleMetadata | undefined, templateVersion: string): Promise<ITemplatesRelease> {
+        const feed: IBundleFeed = await getBundleFeed(context, bundleMetadata);
         return feed.templates.v1[templateVersion];
     }
 
@@ -59,15 +60,15 @@ export namespace bundleFeedUtils {
         return (!template.isHttpTrigger && !template.isTimerTrigger) || bundleTemplateTypes.some(t => isTemplateOfType(template, t));
     }
 
-    export async function getLatestVersionRange(): Promise<string> {
-        const feed: IBundleFeed = await getBundleFeed(undefined);
+    export async function getLatestVersionRange(context: IActionContext): Promise<string> {
+        const feed: IBundleFeed = await getBundleFeed(context, undefined);
         return feed.defaultVersionRange;
     }
 
-    export async function addDefaultBundle(hostJson: IHostJsonV2): Promise<void> {
+    export async function addDefaultBundle(context: IActionContext, hostJson: IHostJsonV2): Promise<void> {
         let versionRange: string;
         try {
-            versionRange = await getLatestVersionRange();
+            versionRange = await getLatestVersionRange(context);
         } catch {
             versionRange = defaultVersionRange;
         }
@@ -82,16 +83,17 @@ export namespace bundleFeedUtils {
         return !!template.id?.toLowerCase().includes(templateType.toLowerCase());
     }
 
-    async function getBundleFeed(bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
+    async function getBundleFeed(context: IActionContext, bundleMetadata: IBundleMetadata | undefined): Promise<IBundleFeed> {
         const bundleId: string = bundleMetadata && bundleMetadata.id || defaultBundleId;
 
         const envVarUri: string | undefined = process.env.FUNCTIONS_EXTENSIONBUNDLE_SOURCE_URI;
         // Only use an aka.ms link for the most common case, otherwise we will dynamically construct the url
         let url: string;
-        if (!envVarUri && bundleId === defaultBundleId && ext.templateProvider.templateSource !== TemplateSource.Staging) {
+        const templateProvider = ext.templateProvider.get(context);
+        if (!envVarUri && bundleId === defaultBundleId && templateProvider.templateSource !== TemplateSource.Staging) {
             url = 'https://aka.ms/AA66i2x';
         } else {
-            const suffix: string = ext.templateProvider.templateSource === TemplateSource.Staging ? 'staging' : '';
+            const suffix: string = templateProvider.templateSource === TemplateSource.Staging ? 'staging' : '';
             const baseUrl: string = envVarUri || `https://functionscdn${suffix}.azureedge.net/public`;
             url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
         }

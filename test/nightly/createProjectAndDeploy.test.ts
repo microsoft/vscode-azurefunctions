@@ -9,8 +9,8 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { TestInput } from 'vscode-azureextensiondev';
-import { createGenericClient, getRandomHexString, nonNullProp } from '../../extension.bundle';
-import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput, testWorkspacePath } from '../global.test';
+import { createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { cleanTestWorkspace, longRunningTestsEnabled, runWithTestActionContext, testUserInput, testWorkspacePath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
@@ -74,14 +74,15 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
     const functionName: string = 'func' + getRandomHexString(); // function name must start with a letter
     await cleanTestWorkspace();
 
-    options.createProjectInputs = options.createProjectInputs || [];
-    options.createFunctionInputs = options.createFunctionInputs || [];
-    options.deployInputs = options.deployInputs || [];
-    options.excludedPaths = options.excludedPaths || [];
-
-    await testUserInput.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
-        await vscode.commands.executeCommand('azureFunctions.createNewProject');
+    await runWithTestActionContext('createNewProject', async context => {
+        options.createProjectInputs = options.createProjectInputs || [];
+        options.createFunctionInputs = options.createFunctionInputs || [];
+        await context.ui.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
+            await createNewProjectInternal(context, {})
+        });
     });
+
+    options.excludedPaths = options.excludedPaths || [];
     options.excludedPaths.push('.git'); // Since the workspace is already in a git repo
     await validateProject(testWorkspacePath, options);
 
@@ -90,8 +91,11 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
 
     const appName: string = 'funcBasic' + getRandomHexString();
     resourceGroupsToDelete.push(appName);
-    await testUserInput.runWithInputs([/create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
-        await vscode.commands.executeCommand('azureFunctions.deploy');
+    await runWithTestActionContext('deploy', async context => {
+        options.deployInputs = options.deployInputs || [];
+        await context.ui.runWithInputs([/create new function app/i, appName, ...options.deployInputs, getRotatingLocation()], async () => {
+            await deployProductionSlot(context)
+        });
     });
 
     await validateFunctionUrl(appName, functionName, routePrefix);

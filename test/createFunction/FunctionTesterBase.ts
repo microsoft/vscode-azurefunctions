@@ -8,7 +8,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
 import { createFunctionInternal, FuncVersion, funcVersionSetting, getRandomHexString, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting, TemplateSource } from '../../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, runForTemplateSource, testFolderPath, testUserInput } from '../global.test';
+import { cleanTestWorkspace, runForTemplateSource, runWithTestActionContext, TestActionContext, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 
 export abstract class FunctionTesterBase implements Disposable {
@@ -35,27 +35,32 @@ export abstract class FunctionTesterBase implements Disposable {
     public abstract getExpectedPaths(functionName: string): string[];
 
     public async initAsync(): Promise<void> {
-        await cleanTestWorkspace();
-        await runForTemplateSource(this._source, async (templateProvider) => {
-            await this.initializeTestFolder(this.projectPath);
+        await runWithTestActionContext('testCreateFunctionInit', async context => {
+            await runForTemplateSource(context, this._source, async (templateProvider) => {
+                await this.initializeTestFolder(this.projectPath);
 
-            // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
-            await templateProvider.getFunctionTemplates(createTestActionContext(), this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
+                // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
+                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
+            });
         });
     }
 
     public async dispose(): Promise<void> {
         await cleanTestWorkspace();
-        await runForTemplateSource(this._source, async (templateProvider) => {
-            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(createTestActionContext(), this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
-            assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
+        await runWithTestActionContext('testCreateFunctionDispose', async context => {
+            await runForTemplateSource(context, this._source, async (templateProvider) => {
+                const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
+                assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
+            });
         });
     }
 
     public async testCreateFunction(templateName: string, ...inputs: string[]): Promise<void> {
         this.testedFunctions.push(templateName);
-        await runForTemplateSource(this._source, async () => {
-            await this.testCreateFunctionInternal(this.projectPath, templateName, inputs.slice());
+        await runWithTestActionContext('testCreateFunction', async context => {
+            await runForTemplateSource(context, this._source, async () => {
+                await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
+            });
         });
     }
 
@@ -84,7 +89,7 @@ export abstract class FunctionTesterBase implements Disposable {
         ]);
     }
 
-    private async testCreateFunctionInternal(testFolder: string, templateName: string, inputs: string[]): Promise<void> {
+    private async testCreateFunctionInternal(context: TestActionContext, testFolder: string, templateName: string, inputs: string[]): Promise<void> {
         // clone inputs array
         const expectedContents: string[] = inputs.slice(0);
 
@@ -93,11 +98,11 @@ export abstract class FunctionTesterBase implements Disposable {
         inputs.unshift(funcName); // Specify the function name
         inputs.unshift(templateName); // Select the function template
 
-        await testUserInput.runWithInputs(inputs, async () => {
+        await context.ui.runWithInputs(inputs, async () => {
             await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
                 await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
                     await runWithFuncSetting(funcVersionSetting, this.version, async () => {
-                        await createFunctionInternal(createTestActionContext(), {
+                        await createFunctionInternal(context, {
                             folderPath: testFolder
                         });
                     });

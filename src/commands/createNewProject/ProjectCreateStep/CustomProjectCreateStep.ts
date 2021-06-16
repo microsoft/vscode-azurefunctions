@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class CustomProjectCreateStep extends ScriptProjectCreateStep {
-    protected async getHostContent(): Promise<IHostJsonV2> {
-        const hostJson: IHostJsonV2 = await super.getHostContent();
+    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+        const hostJson: IHostJsonV2 = await super.getHostContent(context);
         hostJson.customHandler = {
             description: {
                 defaultExecutablePath: '',
