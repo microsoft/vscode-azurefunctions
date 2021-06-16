@@ -34,5 +34,6 @@ module.exports = {
         "@typescript-eslint/no-namespace": "off",
         "@typescript-eslint/ban-types": "off",
         "@typescript-eslint/require-await": "off",
+        "no-constant-condition": ["error", { "checkLoops": false }],
     }
 };
