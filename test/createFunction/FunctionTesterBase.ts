@@ -7,9 +7,15 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { createFunctionInternal, FuncVersion, funcVersionSetting, getRandomHexString, IFunctionTemplate, ProjectLanguage, projectLanguageSetting, TemplateFilter, templateFilterSetting, TemplateSource } from '../../extension.bundle';
-import { cleanTestWorkspace, runForTemplateSource, runWithTestActionContext, TestActionContext, testFolderPath } from '../global.test';
-import { runWithFuncSetting } from '../runWithSetting';
+import { createFunctionInternal, FuncVersion, getRandomHexString, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
+import { addParallelSuite, ParallelSuiteOptions, ParallelTest } from '../addParallelSuite';
+import { runForTemplateSource, runWithTestActionContext, TestActionContext, testFolderPath } from '../global.test';
+
+export interface CreateFunctionTestCase {
+    functionName: string;
+    inputs: string[];
+    skip?: boolean;
+}
 
 export abstract class FunctionTesterBase implements Disposable {
     public projectPath: string;
@@ -46,12 +52,35 @@ export abstract class FunctionTesterBase implements Disposable {
     }
 
     public async dispose(): Promise<void> {
-        await cleanTestWorkspace();
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             await runForTemplateSource(context, this._source, async (templateProvider) => {
                 const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
+        });
+    }
+
+    public addParallelSuite(testCases: CreateFunctionTestCase[], options?: Partial<ParallelSuiteOptions>): void {
+        const parallelTests: ParallelTest[] = [];
+        for (const testCase of testCases) {
+            parallelTests.push({
+                title: testCase.functionName,
+                skip: testCase.skip,
+                callback: async () => {
+                    await this.testCreateFunction(testCase.functionName, ...testCase.inputs);
+                }
+            });
+        }
+
+        addParallelSuite(parallelTests, {
+            title: this.suiteName,
+            suiteSetup: async () => {
+                await this.initAsync();
+            },
+            suiteTeardown: async () => {
+                await this.dispose();
+            },
+            ...options
         });
     }
 
@@ -99,14 +128,10 @@ export abstract class FunctionTesterBase implements Disposable {
         inputs.unshift(templateName); // Select the function template
 
         await context.ui.runWithInputs(inputs, async () => {
-            await runWithFuncSetting(templateFilterSetting, TemplateFilter.Verified, async () => {
-                await runWithFuncSetting(projectLanguageSetting, this.language, async () => {
-                    await runWithFuncSetting(funcVersionSetting, this.version, async () => {
-                        await createFunctionInternal(context, {
-                            folderPath: testFolder
-                        });
-                    });
-                });
+            await createFunctionInternal(context, {
+                folderPath: testFolder,
+                language: <any>this.language,
+                version: this.version
             });
         });
 

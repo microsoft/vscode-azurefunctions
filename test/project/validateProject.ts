@@ -5,9 +5,9 @@
 
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
+import * as globby from 'globby';
 import * as path from 'path';
-import { FuncVersion, IExtensionsJson, ILaunchJson, isPathEqual, ITasksJson, ProjectLanguage } from '../../extension.bundle';
-import { testWorkspacePath } from '../global.test';
+import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage } from '../../extension.bundle';
 
 const defaultVersion: FuncVersion = FuncVersion.v3;
 
@@ -72,7 +72,7 @@ export function getTypeScriptValidateOptions(version: FuncVersion = defaultVersi
     };
 }
 
-export function getCSharpValidateOptions(projectName: string, targetFramework: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultVersion, numCsproj: number = 1): IValidateProjectOptions {
     return {
         language: ProjectLanguage.CSharp,
         version,
@@ -84,7 +84,7 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
-            `${projectName}.csproj`
+            { globPattern: '*.csproj', numMatches: numCsproj }
         ],
         expectedExtensionRecs: [
             'ms-dotnettools.csharp'
@@ -105,7 +105,7 @@ export function getCSharpValidateOptions(projectName: string, targetFramework: s
     };
 }
 
-export function getFSharpValidateOptions(projectName: string, targetFramework: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getFSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.FSharp,
         version,
@@ -117,7 +117,7 @@ export function getFSharpValidateOptions(projectName: string, targetFramework: s
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
-            `${projectName}.fsproj`
+            { globPattern: '*.fsproj', numMatches: 1 }
         ],
         expectedExtensionRecs: [
             'ms-dotnettools.csharp',
@@ -288,12 +288,14 @@ const commonExpectedPaths: string[] = [
     '.vscode/settings.json'
 ];
 
+type ExpectedPath = string | { globPattern: string; numMatches: number };
+
 export interface IValidateProjectOptions {
     language: ProjectLanguage;
     displayLanguage?: RegExp;
     version: FuncVersion;
     expectedSettings: { [key: string]: string | boolean | object | undefined | RegExp };
-    expectedPaths: string[];
+    expectedPaths: ExpectedPath[];
     expectedExtensionRecs: string[];
     expectedDebugConfigs: string[];
     expectedTasks: string[];
@@ -308,10 +310,15 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate expected files
     //
-    let expectedPaths: string[] = commonExpectedPaths.filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
+    let expectedPaths: ExpectedPath[] = commonExpectedPaths.filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
     expectedPaths = expectedPaths.concat(options.expectedPaths);
     await Promise.all(expectedPaths.map(async p => {
-        assert.equal(await fse.pathExists(path.join(projectPath, p)), true, `Path "${p}" does not exist.`);
+        if (typeof p === 'object') {
+            const matches = await globby(p.globPattern, { cwd: projectPath })
+            assert.equal(matches.length, p.numMatches, `Path "${p.globPattern}" does not have expected matches.`);
+        } else {
+            assert.ok(await fse.pathExists(path.join(projectPath, p)), `Path "${p}" does not exist.`);
+        }
     }));
 
     //
@@ -332,7 +339,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
         const expectedValue: RegExp | string | boolean | object | undefined = options.expectedSettings[key];
-        if (key === 'debug.internalConsoleOptions' && isPathEqual(testWorkspacePath, projectPath)) {
+        if (key === 'debug.internalConsoleOptions' && getContainingWorkspace(projectPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
         } else if (expectedValue instanceof RegExp) {
             assert.ok(expectedValue.test(settings[key].toString()), `The setting with key "${key}" does not match RegExp "${expectedValue.source}".`);
@@ -346,7 +353,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate launch.json
     //
-    if (expectedPaths.find(p => p.includes('launch.json'))) {
+    if (expectedPaths.find(p => typeof p === 'string' && p.includes('launch.json'))) {
         const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(projectPath, '.vscode', 'launch.json'));
         launchJson.configurations = launchJson.configurations || [];
         assert.equal(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");

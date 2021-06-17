@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
-import { createNewProjectInternal, funcVersionSetting, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
+import { createNewProjectInternal, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
 import * as api from '../../src/vscode-azurefunctions.api';
 import { TestActionContext, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -37,13 +37,12 @@ export async function createAndValidateProject(context: TestActionContext, optio
         inputs.push(/skip for now/i);
     }
 
-    await runWithFuncSetting(funcVersionSetting, options.version, async () => {
-        await runWithFuncSetting(hiddenStacksSetting, true, async () => {
-            await context.ui.runWithInputs(inputs, async () => {
-                await createNewProjectInternal(context, {
-                    language: options.isHiddenLanguage ? <api.ProjectLanguage>language : undefined,
-                    suppressOpenFolder: true
-                });
+    await runWithFuncSetting(hiddenStacksSetting, true, async () => {
+        await context.ui.runWithInputs(inputs, async () => {
+            await createNewProjectInternal(context, {
+                language: options.isHiddenLanguage ? <api.ProjectLanguage>language : undefined,
+                version: options.version,
+                suppressOpenFolder: true
             });
         });
     });

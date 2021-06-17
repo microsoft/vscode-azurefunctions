@@ -46,6 +46,7 @@ export * from './src/utils/nugetUtils';
 export * from './src/utils/parseJson';
 export * from './src/utils/requestUtils';
 export * from './src/utils/venvUtils';
+export * from './src/utils/workspace';
 export * from './src/vsCodeConfig/extensions';
 export * from './src/vsCodeConfig/launch';
 export * from './src/vsCodeConfig/settings';

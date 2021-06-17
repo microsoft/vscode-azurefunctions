@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CentralTemplateProvider, FuncVersion, ProjectLanguage, supportedLanguages as resourceLanguages, TemplateProviderBase } from '../extension.bundle';
-import { createTestActionContext, testWorkspacePath, updateBackupTemplates } from './global.test';
+import { createTestActionContext, getTestWorkspaceFolder, updateBackupTemplates } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
 type WorkerRuntime = { language: ProjectLanguage; projectTemplateKey?: string, versions: FuncVersion[] }
@@ -22,7 +22,8 @@ suite('Backup templates', () => {
     });
 
     test('Update', async () => {
-        await javaUtils.addJavaProjectToWorkspace();
+        const testWorkspacePath = getTestWorkspaceFolder();
+        await javaUtils.addJavaProjectToWorkspace(testWorkspacePath);
 
         const allVersions = Object.values(FuncVersion);
         const workers: WorkerRuntime[] = [
