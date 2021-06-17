@@ -38,7 +38,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspace.uri.fsPath, true /* suppressPrompt */);
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspace.uri.fsPath);
 
             if (projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);

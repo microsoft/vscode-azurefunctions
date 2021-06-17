@@ -19,7 +19,7 @@ export async function getLocalSettingsFile(context: IActionContext, message: str
     const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
     if (workspacePath || folders.length === 1) {
         workspacePath = workspacePath || folders[0].uri.fsPath;
-        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspacePath, true /* suppressPrompt */);
+        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspacePath);
         if (projectPath) {
             const localSettingsFile: string = path.join(projectPath, localSettingsFileName);
             if (await fse.pathExists(localSettingsFile)) {
@@ -30,7 +30,7 @@ export async function getLocalSettingsFile(context: IActionContext, message: str
 
     return await selectWorkspaceFile(context, message, async (f: WorkspaceFolder): Promise<string> => {
         workspacePath = f.uri.fsPath;
-        const projectPath: string = await tryGetFunctionProjectRoot(context, workspacePath, true /* suppressPrompt */) || workspacePath;
+        const projectPath: string = await tryGetFunctionProjectRoot(context, workspacePath) || workspacePath;
         return path.relative(workspacePath, path.join(projectPath, localSettingsFileName));
     });
 }
