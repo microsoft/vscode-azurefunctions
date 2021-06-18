@@ -133,7 +133,8 @@ async function copyCSharpSettingsFromJS(csharpTemplates: IFunctionTemplate[], ve
         jsContext.errorHandling.suppressDisplay = true;
         jsContext.telemetry.properties.isActivationEvent = 'true';
 
-        const jsTemplates: IFunctionTemplate[] = await ext.templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
+        const templateProvider = ext.templateProvider.get(jsContext);
+        const jsTemplates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(jsContext, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
         for (const csharpTemplate of csharpTemplates) {
             const normalizedDotnetId = normalizeDotnetId(csharpTemplate.id);
             const jsTemplate: IFunctionTemplate | undefined = jsTemplates.find((t: IFunctionTemplate) => normalizeScriptId(t.id) === normalizedDotnetId);

@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, testFolderPath, testUserInput } from '../global.test';
+import { cleanTestWorkspace, runWithTestActionContext, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
 suite('Init Project For VS Code', function (this: Mocha.Suite): void {
@@ -43,12 +43,12 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
 
     test('C#', async () => {
         const mockFiles: MockFile[] = [{ fsPath: 'test.csproj', contents: '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>' }];
-        await initAndValidateProject({ ...getCSharpValidateOptions('test', 'netstandard2.0', FuncVersion.v2), mockFiles });
+        await initAndValidateProject({ ...getCSharpValidateOptions('netstandard2.0', FuncVersion.v2), mockFiles });
     });
 
     test('C# with extensions.csproj', async () => {
         const mockFiles: MockFile[] = ['extensions.csproj', { fsPath: 'test.csproj', contents: '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>' }];
-        await initAndValidateProject({ ...getCSharpValidateOptions('test', 'netstandard2.0', FuncVersion.v2), mockFiles });
+        await initAndValidateProject({ ...getCSharpValidateOptions('netstandard2.0', FuncVersion.v2, 2), mockFiles });
     });
 
     function getMockVenvPath(venvName: string): MockFilePath {
@@ -84,7 +84,7 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
 
     test('F#', async () => {
         const mockFiles: MockFile[] = [{ fsPath: 'test.fsproj', contents: '<TargetFramework>netstandard2.0<\/TargetFramework><AzureFunctionsVersion>v2</AzureFunctionsVersion>' }];
-        await initAndValidateProject({ ...getFSharpValidateOptions('test', 'netstandard2.0', FuncVersion.v2), mockFiles });
+        await initAndValidateProject({ ...getFSharpValidateOptions('netstandard2.0', FuncVersion.v2), mockFiles });
     });
 
     test('Java', async () => {
@@ -331,8 +331,10 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
         }
     }));
 
-    await testUserInput.runWithInputs(options.inputs || [], async () => {
-        await initProjectForVSCode(createTestActionContext(), projectPath);
+    await runWithTestActionContext('initProject', async context => {
+        await context.ui.runWithInputs(options.inputs || [], async () => {
+            await initProjectForVSCode(context, projectPath);
+        });
     });
 
     await validateProject(projectPath, options);

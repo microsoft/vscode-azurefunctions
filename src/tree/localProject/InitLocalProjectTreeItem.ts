@@ -6,6 +6,7 @@
 import { ThemeIcon } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
+import { isLocalProjectCV } from '../projectContextValues';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
 export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
@@ -32,5 +33,9 @@ export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
         });
         ti.commandArgs = [this._projectPath];
         return [ti];
+    }
+
+    public isAncestorOfImpl(contextValue: string | RegExp): boolean {
+        return isLocalProjectCV(contextValue);
     }
 }

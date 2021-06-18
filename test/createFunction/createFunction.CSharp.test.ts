@@ -8,8 +8,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources } from '../global.test';
+import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
-import { FunctionTesterBase } from './FunctionTesterBase';
+import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
 
 class CSharpFunctionTester extends FunctionTesterBase {
     public language: ProjectLanguage = ProjectLanguage.CSharp;
@@ -46,169 +47,133 @@ for (const source of allTemplateSources) {
 }
 
 function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {
-    const csTester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
-    let suiteName: string = csTester.suiteName + ` ${targetFramework}`;
-    if (isIsolated) {
-        suiteName += ' Isolated';
-    }
-
-    suite(suiteName, function (this: Mocha.Suite): void {
-        this.timeout(40 * 1000);
-
-
-        suiteSetup(async function (this: Mocha.Context): Promise<void> {
-            this.timeout(120 * 1000);
-            await csTester.initAsync();
-        });
-
-        suiteTeardown(async () => {
-            await csTester.dispose();
-        });
-
-        const blobTrigger: string = 'Azure Blob Storage trigger';
-        test(blobTrigger, async function (this: Mocha.Context): Promise<void> {
-            // the first function created can take a lot longer - likely related to the dotnet cli's cache
-            this.timeout(150 * 1000);
-
-            await csTester.testCreateFunction(
-                blobTrigger,
+    const testCases: CreateFunctionTestCase[] = [
+        {
+            functionName: 'Azure Blob Storage trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testpath'
-            );
-        });
-
-        const cosmosTrigger: string = 'Azure Cosmos DB trigger';
-        test(cosmosTrigger, async () => {
-            await csTester.testCreateFunction(
-                cosmosTrigger,
+            ]
+        },
+        {
+            functionName: 'Azure Cosmos DB trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testDB',
                 'testCollection'
-            );
-        });
-
-        if (!isIsolated) {
-            const durableTrigger: string = 'Durable Functions Orchestration';
-            test(durableTrigger, async () => {
-                await csTester.testCreateFunction(
-                    durableTrigger,
-                    'TestCompany.TestFunction'
-                );
-            });
-        }
-
-        // Doesn't work on v2: https://github.com/microsoft/vscode-azurefunctions/issues/792
-        if (version !== FuncVersion.v2) {
-            const eventGridTrigger: string = 'Azure Event Grid trigger';
-            test(eventGridTrigger, async () => {
-                await csTester.testCreateFunction(
-                    eventGridTrigger,
-                    'TestCompany.TestFunction'
-                );
-            });
-        }
-
-        const eventHubTrigger: string = 'Azure Event Hub trigger';
-        test(eventHubTrigger, async () => {
-            await csTester.testCreateFunction(
-                eventHubTrigger,
+            ]
+        },
+        {
+            functionName: 'Durable Functions Orchestration',
+            inputs: [
+                'TestCompany.TestFunction'
+            ],
+            skip: isIsolated
+        },
+        {
+            functionName: 'Azure Event Grid trigger',
+            inputs: [
+                'TestCompany.TestFunction'
+            ],
+            skip: version === FuncVersion.v2 // https://github.com/microsoft/vscode-azurefunctions/issues/792
+        },
+        {
+            functionName: 'Azure Event Hub trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testEventHub'
-            );
-        });
-
-        if (!isIsolated) {
-            const iotHubTrigger: string = 'IoT Hub (Event Hub)';
-            test(iotHubTrigger, async () => {
-                await csTester.testCreateFunction(
-                    iotHubTrigger,
-                    'TestCompany.TestFunction',
-                    'AzureWebJobsStorage', // Use existing app setting
-                    'testmessages/testevents'
-                );
-            });
-        }
-
-        const httpTrigger: string = 'HTTP trigger';
-        test(httpTrigger, async () => {
-            await csTester.testCreateFunction(
-                httpTrigger,
+            ]
+        },
+        {
+            functionName: 'IoT Hub (Event Hub)',
+            inputs: [
                 'TestCompany.TestFunction',
-                'Admin'
-            );
-        });
-
-        if (version !== FuncVersion.v2 && !isIsolated) { // not supported on V2 or Isolated
-            const httpTriggerWithOpenAPI: string = 'HTTP trigger with OpenAPI';
-            test(httpTriggerWithOpenAPI, async () => {
-                await csTester.testCreateFunction(
-                    httpTriggerWithOpenAPI,
-                    'TestCompany.TestFunction',
-                    'Admin'
-                );
-            });
-        }
-
-        const queueTrigger: string = 'Azure Queue Storage trigger';
-        test(queueTrigger, async () => {
-            await csTester.testCreateFunction(
-                queueTrigger,
+                'AzureWebJobsStorage', // Use existing app setting
+                'testmessages/testevents'
+            ],
+            skip: isIsolated
+        },
+        {
+            functionName: 'HTTP trigger',
+            inputs: [
+                'TestCompany.TestFunction',
+                getRotatingAuthLevel()
+            ]
+        },
+        {
+            functionName: 'HTTP trigger with OpenAPI',
+            inputs: [
+                'TestCompany.TestFunction',
+                getRotatingAuthLevel()
+            ],
+            skip: version === FuncVersion.v2 || isIsolated
+        },
+        {
+            functionName: 'Azure Queue Storage trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testqueue'
-            );
-        });
-
-        const serviceBusQueueTrigger: string = 'Azure Service Bus Queue trigger';
-        test(serviceBusQueueTrigger, async () => {
-            await csTester.testCreateFunction(
-                serviceBusQueueTrigger,
+            ]
+        },
+        {
+            functionName: 'Azure Service Bus Queue trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testQueue'
-            );
-        });
-
-        const serviceBusTopicTrigger: string = 'Azure Service Bus Topic trigger';
-        test(serviceBusTopicTrigger, async () => {
-            await csTester.testCreateFunction(
-                serviceBusTopicTrigger,
+            ]
+        },
+        {
+            functionName: 'Azure Service Bus Topic trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 'AzureWebJobsStorage', // Use existing app setting
                 'testTopic',
                 'testSubscription'
-            );
-        });
-
-        const timerTrigger: string = 'Timer trigger';
-        test(timerTrigger, async () => {
-            await csTester.testCreateFunction(
-                timerTrigger,
+            ]
+        },
+        {
+            functionName: 'Timer trigger',
+            inputs: [
                 'TestCompany.TestFunction',
                 '0 * * * */6 *'
-            );
-        });
+            ]
+        }
+    ];
 
-        if (version === FuncVersion.v2) {
-            // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
-            test('createFunction API (deprecated)', async () => {
-                // Intentionally testing IoTHub trigger since a partner team plans to use that
-                const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
-                const functionName: string = 'createFunctionApi';
-                const namespace: string = 'TestCompany.TestFunction';
-                const iotPath: string = 'messages/events';
-                const connection: string = 'IoTHub_Setting';
-                await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
-                    await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
-                        // Intentionally testing weird casing
-                        await vscode.commands.executeCommand('azureFunctions.createFunction', csTester.projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
+    const tester: CSharpFunctionTester = new CSharpFunctionTester(version, targetFramework, source, !!isIsolated);
+    let title: string = tester.suiteName + ` ${targetFramework}`;
+    if (isIsolated) {
+        title += ' Isolated';
+    }
+
+    tester.addParallelSuite(testCases, {
+        title,
+        timeoutMS: 60 * 1000,
+        suppressParallel: true, // lots of errors like "The process cannot access the file because it is being used by another process" 😢
+        addTests: () => {
+            if (version === FuncVersion.v2) {
+                // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
+                test('createFunction API (deprecated)', async () => {
+                    // Intentionally testing IoTHub trigger since a partner team plans to use that
+                    const templateId: string = 'Azure.Function.CSharp.IotHubTrigger.2.x';
+                    const functionName: string = 'createFunctionApi';
+                    const namespace: string = 'TestCompany.TestFunction';
+                    const iotPath: string = 'messages/events';
+                    const connection: string = 'IoTHub_Setting';
+                    await runWithFuncSetting(projectLanguageSetting, ProjectLanguage.CSharp, async () => {
+                        await runWithFuncSetting(funcVersionSetting, FuncVersion.v2, async () => {
+                            // Intentionally testing weird casing
+                            await vscode.commands.executeCommand('azureFunctions.createFunction', tester.projectPath, templateId, functionName, { namEspace: namespace, PaTh: iotPath, ConneCtion: connection });
+                        });
                     });
+                    await tester.validateFunction(tester.projectPath, functionName, [namespace, iotPath, connection]);
                 });
-                await csTester.validateFunction(csTester.projectPath, functionName, [namespace, iotPath, connection]);
-            });
+            }
         }
     });
 }

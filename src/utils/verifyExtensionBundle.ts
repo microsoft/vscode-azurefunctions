@@ -5,7 +5,7 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { IActionContext } from 'vscode-azureextensionui';
 import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
 import { extensionsCsprojFileName, extInstallCommand, hostFileName, ProjectLanguage, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';
@@ -34,19 +34,25 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         context.telemetry.properties.bundleResult = 'hasExtensionsConfig';
     } else {
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
-        let hostJson: IHostJsonV2;
-        try {
-            hostJson = <IHostJsonV2>await fse.readJSON(hostFilePath);
-        } catch (error) {
-            throw new Error(localize('failedToParseHostJson', 'Failed to parse {0}: {1}', hostFileName, parseError(error).message));
-        }
-
-        if (!hostJson.extensionBundle) {
-            context.telemetry.properties.bundleResult = 'addedBundle';
-            await bundleFeedUtils.addDefaultBundle(hostJson);
-            await writeFormattedJson(hostFilePath, hostJson);
+        if (!(await fse.pathExists(hostFilePath))) {
+            context.telemetry.properties.bundleResult = 'missingHostJson';
         } else {
-            context.telemetry.properties.bundleResult = 'alreadyHasBundle';
+            let hostJson: IHostJsonV2;
+            try {
+                hostJson = <IHostJsonV2>await fse.readJSON(hostFilePath);
+            } catch (error) {
+                context.telemetry.properties.bundleResult = 'failedToParseHostJson';
+                // ignore error - no need to block create process just to verify bundle
+                return;
+            }
+
+            if (!hostJson.extensionBundle) {
+                context.telemetry.properties.bundleResult = 'addedBundle';
+                await bundleFeedUtils.addDefaultBundle(context, hostJson);
+                await writeFormattedJson(hostFilePath, hostJson);
+            } else {
+                context.telemetry.properties.bundleResult = 'alreadyHasBundle';
+            }
         }
     }
 }

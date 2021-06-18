@@ -18,7 +18,7 @@ export function getRotatingLocation(): string {
 }
 
 let nodeVersionCount: number = getStartingIndex();
-const nodeVersions: RegExp[] = [/node.*10/i, /node.*12/i, /node.*14/i];
+const nodeVersions: RegExp[] = [/node.*12/i, /node.*14/i];
 export function getRotatingNodeVersion(): RegExp {
     nodeVersionCount += 1;
     return nodeVersions[nodeVersionCount % nodeVersions.length];

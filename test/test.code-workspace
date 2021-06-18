@@ -1,7 +1,34 @@
 {
     "folders": [
         {
-            "path": "../testWorkspace"
+            "path": "../testWorkspace/0"
+        },
+        {
+            "path": "../testWorkspace/1"
+        },
+        {
+            "path": "../testWorkspace/2"
+        },
+        {
+            "path": "../testWorkspace/3"
+        },
+        {
+            "path": "../testWorkspace/4"
+        },
+        {
+            "path": "../testWorkspace/5"
+        },
+        {
+            "path": "../testWorkspace/6"
+        },
+        {
+            "path": "../testWorkspace/7"
+        },
+        {
+            "path": "../testWorkspace/8"
+        },
+        {
+            "path": "../testWorkspace/9"
         }
     ],
     "settings": {

@@ -16,24 +16,47 @@ import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersi
  */
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
-/**
- * Folder for tests that require a workspace
- */
-export let testWorkspacePath: string;
-
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
+
+/**
+ * Extension-wide TestUserInput that can't be used in parallel, unlike `createTestContext().ui`
+ */
 export const testUserInput: TestUserInput = new TestUserInput(vscode);
 
-export function createTestActionContext(): IActionContext {
-    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: testUserInput };
+export type TestActionContext = IActionContext & { ui: TestUserInput };
+export function createTestActionContext(): TestActionContext {
+    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: new TestUserInput(vscode) };
 }
 
-let templateProviderMap: Map<TemplateSource, CentralTemplateProvider>;
+/**
+ * Similar to `createTestActionContext` but with some extra logging
+ */
+export async function runWithTestActionContext(callbackId: string, callback: (context: TestActionContext) => Promise<void>): Promise<void> {
+    const context = createTestActionContext();
+    try {
+        await callback(context);
+    } finally {
+        console.log(`** TELEMETRY(${callbackId}) properties=${JSON.stringify(context.telemetry.properties)}, measurements=${JSON.stringify(context.telemetry.measurements)}`);
+    }
+}
+
+const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 
 const requestTimeoutKey: string = 'requestTimeout';
 let oldRequestTimeout: number | undefined;
+
+let testWorkspaceFolders: string[];
+let workspaceFolderIndex = 0;
+export function getTestWorkspaceFolder(): string {
+    if (workspaceFolderIndex >= testWorkspaceFolders.length) {
+        throw new Error('Not enough workspace folders. Add more in "test/test.code-workspace".')
+    }
+    const result = testWorkspaceFolders[workspaceFolderIndex];
+    workspaceFolderIndex += 1;
+    return result;
+}
 
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
@@ -42,7 +65,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await updateGlobalSetting(requestTimeoutKey, 45);
 
     await fse.ensureDir(testFolderPath);
-    testWorkspacePath = await initTestWorkspacePath();
+    testWorkspaceFolders = await initTestWorkspaceFolders();
 
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();
@@ -54,15 +77,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     updateBackupTemplates = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
     if (!updateBackupTemplates) {
-        await preLoadTemplates(ext.templateProvider);
-        templateProviderMap = new Map();
-        for (const source of allTemplateSources) {
-            if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
-                templateProviderMap.set(source, new CentralTemplateProvider(source));
-            }
-
-            await runForTemplateSource(source, preLoadTemplates);
-        }
+        await preLoadTemplates();
     }
 
     longRunningTestsEnabled = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
@@ -86,72 +101,81 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
 /**
  * Pre-load templates so that the first related unit test doesn't time out
  */
-async function preLoadTemplates(provider: CentralTemplateProvider): Promise<void> {
-    console.log(`Loading templates for source "${provider.templateSource}"`);
-    const languages: ProjectLanguage[] = [ProjectLanguage.JavaScript, ProjectLanguage.CSharp];
-
-    for (const version of Object.values(FuncVersion)) {
-        for (const language of languages) {
-            await provider.getFunctionTemplates(createTestActionContext(), undefined, language, version, TemplateFilter.Verified, undefined);
+async function preLoadTemplates(): Promise<void> {
+    const providers = [ext.templateProvider.get(createTestActionContext())];
+    for (const source of allTemplateSources) {
+        if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
+            const provider = new CentralTemplateProvider(source);
+            templateProviderMap.set(source, provider);
+            providers.push(provider);
         }
     }
+
+    const tasks: Promise<unknown>[] = [];
+    for (const provider of providers) {
+        await runWithTestActionContext('preLoadTemplates', async context => {
+            ext.templateProvider.registerActionVariable(provider, context);
+            for (const version of Object.values(FuncVersion)) {
+                for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
+                    tasks.push(provider.getFunctionTemplates(context, undefined, language, version, TemplateFilter.Verified, undefined));
+                }
+            }
+        });
+    }
+    await Promise.all(tasks);
 }
 
 export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
-export async function runForTemplateSource(source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
-    const oldProvider: CentralTemplateProvider = ext.templateProvider;
-    try {
-        let templateProvider: CentralTemplateProvider | undefined;
-        if (source === undefined) {
-            templateProvider = ext.templateProvider;
-        } else {
-            templateProvider = templateProviderMap.get(source);
-            if (!templateProvider) {
-                throw new Error(`Unrecognized source ${source}`);
-            }
-            ext.templateProvider = templateProvider;
+export async function runForTemplateSource(context: IActionContext, source: TemplateSource | undefined, callback: (templateProvider: CentralTemplateProvider) => Promise<void>): Promise<void> {
+    let templateProvider: CentralTemplateProvider | undefined;
+    if (source === undefined) {
+        templateProvider = ext.templateProvider.get(context);
+    } else {
+        templateProvider = templateProviderMap.get(source);
+        if (!templateProvider) {
+            throw new Error(`Unrecognized source ${source}`);
         }
-
-        try {
-            await callback(templateProvider);
-        } catch (e) {
-            // Only display this when a test fails, otherwise it'll clog up the logs
-            console.log(`Test failed for template source "${source}".`);
-            throw e;
-        }
-    } finally {
-        ext.templateProvider = oldProvider;
+        ext.templateProvider.registerActionVariable(templateProvider, context);
     }
+
+    await callback(templateProvider);
 }
 
 export async function cleanTestWorkspace(): Promise<void> {
-    // Doing this because VS Code doesn't always register changes to settings if you just delete "settings.json"
-    const settings: string[] = [
-        projectLanguageSetting,
-        funcVersionSetting,
-        templateFilterSetting,
-        deploySubpathSetting,
-        preDeployTaskSetting,
-        pythonVenvSetting
-    ];
-    for (const setting of settings) {
-        await updateWorkspaceSetting(setting, undefined, testWorkspacePath);
-        await updateGlobalSetting(setting, undefined);
-    }
+    for (const folder of testWorkspaceFolders) {
+        // Doing this because VS Code doesn't always register changes to settings if you just delete "settings.json"
+        const settings: string[] = [
+            projectLanguageSetting,
+            funcVersionSetting,
+            templateFilterSetting,
+            deploySubpathSetting,
+            preDeployTaskSetting,
+            pythonVenvSetting
+        ];
+        for (const setting of settings) {
+            await updateWorkspaceSetting(setting, undefined, folder);
+            await updateGlobalSetting(setting, undefined);
+        }
 
-    await fse.emptyDir(testWorkspacePath);
+        await fse.emptyDir(folder);
+    }
+    workspaceFolderIndex = 0;
 }
 
-async function initTestWorkspacePath(): Promise<string> {
+async function initTestWorkspaceFolders(): Promise<string[]> {
     const workspaceFolders: readonly vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
         throw new Error("No workspace is open");
     } else {
-        assert.equal(workspaceFolders.length, 1, "Expected only one workspace to be open.");
-        const workspacePath: string = workspaceFolders[0].uri.fsPath;
-        assert.equal(path.basename(workspacePath), 'testWorkspace', "Opened against an unexpected workspace.");
-        await fse.ensureDir(workspacePath);
-        await fse.emptyDir(workspacePath);
-        return workspacePath;
+        const folders: string[] = [];
+        for (let i = 0; i < workspaceFolders.length; i++) {
+            const workspacePath: string = workspaceFolders[i].uri.fsPath;
+            const folderName = path.basename(workspacePath);
+            assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
+            await fse.ensureDir(workspacePath);
+            await fse.emptyDir(workspacePath);
+            folders.push(workspacePath);
+        }
+        return folders;
     }
 }

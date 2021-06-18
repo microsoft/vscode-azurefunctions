@@ -30,7 +30,8 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         let value: string | undefined;
         if (triggerBindingType) {
             const version: FuncVersion = await node.parent.parent.getVersion();
-            value = await ext.templateProvider.tryGetSampleData(context, version, triggerBindingType);
+            const templateProvider = ext.templateProvider.get(context);
+            value = await templateProvider.tryGetSampleData(context, version, triggerBindingType);
             if (value) {
                 // Clean up the whitespace to make it more friendly for a one-line input box
                 value = value.replace(/[\r\n\t]/g, ' ');

@@ -7,6 +7,7 @@ import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { workerRuntimeVersionKey } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { hasMinFuncCliVersion } from '../../../funcCoreTools/hasMinFuncCliVersion';
@@ -99,8 +100,8 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    protected async getHostContent(): Promise<IHostJsonV2> {
-        const hostJson: IHostJsonV2 = await super.getHostContent();
+    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+        const hostJson: IHostJsonV2 = await super.getHostContent(context);
         hostJson.managedDependency = { enabled: true };
         return hostJson;
     }
