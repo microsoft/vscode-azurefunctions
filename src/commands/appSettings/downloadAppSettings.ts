@@ -39,10 +39,10 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
     // Valen: Gets the settings file for the open project
     // Valen: choose place on computer and it needs to be a local settings file to overwrite it or any json or txt file
     const localSettingsPath: string = await getLocalSettingsFile(message);
-    //console.log(localSettingsPath)
+    console.log(localSettingsPath)
     // Valen: Gets the URI
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
-    //console.log(localSettingsUri)
+    console.log(localSettingsUri)
     // Valen: I think this function handles the overwrite of existing settings
     let localSettings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath, true /* allowOverwrite */);
 
