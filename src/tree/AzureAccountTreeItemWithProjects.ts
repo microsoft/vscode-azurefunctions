@@ -67,7 +67,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder.uri.fsPath, true /* suppressPrompt */);
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder.uri.fsPath);
             if (projectPath) {
                 try {
                     hasLocalProject = true;
