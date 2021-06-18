@@ -24,7 +24,7 @@ export async function isFunctionProject(folderPath: string): Promise<boolean> {
 export type MultiProjectPromptBehavior = 'silent' | 'prompt' | 'modalPrompt';
 
 /**
- * Checks root folder and subFolders one level down
+ * Checks root folder and one level down first, then all levels of tree
  * If a single function project is found, returns that path.
  * If multiple projects are found, prompt to pick the project.
  */
