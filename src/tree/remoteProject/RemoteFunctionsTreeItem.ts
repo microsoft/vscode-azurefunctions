@@ -56,7 +56,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             }
 
             // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
-            if (Date.now() > maxTime || !(funcs.length === 1 && funcs[0].name?.toLowerCase() === 'warmup')) {
+            if (Date.now() > maxTime || !(funcs.length === 1 && isWarmupFunction(funcs[0]))) {
                 context.telemetry.measurements.listFunctionsAttempt = attempt;
                 break;
             } else {
@@ -75,5 +75,13 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }
         );
+    }
+}
+
+function isWarmupFunction(func: WebSiteManagementModels.FunctionEnvelope): boolean {
+    try {
+        return !!func.id && getFunctionNameFromId(func.id).toLowerCase() === 'warmup';
+    } catch {
+        return false;
     }
 }
