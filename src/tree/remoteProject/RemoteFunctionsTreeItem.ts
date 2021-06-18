@@ -43,7 +43,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         }
 
         let funcs: WebSiteManagementModels.FunctionEnvelopeCollection;
-        const maxTime = Date.now() + 60 * 1000;
+        const maxTime = Date.now() + 2 * 60 * 1000;
         let attempt = 1;
         while (true) {
             funcs = this._nextLink ?
@@ -61,7 +61,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
                 break;
             } else {
                 attempt += 1;
-                await delay(5 * 1000);
+                await delay(10 * 1000);
             }
         }
 
