@@ -79,6 +79,7 @@
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "onCommand:azureFunctions.reportIssue",
+        "onCommand:azureFunctions.testValentina",
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
@@ -149,6 +150,11 @@
             {
                 "command": "azureFunctions.startFunctionApp",
                 "title": "%azureFunctions.startFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.testValentina",
+                "title": "%azureFunctions.testValentina%",
                 "category": "Azure Functions"
             },
             {
@@ -471,6 +477,11 @@
                     "command": "azureFunctions.deleteSlot",
                     "when": "view == azFuncTree && viewItem == azFuncSlot",
                     "group": "3@5"
+                },
+                {
+                    "command": "azureFunctions.testValentina",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "3@6"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
@@ -1030,7 +1041,7 @@
                     "azureFunctions.enableOpenFromPortal": {
                         "type": "boolean",
                         "description": "Enable download content and setup project feature using handle uri (experimental)",
-                        "default": false
+                        "default": true
                     },
                     "azureFunctions.templateSource": {
                         "type": "string",
