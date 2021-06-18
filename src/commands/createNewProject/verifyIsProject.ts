@@ -26,7 +26,7 @@ export type MultiProjectPromptBehavior = 'silent' | 'prompt' | 'modalPrompt';
 /**
  * Checks root folder and one level down first, then all levels of tree
  * If a single function project is found, returns that path.
- * If multiple projects are found, prompt to pick the project.
+ * If multiple projects are found, will prompt based on the value of `promptBehavior`
  */
 export async function tryGetFunctionProjectRoot(context: IActionContext, folderPath: string, promptBehavior: MultiProjectPromptBehavior = 'silent'): Promise<string | undefined> {
     if (!getWorkspaceSetting<boolean>('suppressProject', folderPath)) {
@@ -60,12 +60,12 @@ export async function tryGetFunctionProjectRoot(context: IActionContext, folderP
     return undefined;
 }
 
-async function promptForProjectSubpath(context: IActionContext, workspacePath: string, matchingSubpaths: string[], promptLevel: MultiProjectPromptBehavior): Promise<string> {
+async function promptForProjectSubpath(context: IActionContext, workspacePath: string, matchingSubpaths: string[], promptBehavior: MultiProjectPromptBehavior): Promise<string> {
     const message: string = localize('detectedMultipleProject', 'Detected multiple function projects in the same workspace folder. You must either set the default or use a multi-root workspace.');
     const learnMoreLink: string = 'https://aka.ms/AA4nmfy';
     const setDefault: MessageItem = { title: localize('setDefault', 'Set default') };
     // No need to check result - cancel will throw a UserCancelledError
-    await context.ui.showWarningMessage(message, { learnMoreLink, modal: promptLevel === 'modalPrompt' }, setDefault);
+    await context.ui.showWarningMessage(message, { learnMoreLink, modal: promptBehavior === 'modalPrompt' }, setDefault);
 
     const picks: IAzureQuickPickItem<string>[] = matchingSubpaths.map(p => { return { label: p, data: p }; });
     const placeHolder: string = localize('selectProject', 'Select the default project subpath');
