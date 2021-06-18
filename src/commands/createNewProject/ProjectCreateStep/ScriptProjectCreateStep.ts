@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, proxiesFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
@@ -31,13 +32,13 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
     public async executeCore(context: IProjectWizardContext, _progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const version: FuncVersion = nonNullProp(context, 'version');
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
-        if (await confirmOverwriteFile(hostJsonPath)) {
-            const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent();
+        if (await confirmOverwriteFile(context, hostJsonPath)) {
+            const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent(context);
             await writeFormattedJson(hostJsonPath, hostJson);
         }
 
         const localSettingsJsonPath: string = path.join(context.projectPath, localSettingsFileName);
-        if (await confirmOverwriteFile(localSettingsJsonPath)) {
+        if (await confirmOverwriteFile(context, localSettingsJsonPath)) {
             const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -48,7 +49,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         }
 
         const proxiesJsonPath: string = path.join(context.projectPath, proxiesFileName);
-        if (await confirmOverwriteFile(proxiesJsonPath)) {
+        if (await confirmOverwriteFile(context, proxiesJsonPath)) {
             await writeFormattedJson(proxiesJsonPath, {
                 $schema: 'http://json.schemastore.org/proxies',
                 proxies: {}
@@ -56,7 +57,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         }
 
         const gitignorePath: string = path.join(context.projectPath, gitignoreFileName);
-        if (await confirmOverwriteFile(gitignorePath)) {
+        if (await confirmOverwriteFile(context, gitignorePath)) {
             await fse.writeFile(gitignorePath, this.gitignore.concat(`
 # Azure Functions artifacts
 bin
@@ -66,12 +67,12 @@ local.settings.json`));
         }
 
         const funcIgnorePath: string = path.join(context.projectPath, '.funcignore');
-        if (await confirmOverwriteFile(funcIgnorePath)) {
+        if (await confirmOverwriteFile(context, funcIgnorePath)) {
             await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
         }
     }
 
-    protected async getHostContent(): Promise<IHostJsonV2> {
+    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = {
             version: '2.0',
             logging: {
@@ -84,7 +85,7 @@ local.settings.json`));
             }
         };
 
-        await bundleFeedUtils.addDefaultBundle(hostJson);
+        await bundleFeedUtils.addDefaultBundle(context, hostJson);
 
         return hostJson;
     }

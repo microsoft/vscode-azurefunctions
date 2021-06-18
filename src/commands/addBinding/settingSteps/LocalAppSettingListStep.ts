@@ -30,7 +30,7 @@ import { StorageConnectionCreateStep } from './StorageConnectionCreateStep';
 export class LocalAppSettingListStep extends BindingSettingStepBase {
     public async promptCore(context: IBindingWizardContext): Promise<BindingSettingValue> {
         const localSettingsPath: string = path.join(context.projectPath, localSettingsFileName);
-        const settings: ILocalSettingsJson = await getLocalSettingsJson(localSettingsPath);
+        const settings: ILocalSettingsJson = await getLocalSettingsJson(context, localSettingsPath);
         const existingSettings: string[] = settings.Values ? Object.keys(settings.Values) : [];
         let picks: IAzureQuickPickItem<string | undefined>[] = [{ label: localize('newAppSetting', '$(plus) Create new local app setting'), data: undefined }];
         picks = picks.concat(existingSettings.map((s: string) => { return { data: s, label: s }; }));

@@ -27,7 +27,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         await super.executeCore(context, progress);
 
         const packagePath: string = path.join(context.projectPath, 'package.json');
-        if (await confirmOverwriteFile(packagePath)) {
+        if (await confirmOverwriteFile(context, packagePath)) {
             await writeFormattedJson(packagePath, {
                 name: convertToValidPackageName(path.basename(context.projectPath)),
                 version: '1.0.0',

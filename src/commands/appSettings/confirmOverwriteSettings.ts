@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { DialogResponses } from "vscode-azureextensionui";
+import { DialogResponses, IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 
-export async function confirmOverwriteSettings(sourceSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationName: string): Promise<void> {
+export async function confirmOverwriteSettings(context: IActionContext, sourceSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationName: string): Promise<void> {
     let suppressPrompt: boolean = false;
     let overwriteSetting: boolean = false;
 
@@ -28,7 +28,7 @@ export async function confirmOverwriteSettings(sourceSettings: { [key: string]: 
                 const yesToAll: vscode.MessageItem = { title: localize('yesToAll', 'Yes to all') };
                 const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
                 const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', key, destinationName);
-                const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
+                const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
                 if (result === DialogResponses.yes) {
                     overwriteSetting = true;
                 } else if (result === yesToAll) {

@@ -5,7 +5,7 @@
 
 import { FuncVersion, ProjectLanguage, verifyVersionAndLanguage } from '../extension.bundle';
 import { assertThrowsAsync } from './assertThrowsAsync';
-import { createTestActionContext, testUserInput } from './global.test';
+import { createTestActionContext } from './global.test';
 
 suite('verifyVersionAndLanguage', () => {
     test('Local: ~1, Remote: none', async () => {
@@ -31,8 +31,9 @@ suite('verifyVersionAndLanguage', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~2'
         };
-        await testUserInput.runWithInputs(['Deploy Anyway'], async () => {
-            await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v1, ProjectLanguage.JavaScript, props);
+        const context = createTestActionContext();
+        await context.ui.runWithInputs(['Deploy Anyway'], async () => {
+            await verifyVersionAndLanguage(context, 'testSite', FuncVersion.v1, ProjectLanguage.JavaScript, props);
         });
     });
 
@@ -40,8 +41,9 @@ suite('verifyVersionAndLanguage', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '2.0.0'
         };
-        await testUserInput.runWithInputs(['Deploy Anyway'], async () => {
-            await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v1, ProjectLanguage.JavaScript, props);
+        const context = createTestActionContext();
+        await context.ui.runWithInputs(['Deploy Anyway'], async () => {
+            await verifyVersionAndLanguage(context, 'testSite', FuncVersion.v1, ProjectLanguage.JavaScript, props);
         });
     });
 
@@ -68,8 +70,9 @@ suite('verifyVersionAndLanguage', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '~1'
         };
-        await testUserInput.runWithInputs(['Deploy Anyway'], async () => {
-            await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v2, ProjectLanguage.JavaScript, props);
+        const context = createTestActionContext();
+        await context.ui.runWithInputs(['Deploy Anyway'], async () => {
+            await verifyVersionAndLanguage(context, 'testSite', FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
     });
 
@@ -77,8 +80,9 @@ suite('verifyVersionAndLanguage', () => {
         const props: { [name: string]: string } = {
             FUNCTIONS_EXTENSION_VERSION: '1.0.0'
         };
-        await testUserInput.runWithInputs(['Deploy Anyway'], async () => {
-            await verifyVersionAndLanguage(createTestActionContext(), 'testSite', FuncVersion.v2, ProjectLanguage.JavaScript, props);
+        const context = createTestActionContext();
+        await context.ui.runWithInputs(['Deploy Anyway'], async () => {
+            await verifyVersionAndLanguage(context, 'testSite', FuncVersion.v2, ProjectLanguage.JavaScript, props);
         });
     });
 

@@ -7,8 +7,8 @@ import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { tryGetWebApp } from 'vscode-azureappservice';
-import { DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
-import { cleanTestWorkspace, longRunningTestsEnabled, testUserInput } from '../global.test';
+import { createFunctionAppAdvanced, DialogResponses, getRandomHexString, ProjectLanguage } from '../../extension.bundle';
+import { cleanTestWorkspace, longRunningTestsEnabled, runWithTestActionContext, testUserInput } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
 import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
@@ -42,8 +42,10 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
 
     test('Create - Advanced', async () => {
         const testInputs: (string | RegExp)[] = [appName, /\.net/i, 'Windows', '$(plus) Create new resource group', rgName, location, 'Consumption', '$(plus) Create new storage account', saName, '$(plus) Create new Application Insights resource', aiName];
-        await testUserInput.runWithInputs(testInputs, async () => {
-            await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
+        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+            await context.ui.runWithInputs(testInputs, async () => {
+                await createFunctionAppAdvanced(context);
+            });
         });
         const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         assert.ok(createdApp);
@@ -51,8 +53,10 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
 
     test('Create - Advanced - Existing RG/SA/AI', async () => {
         const testInputs: (string | RegExp)[] = [app2Name, /\.net/i, 'Windows', rgName, location, 'Consumption', saName, aiName];
-        await testUserInput.runWithInputs(testInputs, async () => {
-            await vscode.commands.executeCommand('azureFunctions.createFunctionAppAdvanced');
+        await runWithTestActionContext('createFunctionAppAdvanced', async context => {
+            await context.ui.runWithInputs(testInputs, async () => {
+                await createFunctionAppAdvanced(context);
+            });
         });
         const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.ok(createdApp);

@@ -9,7 +9,7 @@ import * as path from 'path';
 import { commands, Uri } from 'vscode';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, testUserInput, testWorkspacePath } from './global.test';
+import { cleanTestWorkspace, createTestActionContext, getTestWorkspaceFolder, testUserInput } from './global.test';
 
 suite('Add Binding', () => {
     let functionJsonPath: string;
@@ -18,6 +18,7 @@ suite('Add Binding', () => {
 
     suiteSetup(async () => {
         await cleanTestWorkspace();
+        const testWorkspacePath = getTestWorkspaceFolder();
         await testUserInput.runWithInputs([testWorkspacePath, ProjectLanguage.JavaScript, /http\s*trigger/i, functionName, 'Anonymous'], async () => {
             await commands.executeCommand('azureFunctions.createNewProject');
         });
@@ -45,7 +46,7 @@ suite('Add Binding', () => {
     });
 
     test('Tree', async () => {
-        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProjecttestWorkspace/functions/${functionName}`, createTestActionContext());
+        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProject0/functions/${functionName}`, createTestActionContext());
         assert.ok(treeItem, 'Failed to find tree item');
         await validateAddBinding([treeItem], []);
     });

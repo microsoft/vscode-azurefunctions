@@ -83,7 +83,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
         await taskUtils.executeIfNotActive(funcTask);
 
         const intervalMs: number = 500;
-        const funcPort: string = await getFuncPortFromTaskOrProject(funcTask, workspaceFolder);
+        const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
         const statusRequest: RequestPrepareOptions = { url: `http://localhost:${funcPort}/admin/host/status`, method: 'GET' };
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;

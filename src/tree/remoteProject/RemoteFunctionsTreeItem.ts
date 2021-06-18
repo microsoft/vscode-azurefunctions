@@ -7,6 +7,7 @@ import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { isArray } from 'util';
 import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
+import { delay } from '../../utils/delay';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { SlotTreeItemBase } from '../SlotTreeItemBase';
 import { getFunctionNameFromId, RemoteFunctionTreeItem } from './RemoteFunctionTreeItem';
@@ -41,13 +42,27 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             this._nextLink = undefined;
         }
 
-        const funcs: WebSiteManagementModels.FunctionEnvelopeCollection = this._nextLink ?
-            await this.parent.client.listFunctionsNext(this._nextLink) :
-            await this.parent.client.listFunctions();
+        let funcs: WebSiteManagementModels.FunctionEnvelopeCollection;
+        const maxTime = Date.now() + 60 * 1000;
+        let attempt = 1;
+        while (true) {
+            funcs = this._nextLink ?
+                await this.parent.client.listFunctionsNext(this._nextLink) :
+                await this.parent.client.listFunctions();
 
-        // https://github.com/Azure/azure-functions-host/issues/3502
-        if (!isArray(funcs)) {
-            throw new Error(localize('failedToList', 'Failed to list functions.'));
+            // https://github.com/Azure/azure-functions-host/issues/3502
+            if (!isArray(funcs)) {
+                throw new Error(localize('failedToList', 'Failed to list functions.'));
+            }
+
+            // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
+            if (Date.now() > maxTime || !(funcs.length === 1 && funcs[0].name?.toLowerCase() === 'warmup')) {
+                context.telemetry.measurements.listFunctionsAttempt = attempt;
+                break;
+            } else {
+                attempt += 1;
+                await delay(5 * 1000);
+            }
         }
 
         this._nextLink = funcs.nextLink;

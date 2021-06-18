@@ -20,7 +20,7 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     }
 
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
-        const funcRelease = await cliFeedUtils.getRelease(await cliFeedUtils.getLatestVersion(context.version));
+        const funcRelease = await cliFeedUtils.getRelease(await cliFeedUtils.getLatestVersion(context, context.version));
         const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
         const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
         if (runtimes.length === 0) {

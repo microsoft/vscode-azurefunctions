@@ -29,7 +29,7 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
     if (version === FuncVersion.v1) {
         throw new Error(localize('notSupportedV1', 'This operation is not supported for Azure Functions v1.'));
     } else {
-        await node.parent.parent.setApplicationSetting(node.disabledStateKey, String(isDisabled));
+        await node.parent.parent.setApplicationSetting(context, node.disabledStateKey, String(isDisabled));
     }
     await node.parent.parent.refresh(context);
 

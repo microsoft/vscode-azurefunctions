@@ -11,6 +11,7 @@ import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { setupProjectFolder } from './setupProjectFolder';
 
+// export a type of variable called enum
 export enum HandleUriActions {
     downloadContentAndSetupProject = 'downloadContentAndSetupProject',
 }
@@ -22,21 +23,28 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
         const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
 
         if (enableOpenFromPortal) {
-            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
-            const action: string = getRequiredQueryParameter(parsedQuery, 'action');
+            // check if Portal has the option enabled/true to open into VS Code
+            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query); // parses URI
+            const action: string = getRequiredQueryParameter(parsedQuery, 'action'); //check if its valid URI via function below
 
             if (action === HandleUriActions.downloadContentAndSetupProject) {
-                const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
+                // ensures user is logged in to the portal
+                const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn(); //get condition from Azure Account settings if the user is currently logged in
                 if (!isLoggedIn) {
-                    await vscode.commands.executeCommand('azure-account.login');
+                    await vscode.commands.executeCommand('azure-account.login'); //pop up to login
                 }
 
+                // open file dialog - maybe opening a MSI file from the portal?
+                // download contents
                 const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                await setupProjectFolder(uri, filePathUri[0], context); // calls setupProjectFolder.ts
+                const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
                 await setupProjectFolder(uri, filePathUri[0], context);
             } else {
                 throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
             }
         } else {
+            // cannot open from portal
             throw new Error(localize('featureNotSupported', 'Download content and setup project feature is not supported for this extension version.'));
         }
     });

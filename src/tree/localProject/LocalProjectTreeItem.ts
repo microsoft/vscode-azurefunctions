@@ -109,13 +109,13 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         return this.version;
     }
 
-    public async getApplicationSettings(): Promise<ApplicationSettings> {
-        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(path.join(this.effectiveProjectPath, localSettingsFileName));
+    public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
+        const localSettings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(this.effectiveProjectPath, localSettingsFileName));
         return localSettings.Values || {};
     }
 
-    public async setApplicationSetting(key: string, value: string): Promise<void> {
-        await setLocalAppSetting(this.effectiveProjectPath, key, value, MismatchBehavior.Overwrite);
+    public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
+        await setLocalAppSetting(context, this.effectiveProjectPath, key, value, MismatchBehavior.Overwrite);
     }
 
     private async onFuncTaskChanged(scope: WorkspaceFolder | TaskScope | undefined): Promise<void> {

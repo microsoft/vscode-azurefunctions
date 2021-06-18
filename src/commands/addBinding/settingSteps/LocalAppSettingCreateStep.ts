@@ -29,7 +29,7 @@ export class LocalAppSettingCreateStep extends AzureWizardExecuteStep<IBindingWi
         progress.report({ message: localize('updatingLocalSettings', 'Updating {0}...', localSettingsFileName) });
         const appSettingName = String(nonNullValue(getBindingSetting(context, this._setting), this._setting.name));
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await setLocalAppSetting(context.projectPath, appSettingName, nonNullProp(context, <any>this._valueKey));
+        await setLocalAppSetting(context, context.projectPath, appSettingName, nonNullProp(context, <any>this._valueKey));
     }
 
     public shouldExecute(context: IBindingWizardContext): boolean {

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
@@ -11,8 +12,8 @@ import { cpUtils } from '../utils/cpUtils';
 import { getBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
-export async function installFuncCoreTools(packageManagers: PackageManager[], version?: FuncVersion): Promise<void> {
-    version = version || await promptForFuncVersion(localize('selectVersion', 'Select the version of the runtime to install'));
+export async function installFuncCoreTools(context: IActionContext, packageManagers: PackageManager[], version?: FuncVersion): Promise<void> {
+    version = version || await promptForFuncVersion(context, localize('selectVersion', 'Select the version of the runtime to install'));
 
     ext.outputChannel.show();
     // Use the first package manager

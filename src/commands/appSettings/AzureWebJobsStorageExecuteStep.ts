@@ -20,7 +20,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
             value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;
         }
 
-        await setLocalAppSetting(context.projectPath, azureWebJobsStorageKey, value, MismatchBehavior.Overwrite);
+        await setLocalAppSetting(context, context.projectPath, azureWebJobsStorageKey, value, MismatchBehavior.Overwrite);
     }
 
     public shouldExecute(context: IAzureWebJobsStorageWizardContext): boolean {

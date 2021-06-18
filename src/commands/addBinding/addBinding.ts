@@ -31,7 +31,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         functionJsonPath = data.fsPath;
         workspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
         workspacePath = workspaceFolder.uri.fsPath;
-        projectPath = await tryGetFunctionProjectRoot(workspacePath) || workspacePath;
+        projectPath = await tryGetFunctionProjectRoot(context, workspacePath) || workspacePath;
         [language, version] = await verifyInitForVSCode(context, projectPath);
     } else {
         if (!data) {

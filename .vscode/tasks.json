@@ -18,6 +18,32 @@
             "type": "npm",
             "script": "lint",
             "problemMatcher": "$eslint-stylish"
+        },
+        {
+            "type": "func",
+            "command": "host start",
+            "problemMatcher": "$func-node-watch",
+            "isBackground": true,
+            "dependsOn": "npm build"
+        },
+        {
+            "type": "shell",
+            "label": "npm build",
+            "command": "npm run build",
+            "dependsOn": "npm install",
+            "problemMatcher": "$tsc"
+        },
+        {
+            "type": "shell",
+            "label": "npm install",
+            "command": "npm install"
+        },
+        {
+            "type": "shell",
+            "label": "npm prune",
+            "command": "npm prune --production",
+            "dependsOn": "npm build",
+            "problemMatcher": []
         }
     ]
 }
