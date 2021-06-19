@@ -116,6 +116,11 @@ async function preLoadTemplates(): Promise<void> {
         await runWithTestActionContext('preLoadTemplates', async context => {
             ext.templateProvider.registerActionVariable(provider, context);
             for (const version of Object.values(FuncVersion)) {
+                if (version === FuncVersion.v4) {
+                    // v4 doesn't have templates yet
+                    continue;
+                }
+
                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
                     tasks.push(provider.getFunctionTemplates(context, undefined, language, version, TemplateFilter.Verified, undefined));
                 }

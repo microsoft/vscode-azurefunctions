@@ -6,6 +6,7 @@
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
+import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
@@ -13,7 +14,7 @@ export namespace cliFeedUtils {
 
     interface ICliFeed {
         tags: {
-            [tag: string]: ITag;
+            [tag: string]: ITag | undefined;
         };
         releases: {
             [version: string]: IRelease;
@@ -62,7 +63,11 @@ export namespace cliFeedUtils {
             tag = tag + '-prerelease';
         }
 
-        return cliFeed.tags[tag].release;
+        const releaseData = cliFeed.tags[tag];
+        if (!releaseData) {
+            throw new Error(localize('unsupportedVersion', 'Azure Functions v{0} does not support this operation.', majorVersion));
+        }
+        return releaseData.release;
     }
 
     export async function getRelease(templateVersion: string): Promise<IRelease> {

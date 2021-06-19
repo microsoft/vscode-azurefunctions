@@ -86,6 +86,9 @@ export namespace dotnetUtils {
         let isIsolated: boolean = false;
         let targetFramework: string;
         switch (version) { // set up defaults
+            case FuncVersion.v4:
+                targetFramework = 'net6.0';
+                break;
             case FuncVersion.v3:
                 targetFramework = 'netcoreapp3.1';
                 break;

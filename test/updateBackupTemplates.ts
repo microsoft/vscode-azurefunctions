@@ -36,6 +36,11 @@ suite('Backup templates', () => {
 
         for (const worker of workers) {
             for (const version of Object.values(FuncVersion)) {
+                if (version === FuncVersion.v4) {
+                    // v4 doesn't have templates yet
+                    continue;
+                }
+
                 if (!worker.versions?.includes(version)) {
                     continue;
                 }
