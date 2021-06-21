@@ -14,7 +14,7 @@ export interface AzureFunctionsExtensionApi {
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
-export type ProjectVersion = '~1' | '~2' | '~3';
+export type ProjectVersion = '~1' | '~2' | '~3' | '~4';
 
 export interface IAppSettingsClient {
     fullName: string;
