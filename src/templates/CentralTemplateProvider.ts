@@ -150,6 +150,7 @@ export class CentralTemplateProvider implements Disposable {
         const cachedProviders = await this.getCachedProviders(projectPath, language, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
+            console.log('REUSING TEMPLATES TASK');
             return await templatesTask;
         } else {
             templatesTask = this.refreshTemplates(context, cachedProviders.providers);
