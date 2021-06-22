@@ -86,8 +86,7 @@ export class CentralTemplateProvider implements Disposable {
             await provider.clearCachedTemplates(context);
             provider.projKeyMayHaveChanged();
         }
-        const key: string = this.getProvidersKey(projectPath, language, version);
-        const cachedProviders = this._providersMap.get(key);
+        const cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
         if (cachedProviders) {
             delete cachedProviders.templatesTask;
         }
@@ -116,20 +115,34 @@ export class CentralTemplateProvider implements Disposable {
         return await provider.getProjKey();
     }
 
-    private getProvidersKey(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): string {
-        let key: string = language + version;
-        if (projectPath) {
+    private getCachedProvidersKey(language: ProjectLanguage, version: FuncVersion): string {
+        return language + version;
+    }
+
+    private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): CachedProviders | undefined {
+        const key: string = this.getCachedProvidersKey(language, version);
+        if (this._providersMap.has(key)) {
+            return this._providersMap.get(key);
+        } else if (projectPath) {
+            return this._providersMap.get(key + projectPath);
+        } else {
+            return undefined;
+        }
+    }
+
+    private setCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, cachedProviders: CachedProviders): void {
+        let key: string = this.getCachedProvidersKey(language, version);
+        if (cachedProviders.providers.some(p => p.supportsProjKey())) {
             key += projectPath;
         }
-        return key;
+        this._providersMap.set(key, cachedProviders);
     }
 
     private async getCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
-        const key: string = this.getProvidersKey(projectPath, language, version);
-        let cachedProviders = this._providersMap.get(key);
+        let cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
         if (!cachedProviders) {
             cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, version, projectTemplateKey) };
-            this._providersMap.set(key, cachedProviders);
+            this.setCachedProviders(projectPath, language, version, cachedProviders);
         } else {
             await Promise.all(cachedProviders.providers.map(async p => {
                 if (await p.updateProjKeyIfChanged(projectTemplateKey)) {

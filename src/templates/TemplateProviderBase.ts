@@ -144,6 +144,10 @@ export abstract class TemplateProviderBase implements Disposable {
         return key;
     }
 
+    public supportsProjKey(): boolean {
+        return !!this.refreshProjKey;
+    }
+
     /**
      * Optional method if the provider has project-specific templates
      */
