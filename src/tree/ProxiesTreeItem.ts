@@ -18,6 +18,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public readonly label: string = localize('Proxies', 'Proxies');
     public readonly childTypeLabel: string = localize('Proxy', 'Proxy');
     public readonly parent: SlotTreeItemBase;
+    public suppressMaskLabel: boolean = true;
 
     private readonly _proxiesJsonPath: string = 'site/wwwroot/proxies.json';
     private _proxyConfig: IProxyConfig;
