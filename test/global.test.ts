@@ -35,9 +35,12 @@ export function createTestActionContext(): TestActionContext {
  */
 export async function runWithTestActionContext(callbackId: string, callback: (context: TestActionContext) => Promise<void>): Promise<void> {
     const context = createTestActionContext();
+    const start: number = Date.now();
     try {
         await callback(context);
     } finally {
+        const end: number = Date.now();
+        context.telemetry.measurements.duration = (end - start) / 1000;
         console.log(`** TELEMETRY(${callbackId}) properties=${JSON.stringify(context.telemetry.properties)}, measurements=${JSON.stringify(context.telemetry.measurements)}`);
     }
 }
@@ -122,7 +125,7 @@ async function preLoadTemplates(): Promise<void> {
                 }
 
                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, undefined, language, version, TemplateFilter.Verified, undefined));
+                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, version, TemplateFilter.Verified, undefined));
                 }
             }
         });

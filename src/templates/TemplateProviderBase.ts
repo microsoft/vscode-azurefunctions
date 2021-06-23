@@ -145,6 +145,13 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     /**
+     * Returns true if this template provider has project-specific templates
+     */
+    public supportsProjKey(): boolean {
+        return !!this.refreshProjKey;
+    }
+
+    /**
      * Optional method if the provider has project-specific templates
      */
     protected refreshProjKey?(): Promise<string>;
