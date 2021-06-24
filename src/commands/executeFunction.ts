@@ -71,6 +71,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
             } else {
+                context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
             }
         }

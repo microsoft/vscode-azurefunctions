@@ -46,11 +46,13 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
 
 export async function verifyVersionAndLanguage(context: IActionContext, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
     const rawAzureVersion: string = remoteProperties[extensionVersionKey];
-    context.telemetry.properties.remoteVersion = rawAzureVersion;
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
-
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
-    context.telemetry.properties.remoteRuntime = azureWorkerRuntime;
+
+    // Since these are coming from the user's app settings we want to be a bit careful and only track if it's in an expected format
+    context.telemetry.properties.remoteVersion = azureVersion || 'Unknown';
+    context.telemetry.properties.remoteRuntime = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
+
     const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));

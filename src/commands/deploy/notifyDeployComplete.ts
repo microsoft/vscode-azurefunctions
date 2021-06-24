@@ -24,6 +24,8 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
     void window.showInformationMessage(deployComplete, streamLogs, uploadSettings, viewOutput).then(async result => {
         await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
+            postDeployContext.valuesToMask.push(...context.valuesToMask);
+
             if (result === viewOutput) {
                 ext.outputChannel.show();
             } else if (result === streamLogs) {

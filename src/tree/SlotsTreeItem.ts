@@ -19,6 +19,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public readonly label: string = localize('slots', 'Slots');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
     public readonly parent: ProductionSlotTreeItem;
+    public suppressMaskLabel: boolean = true;
 
     private _nextLink: string | undefined;
 
