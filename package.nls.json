@@ -98,6 +98,10 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
+<<<<<<< Updated upstream
     "azureFunctions.testValentina": "Test",
     "azureFunctions.cloneLocally": "Clone Project Locally..."
+=======
+    "azureFunctions.dockerPrompt": "Test Docker Prompt"
+>>>>>>> Stashed changes
 }

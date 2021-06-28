@@ -37,6 +37,8 @@ import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
+// testing
+import { prompt } from './dockersupport/askDockerStep';
 import { editAppSetting } from './editAppSetting';
 import { executeFunction } from './executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
@@ -119,9 +121,14 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties); // menu item 5
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
+<<<<<<< Updated upstream
     // VALEN EDIT:
     registerCommand('azureFunctions.testValentina', testFunctionValentina);
     // VALEN EDIT:
     registerCommand('azureFunctions.cloneLocally', cloneLocally);
 
+=======
+    //testing
+    registerCommand('azureFunctions.dockerPrompt', prompt);
+>>>>>>> Stashed changes
 }

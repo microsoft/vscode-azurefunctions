@@ -5,11 +5,10 @@
 
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
-import { setupProjectFolder } from './setupProjectFolder';
 
 // export a type of variable called enum
 export enum HandleUriActions {
@@ -19,7 +18,7 @@ export enum HandleUriActions {
 // NOTE: Example call for opening vscode with query parameters -
 // vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject'>
 export async function handleUri(uri: vscode.Uri): Promise<void> {
-    await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
+    await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async () => {
         const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
 
         if (enableOpenFromPortal) {
@@ -36,10 +35,10 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
 
                 // open file dialog - maybe opening a MSI file from the portal?
                 // download contents
-                const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
-                await setupProjectFolder(uri, filePathUri[0], context); // calls setupProjectFolder.ts
-                const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
-                await setupProjectFolder(uri, filePathUri[0], context);
+                //const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                //await setupProjectFolder(uri, filePathUri[0], context); // calls setupProjectFolder.ts
+                //const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                //await setupProjectFolder(uri, filePathUri[0], context);
             } else {
                 throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));
             }

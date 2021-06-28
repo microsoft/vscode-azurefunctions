@@ -79,8 +79,12 @@
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "onCommand:azureFunctions.reportIssue",
+<<<<<<< Updated upstream
         "onCommand:azureFunctions.testValentina",
         "onCommand:azureFunctions.cloneLocally",
+=======
+        "onCommand:azureFunctions.dockerPrompt",
+>>>>>>> Stashed changes
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
@@ -369,6 +373,11 @@
                 "command": "azureFunctions.reportIssue",
                 "title": "%azureFunctions.reportIssue%",
                 "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.dockerPrompt",
+                "title": "%azureFunctions.dockerPrompt%",
+                "category": "Azure Functions"
             }
         ],
         "views": {
@@ -490,8 +499,13 @@
                     "group": "3@5"
                 },
                 {
+<<<<<<< Updated upstream
                     "command": "azureFunctions.testValentina",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+=======
+                    "command": "azureFunctions.dockerPrompt",
+                    "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
+>>>>>>> Stashed changes
                     "group": "3@6"
                 },
                 {
