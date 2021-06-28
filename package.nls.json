@@ -98,5 +98,6 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.testValentina": "Test...",
+    "azureFunctions.testValentina": "Test",
+    "azureFunctions.cloneLocally": "Clone Project Locally..."
 }

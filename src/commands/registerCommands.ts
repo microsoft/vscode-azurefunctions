@@ -21,6 +21,7 @@ import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite'; // import menu item 1
 //VALEN EDIT
+import { cloneLocally } from './cloneProjectLocally';
 import { configureDeploymentSource } from './configureDeploymentSource'; // import menu item 2
 import { copyFunctionUrl } from './copyFunctionUrl';
 import { createChildNode } from './createChildNode';
@@ -120,5 +121,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
     // VALEN EDIT:
     registerCommand('azureFunctions.testValentina', testFunctionValentina);
+    // VALEN EDIT:
+    registerCommand('azureFunctions.cloneLocally', cloneLocally);
 
 }
