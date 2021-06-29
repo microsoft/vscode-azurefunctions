@@ -13,9 +13,9 @@ import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
+import { filterSettings } from "./filterSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
@@ -55,7 +55,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
-        await confirmOverwriteSettings(context, localSettings.Values, remoteSettings.properties, client.fullName);
+        await filterSettings(localSettings.Values, localSettings.SettingsToIgnore, remoteSettings.properties, client.fullName);
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);

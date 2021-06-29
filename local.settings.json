@@ -1,24 +1,7 @@
 {
-<<<<<<< Updated upstream
-  "IsEncrypted": false,
-  "Values": {
-    "AzureWebJobsStorage": "",
-    "FUNCTIONS_WORKER_RUNTIME": "node"
-  }
-=======
     "IsEncrypted": false,
     "Values": {
-        "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=faditawfiktutorialfuncti;AccountKey=da/2edzLyQYM+Da3g8A18LEiwk4k4Otm/LiMde4q9/e+A+FBZW1tmYaUyQNAUGXKf4NwAEoqePLo1eheJ6yLyw==;EndpointSuffix=core.windows.net",
-        "FUNCTIONS_EXTENSION_VERSION": "~3-modified",
-        "FUNCTIONS_WORKER_RUNTIME": "node",
-        "WEBSITE_NODE_DEFAULT_VERSION": "~14",
-        "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "DefaultEndpointsProtocol=https;AccountName=faditawfiktutorialfuncti;AccountKey=da/2edzLyQYM+Da3g8A18LEiwk4k4Otm/LiMde4q9/e+A+FBZW1tmYaUyQNAUGXKf4NwAEoqePLo1eheJ6yLyw==;EndpointSuffix=core.windows.net",
-        "WEBSITE_CONTENTSHARE": "faditawfiktutorialfunctionfb3f8f",
-        "WEBSITE_RUN_FROM_PACKAGE": "1",
-        "APPINSIGHTS_INSTRUMENTATIONKEY": "e99a9f52-1705-4f34-b36b-ed0f4ba9de26"
-    },
-    "SettingsToIgnore": {
-        "FUNCTIONS_EXTENSION_VERSION": ""
+        "AzureWebJobsStorage": "",
+        "FUNCTIONS_WORKER_RUNTIME": "node"
     }
->>>>>>> Stashed changes
 }
