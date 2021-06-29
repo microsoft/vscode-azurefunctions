@@ -6,10 +6,11 @@
 //Valen: Import Statements
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { callWithTelemetryAndErrorHandling } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { setupProjectFolder } from './setupProjectFolder';
 
 //Valen: Exporting an enum
 export enum HandleUriActions {
@@ -22,19 +23,6 @@ are made and to import them in another file, you write import and are able to us
 */
 
 // NOTE: Example call for opening vscode with query parameters -
-// vscode://ms-azuretools.vscode-azurefunctions/?resourceId=<appResourceId>&defaultHostName=<appHostName>&devcontainer=<devContainerName>&language=<appLanguage>&action=<'downloadContentAndSetupProject'>
-
-
-/* Valen:
-Promises: eventually return as complete or failed, allow us to rewrite code so it is more readable/less nesting
-if a function awaits, it is declared as an async function
-Async - asynchronous functions return a promise, in async functions you use promises and await command
-to pause execution of a code until a prom,ise is resolved
-
-remember to make note of difference in function declaration and instantiation
-
-Q: still slightly confused about the purpose of await functions
-*/
 
 // Valen: URI are from Rest API, vscode.Uri is a type of object
 export async function handleUri(uri: vscode.Uri): Promise<void> { // Valen: async func that returns promise and uses await
@@ -42,13 +30,10 @@ export async function handleUri(uri: vscode.Uri): Promise<void> { // Valen: asyn
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
         const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
         // Valen: ^ sets the variable
-        if (enableOpenFromPortal) { // Valen: enableOpenFromPortal is a boolean from getWorkspaceSetting
-            // Valen: set these two variables
-            // Valen: calls on query string class to set parsedQuery (unsure what this is)
-            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
-            // Calls function below w/ parsedQuery to set action
-            const action: string = getRequiredQueryParameter(parsedQuery, 'action');
 
+        if (enableOpenFromPortal) { // check if boolean in package.json is true
+            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
+            const action: string = getRequiredQueryParameter(parsedQuery, 'action');
             if (action === HandleUriActions.downloadContentAndSetupProject) {
                 // Valen: if the action is downloadContentAndSetupProject,
                 // check if they are logged in and if not, prompt login

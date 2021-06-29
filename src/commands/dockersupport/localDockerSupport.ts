@@ -13,7 +13,7 @@ import { validateDockerInstalled } from "./validateDockerInstalled";
  * @param node - the Function App project that will clone locally inserted as a SlotTreeItem
  * @param language - Language of the Function App Project
  */
-export async function localDockerPrompt(context: IActionContext, node: SlotTreeItemBase, devContainerFolderPathUri: vscode.Uri, devContainerName: string, language?: string | undefined): Promise<void> {
+export async function localDockerPrompt(context: IActionContext, node: SlotTreeItemBase, devContainerFolderPathUri: vscode.Uri, devContainerName: string | undefined, language: string): Promise<void> {
 
     // external - checks if the project runtime is node or python
     if (getFunctionsWorkerRuntime(language) == "node" || getFunctionsWorkerRuntime(language) == "python") {
