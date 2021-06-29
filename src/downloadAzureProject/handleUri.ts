@@ -21,10 +21,16 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
     await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async () => {
         const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
 
+<<<<<<< Updated upstream
         if (enableOpenFromPortal) {
             // check if Portal has the option enabled/true to open into VS Code
             const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query); // parses URI
             const action: string = getRequiredQueryParameter(parsedQuery, 'action'); //check if its valid URI via function below
+=======
+        if (enableOpenFromPortal) { // check if boolean in package.json is true
+            const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
+            const action: string = getRequiredQueryParameter(parsedQuery, 'action');
+>>>>>>> Stashed changes
 
             if (action === HandleUriActions.downloadContentAndSetupProject) {
                 // ensures user is logged in to the portal
