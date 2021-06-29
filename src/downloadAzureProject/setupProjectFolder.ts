@@ -70,18 +70,10 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             await extract(downloadFilePath, { dir: projectFilePath });
-<<<<<<< Updated upstream
-=======
-            //download dev container - running container locally
->>>>>>> Stashed changes
             await requestUtils.downloadFile(
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
             );
-<<<<<<< Updated upstream
-=======
-            // docker uses this file - not sure if we need both
->>>>>>> Stashed changes
             await requestUtils.downloadFile(
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
