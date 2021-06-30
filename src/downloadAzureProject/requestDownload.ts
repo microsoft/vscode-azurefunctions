@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 //import { ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 //import { nonNullProp } from '../utils/nonNull';
 //import { getGlobalSetting } from '../vsCodeConfig/settings';
 import { setupProjectFolderParsed } from './setupProjectFolder';
@@ -15,7 +16,7 @@ import { setupProjectFolderParsed } from './setupProjectFolder';
 
 
 
-export async function requestDownload(context: IActionContext): Promise<void> {
+export async function requestDownload(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
     if (!isLoggedIn) {
         await vscode.commands.executeCommand('azure-account.login');
@@ -31,7 +32,7 @@ export async function requestDownload(context: IActionContext): Promise<void> {
     // hard coding for valentina-portal-functionapp because I want to test but idk how to get resource group and language
     const language: string = "node";
     const resourceId: string = "/subscriptions/5545ed18-550e-4881-adf7-be4383cbe274/resourceGroups/chloe-portalfunctionapp/providers/Microsoft.Web/sites/chloe-portalfunctionapp";
-    await setupProjectFolderParsed(resourceId, language, filePathUri[0], context);
+    await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
 
 }
 /*

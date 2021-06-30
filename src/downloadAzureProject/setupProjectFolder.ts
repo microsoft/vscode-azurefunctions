@@ -9,10 +9,12 @@ import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { localDockerPrompt } from '../commands/dockersupport/localDockerSupport';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
@@ -26,12 +28,14 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
 
-    await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, devContainerName);
+    const node: SlotTreeItemBase = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+
+    await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
 }
 
 //call this directly if you are staring from VSCode extension
 export async function setupProjectFolderParsed(resourceId: string, language: string,
-    vsCodeFilePathUri: vscode.Uri, context: IActionContext, devContainerName?: string,): Promise<void> {
+    vsCodeFilePathUri: vscode.Uri, context: IActionContext, node?: SlotTreeItemBase, devContainerName?: string,): Promise<void> {
 
     if (!devContainerName) {
         devContainerName = getDevContainerName(language);
@@ -70,7 +74,8 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             await extract(downloadFilePath, { dir: projectFilePath });
-            await requestUtils.downloadFile(
+            await localDockerPrompt(context, devContainerFolderPathUri, language, node, devContainerName);
+            /*await requestUtils.downloadFile(
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
             );
@@ -78,6 +83,7 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
             );
+            */
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
             await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
             await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true); // open the project in VS Code

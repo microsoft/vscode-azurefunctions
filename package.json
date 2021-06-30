@@ -369,11 +369,6 @@
                 "command": "azureFunctions.reportIssue",
                 "title": "%azureFunctions.reportIssue%",
                 "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.dockerPrompt",
-                "title": "%azureFunctions.dockerPrompt%",
-                "category": "Azure Functions"
             }
         ],
         "views": {
