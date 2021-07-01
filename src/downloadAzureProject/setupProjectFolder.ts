@@ -127,20 +127,40 @@ function getDevContainerName(language: string): string {
             return 'azure-functions-node';
         case 'python':
             return 'azure-functions-python-3';
-        case 'dotnet':
+        case 'dotnetcore2.1':
+            return 'azure-functions-dotnetcore-2.1'
+        case 'dotnetcore3.1':
+            return 'azure-functions-dotnetcore-3.1'
+        /*case 'dotnet':
             return 'azure-functions-dotnetcore-3.1';
         case 'java':
             return 'azure-functions-java-11';
+        */
         default:
             throw new Error(`Language not supported: ${language}`);
     }
 }
+
 /*
 function fixResourceId(resourceId:string):string {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
-    if (matches == false) {
-
+    if (matches) {
+        return resourceId;
+    }
+    if (matches === null || matches.length < 3) {
+        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
     }
 
+    let newString: string = "";
+    if (!matches) {
+        //string.substring(indexA, [indexB])
+        if (resourceId.indexOf('resourceGroups') != -1) {
+            //need to change from resourcegroups to resourceGroups
+            newString = "resourceGroup";
+        }
+    }
+
+    return newString;
 }
 */
+

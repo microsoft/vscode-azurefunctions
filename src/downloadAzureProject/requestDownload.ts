@@ -30,9 +30,10 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
 
 
     // hard coding for valentina-portal-functionapp because I want to test but idk how to get resource group and language
-    const language: string = "node";
-    const resourceId: string = "/subscriptions/5545ed18-550e-4881-adf7-be4383cbe274/resourceGroups/chloe-portalfunctionapp/providers/Microsoft.Web/sites/chloe-portalfunctionapp";
+    const language: string = "python";
+    const resourceId: string = "/subscriptions/5545ed18-550e-4881-adf7-be4383cbe274/resourceGroups/valentinahttptriggerpyt2/providers/Microsoft.Web/sites/valentina-httptrigger-python";
     await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
+
 
 }
 /*

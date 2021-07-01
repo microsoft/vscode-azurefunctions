@@ -3,7 +3,6 @@ import { IActionContext } from "vscode-azureextensionui";
 import { localize } from "../../localize";
 import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 import { requestUtils } from "../../utils/requestUtils";
-import { getFunctionsWorkerRuntime } from "../../vsCodeConfig/settings";
 import { prompt } from "./askDockerStep";
 import { validateDockerInstalled } from "./validateDockerInstalled";
 
@@ -14,10 +13,9 @@ import { validateDockerInstalled } from "./validateDockerInstalled";
  * @param language - Language of the Function App Project
  */
 export async function localDockerPrompt(context: IActionContext, devContainerFolderPathUri: vscode.Uri, language: string, node?: SlotTreeItemBase, devContainerName?: string): Promise<void> {
-
-    // external - checks if the project runtime is node or python
     if (node) {
-        if (getFunctionsWorkerRuntime(language) == "node" || getFunctionsWorkerRuntime(language) == "python") {
+        // external - checks if the project runtime is node or python
+        if (language == "node" || language == "python") { // getFunctionsWorkerRuntime()
             // check if the function app is in Linux
             if (node.root.client.isLinux) {
                 // asks if the user wants to use Docker for initializing the project locally
