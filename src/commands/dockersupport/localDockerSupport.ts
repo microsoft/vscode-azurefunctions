@@ -35,17 +35,16 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                         vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
                     );
                     // external - check if Docker is installed, Remote Development extension AND Docker Extension
-                    if (validateDockerInstalled()) {
-                        // don't need to do anything more here
-
-                    } else {
+                    if (!validateDockerInstalled()) {
+                        // if Docker is not downloaded
                         // Check if Operating System is Windows
                         if (process.platform == "win32") {
-                            //Download Docker with an MSI
+                            // Download Docker with an MSI package
                         } else {
-                            // display link to download docker
+                            // display link to download docker externally from Docker documentation
                         }
                     }
+                    // RETURNS back
                 } else {
                     //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
                 }
