@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 //import { ProjectLanguage, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 //import { nonNullProp } from '../utils/nonNull';
 //import { getGlobalSetting } from '../vsCodeConfig/settings';
@@ -21,40 +22,21 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
     if (!isLoggedIn) {
         await vscode.commands.executeCommand('azure-account.login');
     }
-    const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+
+    if (node) {
+        const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
 
 
-    //const language: ProjectLanguage = nonNullProp(context, 'language');
-    //const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
-    //const language: ProjectLanguage | undefined = getGlobalSetting(projectLanguageSetting);
+        //const language: ProjectLanguage = nonNullProp(context, 'language');
+        //const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
+        //const language: ProjectLanguage | undefined = getGlobalSetting(projectLanguageSetting);
 
 
-    // hard coding for valentina-portal-functionapp because I want to test but idk how to get resource group and language
-    const language: string = "python";
-    const resourceId: string = "/subscriptions/5545ed18-550e-4881-adf7-be4383cbe274/resourceGroups/valentinahttptriggerpyt2/providers/Microsoft.Web/sites/valentina-httptrigger-python";
-    await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
-
-
+        // hard coding for valentina-portal-functionapp because I want to test but idk how to get resource group and language
+        const language: string = "node";
+        const resourceId: string = node.id;
+        await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
+    } else {
+        throw new Error(localize('noNode', 'Node is undefined'));
+    }
 }
-/*
-export async function requestDownload(context: IActionContext, node: AzureTreeItem): Promise<void> {
-    await callWithTelemetryAndErrorHandling('azureFunctions.handleUri', async (context: IActionContext) => {
-        const enableOpenFromPortal: boolean | undefined = getWorkspaceSetting<boolean>('enableOpenFromPortal');
-        if (enableOpenFromPortal) { // Valen: enableOpenFromPortal is a boolean from getWorkspaceSetting
-            const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
-            if (!isLoggedIn) {
-                await vscode.commands.executeCommand('azure-account.login');
-            }
-            const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
-
-            const language: string = "node";
-            const resourceId: string = "subscriptions/5545ed18-550e-4881-adf7-be4383cbe274/resourcegroups/valentina-portal-functionapp/providers/Microsoft.Web/sites/valentina-portal-functionapp";
-
-            await setupProjectFolderParsed(resourceId, language, filePathUri[0], context);
-
-        } else {
-            throw new Error(localize('featureNotSupported', 'Download content and setup project feature is not supported for this extension version.'));
-        }
-    });
-}
-*/

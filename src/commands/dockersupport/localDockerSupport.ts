@@ -3,7 +3,7 @@ import { IActionContext } from "vscode-azureextensionui";
 import { localize } from "../../localize";
 import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 import { requestUtils } from "../../utils/requestUtils";
-import { prompt } from "./askDockerStep";
+import { prompt, prompt2 } from "./askDockerStep";
 import { validateDockerInstalled } from "./validateDockerInstalled";
 
 /**
@@ -17,10 +17,10 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
         // external - checks if the project runtime is node or python
         if (language == "node" || language == "python") { // getFunctionsWorkerRuntime()
             // check if the function app is in Linux
-            if (node.root.client.isLinux) {
+            if (true) {// node.root.client.isLinux) {
                 // asks if the user wants to use Docker for initializing the project locally
-                const result: string = await prompt(context);
-                if (result === "yes") {
+                const useDocker: string = await prompt(context);
+                if (useDocker === "yes") {
                     // we will always want to download dev container and DockerFile
                     // download dev container - running container locally
                     await requestUtils.downloadFile(
@@ -35,14 +35,18 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                     // external - check if Docker is installed, Remote Development extension AND Docker Extension
                     if (!validateDockerInstalled()) {
                         // if Docker is not downloaded
-                        // Check if Operating System is Windows
-                        if (process.platform == "win32") {
-                            // Download Docker with an MSI package
+                        const downloadDocker: string = await prompt2(context);
+                        if (downloadDocker === "yes") {
+                            // Check if Operating System is Windows
+                            if (process.platform == "win32") {
+                                // Download Docker with an MSI package, Elliott mentioned them having to click a link
+                            } else {
+                                // Not windows: display link to download docker externally from Docker documentation
+                            }
                         } else {
-                            // display link to download docker externally from Docker documentation
+                            // just open up project but docker files are already downloaded
                         }
                     }
-                    // RETURNS back
                 } else {
                     //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
                 }

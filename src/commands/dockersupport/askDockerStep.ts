@@ -9,7 +9,7 @@ import { localize } from "../../localize";
  */
 export async function prompt(context: IActionContext): Promise<string> {
     const question: QuickPickOptions = { placeHolder: localize('useDocker', 'Use Docker to simplify your development experience?') };
-    let responses: IAzureQuickPickItem<string>[] = [
+    const responses: IAzureQuickPickItem<string>[] = [
         // can customize the label name if needed
         { label: 'Yes, use Docker', data: "yes" },
         { label: 'No, do not use Docker', data: "no" }
@@ -19,4 +19,18 @@ export async function prompt(context: IActionContext): Promise<string> {
     const dockersupport: string = (await context.ui.showQuickPick(responses, question)).data;
     return dockersupport;
 }
+
+export async function prompt2(context: IActionContext): Promise<string> {
+    const question: QuickPickOptions = { placeHolder: localize('useDocker', 'We noticed you don\'t have Docker. Want to install it?') };
+    const responses: IAzureQuickPickItem<string>[] = [
+        // can customize the label name if needed
+        { label: 'Yes, install Docker', data: "yes" },
+        { label: 'No, do not install Docker', data: "no" }
+    ];
+
+    // pop up UI of the prompt and options at the top
+    const dockersupport: string = (await context.ui.showQuickPick(responses, question)).data;
+    return dockersupport;
+}
+
 
