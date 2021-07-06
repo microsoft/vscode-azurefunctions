@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { IActionContext } from "vscode-azureextensionui";
-import { localize } from "../../localize";
 import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 import { requestUtils } from "../../utils/requestUtils";
 import { prompt, prompt2 } from "./askDockerStep";
@@ -8,16 +7,18 @@ import { validateDockerInstalled } from "./validateDockerInstalled";
 
 /**
  * Main Function Called to initialize the Docker flow with cloning Function App project locally from VS Code Extension
- * @param context - Provides basic actions for functions
- * @param node - the Function App project that will clone locally inserted as a SlotTreeItem
- * @param language - Language of the Function App Project
+ * @param context - behavour of action
+ * @param devContainerFolderPathUri - URI for dev container
+ * @param language - language of Function App project
+ * @param node - Function App Project
+ * @param devContainerName - string name of dev container
  */
 export async function localDockerPrompt(context: IActionContext, devContainerFolderPathUri: vscode.Uri, language: string, node?: SlotTreeItemBase, devContainerName?: string): Promise<void> {
     if (node) {
         // external - checks if the project runtime is node or python
         if (language == "node" || language == "python") { // getFunctionsWorkerRuntime()
             // check if the function app is in Linux
-            if (true) {// node.root.client.isLinux) {
+            if (node.site.reserved) {
                 // asks if the user wants to use Docker for initializing the project locally
                 const useDocker: string = await prompt(context);
                 if (useDocker === "yes") {
@@ -50,14 +51,18 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                 } else {
                     //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
                 }
+                // RETURNS back
             } else {
-                throw new Error(localize('projectError', 'Function App is not Linux')); // change to a pop up notification
+                //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
             }
+            //} else {
+            //    throw new Error(localize('projectError', 'Function App is not Linux')); // change to a pop up notification
+            //}
         } else {
-            throw new Error(localize('runtimeError', 'Runtime is not Node or Python')); // change to a pop up notification
+            //throw new Error(localize('runtimeError', 'Runtime is not Node or Python')); // change to a pop up notification
         }
     } else {
-        throw new Error(localize('noNode', 'Node is undefined'));
+        //throw new Error(localize('noNode', 'Node is undefined'));
     }
 
 }

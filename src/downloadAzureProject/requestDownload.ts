@@ -32,9 +32,9 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
         //const language: ProjectLanguage | undefined = getGlobalSetting(projectLanguageSetting);
 
 
-        // hard coding for valentina-portal-functionapp because I want to test but idk how to get resource group and language
+        // hard coding for valentina-portal-functionapp because I want to test but idk how to get language
         const language: string = "node";
-        const resourceId: string = node.id;
+        const resourceId: string = node.id; // gets the subscription id
         await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
     } else {
         throw new Error(localize('noNode', 'Node is undefined'));

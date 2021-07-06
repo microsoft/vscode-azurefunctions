@@ -59,6 +59,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return this.root.client.fullName;
     }
 
+    // possibly get the resource group id?
     public get id(): string {
         return this.root.client.id;
     }
