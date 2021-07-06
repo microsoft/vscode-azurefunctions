@@ -53,7 +53,6 @@ import { startFunctionApp } from './startFunctionApp'; // import menu item 3
 import { stopFunctionApp } from './stopFunctionApp'; // import menu item 3
 import { swapSlot } from './swapSlot';
 //VALEN EDIT:
-import { testFunctionValentina } from './testCommandValentina';
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties'; // import menu item 5
 
@@ -119,9 +118,6 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties); // menu item 5
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
-    // VALEN EDIT:
-    registerCommand('azureFunctions.testValentina', testFunctionValentina);
-    // VALEN EDIT:
     registerCommand('azureFunctions.cloneLocally', cloneLocally);
 
 }

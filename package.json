@@ -79,7 +79,6 @@
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "onCommand:azureFunctions.reportIssue",
-        "onCommand:azureFunctions.testValentina",
         "onCommand:azureFunctions.cloneLocally",
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
@@ -151,11 +150,6 @@
             {
                 "command": "azureFunctions.startFunctionApp",
                 "title": "%azureFunctions.startFunctionApp%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.testValentina",
-                "title": "%azureFunctions.testValentina%",
                 "category": "Azure Functions"
             },
             {
@@ -488,11 +482,6 @@
                     "command": "azureFunctions.deleteSlot",
                     "when": "view == azFuncTree && viewItem == azFuncSlot",
                     "group": "3@5"
-                },
-                {
-                    "command": "azureFunctions.testValentina",
-                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "3@6"
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
