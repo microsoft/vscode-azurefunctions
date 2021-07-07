@@ -20,7 +20,6 @@ import { setAzureWebJobsStorage } from './appSettings/setAzureWebJobsStorage';
 import { toggleSlotSetting } from './appSettings/toggleSlotSetting';
 import { uploadAppSettings } from './appSettings/uploadAppSettings';
 import { browseWebsite } from './browseWebsite'; // import menu item 1
-//VALEN EDIT
 import { cloneLocally } from './cloneProjectLocally';
 import { configureDeploymentSource } from './configureDeploymentSource'; // import menu item 2
 import { copyFunctionUrl } from './copyFunctionUrl';
@@ -52,15 +51,8 @@ import { restartFunctionApp } from './restartFunctionApp'; // import menu item 3
 import { startFunctionApp } from './startFunctionApp'; // import menu item 3
 import { stopFunctionApp } from './stopFunctionApp'; // import menu item 3
 import { swapSlot } from './swapSlot';
-//VALEN EDIT:
 import { disableFunction, enableFunction } from './updateDisabledState';
 import { viewProperties } from './viewProperties'; // import menu item 5
-
-
-
-
-
-
 
 
 export function registerCommands(): void {

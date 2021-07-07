@@ -14,18 +14,13 @@ import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 //import { getGlobalSetting } from '../vsCodeConfig/settings';
 import { setupProjectFolderParsed } from './setupProjectFolder';
 
-
-
-
 export async function requestDownload(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     const isLoggedIn: boolean = await ext.azureAccountTreeItem.getIsLoggedIn();
     if (!isLoggedIn) {
         await vscode.commands.executeCommand('azure-account.login');
     }
-
     if (node) {
         const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
-
 
         //const language: ProjectLanguage = nonNullProp(context, 'language');
         //const language: ProjectLanguage | undefined = <ProjectLanguage>options.language || getGlobalSetting(projectLanguageSetting);
@@ -33,7 +28,7 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
 
 
         // hard coding for valentina-portal-functionapp because I want to test but idk how to get language
-        const language: string = "node";
+        const language: string = "python";
         //throw new Error(localize('testKind', lang));
         const resourceId: string = node.id; // gets the subscription id
         await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);

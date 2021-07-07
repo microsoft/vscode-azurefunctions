@@ -41,8 +41,6 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
         devContainerName = getDevContainerName(language);
     }
 
-    //resourceId = fixResourceId(resourceId);
-    // for valentina-httptrigger-python it stops on this line
     const toBeDeletedFolderPathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, 'temp');
 
     try {
@@ -51,9 +49,7 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
             // NOTE: We don't want to download app content for compiled languages.
-            // Q: unsure what this code does
             const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
-            // Valen: getting info from client, also not super clear
             const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
             const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
 
@@ -85,7 +81,7 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             );
             */
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
-            await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
+            //await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
             await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true); // open the project in VS Code
         });
     } catch (err) {
@@ -104,15 +100,15 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
 function getProjectLanguageForLanguage(language: string): ProjectLanguage {
     // setup the language of the project
     switch (language) {
-        case 'powershell':
-            return ProjectLanguage.PowerShell;
+        //case 'powershell':
+        //    return ProjectLanguage.PowerShell;
         case 'node':
             return ProjectLanguage.JavaScript;
         case 'python':
             return ProjectLanguage.Python;
-        case 'dotnetcore2.1':
-        case 'dotnetcore3.1':
-            return ProjectLanguage.CSharpScript;
+        //case 'dotnetcore2.1':
+        //case 'dotnetcore3.1':
+        //    return ProjectLanguage.CSharpScript;
         default:
             throw new Error(`Language not supported: ${language}`); // are we missing any languages?
     }
@@ -121,17 +117,17 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
 // gets the devContainer name based on the language
 function getDevContainerName(language: string): string {
     switch (language) {
-        case 'powershell':
-            return 'azure-functions-pwsh';
+        //case 'powershell':
+        //    return 'azure-functions-pwsh';
         case 'node':
             return 'azure-functions-node';
         case 'python':
             return 'azure-functions-python-3';
-        case 'dotnetcore2.1':
+        /*case 'dotnetcore2.1':
             return 'azure-functions-dotnetcore-2.1'
         case 'dotnetcore3.1':
             return 'azure-functions-dotnetcore-3.1'
-        /*case 'dotnet':
+        case 'dotnet':
             return 'azure-functions-dotnetcore-3.1';
         case 'java':
             return 'azure-functions-java-11';
@@ -159,7 +155,6 @@ function fixResourceId(resourceId:string):string {
             newString = "resourceGroup";
         }
     }
-
     return newString;
 }
 */
