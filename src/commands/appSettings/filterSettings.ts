@@ -16,6 +16,7 @@ export async function filterSettings(sourceSettings: { [key: string]: string }, 
     const updatedKeys: string[] = [];
     const userIgnoredKeys: string[] = [];
     const matchingKeys: string[] = [];
+    const securitySettingsIgnored: string[] = [];
 
     for (const key of Object.keys(sourceSettings)) {
         if (ignoredSettings[key] === undefined) {
@@ -51,6 +52,9 @@ export async function filterSettings(sourceSettings: { [key: string]: string }, 
                 }
             }
         }
+        else {
+            securitySettingsIgnored.push(key);
+        }
 
     }
 
@@ -72,6 +76,11 @@ export async function filterSettings(sourceSettings: { [key: string]: string }, 
     if (userIgnoredKeys.length > 0) {
         ext.outputChannel.appendLog(localize('userIgnoredKeys', 'Ignored the following settings based on user input:'));
         userIgnoredKeys.forEach(logKey);
+    }
+
+    if (securitySettingsIgnored.length > 0) {
+        ext.outputChannel.appendLog(localize('securitySettingsIgnored', 'Ignored the following settings based on security and privacy:'));
+        securitySettingsIgnored.forEach(logKey);
     }
 
     if (Object.keys(destinationSettings).length > Object.keys(sourceSettings).length) {
