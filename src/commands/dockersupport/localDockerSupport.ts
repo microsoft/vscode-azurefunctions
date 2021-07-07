@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { IActionContext } from "vscode-azureextensionui";
+import { localize } from '../../localize';
 import { SlotTreeItemBase } from "../../tree/SlotTreeItemBase";
 import { requestUtils } from "../../utils/requestUtils";
 import { prompt, prompt2 } from "./askDockerStep";
@@ -35,17 +36,18 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                     );
                     // external - check if Docker is installed, Remote Development extension AND Docker Extension
                     if (!validateDockerInstalled()) {
-                        // if Docker is not downloaded
+                        // if Docker is not downloaded - ask the user if they'd like to download Docker
                         const downloadDocker: string = await prompt2(context);
                         if (downloadDocker === "yes") {
                             // Check if Operating System is Windows
                             if (process.platform == "win32") {
-                                // Download Docker with an MSI package, Elliott mentioned them having to click a link
+                                // Download Docker with an MSI package, Reid has this package
                             } else {
                                 // Not windows: display link to download docker externally from Docker documentation
+                                void vscode.window.showInformationMessage(localize('downloadDocker', 'Check the (Docker documentation)[https://docs.docker.com/get-docker/] to download Docker for your system'));
                             }
                         } else {
-                            // just open up project but docker files are already downloaded
+                            // does not want to download Docker - just open up project but docker files are already downloaded
                         }
                     }
                 } else {
