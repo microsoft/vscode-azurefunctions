@@ -23,6 +23,7 @@ export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createFunctionApp/createFunctionApp';
 export * from './src/commands/createNewProject/createNewProject';
 export * from './src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
+export * from './src/commands/deleteFunctionApp';
 export * from './src/commands/deploy/deploy';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';

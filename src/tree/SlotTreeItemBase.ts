@@ -225,7 +225,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 
-    public async deleteTreeItemImpl(): Promise<void> {
-        await deleteSite(this.root.client);
+    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        await deleteSite(context, this.root.client);
     }
 }

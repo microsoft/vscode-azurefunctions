@@ -7,9 +7,10 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Uri } from 'vscode';
+import { createTestActionContext, runWithTestActionContext } from 'vscode-azureextensiondev';
 import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { addBinding, createNewProjectInternal, ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
-import { cleanTestWorkspace, createTestActionContext, getTestWorkspaceFolder, runWithTestActionContext } from './global.test';
+import { cleanTestWorkspace, getTestWorkspaceFolder } from './global.test';
 
 suite('Add Binding', () => {
     let functionJsonPath: string;
@@ -48,7 +49,7 @@ suite('Add Binding', () => {
     });
 
     test('Tree', async () => {
-        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProject0/functions/${functionName}`, createTestActionContext());
+        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProject0/functions/${functionName}`, await createTestActionContext());
         assert.ok(treeItem, 'Failed to find tree item');
         await validateAddBinding(treeItem, []);
     });

@@ -43,7 +43,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
             }
         };
 
-        await appservice.startStreamingLogs(client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
+        await appservice.startStreamingLogs(context, client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
     }
 }
 
