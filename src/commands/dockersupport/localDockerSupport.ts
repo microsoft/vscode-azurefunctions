@@ -47,24 +47,20 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                                 void vscode.window.showInformationMessage(localize('downloadDocker', 'Check the (Docker documentation)[https://docs.docker.com/get-docker/] to download Docker for your system'));
                             }
                         } else {
-                            // does not want to download Docker - just open up project but docker files are already downloaded
+                            void vscode.window.showInformationMessage(localize('noDocker', 'Continuing without the use of Docker as user requested'));
                         }
                     }
                 } else {
-                    //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
+                    void vscode.window.showInformationMessage(localize('noDocker', 'Continuing without the use of Docker as user requested'));
                 }
-                // RETURNS back
             } else {
-                //throw new Error(localize('noDocker', 'User does NOT want to use Docker')); // change to a pop up notification
+                void vscode.window.showInformationMessage(localize('projectError', 'Function App is not Linux. Continuing without the use of Docker'));
             }
-            //} else {
-            //    throw new Error(localize('projectError', 'Function App is not Linux')); // change to a pop up notification
-            //}
         } else {
-            //throw new Error(localize('runtimeError', 'Runtime is not Node or Python')); // change to a pop up notification
+            void vscode.window.showInformationMessage(localize('runtimeError', 'Runtime is not Node or Python. Continuing without the use of Docker'));
         }
     } else {
-        //throw new Error(localize('noNode', 'Node is undefined'));
+        void vscode.window.showInformationMessage(localize('noNode', 'Node is undefined. Continuing without the use of Docker'));
     }
 
 }
