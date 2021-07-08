@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ExtensionContext, TreeView } from "vscode";
-import { AzExtTreeDataProvider, AzExtTreeItem, IActionContext, IAzExtOutputChannel, IAzureUserInput, IExperimentationServiceAdapter } from "vscode-azureextensionui";
+import { AzExtTreeDataProvider, AzExtTreeItem, IActionContext, IAzExtOutputChannel, IExperimentationServiceAdapter } from "vscode-azureextensionui";
 import { func } from "./constants";
 import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
@@ -48,7 +48,6 @@ export namespace ext {
     export let treeView: TreeView<AzExtTreeItem>;
     export let azureAccountTreeItem: AzureAccountTreeItemWithProjects;
     export let outputChannel: IAzExtOutputChannel;
-    export let ui: IAzureUserInput;
     // eslint-disable-next-line prefer-const
     export let funcCliPath: string = func;
     export let ignoreBundle: boolean | undefined;

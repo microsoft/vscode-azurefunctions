@@ -5,8 +5,9 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { runWithTestActionContext } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString } from '../../extension.bundle';
-import { longRunningTestsEnabled, runWithTestActionContext, testFolderPath } from '../global.test';
+import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { createAndValidateProject } from './createAndValidateProject';
 import { getPythonValidateOptions } from './validateProject';

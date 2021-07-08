@@ -5,10 +5,11 @@
 
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
+import { runWithInputs } from 'vscode-azureextensiondev';
 import { AzureExtensionApiProvider } from "vscode-azureextensionui/api";
-import { nonNullValue, ProjectLanguage } from '../extension.bundle';
+import { nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
-import { testFolderPath, testUserInput } from './global.test';
+import { testFolderPath } from './global.test';
 import { getJavaScriptValidateOptions, IValidateProjectOptions, validateProject } from './project/validateProject';
 
 suite(`AzureFunctionsExtensionApi`, () => {
@@ -23,7 +24,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.JavaScript;
         const folderPath: string = path.join(testFolderPath, language + 'createFunctionApi');
-        await testUserInput.runWithInputs([language], async () => {
+
+        await runWithInputs('api.createFunction', [language], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
                 functionName,

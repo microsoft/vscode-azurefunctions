@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import { runWithTestActionContext } from 'vscode-azureextensiondev';
 import { CentralTemplateProvider, FuncVersion, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../extension.bundle';
-import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, runWithTestActionContext, skipStagingTemplateSource } from './global.test';
+import { getTestWorkspaceFolder, longRunningTestsEnabled, runForTemplateSource, skipStagingTemplateSource } from './global.test';
 import { javaUtils } from './utils/javaUtils';
 
 addSuite(undefined);
