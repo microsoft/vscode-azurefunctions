@@ -10,8 +10,6 @@ import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
-//import { nonNullProp } from '../utils/nonNull';
-//import { getGlobalSetting } from '../vsCodeConfig/settings';
 import { setupProjectFolderParsed } from './setupProjectFolder';
 
 export async function requestDownload(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
@@ -28,8 +26,9 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
 
 
         // hard coding for valentina-portal-functionapp because I want to test but idk how to get language
-        const language: string = "python";
-        //throw new Error(localize('testKind', lang));
+        const language: string = node.getApplicationLanguage;
+        //"node";
+        //throw new Error(localize('testKind', language));
         const resourceId: string = node.id; // gets the subscription id
         await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
     } else {
