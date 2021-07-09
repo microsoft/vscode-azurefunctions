@@ -26,9 +26,9 @@ export async function requestDownload(context: IActionContext, node?: SlotTreeIt
 
 
         // hard coding for valentina-portal-functionapp because I want to test but idk how to get language
-        const language: string = node.getApplicationLanguage;
+        const language: string = node.getApplicationLanguage().get;
         //"node";
-        //throw new Error(localize('testKind', language));
+        throw new Error(localize('testKind', language));
         const resourceId: string = node.id; // gets the subscription id
         await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
     } else {
