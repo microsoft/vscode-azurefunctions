@@ -9,11 +9,12 @@ import { DebugConfiguration, TaskDefinition } from "vscode";
 import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
+import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
-const npmInstallTaskLabel: string = 'npm install';
-const npmPruneTaskLabel: string = 'npm prune';
+const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
+const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
 
 export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     private hasPackageJson: boolean;

@@ -6,13 +6,16 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { func, hostStartCommand, javaPackageTaskLabel, pomXmlFileName, ProjectLanguage } from '../../../constants';
+import { func, hostStartCommand, pomXmlFileName, ProjectLanguage } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
 import { mavenUtils } from '../../../utils/mavenUtils';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
+import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
+
+const javaPackageTaskLabel: string = convertToFunctionsTaskLabel('package');
 
 export class JavaInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = javaPackageTaskLabel;

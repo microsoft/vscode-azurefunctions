@@ -6,11 +6,12 @@
 import { TaskDefinition } from 'vscode';
 import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
+import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
 
-const npmPruneTaskLabel: string = 'npm prune';
-const npmInstallTaskLabel: string = 'npm install';
-const npmBuildTaskLabel: string = 'npm build';
+const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
+const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
+const npmBuildTaskLabel: string = convertToFunctionsTaskLabel('npm build');
 
 export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
     public readonly preDeployTask: string = npmPruneTaskLabel;
