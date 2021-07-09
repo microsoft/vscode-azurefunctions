@@ -29,6 +29,10 @@ function getTasksConfig(folder: WorkspaceFolder): WorkspaceConfiguration {
     return workspace.getConfiguration(tasksKey, folder.uri);
 }
 
+export function convertToFunctionsTaskLabel(label: string): string {
+    return `${label} (functions)`;
+}
+
 export interface ITasksJson {
     version: string;
     tasks?: ITask[];

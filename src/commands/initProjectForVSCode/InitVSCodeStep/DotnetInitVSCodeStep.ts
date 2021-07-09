@@ -6,15 +6,18 @@
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
 import { DialogResponses, parseError } from 'vscode-azureextensionui';
-import { dotnetPublishTaskLabel, func, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { dotnetUtils } from '../../../utils/dotnetUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
+import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
 import { InitVSCodeStepBase } from './InitVSCodeStepBase';
+
+const dotnetPublishTaskLabel: string = convertToFunctionsTaskLabel('publish');
 
 export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = dotnetPublishTaskLabel;
@@ -94,9 +97,13 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const commonArgs: string[] = ['/property:GenerateFullPaths=true', '/consoleloggerparameters:NoSummary'];
         const releaseArgs: string[] = ['--configuration', 'Release'];
 
+        const buildLabel = convertToFunctionsTaskLabel('build');
+        const cleanLabel = convertToFunctionsTaskLabel('clean');
+        const cleanReleaseLabel = convertToFunctionsTaskLabel('clean release');
+
         return [
             {
-                label: 'clean',
+                label: cleanLabel,
                 command: 'dotnet',
                 args: [
                     'clean',
@@ -106,14 +113,14 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 problemMatcher: '$msCompile'
             },
             {
-                label: 'build',
+                label: buildLabel,
                 command: 'dotnet',
                 args: [
                     'build',
                     ...commonArgs
                 ],
                 type: 'process',
-                dependsOn: 'clean',
+                dependsOn: cleanLabel,
                 group: {
                     kind: 'build',
                     isDefault: true
@@ -121,7 +128,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                 problemMatcher: '$msCompile'
             },
             {
-                label: 'clean release',
+                label: cleanReleaseLabel,
                 command: 'dotnet',
                 args: [
                     'clean',
@@ -140,12 +147,12 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
                     ...commonArgs
                 ],
                 type: 'process',
-                dependsOn: 'clean release',
+                dependsOn: cleanReleaseLabel,
                 problemMatcher: '$msCompile'
             },
             {
                 type: func,
-                dependsOn: 'build',
+                dependsOn: buildLabel,
                 options: {
                     cwd: this._debugSubpath
                 },
