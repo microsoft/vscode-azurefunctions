@@ -6,8 +6,8 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { IActionContext } from 'vscode-azureextensionui';
+import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -26,10 +26,6 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
 
         let updateAppSettings: boolean = false;
         if (node.root.client.isLinux) {
-            if (bools.isConsumption) {
-                updateAppSettings = await verifyWebContentSettings(context, appSettings.properties);
-            }
-
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings = updateAppSettings || remoteBuildSettingsChanged;
         } else {
@@ -82,23 +78,6 @@ function verifyRunFromPackage(context: IActionContext, client: SiteClient, remot
 
     context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
     return shouldAddSetting;
-}
-
-/**
- * We need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
- * Only applies to Linux Consumption apps
- */
-async function verifyWebContentSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    const shouldRemoveSettings: boolean = !!(remoteProperties[contentConnectionStringKey] || remoteProperties[contentShareKey]);
-    if (shouldRemoveSettings) {
-        const message: string = localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', contentConnectionStringKey, contentShareKey);
-        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
-        delete remoteProperties[contentConnectionStringKey];
-        delete remoteProperties[contentShareKey];
-    }
-
-    context.telemetry.properties.webContentSettingsRemoved = String(shouldRemoveSettings);
-    return shouldRemoveSettings;
 }
 
 function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {
