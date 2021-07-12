@@ -17,9 +17,7 @@ export async function validateRemoteBuild(context: IDeployContext, client: SiteC
         const message: string = localize('remoteBuildNotSupported', 'The selected Function App doesn\'t support your project\'s configuration. Deploy to a newer Function App or downgrade your config.');
         const learnMoreLink: string = 'https://aka.ms/AA5vsfd';
         const downgrade: vscode.MessageItem = { title: localize('downgrade', 'Downgrade config') };
-        context.telemetry.properties.cancelStep = 'validateRemoteBuild';
-        await context.ui.showWarningMessage(message, { learnMoreLink, modal: true }, downgrade);
-        context.telemetry.properties.cancelStep = undefined;
+        await context.ui.showWarningMessage(message, { learnMoreLink, modal: true, stepName: 'validateRemoteBuild' }, downgrade);
 
         const projectPath: string = await tryGetFunctionProjectRoot(context, workspacePath) || workspacePath;
         await updateWorkspaceSetting(remoteBuildSetting, false, workspacePath);

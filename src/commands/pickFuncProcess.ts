@@ -24,7 +24,7 @@ export const onDotnetFuncTaskReady = funcTaskReadyEmitter.event;
 export async function pickFuncProcess(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<string | undefined> {
     const result: IPreDebugValidateResult = await preDebugValidate(context, debugConfig);
     if (!result.shouldContinue) {
-        throw new UserCancelledError();
+        throw new UserCancelledError('preDebugValidate');
     }
 
     await waitForPrevFuncTaskToStop(result.workspace);

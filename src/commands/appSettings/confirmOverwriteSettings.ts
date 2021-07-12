@@ -31,7 +31,7 @@ export async function confirmOverwriteSettings(context: IActionContext, sourceSe
                 const yesToAll: vscode.MessageItem = { title: localize('yesToAll', 'Yes to all') };
                 const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
                 const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', destKey, destinationName);
-                const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
+                const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmOverwriteSetting' }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
                 if (result === DialogResponses.yes) {
                     overwriteSetting = true;
                 } else if (result === yesToAll) {

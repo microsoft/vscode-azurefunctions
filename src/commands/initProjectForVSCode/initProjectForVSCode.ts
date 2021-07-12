@@ -27,7 +27,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
             const placeHolder: string = localize('selectFunctionAppFolderNew', 'Select the folder to initialize for use with VS Code');
             workspaceFolder = await window.showWorkspaceFolderPick({ placeHolder });
             if (!workspaceFolder) {
-                throw new UserCancelledError();
+                throw new UserCancelledError('selectFunctionAppFolderNew');
             } else {
                 workspacePath = workspaceFolder.uri.fsPath;
             }

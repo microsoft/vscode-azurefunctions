@@ -39,7 +39,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             }
         }
 
-        const data: string = await context.ui.showInputBox({ prompt, value });
+        const data: string = await context.ui.showInputBox({ prompt, value, stepName: 'requestBody' });
         try {
             functionInput = <{}>JSON.parse(data);
         } catch {

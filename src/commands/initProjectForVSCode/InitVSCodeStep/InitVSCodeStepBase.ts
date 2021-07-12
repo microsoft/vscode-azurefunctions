@@ -144,7 +144,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         if (matchingTaskLabels.length > 0) {
             const message = localize('confirmOverwriteTasks', 'This will overwrite the following tasks in your tasks.json: "{0}"', matchingTaskLabels.join('", "'));
             const overwrite: MessageItem = { title: localize('overwrite', 'Overwrite') };
-            await context.ui.showWarningMessage(message, { modal: true }, overwrite)
+            await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmOverwriteTasks' }, overwrite)
         }
 
         return nonMatchingTasks.concat(...newTasks);

@@ -28,7 +28,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
 
     picks.push({ label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined });
 
-    const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), suppressPersistence: true };
+    const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };
     // eslint-disable-next-line no-constant-condition
     while (true) {
         const version: FuncVersion | undefined = (await context.ui.showQuickPick(picks, options)).data;

@@ -12,7 +12,7 @@ import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';
 export async function promptToReinitializeProject(fsPath: string, settingKey: string, message: string, learnMoreLink: string, context: IActionContext): Promise<void> {
     if (getWorkspaceSetting<boolean>(settingKey)) {
         const updateConfig: vscode.MessageItem = { title: localize('reinit', 'Reinitialize Project') };
-        const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink }, updateConfig, DialogResponses.dontWarnAgain);
+        const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { learnMoreLink, stepName: 'reinitProject' }, updateConfig, DialogResponses.dontWarnAgain);
         if (result === DialogResponses.dontWarnAgain) {
             context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
             await updateWorkspaceSetting(settingKey, false, fsPath);
