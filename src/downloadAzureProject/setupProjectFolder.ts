@@ -28,6 +28,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
 
+    // for this call it will prompt user to choose subscription and function app again
     const node: SlotTreeItemBase = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
 
     await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
@@ -44,17 +45,15 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
     const toBeDeletedFolderPathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, 'temp');
 
     try {
-        const functionAppName: string = getNameFromId(resourceId); //resource ID for function app
-        const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath; // URI turns into a string - temporary folder (maybe storing MSI?) to do downloads, contains a specific zip?
+        const functionAppName: string = getNameFromId(resourceId);
+        const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
-            // NOTE: We don't want to download app content for compiled languages.
             const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
             const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
             const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
 
-            if (!!hostKeys && hostKeys.masterKey && defaultHostName) { // what does !! do?
-                // download the App Settings & Info from the Function App - API call
+            if (!!hostKeys && hostKeys.masterKey && defaultHostName) {
                 const requestOptions: RequestPrepareOptions = {
                     method: 'GET',
                     url: `https://${defaultHostName}/admin/functions/download?includeCsproj=true&includeAppSettings=true`,
@@ -70,18 +69,9 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             await extract(downloadFilePath, { dir: projectFilePath });
-            await localDockerPrompt(context, devContainerFolderPathUri, language, node, devContainerName);
-            /*await requestUtils.downloadFile(
-                `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
-            );
-            await requestUtils.downloadFile(
-                `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
-            );
-            */
+            await localDockerPrompt(context, devContainerFolderPathUri, node, devContainerName);
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
-            //await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
+            void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
             await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true); // open the project in VS Code
         });
     } catch (err) {
@@ -97,33 +87,41 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
     }
 }
 
+// Q: do we need to add any other languages here?
+// referenced: getFunctionsWorkerRuntime(language);
 function getProjectLanguageForLanguage(language: string): ProjectLanguage {
     // setup the language of the project
     switch (language) {
-        //case 'powershell':
-        //    return ProjectLanguage.PowerShell;
         case 'node':
             return ProjectLanguage.JavaScript;
         case 'python':
             return ProjectLanguage.Python;
-        //case 'dotnetcore2.1':
-        //case 'dotnetcore3.1':
-        //    return ProjectLanguage.CSharpScript;
+        case 'powershell':
+            return ProjectLanguage.PowerShell;
+        case 'dotnetcore2.1':
+        case 'dotnetcore3.1':
+            return ProjectLanguage.CSharpScript;
+        case 'dotnet':
+            return ProjectLanguage.CSharp
+        case 'java':
+            return ProjectLanguage.Java;
         default:
-            throw new Error(`Language not supported: ${language}`); // are we missing any languages?
+            throw new Error(`Language not supported: ${language}`);
     }
 }
 
 // gets the devContainer name based on the language
-function getDevContainerName(language: string): string {
+// here we define which functions will have docker support
+function getDevContainerName(language: string): string | undefined {
     switch (language) {
-        //case 'powershell':
-        //    return 'azure-functions-pwsh';
         case 'node':
             return 'azure-functions-node';
         case 'python':
             return 'azure-functions-python-3';
-        /*case 'dotnetcore2.1':
+        /*
+        case 'powershell':
+            return 'azure-functions-pwsh';
+        case 'dotnetcore2.1':
             return 'azure-functions-dotnetcore-2.1'
         case 'dotnetcore3.1':
             return 'azure-functions-dotnetcore-3.1'
@@ -133,29 +131,6 @@ function getDevContainerName(language: string): string {
             return 'azure-functions-java-11';
         */
         default:
-            throw new Error(`Language not supported: ${language}`);
+            return undefined;
     }
 }
-
-/*
-function fixResourceId(resourceId:string):string {
-    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
-    if (matches) {
-        return resourceId;
-    }
-    if (matches === null || matches.length < 3) {
-        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
-    }
-
-    let newString: string = "";
-    if (!matches) {
-        //string.substring(indexA, [indexB])
-        if (resourceId.indexOf('resourceGroups') != -1) {
-            //need to change from resourcegroups to resourceGroups
-            newString = "resourceGroup";
-        }
-    }
-    return newString;
-}
-*/
-

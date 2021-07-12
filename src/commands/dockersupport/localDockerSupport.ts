@@ -10,21 +10,19 @@ import { validateDockerInstalled } from "./validateDockerInstalled";
  * Main Function Called to initialize the Docker flow with cloning Function App project locally from VS Code Extension
  * @param context - behavour of action
  * @param devContainerFolderPathUri - URI for dev container
- * @param language - language of Function App project
- * @param node - Function App Project
  * @param devContainerName - string name of dev container
+ * @param node - Function App Project
  */
-export async function localDockerPrompt(context: IActionContext, devContainerFolderPathUri: vscode.Uri, language: string, node?: SlotTreeItemBase, devContainerName?: string): Promise<void> {
+export async function localDockerPrompt(context: IActionContext, devContainerFolderPathUri: vscode.Uri, node?: SlotTreeItemBase, devContainerName?: string): Promise<void> {
     if (node) {
-        // external - checks if the project runtime is node or python
-        if (language == "node" || language == "python") { // getFunctionsWorkerRuntime()
+        // check if language is supported for dev container
+        if (devContainerName) {
             // check if the function app is in Linux
             if (node.site.reserved) {
                 // asks if the user wants to use Docker for initializing the project locally
                 const useDocker: string = await prompt(context);
                 if (useDocker === "yes") {
-                    // we will always want to download dev container and DockerFile
-                    // download dev container - running container locally
+                    // download dev container
                     await requestUtils.downloadFile(
                         `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
                         vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
@@ -41,7 +39,7 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                         if (downloadDocker === "yes") {
                             // Check if Operating System is Windows
                             if (process.platform == "win32") {
-                                // Download Docker with an MSI package, Reid has this package
+                                // Download Docker with an MSI package
                             } else {
                                 // Not windows: display link to download docker externally from Docker documentation
                                 void vscode.window.showInformationMessage(localize('downloadDocker', 'Check the (Docker documentation)[https://docs.docker.com/get-docker/] to download Docker for your system'));
@@ -57,7 +55,7 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                 void vscode.window.showInformationMessage(localize('projectError', 'Function App is not Linux. Continuing without the use of Docker'));
             }
         } else {
-            void vscode.window.showInformationMessage(localize('runtimeError', 'Runtime is not Node or Python. Continuing without the use of Docker'));
+            void vscode.window.showInformationMessage(localize('runtimeError', 'Language not supported. Continuing without the use of Docker'));
         }
     } else {
         void vscode.window.showInformationMessage(localize('noNode', 'Node is undefined. Continuing without the use of Docker'));
