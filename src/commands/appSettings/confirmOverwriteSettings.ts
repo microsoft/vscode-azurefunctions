@@ -17,17 +17,20 @@ export async function confirmOverwriteSettings(context: IActionContext, sourceSe
     const userIgnoredKeys: string[] = [];
     const matchingKeys: string[] = [];
 
-    for (const key of Object.keys(sourceSettings)) {
-        if (destinationSettings[key] === undefined) {
-            addedKeys.push(key);
-            destinationSettings[key] = sourceSettings[key];
-        } else if (destinationSettings[key] === sourceSettings[key]) {
-            matchingKeys.push(key);
-        } else if (sourceSettings[key]) { // ignore empty settings
+    for (const srcKey of Object.keys(sourceSettings)) {
+        // App setting keys are case insensitive, so find the destination key that matches
+        const destKey = Object.keys(destinationSettings).find(dk => srcKey.toLowerCase() === dk.toLowerCase()) || srcKey;
+
+        if (destinationSettings[destKey] === undefined) {
+            addedKeys.push(destKey);
+            destinationSettings[destKey] = sourceSettings[srcKey];
+        } else if (destinationSettings[destKey] === sourceSettings[srcKey]) {
+            matchingKeys.push(destKey);
+        } else if (sourceSettings[srcKey]) { // ignore empty settings
             if (!suppressPrompt) {
                 const yesToAll: vscode.MessageItem = { title: localize('yesToAll', 'Yes to all') };
                 const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
-                const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', key, destinationName);
+                const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', destKey, destinationName);
                 const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
                 if (result === DialogResponses.yes) {
                     overwriteSetting = true;
@@ -43,10 +46,10 @@ export async function confirmOverwriteSettings(context: IActionContext, sourceSe
             }
 
             if (overwriteSetting) {
-                updatedKeys.push(key);
-                destinationSettings[key] = sourceSettings[key];
+                updatedKeys.push(destKey);
+                destinationSettings[destKey] = sourceSettings[srcKey];
             } else {
-                userIgnoredKeys.push(key);
+                userIgnoredKeys.push(destKey);
             }
         }
     }
