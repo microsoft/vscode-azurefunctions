@@ -138,11 +138,10 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     // get language of the Function App from the Settings
     public async getApplicationLanguage(): Promise<string> {
         const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
-        if (appSettings.properties == undefined) {
-            appSettings.properties = {};
-        }
-        const appRuntime: string = appSettings.properties.FUNCTIONS_WORKER_RUNTIME;
-        return appRuntime;
+
+        return !appSettings.properties || !appSettings.properties['FUNCTIONS_WORKER_RUNTIME']
+            ? ''
+            : appSettings.properties['FUNCTIONS_WORKER_RUNTIME'];
     }
 
     public async setApplicationSetting(_context: IActionContext, key: string, value: string): Promise<void> {
