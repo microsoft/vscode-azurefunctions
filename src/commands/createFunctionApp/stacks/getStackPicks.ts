@@ -48,6 +48,17 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                         break;
                 }
 
+                const deprecatedOS = getFlagOs(minorVersion.stackSettings, 'isDeprecated');
+                switch (deprecatedOS) {
+                    case 'All':
+                        description = localize('deprecated', '(Deprecated)');
+                        break;
+                    case 'Linux':
+                    case 'Windows':
+                        description = localize('deprecatedOnOS', '(Deprecated on {0})', deprecatedOS);
+                        break;
+                }
+
                 picks.push({
                     label: minorVersion.displayText,
                     description,
@@ -66,7 +77,7 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
 }
 
 type FlagOS = 'All' | 'Linux' | 'Windows' | 'None';
-function getFlagOs(ss: FunctionAppRuntimes, key: 'isHidden' | 'isDefault' | 'isPreview' | 'isEarlyAccess'): FlagOS {
+function getFlagOs(ss: FunctionAppRuntimes, key: 'isHidden' | 'isDefault' | 'isPreview' | 'isEarlyAccess' | 'isDeprecated'): FlagOS {
     if ([ss.linuxRuntimeSettings, ss.windowsRuntimeSettings].every(s => !s || s[key])) {
         // NOTE: 'All' means all OS's _that are defined_ have the flag set. This may only be one OS if that's all that is defined/supported by this stack
         return 'All';
@@ -88,6 +99,8 @@ function getPriority(ss: FunctionAppRuntimes): number {
         return 4;
     } else if (getFlagOs(ss, 'isHidden') === 'All') {
         return 5;
+    } else if (getFlagOs(ss, 'isDeprecated') === 'All') {
+        return 6;
     } else {
         return 2;
     }
@@ -104,7 +117,7 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
                 pathTemplate: '/providers/Microsoft.Web/functionappstacks',
                 queryParameters: {
                     'api-version': '2020-10-01',
-                    removeDeprecatedStacks: 'true'
+                    removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
                 }
             });
             stacksArmResponse = <StacksArmResponse>result.parsedBody;
