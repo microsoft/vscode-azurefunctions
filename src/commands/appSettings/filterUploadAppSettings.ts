@@ -8,7 +8,7 @@ import { DialogResponses } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 
-export async function filterSettings(sourceSettings: { [key: string]: string }, ignoredSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationName: string): Promise<void> {
+export async function filterUploadAppSettings(sourceSettings: { [key: string]: string }, ignoredSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationName: string): Promise<void> {
     let suppressPrompt: boolean = false;
     let overwriteSetting: boolean = false;
 

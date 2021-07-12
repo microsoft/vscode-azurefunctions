@@ -66,6 +66,7 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
         ext.outputChannel.appendLog(localize('downloadingSettings', 'Downloading settings...'), { resourceName: client.fullName });
         if (remoteSettings.properties) {
             await confirmOverwriteSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
+            // await filterDownloadAppSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
         }
 
         await fse.ensureFile(localSettingsPath);
