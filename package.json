@@ -1024,6 +1024,11 @@
                         "description": "%azureFunctions.showHiddenStacks%",
                         "default": false
                     },
+                    "azureFunctions.showDeprecatedStacks": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.showDeprecatedStacks%",
+                        "default": false
+                    },
                     "azureFunctions.showReloadTemplates": {
                         "type": "boolean",
                         "description": "%azureFunctions.showReloadTemplates%",
