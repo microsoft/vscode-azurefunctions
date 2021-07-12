@@ -140,10 +140,10 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         const isElasticPremium: boolean = context.plan?.sku?.family?.toLowerCase() === 'ep';
-        if (context.newSiteOS === WebsiteOS.windows || isElasticPremium) {
-            // WEBSITE_CONTENT* settings only apply for the following scenarios:
-            // Windows: https://github.com/Microsoft/vscode-azurefunctions/issues/625
-            // Linux Elastic Premium: https://github.com/microsoft/vscode-azurefunctions/issues/1682
+        const isConsumption: boolean = context.plan?.sku?.family?.toLowerCase() === 'y';
+        if (isConsumption || isElasticPremium) {
+            // WEBSITE_CONTENT* settings are added for consumption/premium plans, but not dedicated
+            // https://github.com/microsoft/vscode-azurefunctions/issues/1702
             appSettings.push({
                 name: contentConnectionStringKey,
                 value: storageConnectionString
