@@ -15,7 +15,7 @@ export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServic
         const picks: IAzureQuickPickItem<[boolean, RegExp | undefined]>[] = [
             { label: localize('consumption', 'Consumption'), data: [true, undefined] },
             { label: localize('premium', 'Premium'), data: [false, /^EP$/i] },
-            { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP).)*$/i] }
+            { label: localize('dedicated', 'App Service Plan'), data: [false, /^((?!EP|Y).)*$/i] }
         ];
 
         [context.useConsumptionPlan, context.planSkuFamilyFilter] = (await context.ui.showQuickPick(picks, { placeHolder })).data;
