@@ -65,11 +65,11 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
     const learnMoreLink: string = 'https://aka.ms/AA4nmfy';
     const setDefault: MessageItem = { title: localize('setDefault', 'Set default') };
     // No need to check result - cancel will throw a UserCancelledError
-    await context.ui.showWarningMessage(message, { learnMoreLink, modal: promptBehavior === 'modalPrompt' }, setDefault);
+    await context.ui.showWarningMessage(message, { learnMoreLink, modal: promptBehavior === 'modalPrompt', stepName: 'multipleProjects' }, setDefault);
 
     const picks: IAzureQuickPickItem<string>[] = matchingSubpaths.map(p => { return { label: p, data: p }; });
     const placeHolder: string = localize('selectProject', 'Select the default project subpath');
-    const subpath: string = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+    const subpath: string = (await context.ui.showQuickPick(picks, { placeHolder, stepName: 'multipleProjects|select' })).data;
     await updateWorkspaceSetting(projectSubpathSetting, subpath, workspacePath);
 
     return subpath;
@@ -86,7 +86,7 @@ export async function verifyAndPromptToCreateProject(context: IActionContext, fs
         if (!options.suppressCreateProjectPrompt) {
             const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
             // No need to check result - cancel will throw a UserCancelledError
-            await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+            await context.ui.showWarningMessage(message, { modal: true, stepName: 'notAProject' }, DialogResponses.yes);
         }
 
         options.folderPath = fsPath;

@@ -73,7 +73,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
         const newProject: MessageItem = { title: localize('createNewProject', 'Create new project') };
         const openExistingProject: MessageItem = { title: localize('openExistingProject', 'Open existing project') };
-        const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, newProject, openExistingProject);
+        const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'mustOpenProject' }, newProject, openExistingProject);
 
         if (result === newProject) {
             // don't wait
@@ -84,7 +84,8 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
                 canSelectFiles: false,
                 canSelectFolders: true,
                 canSelectMany: false,
-                openLabel: localize('open', 'Open')
+                openLabel: localize('open', 'Open'),
+                stepName: 'mustOpenProject|selectExisting'
             });
             // don't wait
             void commands.executeCommand('vscode.openFolder', uri[0]);
@@ -99,7 +100,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
         const placeHolder: string = localize('selectProjectFolder', 'Select the folder containing your function project');
         folder = await window.showWorkspaceFolderPick({ placeHolder });
         if (!folder) {
-            throw new UserCancelledError();
+            throw new UserCancelledError('selectProjectFolder');
         }
     }
 

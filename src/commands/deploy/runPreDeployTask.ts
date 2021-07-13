@@ -18,7 +18,7 @@ export async function runPreDeployTask(context: IDeployContext, deployFsPath: st
     if (preDeployTask && preDeployTask.startsWith('func:')) {
         const message: string = localize('installFuncTools', 'You must have the Azure Functions Core Tools installed to run preDeployTask "{0}".', preDeployTask);
         if (!await validateFuncCoreToolsInstalled(context, message, deployFsPath)) {
-            throw new UserCancelledError();
+            throw new UserCancelledError('validateFuncCoreToolsInstalled');
         }
     }
 
@@ -46,9 +46,9 @@ async function promptToBuildNativeDeps(context: IDeployContext, deployFsPath: st
     } else if (result === DialogResponses.learnMore) {
         context.telemetry.properties.preDeployTaskResponse = 'packLearnMore';
         await openUrl('https://aka.ms/func-python-publish');
-        throw new UserCancelledError();
+        throw new UserCancelledError('funcPackFailed|learnMore');
     } else {
         context.telemetry.properties.preDeployTaskResponse = 'cancel';
-        throw new UserCancelledError();
+        throw new UserCancelledError('funcPackFailed');
     }
 }

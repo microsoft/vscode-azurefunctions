@@ -58,10 +58,8 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
         const message: string = localize('incompatibleVersion', 'The remote version "{0}" for function app "{1}" does not match your local version "{2}".', rawAzureVersion, siteName, localVersion);
         const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
         const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
-        context.telemetry.properties.cancelStep = 'incompatibleVersion';
         // No need to check result - cancel will throw a UserCancelledError
-        await context.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
-        context.telemetry.properties.cancelStep = undefined;
+        await context.ui.showWarningMessage(message, { modal: true, learnMoreLink, stepName: 'incompatibleVersion' }, deployAnyway);
     }
 }
 
