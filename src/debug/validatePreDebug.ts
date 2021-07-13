@@ -19,7 +19,7 @@ import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCor
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
-import { getFunctionsWorkerRuntime, getWorkspaceSetting } from "../vsCodeConfig/settings";
+import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
@@ -103,7 +103,7 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
  * Automatically add worker runtime setting since it's required to debug, but often gets deleted since it's stored in "local.settings.json" which isn't tracked in source control
  */
 async function validateWorkerRuntime(context: IActionContext, projectLanguage: string | undefined, projectPath: string): Promise<void> {
-    const runtime: string | undefined = getFunctionsWorkerRuntime(projectLanguage);
+    const runtime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(projectLanguage, projectPath);
     if (runtime) {
         // Not worth handling mismatched runtimes since it's so unlikely
         await setLocalAppSetting(context, projectPath, workerRuntimeKey, runtime, MismatchBehavior.DontChange);

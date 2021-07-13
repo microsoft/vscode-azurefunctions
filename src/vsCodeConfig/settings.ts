@@ -6,6 +6,7 @@
 import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { ProjectLanguage } from '../constants';
 import { ext } from "../extensionVariables";
+import { dotnetUtils } from "../utils/dotnetUtils";
 
 /**
  * Uses ext.prefix 'azureFunctions' unless otherwise specified
@@ -62,7 +63,11 @@ export function getWorkspaceSettingFromAnyFolder(key: string, prefix: string = e
     }
 }
 
-export function getFunctionsWorkerRuntime(language: string | undefined): string | undefined {
+/**
+ * Gets the "root" worker runtime, aka not the project-specific worker runtime
+ * For example, this will return 'dotnet', never 'dotnet-isolated'
+ */
+export function getRootFunctionsWorkerRuntime(language: string | undefined): string | undefined {
     switch (language) {
         case ProjectLanguage.JavaScript:
         case ProjectLanguage.TypeScript:
@@ -83,11 +88,31 @@ export function getFunctionsWorkerRuntime(language: string | undefined): string 
     }
 }
 
+export async function tryGetFunctionsWorkerRuntimeForProject(language: string | undefined, projectPath: string | undefined): Promise<string | undefined> {
+    let runtime = getRootFunctionsWorkerRuntime(language);
+    if (language === ProjectLanguage.CSharp || language === ProjectLanguage.FSharp) {
+        if (projectPath) {
+            const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, projectPath);
+            if (projFiles.length === 1) {
+                if (await dotnetUtils.getIsIsolated(projFiles[0])) {
+                    runtime += '-isolated';
+                }
+                return runtime;
+            }
+        }
+
+        // Couldn't definitively determine isolated vs. non-isolated, so return undefined
+        return undefined;
+    }
+
+    return runtime;
+}
+
 export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
-    return !!runtime && ['node', 'dotnet', 'java', 'python', 'powershell', 'custom'].includes(runtime.toLowerCase());
+    return !!runtime && ['node', 'dotnet', 'dotnet-isolated', 'java', 'python', 'powershell', 'custom'].includes(runtime.toLowerCase());
 }
 
 export function getFuncWatchProblemMatcher(language: string | undefined): string {
-    const runtime: string | undefined = getFunctionsWorkerRuntime(language);
+    const runtime: string | undefined = getRootFunctionsWorkerRuntime(language);
     return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
 }

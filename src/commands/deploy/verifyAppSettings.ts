@@ -12,17 +12,17 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { getFunctionsWorkerRuntime, isKnownWorkerRuntime } from '../../vsCodeConfig/settings';
+import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
-        await verifyVersionAndLanguage(context, node.root.client.fullName, version, language, appSettings.properties);
+        await verifyVersionAndLanguage(context, projectPath, node.root.client.fullName, version, language, appSettings.properties);
 
         let updateAppSettings: boolean = false;
         if (node.root.client.isLinux) {
@@ -40,7 +40,7 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     }
 }
 
-export async function verifyVersionAndLanguage(context: IActionContext, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
+export async function verifyVersionAndLanguage(context: IActionContext, projectPath: string | undefined, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
     const rawAzureVersion: string = remoteProperties[extensionVersionKey];
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
@@ -49,7 +49,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
     context.telemetry.properties.remoteVersion = azureVersion || 'Unknown';
     context.telemetry.properties.remoteRuntime = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
 
-    const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
+    const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(localLanguage, projectPath);
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
     }
