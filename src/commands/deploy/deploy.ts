@@ -83,7 +83,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (isZipDeploy) {
-        await verifyAppSettings(context, node, version, language, { doRemoteBuild, isConsumption });
+        const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder.uri.fsPath);
+        await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
     }
 
     await node.runWithTemporaryDescription(
