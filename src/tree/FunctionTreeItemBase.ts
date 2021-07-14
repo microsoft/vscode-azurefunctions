@@ -18,7 +18,6 @@ import { getProjectContextValue, ProjectResource } from './projectContextValues'
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;
     public readonly name: string;
-    public readonly commandId: string = 'azureFunctions.viewProperties';
     public triggerUrl: string | undefined;
 
     protected readonly _config: ParsedFunctionJson;
@@ -30,6 +29,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
         this._config = config;
         this.name = name;
         this._func = func;
+        this.commandId = 'azureFunctions.viewProperties';
     }
 
     public get id(): string {
