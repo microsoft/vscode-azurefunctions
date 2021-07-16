@@ -6,14 +6,13 @@
 import { WebSiteManagementModels } from "@azure/arm-appservice";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, IAppSettingsClient } from "vscode-azureappservice";
+import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
