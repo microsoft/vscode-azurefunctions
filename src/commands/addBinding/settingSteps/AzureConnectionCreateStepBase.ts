@@ -27,7 +27,7 @@ export abstract class AzureConnectionCreateStepBase<T extends IBindingWizardCont
         this._setting = setting;
     }
 
-    public abstract async getConnection(context: T): Promise<IConnection>;
+    public abstract getConnection(context: T): Promise<IConnection>;
 
     public async execute(context: T, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         progress.report({ message: localize('retrieving', 'Retrieving connection string...') });

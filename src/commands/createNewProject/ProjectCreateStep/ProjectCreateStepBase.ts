@@ -13,7 +13,7 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProjectWizardContext> {
     public priority: number = 10;
 
-    public abstract async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
+    public abstract executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void>;
 
     public async execute(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         context.telemetry.properties.projectLanguage = context.language;
