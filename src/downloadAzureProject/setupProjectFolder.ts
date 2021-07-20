@@ -20,15 +20,12 @@ import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
 import { getRequiredQueryParameter } from './handleUri';
 
-// call this if starting from portal side (unchanged definition)
 export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vscode.Uri, context: IActionContext): Promise<void> {
-    // this function parses through the Uri to get all the variables and then it calls setupProjectFolderParsed()
     const parsedQuery: querystring.ParsedUrlQuery = querystring.parse(uri.query);
     const resourceId: string = getRequiredQueryParameter(parsedQuery, 'resourceId');
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
 
-    // for this call it will prompt user to choose subscription and function app again
     const node: SlotTreeItemBase = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
 
     await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
@@ -67,12 +64,13 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
             await extract(downloadFilePath, { dir: projectFilePath });
             await localDockerPrompt(context, devContainerFolderPathUri, node, devContainerName);
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
+
             void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true); // open the project in VS Code
+            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
         });
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
@@ -87,49 +85,28 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
     }
 }
 
-// Q: do we need to add any other languages here?
-// referenced: getFunctionsWorkerRuntime(language);
-function getProjectLanguageForLanguage(language: string): ProjectLanguage {
-    // setup the language of the project
+function getProjectLanguageForLanguage(language: string): ProjectLanguage | undefined {
     switch (language) {
+        case 'powershell':
+            return ProjectLanguage.PowerShell;
         case 'node':
             return ProjectLanguage.JavaScript;
         case 'python':
             return ProjectLanguage.Python;
-        case 'powershell':
-            return ProjectLanguage.PowerShell;
         case 'dotnetcore2.1':
         case 'dotnetcore3.1':
             return ProjectLanguage.CSharpScript;
-        case 'dotnet':
-            return ProjectLanguage.CSharp
-        case 'java':
-            return ProjectLanguage.Java;
         default:
-            throw new Error(`Language not supported: ${language}`);
+            return undefined;
     }
 }
 
-// gets the devContainer name based on the language
-// here we define which functions will have docker support
 function getDevContainerName(language: string): string | undefined {
     switch (language) {
         case 'node':
             return 'azure-functions-node';
         case 'python':
             return 'azure-functions-python-3';
-        /*
-        case 'powershell':
-            return 'azure-functions-pwsh';
-        case 'dotnetcore2.1':
-            return 'azure-functions-dotnetcore-2.1'
-        case 'dotnetcore3.1':
-            return 'azure-functions-dotnetcore-3.1'
-        case 'dotnet':
-            return 'azure-functions-dotnetcore-3.1';
-        case 'java':
-            return 'azure-functions-java-11';
-        */
         default:
             return undefined;
     }

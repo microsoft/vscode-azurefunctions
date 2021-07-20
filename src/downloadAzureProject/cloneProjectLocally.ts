@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { setupProjectFolderParsed } from '../downloadAzureProject/setupProjectFolder';
 import { ext } from '../extensionVariables';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { setupProjectFolderParsed } from './setupProjectFolder';
 
 
 
