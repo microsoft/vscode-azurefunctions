@@ -15,11 +15,10 @@ import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
  * If only one project is open and the default local settings file exists, return that.
  * Otherwise, prompt
  */
-export async function getLocalSettingsFile(context: IActionContext, message: string, workspacePath?: string): Promise<string> {
-    const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
-    if (workspacePath || folders.length === 1) {
-        workspacePath = workspacePath || folders[0].uri.fsPath;
-        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspacePath);
+export async function getLocalSettingsFile(context: IActionContext, message: string, workspaceFolder?: WorkspaceFolder): Promise<string> {
+    workspaceFolder ||= workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder);
         if (projectPath) {
             const localSettingsFile: string = path.join(projectPath, localSettingsFileName);
             if (await fse.pathExists(localSettingsFile)) {
@@ -29,8 +28,7 @@ export async function getLocalSettingsFile(context: IActionContext, message: str
     }
 
     return await selectWorkspaceFile(context, message, async (f: WorkspaceFolder): Promise<string> => {
-        workspacePath = f.uri.fsPath;
-        const projectPath: string = await tryGetFunctionProjectRoot(context, workspacePath) || workspacePath;
-        return path.relative(workspacePath, path.join(projectPath, localSettingsFileName));
+        const projectPath: string = await tryGetFunctionProjectRoot(context, f) || f.uri.fsPath;
+        return path.relative(f.uri.fsPath, path.join(projectPath, localSettingsFileName));
     });
 }

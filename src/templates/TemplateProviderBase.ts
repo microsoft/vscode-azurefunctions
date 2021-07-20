@@ -154,18 +154,18 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Optional method if the provider has project-specific templates
      */
-    protected refreshProjKey?(): Promise<string>;
+    protected refreshProjKey?(context: IActionContext): Promise<string>;
 
     /**
      * A key used to identify the templates for the current type of project
      */
-    public async getProjKey(): Promise<string> {
+    public async getProjKey(context: IActionContext): Promise<string> {
         if (!this.refreshProjKey) {
             throw new NotImplementedError('refreshProjKey', this);
         }
 
         if (!this._sessionProjKey) {
-            this._sessionProjKey = await this.refreshProjKey();
+            this._sessionProjKey = await this.refreshProjKey(context);
         }
 
         return this._sessionProjKey;
@@ -178,7 +178,7 @@ export abstract class TemplateProviderBase implements Disposable {
     /**
      * Returns true if the key changed
      */
-    public async updateProjKeyIfChanged(projKey: string | undefined): Promise<boolean> {
+    public async updateProjKeyIfChanged(context: IActionContext, projKey: string | undefined): Promise<boolean> {
         let hasChanged: boolean;
         if (!this.refreshProjKey) {
             hasChanged = false; // proj keys not supported, so it's impossible to have changed
@@ -186,7 +186,7 @@ export abstract class TemplateProviderBase implements Disposable {
             hasChanged = this._sessionProjKey !== projKey;
             this._sessionProjKey = projKey;
         } else if (this._projKeyMayHaveChanged) {
-            const latestProjKey = await this.refreshProjKey();
+            const latestProjKey = await this.refreshProjKey(context);
             hasChanged = this._sessionProjKey !== latestProjKey;
             this._sessionProjKey = latestProjKey;
         } else {
@@ -197,9 +197,9 @@ export abstract class TemplateProviderBase implements Disposable {
         return hasChanged;
     }
 
-    public async doesCachedProjKeyMatch(): Promise<boolean> {
+    public async doesCachedProjKeyMatch(context: IActionContext): Promise<boolean> {
         if (this.refreshProjKey) {
-            const projKey = await this.getProjKey();
+            const projKey = await this.getProjKey(context);
             const cachedProjKey = await this.getCachedValue(TemplateProviderBase.projTemplateKeyCacheKey);
             // If cachedProjKey is not defined, assumes it's a match (the cache is probably from before proj keys were a thing)
             return !cachedProjKey || projKey === cachedProjKey;

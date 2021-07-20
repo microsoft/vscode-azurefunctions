@@ -61,7 +61,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
-        await validateRemoteBuild(context, node.root.client, context.workspaceFolder.uri.fsPath, language);
+        await validateRemoteBuild(context, node.root.client, context.workspaceFolder, language);
     }
 
     if (isZipDeploy && node.root.client.isLinux && isConsumption && !doRemoteBuild) {
@@ -83,7 +83,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (isZipDeploy) {
-        const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder.uri.fsPath);
+        const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder);
         await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
     }
 
@@ -108,15 +108,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     );
 
-    await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
+    await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
-    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder.uri.fsPath);
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;
     }
-    const projectFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, functionProject);
+    const projectFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, language, functionProject);
     if (projectFiles.length !== 1) {
         return;
     }

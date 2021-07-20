@@ -35,7 +35,9 @@ suite('Add Binding', () => {
         assert.equal(finalBindingsCount, initialBindingsCount + 3, 'Not all expected bindings were added.');
     });
 
-    test('Command Palette', async () => {
+    test('Command Palette', async function (this: Mocha.Context): Promise<void> {
+        this.timeout(30 * 1000);
+
         const userInputs: string[] = [functionName];
         // https://github.com/microsoft/vscode-azurefunctions/issues/1586
         if (!await ext.azureAccountTreeItem.getIsLoggedIn()) {

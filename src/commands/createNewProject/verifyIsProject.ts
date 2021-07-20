@@ -5,10 +5,11 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { MessageItem, RelativePattern, workspace } from 'vscode';
+import { MessageItem, RelativePattern, workspace, WorkspaceFolder } from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { hostFileName, projectSubpathSetting } from '../../constants';
 import { localize } from '../../localize';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { createNewProjectInternal } from './createNewProject';
@@ -27,37 +28,41 @@ export type MultiProjectPromptBehavior = 'silent' | 'prompt' | 'modalPrompt';
  * Checks root folder and one level down first, then all levels of tree
  * If a single function project is found, returns that path.
  * If multiple projects are found, will prompt based on the value of `promptBehavior`
+ * @param workspaceFolder Per the VS Code docs for `findFiles`: It is recommended to pass in a workspace folder if the pattern should match inside the workspace.
  */
-export async function tryGetFunctionProjectRoot(context: IActionContext, folderPath: string, promptBehavior: MultiProjectPromptBehavior = 'silent'): Promise<string | undefined> {
-    if (!getWorkspaceSetting<boolean>('suppressProject', folderPath)) {
-        const subpath: string | undefined = getWorkspaceSetting(projectSubpathSetting, folderPath);
-        if (subpath) {
-            return path.join(folderPath, subpath);
-        } else if (await fse.pathExists(folderPath)) {
-            if (await isFunctionProject(folderPath)) {
-                return folderPath;
-            } else {
-                const hostJsonUris = await workspace.findFiles(new RelativePattern(folderPath, `*/${hostFileName}`));
-                if (hostJsonUris.length !== 1) {
-                    // NOTE: If we found a single project at the root or one level down, we will use that without searching any further.
-                    // This will reduce false positives in the case of compiled languages like C# where a 'host.json' file is often copied to a build/publish directory a few levels down
-                    // It also maintains consistent historical behavior by giving that project priority because we used to _only_ look at the root and one level down
-                    hostJsonUris.push(...await workspace.findFiles(new RelativePattern(folderPath, `*/*/**/${hostFileName}`)));
-                }
+export async function tryGetFunctionProjectRoot(context: IActionContext, workspaceFolder: WorkspaceFolder | string, promptBehavior: MultiProjectPromptBehavior = 'silent'): Promise<string | undefined> {
+    return await telemetryUtils.runWithDurationTelemetry(context, 'tryGetProject', async () => {
+        const folderPath = typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
+        if (!getWorkspaceSetting<boolean>('suppressProject', workspaceFolder)) {
+            const subpath: string | undefined = getWorkspaceSetting(projectSubpathSetting, workspaceFolder);
+            if (subpath) {
+                return path.join(folderPath, subpath);
+            } else if (await fse.pathExists(folderPath)) {
+                if (await isFunctionProject(folderPath)) {
+                    return folderPath;
+                } else {
+                    const hostJsonUris = await workspace.findFiles(new RelativePattern(workspaceFolder, `*/${hostFileName}`));
+                    if (hostJsonUris.length !== 1) {
+                        // NOTE: If we found a single project at the root or one level down, we will use that without searching any further.
+                        // This will reduce false positives in the case of compiled languages like C# where a 'host.json' file is often copied to a build/publish directory a few levels down
+                        // It also maintains consistent historical behavior by giving that project priority because we used to _only_ look at the root and one level down
+                        hostJsonUris.push(...await workspace.findFiles(new RelativePattern(workspaceFolder, `*/*/**/${hostFileName}`)));
+                    }
 
-                const projectPaths = hostJsonUris.map(uri => path.dirname(uri.fsPath));
-                if (projectPaths.length === 1) {
-                    return projectPaths[0];
-                } else if (projectPaths.length > 1 && promptBehavior !== 'silent') {
-                    const subpaths = projectPaths.map(p => path.relative(folderPath, p));
-                    const pickedSubpath = await promptForProjectSubpath(context, folderPath, subpaths, promptBehavior);
-                    return path.join(folderPath, pickedSubpath);
+                    const projectPaths = hostJsonUris.map(uri => path.dirname(uri.fsPath));
+                    if (projectPaths.length === 1) {
+                        return projectPaths[0];
+                    } else if (projectPaths.length > 1 && promptBehavior !== 'silent') {
+                        const subpaths = projectPaths.map(p => path.relative(folderPath, p));
+                        const pickedSubpath = await promptForProjectSubpath(context, folderPath, subpaths, promptBehavior);
+                        return path.join(folderPath, pickedSubpath);
+                    }
                 }
             }
         }
-    }
 
-    return undefined;
+        return undefined;
+    });
 }
 
 async function promptForProjectSubpath(context: IActionContext, workspacePath: string, matchingSubpaths: string[], promptBehavior: MultiProjectPromptBehavior): Promise<string> {
@@ -78,10 +83,10 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
 /**
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
-export async function verifyAndPromptToCreateProject(context: IActionContext, fsPath: string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
+export async function verifyAndPromptToCreateProject(context: IActionContext, workspaceFolder: WorkspaceFolder | string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
     options = options || {};
 
-    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, fsPath, 'modalPrompt');
+    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
     if (!projectPath) {
         if (!options.suppressCreateProjectPrompt) {
             const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
@@ -89,7 +94,7 @@ export async function verifyAndPromptToCreateProject(context: IActionContext, fs
             await context.ui.showWarningMessage(message, { modal: true, stepName: 'notAProject' }, DialogResponses.yes);
         }
 
-        options.folderPath = fsPath;
+        options.folderPath = typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
         await createNewProjectInternal(context, options);
         return undefined;
     } else {

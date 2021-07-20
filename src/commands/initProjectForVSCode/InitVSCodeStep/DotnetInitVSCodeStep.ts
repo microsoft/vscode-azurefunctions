@@ -51,7 +51,7 @@ export class DotnetInitVSCodeStep extends InitVSCodeStepBase {
         const language: ProjectLanguage = nonNullProp(context, 'language');
 
         let projFile: dotnetUtils.ProjectFile;
-        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, projectPath);
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, language, projectPath);
         const fileExt: string = language === ProjectLanguage.FSharp ? 'fsproj' : 'csproj';
         if (projFiles.length === 1) {
             projFile = projFiles[0];

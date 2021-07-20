@@ -82,7 +82,7 @@ export async function getFuncPortFromTaskOrProject(context: IActionContext, func
         if (typeof projectPathOrTaskScope === 'string') {
             projectPath = projectPathOrTaskScope;
         } else if (typeof projectPathOrTaskScope === 'object') {
-            projectPath = await tryGetFunctionProjectRoot(context, projectPathOrTaskScope.uri.fsPath);
+            projectPath = await tryGetFunctionProjectRoot(context, projectPathOrTaskScope);
         }
 
         if (projectPath) {

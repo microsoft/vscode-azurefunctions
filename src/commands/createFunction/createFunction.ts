@@ -52,7 +52,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath, options);
+    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspaceFolder || workspacePath, options);
     if (!projectPath) {
         return;
     }
