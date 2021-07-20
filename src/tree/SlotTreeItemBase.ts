@@ -74,7 +74,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return this.root.client.id;
     }
 
-    public get hostUrl(): string {
+    public async getHostUrl(): Promise<string> {
         return this.root.client.defaultHostUrl;
     }
 

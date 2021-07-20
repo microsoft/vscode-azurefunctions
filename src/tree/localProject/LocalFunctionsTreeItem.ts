@@ -78,8 +78,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
      */
     private async getChildrenForIsolatedProject(context: IActionContext): Promise<AzExtTreeItem[]> {
         if (runningFuncTaskMap.has(this.parent.workspaceFolder)) {
+            const hostUrl = await this.parent.getHostUrl(context);
             const functions = await requestUtils.sendRequestWithExtTimeout({
-                url: `${this.parent.hostUrl}/admin/functions`,
+                url: `${hostUrl}/admin/functions`,
                 method: 'GET'
             });
             return await this.createTreeItemsWithErrorHandling(
