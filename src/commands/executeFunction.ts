@@ -11,7 +11,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
-import { nonNullProp } from '../utils/nonNull';
+import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
@@ -50,11 +50,12 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     let url: string;
     let body: {};
     if (node.isHttpTrigger) {
-        url = nonNullProp(node, 'triggerUrl');
+        url = nonNullValue(await node.triggerUrlTask, 'triggerUrl');
         body = functionInput;
     } else {
+        const hostUrl = await node.parent.parent.getHostUrl(context);
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        url = `${node.parent.parent.hostUrl}/admin/functions/${node.name}`;
+        url = `${hostUrl}/admin/functions/${node.name}`;
         body = { input: functionInput };
     }
 

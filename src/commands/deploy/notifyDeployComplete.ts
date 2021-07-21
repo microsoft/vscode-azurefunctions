@@ -70,7 +70,8 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
         for (const func of anonFunctions) {
-            ext.outputChannel.appendLine(`  ${func.label}: ${func.triggerUrl}`);
+            const triggerUrl = await func.triggerUrlTask;
+            ext.outputChannel.appendLine(`  ${func.label}: ${triggerUrl}`);
         }
     }
 

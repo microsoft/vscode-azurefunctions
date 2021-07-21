@@ -18,7 +18,7 @@ import { getProjectContextValue, ProjectResource } from './projectContextValues'
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;
     public readonly name: string;
-    public triggerUrl: string | undefined;
+    public triggerUrlTask: Promise<string | undefined>;
 
     protected readonly _config: ParsedFunctionJson;
     private _disabled: boolean;
@@ -103,14 +103,14 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
 
     public async initAsync(context: IActionContext): Promise<void> {
         if (this.isHttpTrigger) {
-            await this.refreshTriggerUrl(context);
+            this.triggerUrlTask = this.getTriggerUrl(context);
         }
 
         await this.refreshDisabledState(context);
     }
 
-    private async refreshTriggerUrl(context: IActionContext): Promise<void> {
-        const hostUrl = new url.URL(this.parent.parent.hostUrl);
+    private async getTriggerUrl(context: IActionContext): Promise<string | undefined> {
+        const hostUrl = new url.URL(await this.parent.parent.getHostUrl(context));
         let triggerUrl: url.URL;
         if (this._func?.invokeUrlTemplate) {
             triggerUrl = new url.URL(this._func?.invokeUrlTemplate);
@@ -127,7 +127,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             triggerUrl.searchParams.set('code', key);
         }
 
-        this.triggerUrl = triggerUrl.toString();
+        return triggerUrl.toString();
     }
 
     /**
