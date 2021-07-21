@@ -70,7 +70,8 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
 
             void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
+            const delayMilliseconds = 1500;
+            setTimeout(vscode.commands.executeCommand, delayMilliseconds, 'vscode.openFolder', vscode.Uri.file(projectFilePath), true)
         });
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
