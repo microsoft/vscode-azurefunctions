@@ -37,7 +37,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspacePath);
+    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         return;
     }

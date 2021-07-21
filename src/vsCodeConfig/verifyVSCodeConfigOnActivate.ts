@@ -25,7 +25,7 @@ export async function verifyVSCodeConfigOnActivate(context: IActionContext, fold
     if (folders) {
         for (const folder of folders) {
             const workspacePath: string = folder.uri.fsPath;
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspacePath, 'prompt');
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder, 'prompt');
             if (projectPath) {
                 context.telemetry.suppressIfSuccessful = false;
 

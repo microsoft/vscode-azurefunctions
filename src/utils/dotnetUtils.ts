@@ -5,10 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { RelativePattern, workspace } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 import { cliFeedUtils } from './cliFeedUtils';
+import { telemetryUtils } from './telemetryUtils';
 
 export namespace dotnetUtils {
     export const isolatedSdkName: string = 'Microsoft.Azure.Functions.Worker.Sdk';
@@ -38,10 +41,12 @@ export namespace dotnetUtils {
     /**
      * NOTE: 'extensions.csproj' is excluded as it has special meaning for the func cli
      */
-    export async function getProjFiles(projectLanguage: ProjectLanguage, projectPath: string): Promise<ProjectFile[]> {
-        const regexp: RegExp = projectLanguage === ProjectLanguage.FSharp ? /\.fsproj$/i : /\.csproj$/i;
-        const files: string[] = await fse.readdir(projectPath);
-        return files.filter((f: string) => regexp.test(f) && !/^extensions\.csproj$/i.test(f)).map(f => new ProjectFile(f, projectPath));
+    export async function getProjFiles(context: IActionContext, projectLanguage: ProjectLanguage, projectPath: string): Promise<ProjectFile[]> {
+        return await telemetryUtils.runWithDurationTelemetry(context, 'getNetProjFiles', async () => {
+            const pattern = projectLanguage === ProjectLanguage.FSharp ? '*.fsproj' : '*.csproj';
+            const uris = await workspace.findFiles(new RelativePattern(projectPath, pattern))
+            return uris.map(uri => path.basename(uri.fsPath)).filter(f => f.toLowerCase() !== 'extensions.csproj').map(f => new ProjectFile(f, projectPath));
+        });
     }
 
     export async function getTargetFramework(projFile: ProjectFile): Promise<string> {
@@ -82,7 +87,7 @@ export namespace dotnetUtils {
         }
     }
 
-    export async function getTemplateKeyFromProjFile(projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage): Promise<string> {
+    export async function getTemplateKeyFromProjFile(context: IActionContext, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage): Promise<string> {
         let isIsolated: boolean = false;
         let targetFramework: string;
         switch (version) { // set up defaults
@@ -101,7 +106,7 @@ export namespace dotnetUtils {
         }
 
         if (projectPath && await fse.pathExists(projectPath)) {
-            const projFiles = await getProjFiles(language, projectPath);
+            const projFiles = await getProjFiles(context, language, projectPath);
             if (projFiles.length === 1) {
                 targetFramework = await getTargetFramework(projFiles[0]);
                 isIsolated = await getIsIsolated(projFiles[0]);

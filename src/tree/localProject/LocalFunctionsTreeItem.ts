@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { ThemeIcon } from 'vscode';
+import { RelativePattern, ThemeIcon, workspace } from 'vscode';
 import { AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
@@ -14,6 +14,7 @@ import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { requestUtils } from '../../utils/requestUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalProjectTreeItem } from './LocalProjectTreeItem';
@@ -35,7 +36,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         if (this.parent.isIsolated) {
             return await this.getChildrenForIsolatedProject(context);
         } else {
-            const functions: string[] = await getFunctionFolders(this.parent.effectiveProjectPath);
+            const functions: string[] = await getFunctionFolders(context, this.parent.effectiveProjectPath);
             const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
                 functions,
                 'azFuncInvalidLocalFunction',
@@ -106,15 +107,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 }
 
-export async function getFunctionFolders(projectPath: string): Promise<string[]> {
-    const result: string[] = [];
-    if (await fse.pathExists(projectPath)) {
-        const subpaths: string[] = await fse.readdir(projectPath);
-        await Promise.all(subpaths.map(async s => {
-            if (await fse.pathExists(path.join(projectPath, s, functionJsonFileName))) {
-                result.push(s);
-            }
-        }));
-    }
-    return result;
+export async function getFunctionFolders(context: IActionContext, projectPath: string): Promise<string[]> {
+    return await telemetryUtils.runWithDurationTelemetry(context, 'getFuncs', async () => {
+        const funcJsonUris = await workspace.findFiles(new RelativePattern(projectPath, `*/${functionJsonFileName}`));
+        return funcJsonUris.map(uri => path.basename(path.dirname(uri.fsPath)))
+    });
 }

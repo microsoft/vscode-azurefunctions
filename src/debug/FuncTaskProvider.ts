@@ -43,7 +43,7 @@ export class FuncTaskProvider implements TaskProvider {
                 let lastError: unknown;
                 for (const folder of workspace.workspaceFolders) {
                     try {
-                        const projectRoot: string | undefined = await tryGetFunctionProjectRoot(context, folder.uri.fsPath);
+                        const projectRoot: string | undefined = await tryGetFunctionProjectRoot(context, folder);
                         if (projectRoot) {
                             const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
 

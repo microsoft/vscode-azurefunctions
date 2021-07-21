@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as retry from 'p-retry';
-import { MessageItem, window } from 'vscode';
+import { MessageItem, window, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -14,7 +14,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
-export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspacePath: string): Promise<void> {
+export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspaceFolder: WorkspaceFolder): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
@@ -31,7 +31,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
             } else if (result === streamLogs) {
                 await startStreamingLogs(postDeployContext, node);
             } else if (result === uploadSettings) {
-                await uploadAppSettings(postDeployContext, node.appSettingsTreeItem, workspacePath);
+                await uploadAppSettings(postDeployContext, node.appSettingsTreeItem, workspaceFolder);
             }
         });
     });

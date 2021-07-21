@@ -49,7 +49,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, projectP
     context.telemetry.properties.remoteVersion = azureVersion || 'Unknown';
     context.telemetry.properties.remoteRuntime = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
 
-    const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(localLanguage, projectPath);
+    const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, localLanguage, projectPath);
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
     }

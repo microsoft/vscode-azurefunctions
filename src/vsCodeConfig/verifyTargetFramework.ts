@@ -15,7 +15,7 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
     const settingKey: string = 'showTargetFrameworkWarning';
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
-        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, projectLanguage, projectPath);
         if (projFiles.length === 1) {
 
             let targetFramework: string;
@@ -40,7 +40,7 @@ export async function verifyTargetFramework(projectLanguage: ProjectLanguage, fo
                 const result: vscode.MessageItem = await context.ui.showWarningMessage(message, update, DialogResponses.dontWarnAgain);
                 if (result === DialogResponses.dontWarnAgain) {
                     context.telemetry.properties.verifyConfigResult = 'dontWarnAgain';
-                    await updateWorkspaceSetting(settingKey, false, folder.uri.fsPath);
+                    await updateWorkspaceSetting(settingKey, false, folder);
                 } else if (result === update) {
                     context.telemetry.properties.verifyConfigResult = 'update';
                     if (tasksResult) {

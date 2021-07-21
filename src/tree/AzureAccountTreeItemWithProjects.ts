@@ -66,7 +66,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
         const folders: readonly WorkspaceFolder[] = workspace.workspaceFolders || [];
         for (const folder of folders) {
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder.uri.fsPath);
+            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, folder);
             if (projectPath) {
                 try {
                     hasLocalProject = true;
@@ -79,7 +79,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         let preCompiledProjectPath: string | undefined;
                         let effectiveProjectPath: string;
                         let isIsolated: boolean | undefined;
-                        const compiledProjectInfo: CompiledProjectInfo | undefined = await getCompiledProjectInfo(projectPath, language);
+                        const compiledProjectInfo: CompiledProjectInfo | undefined = await getCompiledProjectInfo(context, projectPath, language);
                         if (compiledProjectInfo) {
                             preCompiledProjectPath = projectPath;
                             effectiveProjectPath = compiledProjectInfo.compiledProjectPath;
@@ -147,9 +147,9 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
 
 type CompiledProjectInfo = { compiledProjectPath: string; isIsolated: boolean };
 
-async function getCompiledProjectInfo(projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
+async function getCompiledProjectInfo(context: IActionContext, projectPath: string, projectLanguage: ProjectLanguage): Promise<CompiledProjectInfo | undefined> {
     if (projectLanguage === ProjectLanguage.CSharp || projectLanguage === ProjectLanguage.FSharp) {
-        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(projectLanguage, projectPath);
+        const projFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, projectLanguage, projectPath);
         if (projFiles.length === 1) {
             const targetFramework: string = await dotnetUtils.getTargetFramework(projFiles[0]);
             const isIsolated = await dotnetUtils.getIsIsolated(projFiles[0]);
