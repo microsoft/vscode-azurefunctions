@@ -50,12 +50,12 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
             remoteSettings.properties = {};
         }
         if (!localSettings.SettingsToIgnore) {
-            localSettings.SettingsToIgnore = {};
+            localSettings.SettingsToIgnore = [];
         }
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
-        await filterUploadAppSettings(localSettings.Values, localSettings.SettingsToIgnore, remoteSettings.properties, client.fullName);
+        await filterUploadAppSettings(localSettings.Values, remoteSettings.properties, localSettings.SettingsToIgnore, client.fullName);
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);

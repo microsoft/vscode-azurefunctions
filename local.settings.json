@@ -11,7 +11,7 @@
         "WEBSITE_CONTENTSHARE": "faditawfikportalfunctionapptestaa1f",
         "WEBSITE_RUN_FROM_PACKAGE": "1"
     },
-    "SettingsToIgnore": {
-        "FUNCTIONS_EXTENSION_VERSION": ""
-    }
+    "SettingsToIgnore": [
+        "AzureWebJobsStorage"
+    ]
 }

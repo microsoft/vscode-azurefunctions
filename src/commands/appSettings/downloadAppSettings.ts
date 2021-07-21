@@ -13,7 +13,6 @@ import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { confirmOverwriteSettings } from "./confirmOverwriteSettings";
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { filterDownloadAppSettings } from "./filterDownloadAppSettings";
@@ -47,13 +46,14 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
         if (!localSettings.Values) {
             localSettings.Values = {};
         }
-
+        if (!localSettings.SettingsToIgnore) {
+            localSettings.SettingsToIgnore = [];
+        }
         const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
 
         ext.outputChannel.appendLog(localize('downloadingSettings', 'Downloading settings...'), { resourceName: client.fullName });
         if (remoteSettings.properties) {
-            await confirmOverwriteSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
-            await filterDownloadAppSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
+            await filterDownloadAppSettings(context, remoteSettings.properties, localSettings.Values, localSettings.SettingsToIgnore, localSettingsFileName);
         }
 
         await fse.ensureFile(localSettingsPath);

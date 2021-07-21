@@ -8,7 +8,7 @@ import { DialogResponses } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 
-export async function filterUploadAppSettings(sourceSettings: { [key: string]: string }, ignoredSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationName: string): Promise<void> {
+export async function filterUploadAppSettings(sourceSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, ignoredSettings: string[], destinationName: string): Promise<void> {
     let suppressPrompt: boolean = false;
     let overwriteSetting: boolean = false;
 
@@ -19,8 +19,8 @@ export async function filterUploadAppSettings(sourceSettings: { [key: string]: s
     const securitySettingsIgnored: string[] = [];
 
     for (const key of Object.keys(sourceSettings)) {
-        if (ignoredSettings[key] === undefined) {
-            if (destinationSettings[key] === undefined) {
+        if (!ignoredSettings.includes(key)) {
+            if (destinationSettings[key] === undefined) { // Have an explicit check for undefined as empty settings should not pass the condition
                 addedKeys.push(key);
                 destinationSettings[key] = sourceSettings[key];
             } else if (destinationSettings[key] === sourceSettings[key]) {
@@ -31,17 +31,8 @@ export async function filterUploadAppSettings(sourceSettings: { [key: string]: s
                     const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
                     const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', key, destinationName);
                     const result: vscode.MessageItem = await ext.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
-                    if (result === DialogResponses.yes) {
-                        overwriteSetting = true;
-                    } else if (result === yesToAll) {
-                        overwriteSetting = true;
-                        suppressPrompt = true;
-                    } else if (result === DialogResponses.no) {
-                        overwriteSetting = false;
-                    } else if (result === noToAll) {
-                        overwriteSetting = false;
-                        suppressPrompt = true;
-                    }
+                    overwriteSetting = result === DialogResponses.yes || result === yesToAll;
+                    suppressPrompt = result === yesToAll || result === noToAll;
                 }
 
                 if (overwriteSetting) {
