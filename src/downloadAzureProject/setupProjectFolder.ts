@@ -31,7 +31,6 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
 }
 
-//call this directly if you are staring from VSCode extension
 export async function setupProjectFolderParsed(resourceId: string, language: string,
     vsCodeFilePathUri: vscode.Uri, context: IActionContext, node?: SlotTreeItemBase, devContainerName?: string,): Promise<void> {
 

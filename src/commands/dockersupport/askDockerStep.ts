@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { QuickPickOptions } from "vscode";
 import { IActionContext, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { localize } from "../../localize";
@@ -10,12 +15,10 @@ import { localize } from "../../localize";
 export async function prompt(context: IActionContext): Promise<string> {
     const question: QuickPickOptions = { placeHolder: localize('useDocker', 'Use Docker to simplify your development experience?') };
     const responses: IAzureQuickPickItem<string>[] = [
-        // can customize the label name if needed
         { label: 'Yes, use Docker', data: "yes" },
         { label: 'No, do not use Docker', data: "no" }
     ];
 
-    // pop up UI of the prompt and options at the top
     const dockersupport: string = (await context.ui.showQuickPick(responses, question)).data;
     return dockersupport;
 }

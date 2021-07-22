@@ -135,7 +135,6 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return appSettings.properties || {};
     }
 
-    // get language of the Function App from the Settings
     public async getApplicationLanguage(): Promise<string> {
         const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
 
