@@ -4,64 +4,47 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext } from "vscode-azureextensionui";
+import { IActionContext } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../localize";
 
 export async function filterDownloadAppSettings(context: IActionContext, sourceSettings: { [key: string]: string }, destinationSettings: { [key: string]: string }, destinationSettingsToIgnore: string[], destinationName: string): Promise<void> {
-    let suppressPrompt: boolean = false;
-    let overwriteSetting: boolean = false;
-    let overwriteSettingsToIgnore: boolean = false;
-
     const addedKeys: string[] = [];
     const updatedKeys: string[] = [];
     const userIgnoredKeys: string[] = [];
     const matchingKeys: string[] = [];
-    const securitySettingsIgnored: string[] = [];
+
     const listOfSettingsToIgnore: string[] = ["AzureWebJobsStorage", "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING", "WEBSITE_CONTENTSHARE"];
-
-    const yesToAll: vscode.MessageItem = { title: localize('yesToAll', 'Yes to all') };
-    const noToAll: vscode.MessageItem = { title: localize('noToAll', 'No to all') };
-
+    const options: vscode.QuickPickItem[] = [];
     destinationSettingsToIgnore.length = 0;
 
+    for (const element of Object.keys(sourceSettings)) {
+        options.push({
+            label: element,
+            picked: !listOfSettingsToIgnore.includes(element)
+        });
+    }
+
+    const result = await context.ui.showQuickPick(options, { placeHolder: 'Select the app settings you would like to download:', canPickMany: true });
+    const userChosenSettings: string[] = result ? result.map(item => item.label) : [];
+
     for (const key of Object.keys(sourceSettings)) {
-        if (listOfSettingsToIgnore.includes(key)) {
-            if (!suppressPrompt) {
-                const message: string = localize('overwriteSettingsToIgnore', 'Setting "{0}" contains secrets. Download?', key);
-                const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
-                overwriteSettingsToIgnore = result === DialogResponses.yes || result === yesToAll;
-                suppressPrompt = result === yesToAll || result === noToAll;
-            }
-            if (overwriteSettingsToIgnore) {
-                updatedKeys.push(key);
-                destinationSettings[key] = sourceSettings[key];
-            } else {
-                securitySettingsIgnored.push(key);
-                destinationSettings[key] = "_REDACTED_";
-                destinationSettingsToIgnore.push(key);
-            }
-        }
-        else {
-            if (destinationSettings[key] === undefined) { // Have an explicit check for undefined as empty settings should not pass the condition
+        if (userChosenSettings.includes(key)) {
+            // Explicit check for undefined as destinationSettings[key] could be empty but valid
+            if (destinationSettings[key] === undefined) {
                 addedKeys.push(key);
                 destinationSettings[key] = sourceSettings[key];
             } else if (destinationSettings[key] === sourceSettings[key]) {
                 matchingKeys.push(key);
             } else if (sourceSettings[key]) {
-                if (!suppressPrompt) {
-                    const message: string = localize('overwriteSetting', 'Setting "{0}" already exists in "{1}". Overwrite?', key, destinationName);
-                    const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, yesToAll, DialogResponses.no, noToAll);
-                    overwriteSetting = result === DialogResponses.yes || result === yesToAll;
-                    suppressPrompt = result === yesToAll || result === noToAll;
-                }
-                if (overwriteSetting) {
-                    updatedKeys.push(key);
-                    destinationSettings[key] = sourceSettings[key];
-                } else {
-                    userIgnoredKeys.push(key);
-                }
+                updatedKeys.push(key);
+                destinationSettings[key] = sourceSettings[key];
             }
+        }
+        else {
+            userIgnoredKeys.push(key);
+            destinationSettings[key] = "_REDACTED_";
+            destinationSettingsToIgnore.push(key);
         }
     }
 
@@ -83,11 +66,6 @@ export async function filterDownloadAppSettings(context: IActionContext, sourceS
     if (userIgnoredKeys.length > 0) {
         ext.outputChannel.appendLog(localize('userIgnoredKeys', 'Ignored the following settings based on user input:'));
         userIgnoredKeys.forEach(logKey);
-    }
-
-    if (securitySettingsIgnored.length > 0) {
-        ext.outputChannel.appendLog(localize('securitySettingsIgnored', 'Ignored the following settings based on security and privacy:'));
-        securitySettingsIgnored.forEach(logKey);
     }
 
     if (Object.keys(destinationSettings).length > Object.keys(sourceSettings).length) {
