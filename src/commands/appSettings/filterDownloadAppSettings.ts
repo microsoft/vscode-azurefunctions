@@ -20,12 +20,15 @@ export async function filterDownloadAppSettings(context: IActionContext, sourceS
 
     for (const element of Object.keys(sourceSettings)) {
         options.push({
-            label: element,
-            picked: !listOfSettingsToIgnore.includes(element)
+            label: element
         });
     }
 
-    const result = await context.ui.showQuickPick(options, { placeHolder: 'Select the app settings you would like to download:', canPickMany: true });
+    const result = await context.ui.showQuickPick(options, {
+        placeHolder: 'Select the app settings you would like to download:',
+        isPickSelected: (item) => { return !listOfSettingsToIgnore.includes(item.label) }
+        , canPickMany: true
+    });
     const userChosenSettings: string[] = result ? result.map(item => item.label) : [];
 
     for (const key of Object.keys(sourceSettings)) {
