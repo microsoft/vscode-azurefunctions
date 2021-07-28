@@ -18,6 +18,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
     public readonly label: string = localize('Proxies', 'Proxies');
     public readonly childTypeLabel: string = localize('Proxy', 'Proxy');
     public readonly parent: SlotTreeItemBase;
+    public suppressMaskLabel: boolean = true;
 
     private readonly _proxiesJsonPath: string = 'site/wwwroot/proxies.json';
     private _proxyConfig: IProxyConfig;
@@ -85,7 +86,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
 
     public async deleteProxy(context: IActionContext, name: string): Promise<void> {
         const message: string = localize('ConfirmDelete', 'Are you sure you want to delete proxy "{0}"?', name);
-        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.deleteResponse, DialogResponses.cancel);
+        await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmDelete' }, DialogResponses.deleteResponse);
         if (this._deletingProxy) {
             throw new Error(localize('multipleProxyOperations', 'An operation on the proxy config is already in progress. Wait until it has finished and try again.'));
         } else {

@@ -5,27 +5,29 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import { RelativePattern, workspace } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { telemetryUtils } from '../../utils/telemetryUtils';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
 
 /**
  * Returns the project language if we can uniquely detect it for this folder, otherwise returns undefined
  */
 export async function detectProjectLanguage(context: IActionContext, projectPath: string): Promise<ProjectLanguage | undefined> {
-    let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(projectPath);
+    let detectedLangs: ProjectLanguage[] = await detectScriptLanguages(context, projectPath);
 
     if (await isJavaProject(projectPath)) {
         detectedLangs.push(ProjectLanguage.Java);
     }
 
-    if (await isCSharpProject(projectPath)) {
+    if (await isCSharpProject(context, projectPath)) {
         detectedLangs.push(ProjectLanguage.CSharp);
     }
 
-    if (await isFSharpProject(projectPath)) {
+    if (await isFSharpProject(context, projectPath)) {
         detectedLangs.push(ProjectLanguage.FSharp);
     }
 
@@ -40,12 +42,12 @@ async function isJavaProject(projectPath: string): Promise<boolean> {
     return await fse.pathExists(path.join(projectPath, pomXmlFileName));
 }
 
-async function isCSharpProject(projectPath: string): Promise<boolean> {
-    return (await dotnetUtils.getProjFiles(ProjectLanguage.CSharp, projectPath)).length === 1;
+async function isCSharpProject(context: IActionContext, projectPath: string): Promise<boolean> {
+    return (await dotnetUtils.getProjFiles(context, ProjectLanguage.CSharp, projectPath)).length === 1;
 }
 
-async function isFSharpProject(projectPath: string): Promise<boolean> {
-    return (await dotnetUtils.getProjFiles(ProjectLanguage.FSharp, projectPath)).length === 1;
+async function isFSharpProject(context: IActionContext, projectPath: string): Promise<boolean> {
+    return (await dotnetUtils.getProjFiles(context, ProjectLanguage.FSharp, projectPath)).length === 1;
 }
 
 /**
@@ -79,29 +81,19 @@ async function detectLanguageFromLocalSettings(context: IActionContext, detected
  * Script projects will always be in the following structure: <Root project dir>/<function dir>/<function script file>
  * To detect the language, we can check for any "function script file" that matches the well-known filename for each language
  */
-async function detectScriptLanguages(projectPath: string): Promise<ProjectLanguage[]> {
-    const subDirs: string[] = [];
-    const subpaths: string[] = await fse.readdir(projectPath);
-    for (const subpath of subpaths) {
-        const fullPath: string = path.join(projectPath, subpath);
-        const stats: fse.Stats = await fse.lstat(fullPath);
-        if (stats.isDirectory()) {
-            subDirs.push(fullPath);
-        }
-    }
-
-    const detectedLangs: ProjectLanguage[] = [];
-    for (const language of Object.values(ProjectLanguage)) {
-        const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
-        if (functionFileName) {
-            for (const subDir of subDirs) {
-                if (await fse.pathExists(path.join(subDir, functionFileName))) {
+async function detectScriptLanguages(context: IActionContext, projectPath: string): Promise<ProjectLanguage[]> {
+    return await telemetryUtils.runWithDurationTelemetry(context, 'detectScriptLangs', async () => {
+        const detectedLangs: ProjectLanguage[] = [];
+        for (const language of Object.values(ProjectLanguage)) {
+            const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
+            if (functionFileName) {
+                const uris = await workspace.findFiles(new RelativePattern(projectPath, `*/${functionFileName}`), undefined, 1 /* maxResults */);
+                if (uris.length > 0) {
                     detectedLangs.push(language);
-                    break;
                 }
             }
         }
-    }
 
-    return detectedLangs;
+        return detectedLangs;
+    });
 }

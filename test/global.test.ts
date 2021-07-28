@@ -8,8 +8,8 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
-import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
+import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
+import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersion, funcVersionSetting, getGlobalSetting, getRandomHexString, IActionContext, parseError, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, pythonVenvSetting, registerOnActionStartHandler, TemplateFilter, templateFilterSetting, TemplateSource, updateGlobalSetting, updateWorkspaceSetting } from '../extension.bundle';
 
 /**
  * Folder for most tests that do not need a workspace open
@@ -19,28 +19,6 @@ export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRan
 export let longRunningTestsEnabled: boolean;
 export let updateBackupTemplates: boolean;
 export let skipStagingTemplateSource: boolean;
-
-/**
- * Extension-wide TestUserInput that can't be used in parallel, unlike `createTestContext().ui`
- */
-export const testUserInput: TestUserInput = new TestUserInput(vscode);
-
-export type TestActionContext = IActionContext & { ui: TestUserInput };
-export function createTestActionContext(): TestActionContext {
-    return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, valuesToMask: [], ui: new TestUserInput(vscode) };
-}
-
-/**
- * Similar to `createTestActionContext` but with some extra logging
- */
-export async function runWithTestActionContext(callbackId: string, callback: (context: TestActionContext) => Promise<void>): Promise<void> {
-    const context = createTestActionContext();
-    try {
-        await callback(context);
-    } finally {
-        console.log(`** TELEMETRY(${callbackId}) properties=${JSON.stringify(context.telemetry.properties)}, measurements=${JSON.stringify(context.telemetry.measurements)}`);
-    }
-}
 
 const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 
@@ -69,7 +47,11 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();
-    ext.ui = testUserInput;
+
+    registerOnActionStartHandler(context => {
+        // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
+        context.ui = new TestUserInput(vscode);
+    });
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
@@ -102,7 +84,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
  * Pre-load templates so that the first related unit test doesn't time out
  */
 async function preLoadTemplates(): Promise<void> {
-    const providers = [ext.templateProvider.get(createTestActionContext())];
+    const providers = [ext.templateProvider.get(await createTestActionContext())];
     for (const source of allTemplateSources) {
         if (!(source === TemplateSource.Staging && skipStagingTemplateSource)) {
             const provider = new CentralTemplateProvider(source);
@@ -116,8 +98,13 @@ async function preLoadTemplates(): Promise<void> {
         await runWithTestActionContext('preLoadTemplates', async context => {
             ext.templateProvider.registerActionVariable(provider, context);
             for (const version of Object.values(FuncVersion)) {
+                if (version === FuncVersion.v4) {
+                    // v4 doesn't have templates yet
+                    continue;
+                }
+
                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, undefined, language, version, TemplateFilter.Verified, undefined));
+                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, version, TemplateFilter.Verified, undefined));
                 }
             }
         });

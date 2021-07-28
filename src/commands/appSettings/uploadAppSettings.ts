@@ -18,20 +18,20 @@ import { encryptLocalSettings } from "./encryptLocalSettings";
 import { filterUploadAppSettings } from "./filterUploadAppSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspacePath?: string): Promise<void> {
+export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: IAppSettingsClient = node.client;
     await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
-        await uploadAppSettingsInternal(context, client, workspacePath);
+        await uploadAppSettingsInternal(context, client, workspaceFolder);
     });
 }
 
-export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspacePath?: string): Promise<void> {
+export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspaceFolder?: vscode.WorkspaceFolder): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
-    const localSettingsPath: string = await getLocalSettingsFile(context, message, workspacePath);
+    const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
     let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
@@ -55,7 +55,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
-        await filterUploadAppSettings(localSettings.Values, remoteSettings.properties, localSettings.SettingsToIgnore, client.fullName);
+        await filterUploadAppSettings(context, localSettings.Values, remoteSettings.properties, localSettings.SettingsToIgnore, client.fullName);
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);

@@ -5,13 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { Disposable, TaskScope, WorkspaceFolder } from 'vscode';
+import { Disposable, Task, tasks, TaskScope, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
 import { functionJsonFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../constants';
 import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { onFuncTaskStarted, runningFuncPortMap } from '../../funcCoreTools/funcHostTask';
+import { getFuncPortFromTaskOrProject, isFuncHostTask, onFuncTaskStarted, runningFuncPortMap } from '../../funcCoreTools/funcHostTask';
 import { FuncVersion } from '../../FuncVersion';
 import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
@@ -26,7 +26,6 @@ export type LocalProjectOptions = {
     language: ProjectLanguage;
     preCompiledProjectPath?: string
     isIsolated?: boolean;
-    funcPort: string;
 }
 
 export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Disposable, IProjectTreeItem {
@@ -43,7 +42,6 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
 
     private readonly _disposables: Disposable[] = [];
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
-    private readonly _funcPort: string;
 
     public constructor(parent: AzExtParentTreeItem, options: LocalProjectOptions) {
         super(parent, options.preCompiledProjectPath || options.effectiveProjectPath);
@@ -54,7 +52,6 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this.version = options.version;
         this.langauge = options.language;
         this.isIsolated = !!options.isIsolated;
-        this._funcPort = options.funcPort;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, localSettingsFileName)));
@@ -65,8 +62,13 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
     }
 
-    public get hostUrl(): string {
-        const port = runningFuncPortMap.get(this.workspaceFolder) || this._funcPort;
+    public async getHostUrl(context: IActionContext): Promise<string> {
+        let port = runningFuncPortMap.get(this.workspaceFolder);
+        if (!port) {
+            const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === this.workspaceFolder && isFuncHostTask(t));
+            port = await getFuncPortFromTaskOrProject(context, funcTask, this.effectiveProjectPath);
+        }
+
         return `http://localhost:${port}`;
     }
 

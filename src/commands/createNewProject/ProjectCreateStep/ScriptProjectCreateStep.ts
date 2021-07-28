@@ -15,7 +15,7 @@ import { FuncVersion } from '../../../FuncVersion';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
-import { getFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
+import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
@@ -39,7 +39,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
 
         const localSettingsJsonPath: string = path.join(context.projectPath, localSettingsFileName);
         if (await confirmOverwriteFile(context, localSettingsJsonPath)) {
-            const functionsWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(context.language);
+            const functionsWorkerRuntime: string | undefined = getRootFunctionsWorkerRuntime(context.language);
             if (functionsWorkerRuntime) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;

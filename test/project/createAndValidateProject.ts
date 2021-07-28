@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import { TestInput } from 'vscode-azureextensiondev';
+import { TestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { createNewProjectInternal, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
 import * as api from '../../src/vscode-azurefunctions.api';
-import { TestActionContext, testFolderPath } from '../global.test';
+import { testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { IValidateProjectOptions, validateProject } from './validateProject';
 

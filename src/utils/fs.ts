@@ -7,7 +7,7 @@ import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem } from "vscode";
-import { DialogResponses, IActionContext } from "vscode-azureextensionui";
+import { DialogResponses, IActionContext, parseError } from "vscode-azureextensionui";
 import { localize } from "../localize";
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
@@ -30,21 +30,23 @@ export async function copyFolder(context: IActionContext, fromPath: string, toPa
     }
 }
 
-export async function confirmEditJsonFile(context: IActionContext, fsPath: string, editJson: (existingData: {}) => {}): Promise<void> {
+export async function confirmEditJsonFile(context: IActionContext, fsPath: string, editJson: (existingData: {}) => {} | Promise<{}>): Promise<void> {
     let newData: {};
     if (await fse.pathExists(fsPath)) {
         try {
-            newData = editJson(<{}>await fse.readJson(fsPath));
+            newData = await editJson(<{}>await fse.readJson(fsPath));
         } catch (error) {
-            // If we failed to parse or edit the existing file, just ask to overwrite the file completely
-            if (await confirmOverwriteFile(context, fsPath)) {
-                newData = editJson({});
+            if (parseError(error).isUserCancelledError) {
+                throw error;
+            } else if (await confirmOverwriteFile(context, fsPath)) {
+                // If we failed to parse or edit the existing file, just ask to overwrite the file completely
+                newData = await editJson({});
             } else {
                 return;
             }
         }
     } else {
-        newData = editJson({});
+        newData = await editJson({});
     }
 
     await writeFormattedJson(fsPath, newData);
@@ -52,7 +54,7 @@ export async function confirmEditJsonFile(context: IActionContext, fsPath: strin
 
 export async function confirmOverwriteFile(context: IActionContext, fsPath: string): Promise<boolean> {
     if (await fse.pathExists(fsPath)) {
-        const result: MessageItem | undefined = await context.ui.showWarningMessage(localize('fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true }, DialogResponses.yes, DialogResponses.no, DialogResponses.cancel);
+        const result: MessageItem | undefined = await context.ui.showWarningMessage(localize('fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true, stepName: 'overwriteFile' }, DialogResponses.yes, DialogResponses.no);
         if (result === DialogResponses.yes) {
             return true;
         } else {

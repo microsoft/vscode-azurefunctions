@@ -6,30 +6,26 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
-import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { IActionContext } from 'vscode-azureextensionui';
+import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
-import { getFunctionsWorkerRuntime, isKnownWorkerRuntime } from '../../vsCodeConfig/settings';
+import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
     const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
     if (appSettings.properties) {
-        await verifyVersionAndLanguage(context, node.root.client.fullName, version, language, appSettings.properties);
+        await verifyVersionAndLanguage(context, projectPath, node.root.client.fullName, version, language, appSettings.properties);
 
         let updateAppSettings: boolean = false;
         if (node.root.client.isLinux) {
-            if (bools.isConsumption) {
-                updateAppSettings = await verifyWebContentSettings(context, appSettings.properties);
-            }
-
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings = updateAppSettings || remoteBuildSettingsChanged;
         } else {
@@ -44,14 +40,16 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     }
 }
 
-export async function verifyVersionAndLanguage(context: IActionContext, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
+export async function verifyVersionAndLanguage(context: IActionContext, projectPath: string | undefined, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
     const rawAzureVersion: string = remoteProperties[extensionVersionKey];
-    context.telemetry.properties.remoteVersion = rawAzureVersion;
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
-
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
-    context.telemetry.properties.remoteRuntime = azureWorkerRuntime;
-    const localWorkerRuntime: string | undefined = getFunctionsWorkerRuntime(localLanguage);
+
+    // Since these are coming from the user's app settings we want to be a bit careful and only track if it's in an expected format
+    context.telemetry.properties.remoteVersion = azureVersion || 'Unknown';
+    context.telemetry.properties.remoteRuntime = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
+
+    const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, localLanguage, projectPath);
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
         throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
     }
@@ -60,10 +58,8 @@ export async function verifyVersionAndLanguage(context: IActionContext, siteName
         const message: string = localize('incompatibleVersion', 'The remote version "{0}" for function app "{1}" does not match your local version "{2}".', rawAzureVersion, siteName, localVersion);
         const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
         const learnMoreLink: string = 'https://aka.ms/azFuncRuntime';
-        context.telemetry.properties.cancelStep = 'incompatibleVersion';
         // No need to check result - cancel will throw a UserCancelledError
-        await context.ui.showWarningMessage(message, { modal: true, learnMoreLink }, deployAnyway);
-        context.telemetry.properties.cancelStep = undefined;
+        await context.ui.showWarningMessage(message, { modal: true, learnMoreLink, stepName: 'incompatibleVersion' }, deployAnyway);
     }
 }
 
@@ -80,23 +76,6 @@ function verifyRunFromPackage(context: IActionContext, client: SiteClient, remot
 
     context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);
     return shouldAddSetting;
-}
-
-/**
- * We need this check due to this issue: https://github.com/Microsoft/vscode-azurefunctions/issues/625
- * Only applies to Linux Consumption apps
- */
-async function verifyWebContentSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
-    const shouldRemoveSettings: boolean = !!(remoteProperties[contentConnectionStringKey] || remoteProperties[contentShareKey]);
-    if (shouldRemoveSettings) {
-        const message: string = localize('notConfiguredForDeploy', 'The selected app is not configured for deployment through VS Code. Remove app settings "{0}" and "{1}"?', contentConnectionStringKey, contentShareKey);
-        await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
-        delete remoteProperties[contentConnectionStringKey];
-        delete remoteProperties[contentShareKey];
-    }
-
-    context.telemetry.properties.webContentSettingsRemoved = String(shouldRemoveSettings);
-    return shouldRemoveSettings;
 }
 
 function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {

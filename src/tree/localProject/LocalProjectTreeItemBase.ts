@@ -10,6 +10,7 @@ import { treeUtils } from '../../utils/treeUtils';
 
 export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('localProject', 'Local Project');
+    public suppressMaskLabel: boolean = true;
     private readonly _projectName: string;
 
     public constructor(parent: AzExtParentTreeItem, projectPath: string) {

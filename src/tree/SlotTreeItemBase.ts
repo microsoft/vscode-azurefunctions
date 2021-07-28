@@ -44,6 +44,17 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         this.appSettingsTreeItem = new AppSettingsTreeItem(this, client);
         this._siteFilesTreeItem = new SiteFilesTreeItem(this, client, true);
         this._logFilesTreeItem = new LogFilesTreeItem(this, client);
+
+        const valuesToMask = [
+            client.siteName, client.slotName, client.defaultHostName, client.resourceGroup,
+            client.planName, client.planResourceGroup, client.kuduHostName, client.gitUrl,
+            site.repositorySiteName, ...(site.hostNames || []), ...(site.enabledHostNames || [])
+        ];
+        for (const v of valuesToMask) {
+            if (v) {
+                this.valuesToMask.push(v);
+            }
+        }
     }
 
     // overrides ISubscriptionContext with an object that also has SiteClient
@@ -63,7 +74,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return this.root.client.id;
     }
 
-    public get hostUrl(): string {
+    public async getHostUrl(): Promise<string> {
         return this.root.client.defaultHostUrl;
     }
 
@@ -222,7 +233,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 
-    public async deleteTreeItemImpl(): Promise<void> {
-        await deleteSite(this.root.client);
+    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        await deleteSite(context, this.root.client);
     }
 }

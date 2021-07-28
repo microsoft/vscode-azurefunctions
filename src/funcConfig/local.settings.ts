@@ -59,7 +59,7 @@ export async function setLocalAppSetting(context: IActionContext, functionAppPat
     } else if (settings.Values[key]) {
         if (behavior === MismatchBehavior.Prompt) {
             const message: string = localize('SettingAlreadyExists', 'Local app setting \'{0}\' already exists. Overwrite?', key);
-            if (await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, DialogResponses.cancel) !== DialogResponses.yes) {
+            if (await context.ui.showWarningMessage(message, { modal: true, stepName: 'overwriteLocalSetting' }, DialogResponses.yes) !== DialogResponses.yes) {
                 return;
             }
         } else if (behavior === MismatchBehavior.DontChange) {
@@ -82,7 +82,7 @@ export async function getLocalSettingsJson(context: IActionContext, localSetting
                     const message: string = localize('failedToParseWithOverwrite', 'Failed to parse "{0}": {1}. Overwrite?', localSettingsFileName, parseError(error).message);
                     const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };
                     // Overwrite is the only button and cancel automatically throws, so no need to check result
-                    await context.ui.showWarningMessage(message, { modal: true }, overwriteButton, DialogResponses.cancel);
+                    await context.ui.showWarningMessage(message, { modal: true, stepName: 'overwriteLocalSettings' }, overwriteButton);
                 } else {
                     const message: string = localize('failedToParse', 'Failed to parse "{0}": {1}.', localSettingsFileName, parseError(error).message);
                     throw new Error(message);

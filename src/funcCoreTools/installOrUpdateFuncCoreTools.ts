@@ -28,7 +28,7 @@ export async function installOrUpdateFuncCoreTools(context: IActionContext): Pro
         } else {
             const placeHolder: string = localize('multipleInstalls', 'Multiple installs of the func cli detected. Select the one to update');
             const picks: IAzureQuickPickItem<PackageManager>[] = packageManagers.map(pm => { return { label: localize('update', 'Update {0} package', pm), data: pm }; });
-            packageManager = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+            packageManager = (await context.ui.showQuickPick(picks, { placeHolder, stepName: 'multipleFuncInstalls' })).data;
         }
 
         let version: FuncVersion | undefined = await tryGetLocalFuncVersion();

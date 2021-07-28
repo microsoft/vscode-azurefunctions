@@ -58,7 +58,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
 
         if (existingFiles.length > 0) {
             const message: string = localize('overwriteExistingFiles', 'Overwrite existing files?: {0}', existingFiles.join(', '));
-            await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes);
+            await context.ui.showWarningMessage(message, { modal: true, stepName: 'overwriteExistingFiles' }, DialogResponses.yes);
         }
     }
 }

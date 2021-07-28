@@ -61,7 +61,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
-        await validateRemoteBuild(context, node.root.client, context.workspaceFolder.uri.fsPath, language);
+        await validateRemoteBuild(context, node.root.client, context.workspaceFolder, language);
     }
 
     if (isZipDeploy && node.root.client.isLinux && isConsumption && !doRemoteBuild) {
@@ -83,7 +83,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     if (isZipDeploy) {
-        await verifyAppSettings(context, node, version, language, { doRemoteBuild, isConsumption });
+        const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder);
+        await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
     }
 
     await node.runWithTemporaryDescription( // issues temporary description while call back is being run
@@ -107,15 +108,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         }
     );
 
-    await notifyDeployComplete(context, node, context.workspaceFolder.uri.fsPath);
+    await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
 async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
-    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder.uri.fsPath);
+    const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;
     }
-    const projectFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(language, functionProject);
+    const projectFiles: dotnetUtils.ProjectFile[] = await dotnetUtils.getProjFiles(context, language, functionProject);
     if (projectFiles.length !== 1) {
         return;
     }
@@ -123,7 +124,7 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
     if (platformTarget === 'x64' && siteConfig.use32BitWorkerProcess === true) {
         const message: string = localize('overwriteSetting', 'The remote app targets "{0}", but your local project targets "{1}". Update remote app to "{1}"?', '32 bit', '64 bit');
         const deployAnyway: vscode.MessageItem = { title: localize('deployAnyway', 'Deploy Anyway') };
-        const dialogResult: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.yes, deployAnyway);
+        const dialogResult: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'mismatch64bit' }, DialogResponses.yes, deployAnyway);
         if (dialogResult === deployAnyway) {
             return;
         }
@@ -142,6 +143,6 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
     if (includeSetting || excludeSetting) {
         context.telemetry.properties.hasOldGlobSettings = 'true';
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
-        await context.ui.showWarningMessage(message);
+        await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
 }

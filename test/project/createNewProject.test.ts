@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TestInput } from 'vscode-azureextensiondev';
+import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
-import { allTemplateSources, runForTemplateSource, runWithTestActionContext } from '../global.test';
+import { allTemplateSources, runForTemplateSource } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 

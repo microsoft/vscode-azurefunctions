@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.4.1 - 2021-07-14
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.4.1%22+is%3Aclosed)
+
 ## 1.4.0 - 2021-05-25
 ### Added
 - Support Azure Functions on Kubernetes with Azure Arc (Preview)

@@ -16,7 +16,7 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersio
 import { localize } from "../localize";
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
-import { getFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { getRootFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
@@ -105,7 +105,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (!context.advancedCreation) {
             LocationListStep.addStep(wizardContext, promptSteps);
             wizardContext.useConsumptionPlan = true;
-            wizardContext.stackFilter = getFunctionsWorkerRuntime(language);
+            wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));

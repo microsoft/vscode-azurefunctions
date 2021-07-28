@@ -10,7 +10,8 @@ import { openUrl } from './utils/openUrl';
 export enum FuncVersion {
     v1 = '~1',
     v2 = '~2',
-    v3 = '~3'
+    v3 = '~3',
+    v4 = '~4'
 }
 
 export const latestGAVersion: FuncVersion = FuncVersion.v3;
@@ -27,7 +28,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
 
     picks.push({ label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined });
 
-    const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), suppressPersistence: true };
+    const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };
     // eslint-disable-next-line no-constant-condition
     while (true) {
         const version: FuncVersion | undefined = (await context.ui.showQuickPick(picks, options)).data;
@@ -50,8 +51,8 @@ export function tryParseFuncVersion(data: string | undefined): FuncVersion | und
     return undefined;
 }
 
-export function isPreviewVersion(_version: FuncVersion): boolean {
-    return false;
+export function isPreviewVersion(version: FuncVersion): boolean {
+    return version === FuncVersion.v4;
 }
 
 function osSupportsVersion(version: FuncVersion | undefined): boolean {

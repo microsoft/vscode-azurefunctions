@@ -11,7 +11,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
-import { nonNullProp } from '../utils/nonNull';
+import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
@@ -39,8 +39,8 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             }
         }
 
-        // changes string to object format
-        const data: string = await context.ui.showInputBox({ prompt, value });
+        const data: string = await context.ui.showInputBox({ prompt, value, stepName: 'requestBody' });
+
         try {
             functionInput = <{}>JSON.parse(data);
         } catch {
@@ -52,11 +52,12 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     let url: string;
     let body: {};
     if (node.isHttpTrigger) {
-        url = nonNullProp(node, 'triggerUrl');
+        url = nonNullValue(await node.triggerUrlTask, 'triggerUrl');
         body = functionInput;
     } else {
+        const hostUrl = await node.parent.parent.getHostUrl(context);
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        url = `${node.parent.parent.hostUrl}/admin/functions/${node.name}`;
+        url = `${hostUrl}/admin/functions/${node.name}`;
         body = { input: functionInput };
     }
 
@@ -74,6 +75,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
             } else {
+                context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
             }
         }

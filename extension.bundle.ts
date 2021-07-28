@@ -16,12 +16,14 @@
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
 export * from 'vscode-azureappservice';
 export * from 'vscode-azureextensionui';
+export * from './src/commands/addBinding/addBinding';
 export * from './src/commands/copyFunctionUrl';
 export * from './src/commands/createFunction/createFunction';
 export * from './src/commands/createFunction/dotnetSteps/DotnetNamespaceStep';
 export * from './src/commands/createFunctionApp/createFunctionApp';
 export * from './src/commands/createNewProject/createNewProject';
 export * from './src/commands/createNewProject/ProjectCreateStep/JavaScriptProjectCreateStep';
+export * from './src/commands/deleteFunctionApp';
 export * from './src/commands/deploy/deploy';
 export * from './src/commands/deploy/verifyAppSettings';
 export * from './src/commands/initProjectForVSCode/initProjectForVSCode';
