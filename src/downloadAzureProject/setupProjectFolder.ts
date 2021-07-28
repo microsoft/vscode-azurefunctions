@@ -72,9 +72,13 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             // Setting a delay so that users are able to see the message before new window opens
             const delayMilliseconds = 1500;
             if (openInContainer) {
-                setTimeout(vscode.commands.executeCommand, delayMilliseconds, 'remote-containers.openFolder', vscode.Uri.file(projectFilePath), true);
+                setTimeout((commandString, filePath, openFile) => {
+                    void vscode.commands.executeCommand(commandString, filePath, openFile);
+                }, delayMilliseconds, 'remote-containers.openFolder', vscode.Uri.file(projectFilePath), true);
             } else {
-                setTimeout(vscode.commands.executeCommand, delayMilliseconds, 'vscode.openFolder', vscode.Uri.file(projectFilePath), true)
+                setTimeout((commandString, filePath, openFile) => {
+                    void vscode.commands.executeCommand(commandString, filePath, openFile);
+                }, delayMilliseconds, 'vscode.openFolder', vscode.Uri.file(projectFilePath), true);
             }
         });
     } catch (err) {

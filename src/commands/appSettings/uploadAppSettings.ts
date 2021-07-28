@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from "@azure/arm-appservice";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "vscode-azureappservice";
+import { AppSettingsTreeItem, IAppSettingsClient } from "vscode-azureappservice";
 import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -55,7 +55,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
-        await filterUploadAppSettings(localSettings.Values, remoteSettings.properties, localSettings.SettingsToIgnore, client.fullName);
+        await filterUploadAppSettings(context, localSettings.Values, remoteSettings.properties, localSettings.SettingsToIgnore, client.fullName);
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);

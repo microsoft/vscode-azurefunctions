@@ -15,10 +15,9 @@ export async function cloneLocally(context: IActionContext, node?: SlotTreeItemB
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+    const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
     const resourceId: string = node.id;
     const language: string = await node.getApplicationLanguage();
 
     await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
 }
-
