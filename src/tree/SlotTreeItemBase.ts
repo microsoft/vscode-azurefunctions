@@ -146,6 +146,14 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return appSettings.properties || {};
     }
 
+    public async getApplicationLanguage(): Promise<string> {
+        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+
+        return !appSettings.properties || !appSettings.properties['FUNCTIONS_WORKER_RUNTIME']
+            ? ''
+            : appSettings.properties['FUNCTIONS_WORKER_RUNTIME'];
+    }
+
     public async setApplicationSetting(_context: IActionContext, key: string, value: string): Promise<void> {
         const settings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
         if (!settings.properties) {

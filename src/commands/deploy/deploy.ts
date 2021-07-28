@@ -87,7 +87,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
     }
 
-    await node.runWithTemporaryDescription(
+    await node.runWithTemporaryDescription( // issues temporary description while call back is being run
         context,
         localize('deploying', 'Deploying...'),
         async () => {

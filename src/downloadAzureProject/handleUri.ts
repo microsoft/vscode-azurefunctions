@@ -31,7 +31,7 @@ export async function handleUri(uri: vscode.Uri): Promise<void> {
                     await vscode.commands.executeCommand('azure-account.login');
                 }
 
-                const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
+                const filePathUri: vscode.Uri[] = await ext.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
                 await setupProjectFolder(uri, filePathUri[0], context);
             } else {
                 throw new RangeError(localize('invalidAction', 'Invalid action "{0}".', action));

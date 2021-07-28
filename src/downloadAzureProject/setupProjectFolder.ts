@@ -9,10 +9,12 @@ import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { localDockerPrompt } from '../commands/dockersupport/localDockerSupport';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
+import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
@@ -24,6 +26,18 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
 
+    const node: SlotTreeItemBase = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+
+    await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
+}
+
+export async function setupProjectFolderParsed(resourceId: string, language: string,
+    vsCodeFilePathUri: vscode.Uri, context: IActionContext, node?: SlotTreeItemBase, devContainerName?: string,): Promise<void> {
+
+    if (!devContainerName) {
+        devContainerName = getDevContainerName(language);
+    }
+
     const toBeDeletedFolderPathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, 'temp');
 
     try {
@@ -31,7 +45,6 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
         const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
-            // NOTE: We don't want to download app content for compiled languages.
             const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
             const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
             const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
@@ -40,7 +53,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
                 const requestOptions: RequestPrepareOptions = {
                     method: 'GET',
                     url: `https://${defaultHostName}/admin/functions/download?includeCsproj=true&includeAppSettings=true`,
-                    headers: { 'x-functions-key':  hostKeys.masterKey }
+                    headers: { 'x-functions-key': hostKeys.masterKey }
                 };
                 await requestUtils.downloadFile(requestOptions, downloadFilePath);
             } else {
@@ -50,19 +63,19 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             const projectFilePathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, `${functionAppName}`);
             const projectFilePath: string = projectFilePathUri.fsPath;
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+
             await extract(downloadFilePath, { dir: projectFilePath });
-            await requestUtils.downloadFile(
-                `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
-            );
-            await requestUtils.downloadFile(
-                `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
-                vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
-            );
+            const openInContainer: boolean = await localDockerPrompt(context, devContainerFolderPathUri, node, devContainerName);
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
-            await vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
-            await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectFilePath), true);
+
+            void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
+            // Setting a delay so that users are able to see the message before new window opens
+            const delayMilliseconds = 1500;
+            if (openInContainer) {
+                setTimeout(vscode.commands.executeCommand, delayMilliseconds, 'remote-containers.openFolder', vscode.Uri.file(projectFilePath), true);
+            } else {
+                setTimeout(vscode.commands.executeCommand, delayMilliseconds, 'vscode.openFolder', vscode.Uri.file(projectFilePath), true)
+            }
         });
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
@@ -77,7 +90,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     }
 }
 
-function getProjectLanguageForLanguage(language: string): ProjectLanguage {
+function getProjectLanguageForLanguage(language: string): ProjectLanguage | undefined {
     switch (language) {
         case 'powershell':
             return ProjectLanguage.PowerShell;
@@ -89,6 +102,17 @@ function getProjectLanguageForLanguage(language: string): ProjectLanguage {
         case 'dotnetcore3.1':
             return ProjectLanguage.CSharpScript;
         default:
-            throw new Error(`Language not supported: ${language}`);
+            return undefined;
+    }
+}
+
+function getDevContainerName(language: string): string | undefined {
+    switch (language) {
+        case 'node':
+            return 'azure-functions-node';
+        case 'python':
+            return 'azure-functions-python-3';
+        default:
+            return undefined;
     }
 }

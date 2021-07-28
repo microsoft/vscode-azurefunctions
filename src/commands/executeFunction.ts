@@ -47,6 +47,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         }
     }
 
+    // access the function's master key on the portal
     let url: string;
     let body: {};
     if (node.isHttpTrigger) {
@@ -59,6 +60,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         body = { input: functionInput };
     }
 
+    // loads in the function in the extension
     let responseText: string | null | undefined;
     await node.runWithTemporaryDescription(context, localize('executing', 'Executing...'), async () => {
         const headers: { [name: string]: string | undefined } = {};
@@ -78,6 +80,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         }
     });
 
+    // shows if the function was able to run
     const message: string = responseText ? localize('executedWithResponse', 'Executed function "{0}". Response: "{1}"', node.name, responseText) : localize('executed', 'Executed function "{0}"', node.name);
     void window.showInformationMessage(message);
 }
