@@ -46,14 +46,14 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
         if (!localSettings.Values) {
             localSettings.Values = {};
         }
-        if (!localSettings.SettingsToIgnore) {
-            localSettings.SettingsToIgnore = [];
+        if (!localSettings.SettingsToIgnoreOnDeployment) {
+            localSettings.SettingsToIgnoreOnDeployment = [];
         }
         const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
 
         ext.outputChannel.appendLog(localize('downloadingSettings', 'Downloading settings...'), { resourceName: client.fullName });
         if (remoteSettings.properties) {
-            await filterDownloadAppSettings(context, remoteSettings.properties, localSettings.Values, localSettings.SettingsToIgnore, localSettingsFileName);
+            await filterDownloadAppSettings(context, remoteSettings.properties, localSettings.Values, localSettings.SettingsToIgnoreOnDeployment, localSettingsFileName);
         }
 
         await fse.ensureFile(localSettingsPath);
