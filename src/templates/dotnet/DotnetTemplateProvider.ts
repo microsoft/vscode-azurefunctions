@@ -67,23 +67,43 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     public async getLatestTemplateVersion(context: IActionContext): Promise<string> {
         const projKey = await this.getProjKey(context);
 
-        let templateVersion = await cliFeedUtils.getLatestVersion(context, this.version);
+        const templateVersion = await cliFeedUtils.getLatestVersion(context, this.version);
         let netRelease = await this.getNetRelease(projKey, templateVersion);
         if (netRelease) {
             return templateVersion;
         } else {
-            for (const newVersion of Object.values(FuncVersion)) {
-                if (newVersion !== this.version) {
-                    templateVersion = await cliFeedUtils.getLatestVersion(context, newVersion);
-                    netRelease = await this.getNetRelease(projKey, templateVersion);
+            const templateVersions = await cliFeedUtils.getSortedVersions(this.version);
+            for (const newTemplateVersion of templateVersions) {
+                try {
+                    netRelease = await this.getNetRelease(projKey, newTemplateVersion);
                     if (netRelease) {
-                        context.telemetry.properties.effectiveProjectRuntime = newVersion;
-                        const oldMajorVersion = getMajorVersion(this.version);
-                        const newMajorVersion = getMajorVersion(newVersion);
-                        const warning = localize('mismatchProjKeyWarning', 'WARNING: "{0}" is not supported on Azure Functions v{1}. Using templates from v{2} instead.', projKey, oldMajorVersion, newMajorVersion);
+                        const latestFuncRelease = await cliFeedUtils.getRelease(templateVersion);
+                        const latestProjKeys = Object.values(latestFuncRelease.workerRuntimes.dotnet).map(r => dotnetUtils.getTemplateKeyFromFeedEntry(r));
+                        const warning = localize('oldProjKeyWarning', 'WARNING: "{0}" does not support the latest templates. Use "{1}" for the latest.', projKey, latestProjKeys.join('", "'));
                         ext.outputChannel.appendLog(warning);
-                        return templateVersion;
+                        return newTemplateVersion;
                     }
+                } catch {
+                    // ignore and try next version
+                }
+            }
+
+            for (const newFuncVersion of Object.values(FuncVersion)) {
+                try {
+                    if (newFuncVersion !== this.version) {
+                        const newTemplateVersion = await cliFeedUtils.getLatestVersion(context, newFuncVersion);
+                        netRelease = await this.getNetRelease(projKey, newTemplateVersion);
+                        if (netRelease) {
+                            context.telemetry.properties.effectiveProjectRuntime = newFuncVersion;
+                            const oldMajorVersion = getMajorVersion(this.version);
+                            const newMajorVersion = getMajorVersion(newFuncVersion);
+                            const warning = localize('mismatchProjKeyWarning', 'WARNING: "{0}" is not supported on Azure Functions v{1}. Using templates from v{2} instead.', projKey, oldMajorVersion, newMajorVersion);
+                            ext.outputChannel.appendLog(warning);
+                            return newTemplateVersion;
+                        }
+                    }
+                } catch {
+                    // ignore and try next version
                 }
             }
             throw new Error(localize('projKeyError', '"{0}" is not supported for Azure Functions version "{1}".', projKey, this.version));
