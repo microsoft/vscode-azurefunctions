@@ -79,7 +79,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(profileps1Path, profileps1);
         }
 
-        const majorVersion: number | undefined = await this.tryGetLatestAzModuleMajorVersion(progress);
+        const majorVersion: number | undefined = await this.tryGetLatestAzModuleMajorVersion(context, progress);
         if (majorVersion !== undefined) {
             progress.report({
                 message: localize('successfullyConnected', 'Successfully retrieved {0} information from PowerShell Gallery', this.azModuleName)
@@ -106,13 +106,13 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         return hostJson;
     }
 
-    private async tryGetLatestAzModuleMajorVersion(progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
+    private async tryGetLatestAzModuleMajorVersion(context: IActionContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<number | undefined> {
         progress.report({
             message: localize('connecting', 'Connecting to PowerShell Gallery...')
         });
 
         try {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url: this.azModuleGalleryUrl });
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: this.azModuleGalleryUrl });
             const versionResult: string = this.parseLatestAzModuleVersion(response);
             const [major]: string[] = versionResult.split('.');
             return parseInt(major);

@@ -28,9 +28,10 @@ export async function viewProperties(context: IActionContext, node?: SlotTreeIte
             const siteNode: SlotTreeItemBase = node;
             await node.runWithTemporaryDescription(context, localize('retrievingProps', 'Retrieving properties...'), async () => {
                 // `siteConfig` already exists on `node.site`, but has very limited properties for some reason. We want to get the full site config
-                siteNode.site.siteConfig = await siteNode.root.client.getSiteConfig();
+                const client = await siteNode.site.createClient(context);
+                siteNode.site.rawSite.siteConfig = await client.getSiteConfig();
             });
-            data = node.site;
+            data = node.site.rawSite;
         } else {
             data = node.rawConfig;
         }

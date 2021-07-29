@@ -5,7 +5,7 @@
 
 import { WebSiteManagementClient, WebSiteManagementMappers, WebSiteManagementModels as SiteModels, WebSiteManagementModels } from '@azure/arm-appservice';
 import { Progress } from 'vscode';
-import { CustomLocation, IAppServiceWizardContext, SiteClient, WebsiteOS } from 'vscode-azureappservice';
+import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from 'vscode-azureappservice';
 import { AzureWizardExecuteStep, LocationListStep, parseError } from 'vscode-azureextensionui';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -44,17 +44,17 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const client: WebSiteManagementClient = await createWebSiteClient(context);
         context.site = await client.webApps.createOrUpdate(rgName, siteName, await this.getNewSite(context, stack));
 
-        context.siteClient = new SiteClient(context.site, context);
-        if (!context.siteClient.isLinux) { // not supported on linux
+        const site = new ParsedSite(context.site, context);
+        if (!site.isLinux) { // not supported on linux
             try {
-                await enableFileLogging(context.siteClient);
+                await enableFileLogging(context, site);
             } catch (error) {
                 // optional part of creating function app, so not worth blocking on error
                 context.telemetry.properties.fileLoggingError = parseError(error).message;
             }
         }
 
-        showSiteCreated(context.siteClient, context);
+        showSiteCreated(site, context);
     }
 
     public shouldExecute(context: IFunctionAppWizardContext): boolean {

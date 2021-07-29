@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { funcPackageName, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
@@ -12,11 +13,11 @@ import { nonNullValue } from '../utils/nonNull';
 import { getBrewPackageName, tryGetInstalledBrewPackageName } from './getBrewPackageName';
 import { getNpmDistTag, INpmDistTag } from './getNpmDistTag';
 
-export async function updateFuncCoreTools(packageManager: PackageManager, version: FuncVersion): Promise<void> {
+export async function updateFuncCoreTools(context: IActionContext, packageManager: PackageManager, version: FuncVersion): Promise<void> {
     ext.outputChannel.show();
     switch (packageManager) {
         case PackageManager.npm:
-            const distTag: INpmDistTag = await getNpmDistTag(version);
+            const distTag: INpmDistTag = await getNpmDistTag(context, version);
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
             break;
         case PackageManager.brew:

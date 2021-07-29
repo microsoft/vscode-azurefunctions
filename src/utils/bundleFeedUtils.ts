@@ -98,6 +98,6 @@ export namespace bundleFeedUtils {
             url = `${baseUrl}/ExtensionBundles/${bundleId}/index-v2.json`;
         }
 
-        return feedUtils.getJsonFeed(url);
+        return feedUtils.getJsonFeed(context, url);
     }
 }

@@ -5,7 +5,7 @@
 
 import { commands } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from 'vscode-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -85,12 +85,12 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
-    registerCommand('azureFunctions.loadMore', async (context: IActionContext, node: AzureTreeItem) => await ext.tree.loadMore(node, context));
+    registerCommand('azureFunctions.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.tree.loadMore(node, context));
     registerCommand('azureFunctions.openFile', openFile);
     registerCommand('azureFunctions.openInPortal', openInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
-    registerCommand('azureFunctions.refresh', async (context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(context, node));
+    registerCommand('azureFunctions.refresh', async (context: IActionContext, node?: AzExtTreeItem) => await ext.tree.refresh(context, node));
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
     registerCommand('azureFunctions.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);

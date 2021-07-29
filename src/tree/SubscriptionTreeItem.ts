@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, SiteClient, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
+import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
@@ -34,12 +34,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return !!this._nextLink;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = await createWebSiteClient(this.root);
+        const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
         let webAppCollection: WebSiteManagementModels.WebAppCollection;
         try {
             webAppCollection = this._nextLink ?
@@ -62,9 +62,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             webAppCollection,
             'azFuncInvalidFunctionApp',
             (site: WebSiteManagementModels.Site) => {
-                const siteClient: SiteClient = new SiteClient(site, this.root);
-                if (siteClient.isFunctionApp) {
-                    return new ProductionSlotTreeItem(this, siteClient, site);
+                const parsedSite = new ParsedSite(site, this.subscription);
+                if (parsedSite.isFunctionApp) {
+                    return new ProductionSlotTreeItem(this, parsedSite);
                 }
                 return undefined;
             },
@@ -74,13 +74,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzureTreeItem> {
+    public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzExtTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
-        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.root, {
+        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.subscription, {
             newSiteKind: AppKind.functionapp,
             resourceGroupDeferLocationStep: true,
             version,
@@ -155,7 +155,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await wizard.execute();
 
-        return new ProductionSlotTreeItem(this, nonNullProp(wizardContext, 'siteClient'), nonNullProp(wizardContext, 'site'));
+        return new ProductionSlotTreeItem(this, new ParsedSite(nonNullProp(wizardContext, 'site'), this.subscription));
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { ProgressLocation, window } from 'vscode';
-import { IFunctionKeys, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
+import { IFunctionKeys } from 'vscode-azureappservice';
 import { DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
@@ -29,16 +29,8 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         return ti;
     }
 
-    public get root(): ISiteTreeRoot {
-        return this.parent.parent.root;
-    }
-
-    public get client(): SiteClient {
-        return this.root.client;
-    }
-
     public get logStreamLabel(): string {
-        return `${this.client.fullName}/${this.name}`;
+        return `${this.parent.parent.site.fullName}/${this.name}`;
     }
 
     public get logStreamPath(): string {
@@ -52,18 +44,22 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
         await context.ui.showWarningMessage(message, { modal: true, stepName: 'confirmDelete' }, DialogResponses.deleteResponse);
         await window.withProgress({ location: ProgressLocation.Notification, title: deleting }, async (): Promise<void> => {
             ext.outputChannel.appendLog(deleting);
-            await this.client.deleteFunction(this.name);
+            const client = await this.parent.parent.site.createClient(context);
+            await client.deleteFunction(this.name);
             void window.showInformationMessage(deleteSucceeded);
             ext.outputChannel.appendLog(deleteSucceeded);
         });
     }
 
-    public async getKey(): Promise<string | undefined> {
+    public async getKey(context: IActionContext): Promise<string | undefined> {
         if (this.isAnonymous) {
             return undefined;
-        } else if (this._config.authLevel === HttpAuthLevel.function) {
+        }
+
+        const client = await this.parent.parent.site.createClient(context);
+        if (this._config.authLevel === HttpAuthLevel.function) {
             try {
-                const functionKeys: IFunctionKeys = await this.client.listFunctionKeys(this.name);
+                const functionKeys: IFunctionKeys = await client.listFunctionKeys(this.name);
                 return nonNullProp(functionKeys, 'default');
             } catch (error) {
                 if (parseError(error).errorType === 'NotFound') {
@@ -74,7 +70,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
             }
         }
 
-        const hostKeys: WebSiteManagementModels.HostKeys = await this.client.listHostKeys();
+        const hostKeys: WebSiteManagementModels.HostKeys = await client.listHostKeys();
         return nonNullProp(hostKeys, 'masterKey');
     }
 }

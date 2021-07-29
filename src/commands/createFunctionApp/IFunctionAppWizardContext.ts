@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAppServiceWizardContext, SiteClient } from 'vscode-azureappservice';
+import { IAppServiceWizardContext } from 'vscode-azureappservice';
 import { ICreateChildImplContext } from 'vscode-azureextensionui';
 import { FuncVersion } from '../../FuncVersion';
 import { AppStackMajorVersion, AppStackMinorVersion } from './stacks/models/AppStackModel';
@@ -20,5 +20,4 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
-    siteClient?: SiteClient;
 }

@@ -14,7 +14,7 @@ export async function disconnectRepo(context: IActionContext, node?: Deployments
     }
 
     if (node.parent instanceof SlotTreeItemBase) {
-        await disconnectRepository(context, node.parent.client, node.parent.root);
+        await disconnectRepository(context, node.site, node.subscription);
         await node.refresh(context);
     } else {
         throw Error('Internal error: Action not supported.');

@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CosmosDBManagementModels } from '@azure/arm-cosmosdb';
-import { ISubscriptionWizardContext } from 'vscode-azureextensionui';
+import { ISubscriptionActionContext } from 'vscode-azureextensionui';
 
-export interface ICosmosDBWizardContext extends ISubscriptionWizardContext {
+export interface ICosmosDBWizardContext extends ISubscriptionActionContext {
     databaseAccount?: CosmosDBManagementModels.DatabaseAccountGetResults;
 }

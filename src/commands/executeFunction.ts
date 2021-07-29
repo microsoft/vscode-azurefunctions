@@ -20,7 +20,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;/i, { ...context, noItemFoundErrorMessage });
     }
 
-    const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? node.parent.parent.root.client : undefined;
+    const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
     const triggerBindingType: string | undefined = node.triggerBindingType;
     context.telemetry.properties.triggerBindingType = triggerBindingType;
 
@@ -29,7 +29,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         const prompt: string = localize('enterRequestBody', 'Enter request body');
         let value: string | undefined;
         if (triggerBindingType) {
-            const version: FuncVersion = await node.parent.parent.getVersion();
+            const version: FuncVersion = await node.parent.parent.getVersion(context);
             const templateProvider = ext.templateProvider.get(context);
             value = await templateProvider.tryGetSampleData(context, version, triggerBindingType);
             if (value) {
@@ -66,7 +66,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }
         try {
-            responseText = (await requestUtils.sendRequestWithExtTimeout({ method: 'POST', url, headers, body })).bodyAsText;
+            responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', url, headers, body })).bodyAsText;
         } catch (error) {
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;

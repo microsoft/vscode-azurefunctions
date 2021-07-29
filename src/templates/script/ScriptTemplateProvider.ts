@@ -50,13 +50,13 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         return await cliFeedUtils.getLatestVersion(context, this.version);
     }
 
-    public async getLatestTemplates(_context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
-        const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(latestTemplateVersion);
+    public async getLatestTemplates(context: IActionContext, latestTemplateVersion: string): Promise<ITemplates> {
+        const templateRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(context, latestTemplateVersion);
 
         const templatesPath: string = path.join(ext.context.globalStoragePath, 'script', getRandomHexString());
         try {
             const filePath: string = path.join(templatesPath, 'templates.zip');
-            await requestUtils.downloadFile(templateRelease.templates, filePath);
+            await requestUtils.downloadFile(context, templateRelease.templates, filePath);
 
             await new Promise((resolve: (value?: unknown) => void, reject: (e: Error) => void): void => {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-call

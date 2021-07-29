@@ -38,7 +38,7 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         const resourcesUrl: string = release.resources.replace('{locale}', language);
 
         const urls: string[] = [release.bindings, resourcesUrl, release.functions];
-        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(url)));
+        [this._rawBindings, this._rawResources, this._rawTemplates] = <[object, object, object[]]>await Promise.all(urls.map(url => feedUtils.getJsonFeed(context, url)));
 
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }

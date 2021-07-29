@@ -91,7 +91,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
                         if (result === DialogResponses.learnMore) {
                             await openUrl('https://aka.ms/azFuncOutdated');
                         } else if (result === update) {
-                            await updateFuncCoreTools(packageManager, versionFromSetting);
+                            await updateFuncCoreTools(context, packageManager, versionFromSetting);
                         } else if (result === DialogResponses.dontWarnAgain) {
                             await updateGlobalSetting(showCoreToolsWarningKey, false);
                         }
@@ -108,14 +108,14 @@ async function getNewestFunctionRuntimeVersion(packageManager: PackageManager | 
         if (packageManager === PackageManager.brew) {
             const packageName: string = getBrewPackageName(versionFromSetting);
             const url: string = `https://raw.githubusercontent.com/Azure/homebrew-functions/master/Formula/${packageName}.rb`;
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url });
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
             const brewInfo: string = nonNullProp(response, 'bodyAsText');
             const matches: RegExpMatchArray | null = brewInfo.match(/version\s+["']([^"']+)["']/i);
             if (matches && matches.length > 1) {
                 return matches[1];
             }
         } else {
-            return (await getNpmDistTag(versionFromSetting)).value;
+            return (await getNpmDistTag(context, versionFromSetting)).value;
         }
     } catch (error) {
         context.telemetry.properties.latestRuntimeError = parseError(error).message;

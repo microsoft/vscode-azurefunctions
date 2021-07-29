@@ -53,7 +53,7 @@ export namespace cliFeedUtils {
     }
 
     export async function getLatestVersion(context: IActionContext, version: FuncVersion): Promise<string> {
-        const cliFeed: ICliFeed = await getCliFeed();
+        const cliFeed: ICliFeed = await getCliFeed(context);
 
         const majorVersion: string = getMajorVersion(version);
         let tag: string = 'v' + majorVersion;
@@ -71,19 +71,19 @@ export namespace cliFeedUtils {
         return releaseData.release;
     }
 
-    export async function getSortedVersions(version: FuncVersion): Promise<string[]> {
-        const cliFeed: ICliFeed = await getCliFeed();
+    export async function getSortedVersions(context: IActionContext, version: FuncVersion): Promise<string[]> {
+        const cliFeed: ICliFeed = await getCliFeed(context);
         const majorVersion = parseInt(getMajorVersion(version));
         const versions = Object.keys(cliFeed.releases).filter(v => semver.valid(v) && semver.major(v) === majorVersion);
         return semver.rsort(versions).map(v => typeof v === 'string' ? v : v.version);
     }
 
-    export async function getRelease(templateVersion: string): Promise<IRelease> {
-        const cliFeed: ICliFeed = await getCliFeed();
+    export async function getRelease(context: IActionContext, templateVersion: string): Promise<IRelease> {
+        const cliFeed: ICliFeed = await getCliFeed(context);
         return cliFeed.releases[templateVersion];
     }
 
-    async function getCliFeed(): Promise<ICliFeed> {
-        return feedUtils.getJsonFeed(funcCliFeedV4Url);
+    async function getCliFeed(context: IActionContext): Promise<ICliFeed> {
+        return feedUtils.getJsonFeed(context, funcCliFeedV4Url);
     }
 }

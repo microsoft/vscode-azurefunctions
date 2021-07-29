@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { window } from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
+import { ParsedSite } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
 import { viewOutput } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -14,10 +14,10 @@ export interface ISiteCreatedOptions extends IActionContext {
     showCreatedNotification?: boolean;
 }
 
-export function showSiteCreated(client: SiteClient, context: ISiteCreatedOptions): void {
-    const message: string = client.isSlot ?
-        localize('createdNewSlot', 'Successfully created slot "{0}": {1}', client.slotName, client.defaultHostUrl) :
-        localize('createdNewApp', 'Successfully created function app "{0}": {1}', client.fullName, client.defaultHostUrl);
+export function showSiteCreated(site: ParsedSite, context: ISiteCreatedOptions): void {
+    const message: string = site.isSlot ?
+        localize('createdNewSlot', 'Successfully created slot "{0}": {1}', site.slotName, site.defaultHostUrl) :
+        localize('createdNewApp', 'Successfully created function app "{0}": {1}', site.fullName, site.defaultHostUrl);
 
     ext.outputChannel.appendLog(message);
 

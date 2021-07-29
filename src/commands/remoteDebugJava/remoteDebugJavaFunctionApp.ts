@@ -22,10 +22,10 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     if (!node) {
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
-    const client: SiteClient = node.root.client;
+    const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await portfinder.getPortPromise();
     const publishCredential: WebSiteManagementModels.User = await client.getWebAppPublishCredential();
-    const debugProxy: DebugProxy = new DebugProxy(client, portNumber, publishCredential);
+    const debugProxy: DebugProxy = new DebugProxy(node.site, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
         debugProxy.dispose();
@@ -52,7 +52,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
 
                 p.report({ message: 'starting debug proxy...' });
                 ext.outputChannel.appendLog('starting debug proxy...');
-                void debugProxy.startProxy();
+                void debugProxy.startProxy(context);
                 debugProxy.on('start', resolve);
             } catch (error) {
                 reject(error);

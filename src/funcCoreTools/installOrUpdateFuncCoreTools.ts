@@ -35,7 +35,7 @@ export async function installOrUpdateFuncCoreTools(context: IActionContext): Pro
         if (version === undefined) {
             version = await promptForFuncVersion(context, localize('selectLocalVersion', 'Failed to detect local version automatically. Select your version to update'));
         }
-        await updateFuncCoreTools(packageManager, version);
+        await updateFuncCoreTools(context, packageManager, version);
     } else {
         await installFuncCoreTools(context, packageManagers);
     }

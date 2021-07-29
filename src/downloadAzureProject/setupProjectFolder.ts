@@ -33,16 +33,21 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
             // NOTE: We don't want to download app content for compiled languages.
             const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
-            const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
-            const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
+            if (!slotTreeItem) {
+                throw new Error(localize('failedToFindApp', 'Failed to find function app with id "{0}"', resourceId));
+            }
+
+            const client = await slotTreeItem.site.createClient(context);
+            const hostKeys: WebSiteManagementModels.HostKeys | undefined = await client.listHostKeys();
+            const defaultHostName: string | undefined = slotTreeItem.site.defaultHostName;
 
             if (!!hostKeys && hostKeys.masterKey && defaultHostName) {
                 const requestOptions: RequestPrepareOptions = {
                     method: 'GET',
                     url: `https://${defaultHostName}/admin/functions/download?includeCsproj=true&includeAppSettings=true`,
-                    headers: { 'x-functions-key':  hostKeys.masterKey }
+                    headers: { 'x-functions-key': hostKeys.masterKey }
                 };
-                await requestUtils.downloadFile(requestOptions, downloadFilePath);
+                await requestUtils.downloadFile(context, requestOptions, downloadFilePath);
             } else {
                 throw new Error(localize('hostInformationNotFound', 'Failed to get host information for the functionApp.'));
             }
@@ -53,10 +58,12 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call
             await extract(downloadFilePath, { dir: projectFilePath });
             await requestUtils.downloadFile(
+                context,
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/devcontainer.json`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'devcontainer.json').fsPath
             );
             await requestUtils.downloadFile(
+                context,
                 `https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/containers/${devContainerName}/.devcontainer/Dockerfile`,
                 vscode.Uri.joinPath(devContainerFolderPathUri, 'Dockerfile').fsPath
             );

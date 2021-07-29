@@ -6,7 +6,8 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { EventEmitter } from 'events';
 import { createServer, Server, Socket } from 'net';
-import { pingFunctionApp, SiteClient } from 'vscode-azureappservice';
+import { ParsedSite, pingFunctionApp } from 'vscode-azureappservice';
+import { IActionContext } from 'vscode-azureextensionui';
 import * as websocket from 'websocket';
 import { ext } from '../../extensionVariables';
 
@@ -14,26 +15,26 @@ export class DebugProxy extends EventEmitter {
     private _server: Server | undefined;
     private _wsclient: websocket.client | undefined;
     private _wsconnection: websocket.connection | undefined;
-    private readonly _client: SiteClient;
+    private readonly _site: ParsedSite;
     private readonly _port: number;
     private readonly _publishCredential: WebSiteManagementModels.User;
     private _keepAlive: boolean;
 
-    constructor(client: SiteClient, port: number, publishCredential: WebSiteManagementModels.User) {
+    constructor(site: ParsedSite, port: number, publishCredential: WebSiteManagementModels.User) {
         super();
-        this._client = client;
+        this._site = site;
         this._port = port;
         this._publishCredential = publishCredential;
         this._keepAlive = true;
         this._server = createServer();
     }
 
-    public async startProxy(): Promise<void> {
+    public async startProxy(context: IActionContext): Promise<void> {
         if (!this._server) {
             this.emit('error', new Error('Proxy server is not started.'));
         } else {
             // wake up the Function App before connecting to it.
-            await this.keepAlive();
+            await this.keepAlive(context);
 
             this._server.on('connection', (socket: Socket) => {
                 if (this._wsclient) {
@@ -80,7 +81,7 @@ export class DebugProxy extends EventEmitter {
                     });
 
                     this._wsclient.connect(
-                        `wss://${this._client.kuduHostName}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
+                        `wss://${this._site.kuduHostName}/DebugSiteExtension/JavaDebugSiteExtension.ashx`,
                         undefined,
                         undefined,
                         { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
@@ -138,10 +139,10 @@ export class DebugProxy extends EventEmitter {
     }
 
     //keep querying the Function App state, otherwise the connection will lose.
-    private async keepAlive(): Promise<void> {
+    private async keepAlive(context: IActionContext): Promise<void> {
         if (this._keepAlive) {
             try {
-                await pingFunctionApp(this._client);
+                await pingFunctionApp(context, this._site);
                 // eslint-disable-next-line @typescript-eslint/no-misused-promises
                 setTimeout(this.keepAlive, 60 * 1000 /* 60 seconds */);
             } catch (err) {

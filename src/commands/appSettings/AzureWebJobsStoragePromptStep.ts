@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { MessageItem } from 'vscode';
-import { AzureWizardPromptStep, ISubscriptionWizardContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
+import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
@@ -47,11 +47,11 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         return !context.azureWebJobsStorageType;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionWizardContext> | undefined> {
+    public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
         if (context.azureWebJobsStorageType === 'azure') {
-            const promptSteps: AzureWizardPromptStep<T & ISubscriptionWizardContext>[] = [];
+            const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
 
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionWizardContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
             if (subscriptionPromptStep) {
                 promptSteps.push(subscriptionPromptStep);
             }

@@ -11,5 +11,5 @@ export async function viewCommitInGitHub(context: IActionContext, node?: Deploym
     if (!node) {
         node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>('deployment/github', context);
     }
-    await node.viewCommitInGitHub();
+    await node.viewCommitInGitHub(context);
 }

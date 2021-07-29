@@ -25,7 +25,7 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
         node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(expectedContextValue, { ...context, noItemFoundErrorMessage });
     }
 
-    const version: FuncVersion = await node.parent.parent.getVersion();
+    const version: FuncVersion = await node.parent.parent.getVersion(context);
     if (version === FuncVersion.v1) {
         throw new Error(localize('notSupportedV1', 'This operation is not supported for Azure Functions v1.'));
     } else {

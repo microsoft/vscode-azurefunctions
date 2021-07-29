@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, ISiteTreeRoot, LogFilesTreeItem, SiteClient, SiteFilesTreeItem } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from 'vscode-azureappservice';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { runFromPackageKey } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -18,17 +18,16 @@ import { ProxiesTreeItem } from './ProxiesTreeItem';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { RemoteFunctionsTreeItem } from './remoteProject/RemoteFunctionsTreeItem';
 
-export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot> implements IProjectTreeItem {
+export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
-    public site: WebSiteManagementModels.Site;
+    public site: ParsedSite;
 
     public abstract readonly contextValue: string;
     public abstract readonly label: string;
 
-    private readonly _root: ISiteTreeRoot;
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
     private _proxiesTreeItem: ProxiesTreeItem | undefined;
     private readonly _logFilesTreeItem: LogFilesTreeItem;
@@ -37,18 +36,17 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
-    public constructor(parent: AzureParentTreeItem, client: SiteClient, site: WebSiteManagementModels.Site) {
+    public constructor(parent: AzExtParentTreeItem, site: ParsedSite) {
         super(parent);
         this.site = site;
-        this._root = Object.assign({}, parent.root, { client });
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this, client);
-        this._siteFilesTreeItem = new SiteFilesTreeItem(this, client, true);
-        this._logFilesTreeItem = new LogFilesTreeItem(this, client);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(this, site);
+        this._siteFilesTreeItem = new SiteFilesTreeItem(this, site, true);
+        this._logFilesTreeItem = new LogFilesTreeItem(this, site);
 
         const valuesToMask = [
-            client.siteName, client.slotName, client.defaultHostName, client.resourceGroup,
-            client.planName, client.planResourceGroup, client.kuduHostName, client.gitUrl,
-            site.repositorySiteName, ...(site.hostNames || []), ...(site.enabledHostNames || [])
+            site.siteName, site.slotName, site.defaultHostName, site.resourceGroup,
+            site.planName, site.planResourceGroup, site.kuduHostName, site.gitUrl,
+            site.rawSite.repositorySiteName, ...(site.rawSite.hostNames || []), ...(site.rawSite.enabledHostNames || [])
         ];
         for (const v of valuesToMask) {
             if (v) {
@@ -57,25 +55,16 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         }
     }
 
-    // overrides ISubscriptionContext with an object that also has SiteClient
-    public get root(): ISiteTreeRoot {
-        return this._root;
-    }
-
-    public get client(): SiteClient {
-        return this.root.client;
-    }
-
     public get logStreamLabel(): string {
-        return this.root.client.fullName;
+        return this.site.fullName;
     }
 
     public get id(): string {
-        return this.root.client.id;
+        return this.site.id;
     }
 
     public async getHostUrl(): Promise<string> {
-        return this.root.client.defaultHostUrl;
+        return this.site.defaultHostUrl;
     }
 
     public get description(): string | undefined {
@@ -87,7 +76,7 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     }
 
     private get _state(): string | undefined {
-        return this.site.state;
+        return this.site.rawSite.state;
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -97,20 +86,22 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
     /**
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
-    public async refreshImpl(): Promise<void> {
+    public async refreshImpl(context: IActionContext): Promise<void> {
         this._cachedVersion = undefined;
         this._cachedHostJson = undefined;
         this._cachedIsConsumption = undefined;
 
-        this.site = nonNullValue(await this.root.client.getSite(), 'site');
+        const client = await this.site.createClient(context);
+        this.site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this.subscription);
     }
 
-    public async getVersion(): Promise<FuncVersion> {
+    public async getVersion(context: IActionContext): Promise<FuncVersion> {
         let result: FuncVersion | undefined = this._cachedVersion;
         if (result === undefined) {
             let version: FuncVersion | undefined;
             try {
-                const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+                const client = await this.site.createClient(context);
+                const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
                 version = tryParseFuncVersion(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
             } catch {
                 // ignore and use default
@@ -129,11 +120,11 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
             let data: any;
             try {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                data = JSON.parse((await getFile(context, this.client, 'site/wwwroot/host.json')).data);
+                data = JSON.parse((await getFile(context, this.site, 'site/wwwroot/host.json')).data);
             } catch {
                 // ignore and use default
             }
-            const version: FuncVersion = await this.getVersion();
+            const version: FuncVersion = await this.getVersion(context);
             result = parseHostJson(data, version);
             this._cachedHostJson = result;
         }
@@ -141,25 +132,28 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return result;
     }
 
-    public async getApplicationSettings(): Promise<ApplicationSettings> {
-        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+    public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
+        const client = await this.site.createClient(context);
+        const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
         return appSettings.properties || {};
     }
 
-    public async setApplicationSetting(_context: IActionContext, key: string, value: string): Promise<void> {
-        const settings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+    public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
+        const client = await this.site.createClient(context);
+        const settings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
         if (!settings.properties) {
             settings.properties = {};
         }
         settings.properties[key] = value;
-        await this.root.client.updateApplicationSettings(settings);
+        await client.updateApplicationSettings(settings);
     }
 
-    public async getIsConsumption(): Promise<boolean> {
+    public async getIsConsumption(context: IActionContext): Promise<boolean> {
         let result: boolean | undefined = this._cachedIsConsumption;
         if (result === undefined) {
             try {
-                result = await this.root.client.getIsConsumption();
+                const client = await this.site.createClient(context);
+                result = await client.getIsConsumption(context);
             } catch {
                 // ignore and use default
                 result = true;
@@ -170,17 +164,18 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return result;
     }
 
-    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const siteConfig: WebSiteManagementModels.SiteConfig = await this.root.client.getSiteConfig();
-        const sourceControl: WebSiteManagementModels.SiteSourceControl = await this.root.client.getSourceControl();
-        this.deploymentsNode = new DeploymentsTreeItem(this, this.root.client, siteConfig, sourceControl);
+    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        const client = await this.site.createClient(context);
+        const siteConfig: WebSiteManagementModels.SiteConfig = await client.getSiteConfig();
+        const sourceControl: WebSiteManagementModels.SiteSourceControl = await client.getSourceControl();
+        this.deploymentsNode = new DeploymentsTreeItem(this, this.site, siteConfig, sourceControl);
 
         if (!this._functionsTreeItem) {
-            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(this);
+            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, this);
         }
 
         if (!this._proxiesTreeItem) {
-            this._proxiesTreeItem = await ProxiesTreeItem.createProxiesTreeItem(this);
+            this._proxiesTreeItem = await ProxiesTreeItem.createProxiesTreeItem(context, this);
         }
 
         return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._proxiesTreeItem];
@@ -220,12 +215,13 @@ export abstract class SlotTreeItemBase extends AzureParentTreeItem<ISiteTreeRoot
         return 0; // already sorted
     }
 
-    public async isReadOnly(): Promise<boolean> {
-        const appSettings: WebSiteManagementModels.StringDictionary = await this.root.client.listApplicationSettings();
+    public async isReadOnly(context: IActionContext): Promise<boolean> {
+        const client = await this.site.createClient(context);
+        const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        await deleteSite(context, this.root.client);
+        await deleteSite(context, this.site);
     }
 }

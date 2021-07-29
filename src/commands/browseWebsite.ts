@@ -14,5 +14,5 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    await openUrl(node.root.client.defaultHostUrl);
+    await openUrl(node.site.defaultHostUrl);
 }

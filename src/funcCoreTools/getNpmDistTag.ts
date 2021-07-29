@@ -5,6 +5,7 @@
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as semver from 'semver';
+import { IActionContext } from 'vscode-azureextensionui';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { requestUtils } from '../utils/requestUtils';
@@ -17,8 +18,8 @@ interface IPackageMetadata {
     versions: { [version: string]: {} };
 }
 
-export async function getNpmDistTag(version: FuncVersion): Promise<INpmDistTag> {
-    const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url: npmRegistryUri });
+export async function getNpmDistTag(context: IActionContext, version: FuncVersion): Promise<INpmDistTag> {
+    const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: npmRegistryUri });
     const packageMetadata: IPackageMetadata = <IPackageMetadata>response.parsedBody;
     const majorVersion: string = getMajorVersion(version);
 

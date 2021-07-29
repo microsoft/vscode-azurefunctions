@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
-import { createSlot, ISiteTreeRoot, SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureParentTreeItem, AzureTreeItem, ICreateChildImplContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { createSlot, ParsedSite } from 'vscode-azureappservice';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, ICreateChildImplContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { showSiteCreated } from '../commands/createFunctionApp/showSiteCreated';
 import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
@@ -13,7 +13,7 @@ import { treeUtils } from '../utils/treeUtils';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 
-export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
+export class SlotsTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azFuncSlots';
     public readonly contextValue: string = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
@@ -39,15 +39,15 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return !!this._nextLink;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
 
-        const client: WebSiteManagementClient = await createWebSiteClient(this.root);
+        const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
         const webAppCollection: WebSiteManagementModels.WebAppCollection = this._nextLink ?
             await client.webApps.listSlotsNext(this._nextLink) :
-            await client.webApps.listSlots(this.root.client.resourceGroup, this.root.client.siteName);
+            await client.webApps.listSlots(this.parent.site.resourceGroup, this.parent.site.siteName);
 
         this._nextLink = webAppCollection.nextLink;
 
@@ -55,8 +55,7 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
             webAppCollection,
             'azFuncInvalidSlot',
             (site: WebSiteManagementModels.Site) => {
-                const siteClient: SiteClient = new SiteClient(site, this.root);
-                return new SlotTreeItem(this, siteClient, site);
+                return new SlotTreeItem(this, new ParsedSite(site, this.subscription));
             },
             (site: WebSiteManagementModels.Site) => {
                 return site.name;
@@ -64,11 +63,11 @@ export class SlotsTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         );
     }
 
-    public async createChildImpl(context: ICreateChildImplContext): Promise<AzureTreeItem<ISiteTreeRoot>> {
+    public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
-        const newSite: WebSiteManagementModels.Site = await createSlot(this.root, existingSlots, context);
-        const siteClient: SiteClient = new SiteClient(newSite, this.root);
-        showSiteCreated(siteClient, context);
-        return new SlotTreeItem(this, siteClient, newSite);
+        const newSite: WebSiteManagementModels.Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
+        const parsedSite = new ParsedSite(newSite, this.subscription);
+        showSiteCreated(parsedSite, context);
+        return new SlotTreeItem(this, parsedSite);
     }
 }

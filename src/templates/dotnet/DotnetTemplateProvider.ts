@@ -68,16 +68,16 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
 
         const templateVersion = await cliFeedUtils.getLatestVersion(context, this.version);
-        let netRelease = await this.getNetRelease(projKey, templateVersion);
+        let netRelease = await this.getNetRelease(context, projKey, templateVersion);
         if (netRelease) {
             return templateVersion;
         } else {
-            const templateVersions = await cliFeedUtils.getSortedVersions(this.version);
+            const templateVersions = await cliFeedUtils.getSortedVersions(context, this.version);
             for (const newTemplateVersion of templateVersions) {
                 try {
-                    netRelease = await this.getNetRelease(projKey, newTemplateVersion);
+                    netRelease = await this.getNetRelease(context, projKey, newTemplateVersion);
                     if (netRelease) {
-                        const latestFuncRelease = await cliFeedUtils.getRelease(templateVersion);
+                        const latestFuncRelease = await cliFeedUtils.getRelease(context, templateVersion);
                         const latestProjKeys = Object.values(latestFuncRelease.workerRuntimes.dotnet).map(r => dotnetUtils.getTemplateKeyFromFeedEntry(r));
                         const warning = localize('oldProjKeyWarning', 'WARNING: "{0}" does not support the latest templates. Use "{1}" for the latest.', projKey, latestProjKeys.join('", "'));
                         ext.outputChannel.appendLog(warning);
@@ -92,7 +92,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
                 try {
                     if (newFuncVersion !== this.version) {
                         const newTemplateVersion = await cliFeedUtils.getLatestVersion(context, newFuncVersion);
-                        netRelease = await this.getNetRelease(projKey, newTemplateVersion);
+                        netRelease = await this.getNetRelease(context, projKey, newTemplateVersion);
                         if (netRelease) {
                             context.telemetry.properties.effectiveProjectRuntime = newFuncVersion;
                             const oldMajorVersion = getMajorVersion(this.version);
@@ -117,17 +117,17 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projectFilePath: string = getDotnetProjectTemplatePath(context, this.version, projKey);
         const itemFilePath: string = getDotnetItemTemplatePath(context, this.version, projKey);
 
-        const netRelease = nonNullValue(await this.getNetRelease(projKey, latestTemplateVersion), 'netRelease');
+        const netRelease = nonNullValue(await this.getNetRelease(context, projKey, latestTemplateVersion), 'netRelease');
         await Promise.all([
-            requestUtils.downloadFile(netRelease.projectTemplates, projectFilePath),
-            requestUtils.downloadFile(netRelease.itemTemplates, itemFilePath)
+            requestUtils.downloadFile(context, netRelease.projectTemplates, projectFilePath),
+            requestUtils.downloadFile(context, netRelease.itemTemplates, itemFilePath)
         ]);
 
         return await this.parseTemplates(context, projKey);
     }
 
-    private async getNetRelease(projKey: string, templateVersion: string): Promise<cliFeedUtils.IWorkerRuntime | undefined> {
-        const funcRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(templateVersion);
+    private async getNetRelease(context: IActionContext, projKey: string, templateVersion: string): Promise<cliFeedUtils.IWorkerRuntime | undefined> {
+        const funcRelease: cliFeedUtils.IRelease = await cliFeedUtils.getRelease(context, templateVersion);
         return Object.values(funcRelease.workerRuntimes.dotnet).find(r => projKey === dotnetUtils.getTemplateKeyFromFeedEntry(r));
     }
 

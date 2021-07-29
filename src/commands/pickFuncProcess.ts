@@ -96,7 +96,7 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
             if (taskInfo) {
                 try {
                     // wait for status url to indicate functions host is running
-                    const response: HttpOperationResponse = await sendRequestWithTimeout(statusRequest, statusRequestTimeout);
+                    const response: HttpOperationResponse = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     if (response.parsedBody.state.toLowerCase() === 'running') {
                         funcTaskReadyEmitter.fire(workspaceFolder);
