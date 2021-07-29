@@ -101,7 +101,7 @@ export namespace dotnetUtils {
                 targetFramework = 'netcoreapp2.1';
                 break;
             case FuncVersion.v1:
-                targetFramework = 'net461';
+                targetFramework = 'net48';
                 break;
         }
 
