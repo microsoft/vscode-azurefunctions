@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISiteTreeRoot } from 'vscode-azureappservice';
-import { AzureTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { treeUtils } from '../utils/treeUtils';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 
-export class ProxyTreeItem extends AzureTreeItem<ISiteTreeRoot> {
+export class ProxyTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'azFuncProxy';
     public static readOnlyContextValue: string = 'azFuncProxyReadOnly';
     public readonly parent: ProxiesTreeItem;

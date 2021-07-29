@@ -22,15 +22,15 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         super(parent);
     }
 
-    public static async createFunctionsTreeItem(parent: SlotTreeItemBase): Promise<RemoteFunctionsTreeItem> {
+    public static async createFunctionsTreeItem(context: IActionContext, parent: SlotTreeItemBase): Promise<RemoteFunctionsTreeItem> {
         const ti: RemoteFunctionsTreeItem = new RemoteFunctionsTreeItem(parent);
         // initialize
-        await ti.refreshImpl();
+        await ti.refreshImpl(context);
         return ti;
     }
 
-    public async refreshImpl(): Promise<void> {
-        this.isReadOnly = await this.parent.isReadOnly();
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        this.isReadOnly = await this.parent.isReadOnly(context);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -42,13 +42,14 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             this._nextLink = undefined;
         }
 
+        const client = await this.parent.site.createClient(context);
         let funcs: WebSiteManagementModels.FunctionEnvelopeCollection;
         const maxTime = Date.now() + 2 * 60 * 1000;
         let attempt = 1;
         while (true) {
             funcs = this._nextLink ?
-                await this.parent.client.listFunctionsNext(this._nextLink) :
-                await this.parent.client.listFunctions();
+                await client.listFunctionsNext(this._nextLink) :
+                await client.listFunctions();
 
             // https://github.com/Azure/azure-functions-host/issues/3502
             if (!isArray(funcs)) {

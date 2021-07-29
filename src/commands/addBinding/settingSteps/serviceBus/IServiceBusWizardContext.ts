@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ServiceBusManagementModels } from '@azure/arm-servicebus';
-import { ISubscriptionWizardContext } from 'vscode-azureextensionui';
+import { ISubscriptionActionContext } from 'vscode-azureextensionui';
 
-export interface IServiceBusWizardContext extends ISubscriptionWizardContext {
+export interface IServiceBusWizardContext extends ISubscriptionActionContext {
     sbNamespace?: ServiceBusManagementModels.SBNamespace;
 }

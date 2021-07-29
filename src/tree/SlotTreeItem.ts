@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { SiteClient } from 'vscode-azureappservice';
+import { ParsedSite } from 'vscode-azureappservice';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
@@ -13,12 +12,12 @@ export class SlotTreeItem extends SlotTreeItemBase {
     public readonly contextValue: string = SlotTreeItem.contextValue;
     public readonly parent: SlotsTreeItem;
 
-    public constructor(parent: SlotsTreeItem, client: SiteClient, site: WebSiteManagementModels.Site) {
-        super(parent, client, site);
+    public constructor(parent: SlotsTreeItem, site: ParsedSite) {
+        super(parent, site);
     }
 
     public get label(): string {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.root.client.slotName!;
+        return this.site.slotName!;
     }
 }

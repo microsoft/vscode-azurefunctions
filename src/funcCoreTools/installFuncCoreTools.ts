@@ -19,7 +19,7 @@ export async function installFuncCoreTools(context: IActionContext, packageManag
     // Use the first package manager
     switch (packageManagers[0]) {
         case PackageManager.npm:
-            const distTag: INpmDistTag = await getNpmDistTag(version);
+            const distTag: INpmDistTag = await getNpmDistTag(context, version);
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'install', '-g', `${funcPackageName}@${distTag.tag}`);
             break;
         case PackageManager.brew:

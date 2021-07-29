@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
+import { createTestActionContext, runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest, runInSeries } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
@@ -114,7 +114,7 @@ async function validateFunctionUrl(appName: string, functionName: string, routeP
 
     assert.ok(functionUrl?.includes(routePrefix), `Function url "${functionUrl}" did not include routePrefix "${routePrefix}".`);
 
-    const client: ServiceClient = await createGenericClient();
+    const client: ServiceClient = await createGenericClient(await createTestActionContext(), undefined);
     const response: HttpOperationResponse = await client.sendRequest({ method: 'POST', url: functionUrl, body: { name: "World" } });
     const body: string = nonNullProp(response, 'bodyAsText');
     assert.ok((body.includes('Hello') && body.includes('World')) || body.includes('Welcome'), 'Expected function response to include "Hello World" or "Welcome"');

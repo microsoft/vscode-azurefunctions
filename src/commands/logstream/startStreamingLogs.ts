@@ -6,7 +6,8 @@
 import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels as AIModels } from '@azure/arm-appinsights';
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as appservice from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { ParsedSite } from 'vscode-azureappservice';
+import { AzExtTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
@@ -22,28 +23,29 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
         treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    const client: appservice.SiteClient = treeItem.client;
+    const site: ParsedSite = treeItem instanceof SlotTreeItemBase ? treeItem.site : treeItem.parent.parent.site;
 
-    if (client.isLinux) {
+    if (site.isLinux) {
         try {
             // https://github.com/microsoft/vscode-azurefunctions/issues/1472
-            await appservice.pingFunctionApp(treeItem.client);
+            await appservice.pingFunctionApp(context, site);
         } catch {
             // ignore and open portal anyways
         }
 
-        await openLiveMetricsStream(treeItem);
+        await openLiveMetricsStream(context, site, treeItem);
     } else {
         const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
+            const client = await site.createClient(context);
             const logsConfig: WebSiteManagementModels.SiteLogsConfig = await client.getLogsConfig();
             if (!isApplicationLoggingEnabled(logsConfig)) {
                 const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
                 await context.ui.showWarningMessage(message, { modal: true, stepName: 'enableAppLogging' }, DialogResponses.yes);
-                await enableFileLogging(client, logsConfig);
+                await enableFileLogging(context, site, logsConfig);
             }
         };
 
-        await appservice.startStreamingLogs(context, client, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
+        await appservice.startStreamingLogs(context, site, verifyLoggingEnabled, treeItem.logStreamLabel, treeItem.logStreamPath);
     }
 }
 
@@ -51,28 +53,29 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
  * Linux Function Apps only support streaming through App Insights
  * For initial support, we will just open the "Live Metrics Stream" view in the portal
  */
-async function openLiveMetricsStream(treeItem: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
-    const appSettings: WebSiteManagementModels.StringDictionary = await treeItem.client.listApplicationSettings();
+async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, node: AzExtTreeItem): Promise<void> {
+    const client = await site.createClient(context);
+    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
     const aiKey: string | undefined = appSettings.properties && appSettings.properties.APPINSIGHTS_INSTRUMENTATIONKEY;
     if (!aiKey) {
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
-        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient(treeItem.root);
+        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node]);
         const components: AIModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
         const component: AIModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {
             throw new Error(localize('failedToFindAI', 'Failed to find application insights component.'));
         } else {
             const componentId: string = encodeURIComponent(JSON.stringify({
-                Name: treeItem.client.fullName,
-                SubscriptionId: treeItem.root.subscriptionId,
-                ResourceGroup: treeItem.client.resourceGroup
+                Name: site.fullName,
+                SubscriptionId: node.subscription.subscriptionId,
+                ResourceGroup: site.resourceGroup
             }));
             const resourceId: string = encodeURIComponent(nonNullProp(component, 'id'));
 
             // Not using `openInPortal` because this url is so unconventional
-            const url: string = `${treeItem.root.environment.portalUrl}/#blade/AppInsightsExtension/QuickPulseBladeV2/ComponentId/${componentId}/ResourceId/${resourceId}`;
+            const url: string = `${node.subscription.environment.portalUrl}/#blade/AppInsightsExtension/QuickPulseBladeV2/ComponentId/${componentId}/ResourceId/${resourceId}`;
             await openUrl(url);
         }
     }

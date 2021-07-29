@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { SiteClient } from 'vscode-azureappservice';
-import { AzExtTreeItem } from 'vscode-azureextensionui';
+import { ParsedSite } from 'vscode-azureappservice';
+import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
@@ -17,17 +16,17 @@ export class ProductionSlotTreeItem extends SlotTreeItemBase {
 
     private readonly _slotsTreeItem: SlotsTreeItem;
 
-    public constructor(parent: SubscriptionTreeItem, client: SiteClient, site: WebSiteManagementModels.Site) {
-        super(parent, client, site);
+    public constructor(parent: SubscriptionTreeItem, site: ParsedSite) {
+        super(parent, site);
         this._slotsTreeItem = new SlotsTreeItem(this);
     }
 
     public get label(): string {
-        return this.root.client.fullName;
+        return this.site.fullName;
     }
 
-    public async loadMoreChildrenImpl(): Promise<AzExtTreeItem[]> {
-        const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl();
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        const children: AzExtTreeItem[] = await super.loadMoreChildrenImpl(clearCache, context);
         children.push(this._slotsTreeItem);
         return children;
     }

@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { SiteClient } from 'vscode-azureappservice';
+import { ParsedSite } from 'vscode-azureappservice';
+import { IActionContext } from 'vscode-azureextensionui';
 
-export async function enableFileLogging(client: SiteClient, logsConfig?: WebSiteManagementModels.SiteLogsConfig): Promise<void> {
+export async function enableFileLogging(context: IActionContext, site: ParsedSite, logsConfig?: WebSiteManagementModels.SiteLogsConfig): Promise<void> {
+    const client = await site.createClient(context);
     logsConfig = logsConfig || await client.getLogsConfig();
 
     logsConfig.applicationLogs = logsConfig.applicationLogs || {};

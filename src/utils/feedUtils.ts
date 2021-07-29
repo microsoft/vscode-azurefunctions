@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { IActionContext } from 'vscode-azureextensionui';
 import { nonNullProp } from './nonNull';
 import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
@@ -21,10 +22,10 @@ export namespace feedUtils {
      * 1. Caches the feed for 10 minutes since these feeds don't change very often and we don't want to make repeated calls to get the same information
      * 2. Sets timeout for getting the feed to 15 seconds since we would rather default to the "backup" logic than wait a long time
      */
-    export async function getJsonFeed<T extends {}>(url: string): Promise<T> {
+    export async function getJsonFeed<T extends {}>(context: IActionContext, url: string): Promise<T> {
         let cachedFeed: ICachedFeed | undefined = cachedFeeds.get(url);
         if (!cachedFeed || Date.now() > cachedFeed.nextRefreshTime) {
-            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout({ method: 'GET', url });
+            const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url });
             // NOTE: r.parsedBody doesn't work because these feeds sometimes return with a BOM char or incorrect content-type
             cachedFeed = { data: parseJson(nonNullProp(response, 'bodyAsText')), nextRefreshTime: Date.now() + 10 * 60 * 1000 };
             cachedFeeds.set(url, cachedFeed);

@@ -14,7 +14,7 @@ export interface IProjectTreeItem {
     source: ProjectSource;
     getHostUrl(context: IActionContext): Promise<string>;
     getHostJson(context: IActionContext): Promise<IParsedHostJson>;
-    getVersion(): Promise<FuncVersion>;
+    getVersion(context: IActionContext): Promise<FuncVersion>;
     getApplicationSettings(context: IActionContext): Promise<ApplicationSettings>;
     setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void>;
 }

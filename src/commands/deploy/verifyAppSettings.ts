@@ -5,7 +5,7 @@
 
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
+import { ParsedSite } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
 import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -20,20 +20,21 @@ import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '..
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
-    const appSettings: WebSiteManagementModels.StringDictionary = await node.root.client.listApplicationSettings();
+    const client = await node.site.createClient(context);
+    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
-        await verifyVersionAndLanguage(context, projectPath, node.root.client.fullName, version, language, appSettings.properties);
+        await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
         let updateAppSettings: boolean = false;
-        if (node.root.client.isLinux) {
+        if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings = updateAppSettings || remoteBuildSettingsChanged;
         } else {
-            updateAppSettings = verifyRunFromPackage(context, node.root.client, appSettings.properties);
+            updateAppSettings = verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
         if (updateAppSettings) {
-            await node.root.client.updateApplicationSettings(appSettings);
+            await client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
             await node.appSettingsTreeItem.refresh(context);
         }
@@ -67,11 +68,11 @@ export async function verifyVersionAndLanguage(context: IActionContext, projectP
  * Automatically set to 1 on windows plans because it has significant perf improvements
  * https://github.com/microsoft/vscode-azurefunctions/issues/1465
  */
-function verifyRunFromPackage(context: IActionContext, client: SiteClient, remoteProperties: { [propertyName: string]: string }): boolean {
+function verifyRunFromPackage(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
     const shouldAddSetting: boolean = !remoteProperties[runFromPackageKey];
     if (shouldAddSetting) {
         remoteProperties[runFromPackageKey] = '1';
-        ext.outputChannel.appendLog(localize('addedRunFromPackage', 'Added app setting "{0}" to improve performance of function app. Learn more here: https://aka.ms/AA8vxc0', runFromPackageKey), { resourceName: client.fullName });
+        ext.outputChannel.appendLog(localize('addedRunFromPackage', 'Added app setting "{0}" to improve performance of function app. Learn more here: https://aka.ms/AA8vxc0', runFromPackageKey), { resourceName: site.fullName });
     }
 
     context.telemetry.properties.addedRunFromPackage = String(shouldAddSetting);

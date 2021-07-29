@@ -5,15 +5,15 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { IDeployContext, SiteClient } from 'vscode-azureappservice';
+import { IDeployContext, ParsedSite } from 'vscode-azureappservice';
 import { deploySubpathSetting, packTaskName, preDeployTaskSetting, ProjectLanguage, remoteBuildSetting } from '../../constants';
 import { localize } from '../../localize';
 import { updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { ensureGitIgnoreContents } from '../initProjectForVSCode/InitVSCodeStep/PythonInitVSCodeStep';
 
-export async function validateRemoteBuild(context: IDeployContext, client: SiteClient, workspaceFolder: vscode.WorkspaceFolder, language: ProjectLanguage): Promise<void> {
-    if (language === ProjectLanguage.Python && !client.kuduUrl) {
+export async function validateRemoteBuild(context: IDeployContext, site: ParsedSite, workspaceFolder: vscode.WorkspaceFolder, language: ProjectLanguage): Promise<void> {
+    if (language === ProjectLanguage.Python && !site.kuduUrl) {
         const message: string = localize('remoteBuildNotSupported', 'The selected Function App doesn\'t support your project\'s configuration. Deploy to a newer Function App or downgrade your config.');
         const learnMoreLink: string = 'https://aka.ms/AA5vsfd';
         const downgrade: vscode.MessageItem = { title: localize('downgrade', 'Downgrade config') };

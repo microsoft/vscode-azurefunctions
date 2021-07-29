@@ -5,7 +5,7 @@
 
 import * as retry from 'p-retry';
 import { MessageItem, window, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
@@ -15,7 +15,7 @@ import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
 export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspaceFolder: WorkspaceFolder): Promise<void> {
-    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.root.client.fullName);
+    const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
     const uploadSettings: MessageItem = { title: localize('uploadAppSettings', 'Upload settings') };
@@ -44,7 +44,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
                 const message: string = currentAttempt === 1 ?
                     localize('queryingTriggers', 'Querying triggers...') :
                     localize('queryingTriggersAttempt', 'Querying triggers (Attempt {0}/{1})...', currentAttempt, retries + 1);
-                ext.outputChannel.appendLog(message, { resourceName: node.client.fullName });
+                ext.outputChannel.appendLog(message, { resourceName: node.site.fullName });
                 await listHttpTriggerUrls(context, node);
             },
             { retries, minTimeout: 2 * 1000 }
@@ -59,13 +59,13 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
 
 async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
-    const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find((n: AzureTreeItem) => n instanceof RemoteFunctionsTreeItem);
+    const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find(n => n instanceof RemoteFunctionsTreeItem);
     await node.treeDataProvider.refresh(context, functionsNode);
 
-    const logOptions: {} = { resourceName: node.client.fullName };
+    const logOptions: {} = { resourceName: node.site.fullName };
     let hasHttpTriggers: boolean = false;
     const functions: AzExtTreeItem[] = await functionsNode.getCachedChildren(context);
-    const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && f.isAnonymous);
+    const anonFunctions: RemoteFunctionTreeItem[] = <RemoteFunctionTreeItem[]>functions.filter(f => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && f.isAnonymous);
     if (anonFunctions.length > 0) {
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
@@ -75,7 +75,7 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         }
     }
 
-    if (functions.find((f: AzureTreeItem) => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && !f.isAnonymous)) {
+    if (functions.find(f => f instanceof RemoteFunctionTreeItem && f.isHttpTrigger && !f.isAnonymous)) {
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('nonAnonymousWarning', 'WARNING: Some http trigger urls cannot be displayed in the output window because they require an authentication token. Instead, you may copy them from the Azure Functions explorer.'), logOptions);
     }

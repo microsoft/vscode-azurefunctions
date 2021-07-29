@@ -44,16 +44,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
 
-    if (language === ProjectLanguage.Python && !node.root.client.isLinux) {
+    if (language === ProjectLanguage.Python && !node.site.isLinux) {
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    const siteConfig: WebSiteManagementModels.SiteConfigResource = await node.root.client.getSiteConfig();
-    const isConsumption: boolean = await node.root.client.getIsConsumption();
+    const client = await node.site.createClient(actionContext);
+    const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
+    const isConsumption: boolean = await client.getIsConsumption(actionContext);
     let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
-    if (!isZipDeploy && node.root.client.isLinux && isConsumption) {
-        ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: node.root.client.fullName });
+    if (!isZipDeploy && node.site.isLinux && isConsumption) {
+        ext.outputChannel.appendLog(localize('linuxConsZipOnly', 'WARNING: Using zip deploy because scm type "{0}" is not supported on Linux consumption', siteConfig.scmType), { resourceName: node.site.fullName });
         isZipDeploy = true;
         context.deployMethod = 'zip';
     }
@@ -61,15 +62,15 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
-        await validateRemoteBuild(context, node.root.client, context.workspaceFolder, language);
+        await validateRemoteBuild(context, node.site, context.workspaceFolder, language);
     }
 
-    if (isZipDeploy && node.root.client.isLinux && isConsumption && !doRemoteBuild) {
+    if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
-        await showDeployConfirmation(context, node.root.client, 'azureFunctions.deploy');
+        await showDeployConfirmation(context, node.site, 'azureFunctions.deploy');
     }
 
     await runPreDeployTask(context, context.effectiveDeployFsPath, siteConfig.scmType);
@@ -78,7 +79,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
-    if (language === ProjectLanguage.CSharp && !node.root.client.isLinux) {
+    if (language === ProjectLanguage.CSharp && !node.site.isLinux) {
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
     }
 
@@ -104,7 +105,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
                 ext.outputChannel.appendLog(noSubpathWarning);
             }
 
-            await innerDeploy(node.root.client, deployFsPath, context);
+            await innerDeploy(node.site, deployFsPath, context);
         }
     );
 
@@ -131,7 +132,8 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
         const config: WebSiteManagementModels.SiteConfigResource = {
             use32BitWorkerProcess: false
         };
-        await node.root.client.updateConfiguration(config);
+        const client = await node.site.createClient(context);
+        await client.updateConfiguration(config);
     }
 }
 

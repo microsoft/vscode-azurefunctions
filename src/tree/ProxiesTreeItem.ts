@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ThemeIcon } from 'vscode';
-import { getFile, ISiteFile, ISiteTreeRoot, putFile } from 'vscode-azureappservice';
-import { AzureParentTreeItem, AzureTreeItem, DialogResponses, IActionContext, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
+import { getFile, ISiteFile, putFile } from 'vscode-azureappservice';
+import { AzExtParentTreeItem, AzExtTreeItem, DialogResponses, IActionContext, parseError, TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { ProxyTreeItem } from './ProxyTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
-export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
+export class ProxiesTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azFuncProxies';
     public readonly contextValue: string = ProxiesTreeItem.contextValue;
     public readonly label: string = localize('Proxies', 'Proxies');
@@ -30,10 +30,10 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         super(parent);
     }
 
-    public static async createProxiesTreeItem(parent: SlotTreeItemBase): Promise<ProxiesTreeItem> {
+    public static async createProxiesTreeItem(context: IActionContext, parent: SlotTreeItemBase): Promise<ProxiesTreeItem> {
         const ti: ProxiesTreeItem = new ProxiesTreeItem(parent);
         // initialize
-        await ti.refreshImpl();
+        await ti.refreshImpl(context);
         return ti;
     }
 
@@ -53,18 +53,18 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
         return this._readOnly;
     }
 
-    public async refreshImpl(): Promise<void> {
-        this._readOnly = await this.parent.isReadOnly();
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        this._readOnly = await this.parent.isReadOnly(context);
     }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzureTreeItem<ISiteTreeRoot>[]> {
+    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         let proxiesJson: string;
         try {
-            const result: ISiteFile = await getFile(context, this.root.client, this._proxiesJsonPath);
+            const result: ISiteFile = await getFile(context, this.parent.site, this._proxiesJsonPath);
             proxiesJson = result.data;
             this._etag = result.etag;
         } catch (err) {
@@ -96,7 +96,7 @@ export class ProxiesTreeItem extends AzureParentTreeItem<ISiteTreeRoot> {
                 ext.outputChannel.appendLog(localize('DeletingProxy', 'Deleting proxy "{0}"...', name));
                 delete this._proxyConfig.proxies[name];
                 const data: string = JSON.stringify(this._proxyConfig);
-                this._etag = await putFile(context, this.root.client, data, this._proxiesJsonPath, this._etag);
+                this._etag = await putFile(context, this.parent.site, data, this._proxiesJsonPath, this._etag);
                 ext.outputChannel.appendLog(localize('DeleteProxySucceeded', 'Successfully deleted proxy "{0}".', name));
             } finally {
                 this._deletingProxy = false;

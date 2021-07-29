@@ -99,7 +99,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
         return `AzureWebJobs.${this.name}.Disabled`;
     }
 
-    public abstract getKey(): Promise<string | undefined>;
+    public abstract getKey(context: IActionContext): Promise<string | undefined>;
 
     public async initAsync(context: IActionContext): Promise<void> {
         if (this.isHttpTrigger) {
@@ -122,7 +122,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
             triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
         }
 
-        const key: string | undefined = await this.getKey();
+        const key: string | undefined = await this.getKey(context);
         if (key) {
             triggerUrl.searchParams.set('code', key);
         }
@@ -137,7 +137,7 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
         if (this._func) {
             this._disabled = !!this._func.isDisabled;
         } else {
-            const version: FuncVersion = await this.parent.parent.getVersion();
+            const version: FuncVersion = await this.parent.parent.getVersion(context);
             if (version === FuncVersion.v1) {
                 this._disabled = this._config.disabled;
             } else {

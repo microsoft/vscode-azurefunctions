@@ -14,7 +14,7 @@ export async function configureDeploymentSource(context: IActionContext, node?: 
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
 
-    const updatedScmType: string | undefined = await editScmType(context, node.root.client, node.root);
+    const updatedScmType: string | undefined = await editScmType(context, node.site, node.subscription);
     if (updatedScmType !== undefined) {
         context.telemetry.properties.updatedScmType = updatedScmType;
     }
