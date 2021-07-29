@@ -6,12 +6,15 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import { RequestPrepareOptions } from '@azure/ms-rest-js';
 import * as extract from 'extract-zip';
+import * as path from 'path';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
+import { IAppSettingsClient } from 'vscode-azureappservice';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
+import { downloadAppSettingsInternal } from '../commands/appSettings/downloadAppSettings';
 import { localDockerPrompt } from '../commands/dockersupport/localDockerSupport';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { ProjectLanguage } from '../constants';
+import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
@@ -65,6 +68,13 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const devContainerFolderPathUri: vscode.Uri = vscode.Uri.joinPath(projectFilePathUri, '.devcontainer');
 
             await extract(downloadFilePath, { dir: projectFilePath });
+
+            if (node) {
+                const client: IAppSettingsClient = node.client;
+                const localSettingsPath: string = path.join(projectFilePathUri.fsPath, localSettingsFileName);
+                await downloadAppSettingsInternal(context, client, localSettingsPath);
+            }
+
             const openInContainer: boolean = await localDockerPrompt(context, devContainerFolderPathUri, node, devContainerName);
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
 
