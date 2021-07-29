@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as semver from 'semver';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
@@ -68,6 +69,13 @@ export namespace cliFeedUtils {
             throw new Error(localize('unsupportedVersion', 'Azure Functions v{0} does not support this operation.', majorVersion));
         }
         return releaseData.release;
+    }
+
+    export async function getSortedVersions(context: IActionContext, version: FuncVersion): Promise<string[]> {
+        const cliFeed: ICliFeed = await getCliFeed(context);
+        const majorVersion = parseInt(getMajorVersion(version));
+        const versions = Object.keys(cliFeed.releases).filter(v => semver.valid(v) && semver.major(v) === majorVersion);
+        return semver.rsort(versions).map(v => typeof v === 'string' ? v : v.version);
     }
 
     export async function getRelease(context: IActionContext, templateVersion: string): Promise<IRelease> {
