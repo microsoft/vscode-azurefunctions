@@ -25,7 +25,7 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
     if (node && devContainerName && node.site.reserved) {
         if (await prompt(context) === DOCKER_PROMPT_YES) {
             await downloadLocalDevFiles(devContainerFolderPathUri, devContainerName);
-            if (!validateDockerInstalled()) {
+            if (!(await validateDockerInstalled())) {
                 const dockerDocumentation: string = localize('documentation', 'Docker Documentation');
                 await vscode.window.showInformationMessage(localize('download', 'We noticed you don\'t have Docker installed. Check the Docker Documentation to download Docker to your system.'), dockerDocumentation,).then(async result => {
                     if (result === dockerDocumentation) {
