@@ -6,6 +6,7 @@
 import * as path from 'path';
 import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
+import { getRandomHexString } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 
 export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
@@ -23,7 +24,7 @@ export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get id(): string {
-        return 'localProject' + this._projectName;
+        return 'localProject' + this._projectName + getRandomHexString(8);
     }
 
     public get description(): string {
