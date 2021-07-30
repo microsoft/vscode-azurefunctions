@@ -46,7 +46,6 @@ export async function filterUploadAppSettings(context: IActionContext, sourceSet
         else {
             securitySettingsIgnored.push(key);
         }
-
     }
 
     if (addedKeys.length > 0) {

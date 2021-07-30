@@ -72,7 +72,6 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
     if (showMessage) {
         ext.outputChannel.appendLog(localize('downloadedSettings', 'Successfully downloaded settings.'), { resourceName: client.fullName });
         const openFile: string = localize('openFile', 'Open File');
-        // don't wait
         void vscode.window.showInformationMessage(localize('downloadedSettingsFrom', 'Successfully downloaded settings from "{0}".', client.fullName), openFile, viewOutput).then(async result => {
             if (result === openFile) {
                 const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(localSettingsUri);
