@@ -8,6 +8,7 @@ import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
+import { isMultiRootWorkspace } from '../../utils/workspace';
 
 export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('localProject', 'Local Project');
@@ -16,7 +17,7 @@ export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
 
     public constructor(parent: AzExtParentTreeItem, projectPath: string) {
         super(parent);
-        this._projectName = path.basename(projectPath);
+        this._projectName = isMultiRootWorkspace() ? `${path.basename(path.dirname(projectPath))}/${path.basename(projectPath)}` : path.basename(projectPath);
     }
 
     public get iconPath(): TreeItemIconPath {
