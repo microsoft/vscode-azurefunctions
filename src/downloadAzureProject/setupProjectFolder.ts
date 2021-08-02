@@ -17,7 +17,6 @@ import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProje
 import { localSettingsFileName, ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from "../tree/SlotTreeItemBase";
 import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
@@ -28,8 +27,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     const resourceId: string = getRequiredQueryParameter(parsedQuery, 'resourceId');
     const devContainerName: string = getRequiredQueryParameter(parsedQuery, 'devcontainer');
     const language: string = getRequiredQueryParameter(parsedQuery, 'language');
-
-    const node: SlotTreeItemBase = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+    const node: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
 
     await setupProjectFolderParsed(resourceId, language, vsCodeFilePathUri, context, node, devContainerName);
 }
@@ -48,9 +46,8 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
         const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
-            const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
-            const hostKeys: WebSiteManagementModels.HostKeys | undefined = await slotTreeItem?.client.listHostKeys();
-            const defaultHostName: string | undefined = slotTreeItem?.client.defaultHostName;
+            const hostKeys: WebSiteManagementModels.HostKeys | undefined = await node?.client.listHostKeys();
+            const defaultHostName: string | undefined = node?.client.defaultHostName;
 
             if (!!hostKeys && hostKeys.masterKey && defaultHostName) {
                 const requestOptions: RequestPrepareOptions = {
