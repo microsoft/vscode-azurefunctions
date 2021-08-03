@@ -6,6 +6,7 @@
 import { commands } from 'vscode';
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from 'vscode-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
+import { cloneLocally } from '../downloadAzureProject/cloneProjectLocally';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -107,4 +108,5 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties);
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
+    registerCommand('azureFunctions.cloneLocally', cloneLocally);
 }

@@ -79,6 +79,7 @@
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "onCommand:azureFunctions.reportIssue",
+        "onCommand:azureFunctions.cloneLocally",
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
@@ -176,6 +177,11 @@
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
                 "icon": "$(cloud-upload)"
+            },
+            {
+                "command": "azureFunctions.cloneLocally",
+                "title": "%azureFunctions.cloneLocally%",
+                "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.deploySlot",
@@ -428,19 +434,24 @@
                     "group": "1@2"
                 },
                 {
+                    "command": "azureFunctions.cloneLocally",
+                    "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
+                    "group": "2@1"
+                },
+                {
                     "command": "azureFunctions.deploy",
                     "when": "view == azFuncTree && viewItem == azFuncProductionSlot",
-                    "group": "2@1"
+                    "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.deploySlot",
                     "when": "view == azFuncTree && viewItem == azFuncSlot",
-                    "group": "2@1"
+                    "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
-                    "group": "2@2"
+                    "group": "2@3"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
