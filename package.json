@@ -1037,7 +1037,7 @@
                     "azureFunctions.enableOpenFromPortal": {
                         "type": "boolean",
                         "description": "Enable download content and setup project feature using handle uri (experimental)",
-                        "default": true
+                        "default": false
                     },
                     "azureFunctions.templateSource": {
                         "type": "string",
