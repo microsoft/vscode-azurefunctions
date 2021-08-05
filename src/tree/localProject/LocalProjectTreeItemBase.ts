@@ -14,10 +14,12 @@ export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     public readonly label: string = localize('localProject', 'Local Project');
     public suppressMaskLabel: boolean = true;
     private readonly _projectName: string;
+    private readonly _id: string;
 
     public constructor(parent: AzExtParentTreeItem, projectPath: string) {
         super(parent);
         this._projectName = isMultiRootWorkspace() ? `${path.basename(path.dirname(projectPath))}/${path.basename(projectPath)}` : path.basename(projectPath);
+        this._id = 'localProject' + this._projectName + getRandomHexString(8);
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -25,7 +27,7 @@ export abstract class LocalProjectTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get id(): string {
-        return 'localProject' + this._projectName + getRandomHexString(8);
+        return this._id;
     }
 
     public get description(): string {
