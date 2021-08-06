@@ -49,6 +49,7 @@ export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
 export const pomXmlFileName: string = 'pom.xml';
+export const buildGradleFileName: string = 'build.gradle';
 
 export enum PackageManager {
     npm = 'npm',
