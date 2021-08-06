@@ -10,11 +10,11 @@ import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
-import { JavaInitVSCodeStep } from './InitVSCodeStep/JavaInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
 import { ScriptInitVSCodeStep } from './InitVSCodeStep/ScriptInitVSCodeStep';
 import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeStep';
+import { addJavaInitVSCodeSteps } from './javaSteps/addJavaInitVSCodeSteps';
 import { addPythonInitVSCodeSteps } from './pythonSteps/addPythonInitVSCodeSteps';
 
 export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
@@ -74,7 +74,7 @@ export async function addInitVSCodeSteps(
             executeSteps.push(new PowerShellInitVSCodeStep());
             break;
         case ProjectLanguage.Java:
-            executeSteps.push(new JavaInitVSCodeStep());
+            await addJavaInitVSCodeSteps(context, executeSteps);
             break;
         case ProjectLanguage.CSharpScript:
         case ProjectLanguage.FSharpScript:

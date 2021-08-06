@@ -3,13 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { func, hostStartCommand, pomXmlFileName, ProjectLanguage } from '../../../constants';
+import { func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
-import { mavenUtils } from '../../../utils/mavenUtils';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from '../../createNewProject/IProjectWizardContext';
@@ -17,22 +15,18 @@ import { InitVSCodeStepBase } from './InitVSCodeStepBase';
 
 const javaPackageTaskLabel: string = convertToFunctionsTaskLabel('package');
 
-export class JavaInitVSCodeStep extends InitVSCodeStepBase {
+export abstract class JavaInitVSCodeStep extends InitVSCodeStepBase {
     protected preDeployTask: string = javaPackageTaskLabel;
 
     private _debugSubpath: string;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
-        const pomFilePath: string = path.join(context.projectPath, pomXmlFileName);
-        if (!await fse.pathExists(pomFilePath)) {
-            throw new Error(localize('pomNotFound', 'Cannot find pom.xml file in current project, please make sure the language setting is correct.'));
-        }
-        const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(pomFilePath);
+        const functionAppName: string | undefined = await this.getFunctionAppName(context);
         if (!functionAppName) {
             this._debugSubpath = '<function_build_path>';
-            void window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name from pom file, you may need to specify it in the tasks.json.'));
+            void window.showWarningMessage(localize('functionAppNameNotFound', 'Cannot parse the Azure Functions name, you may need to specify it in the tasks.json.'));
         } else {
-            this._debugSubpath = getJavaDebugSubpath(functionAppName);
+            this._debugSubpath = this.getJavaDebugSubpath(functionAppName);
         }
 
         this.setDeploySubpath(context, this._debugSubpath);
@@ -52,7 +46,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
             },
             {
                 label: javaPackageTaskLabel,
-                command: 'mvn clean package',
+                command: this.getPackageCommand(),
                 type: 'shell',
                 group: {
                     kind: 'build',
@@ -69,6 +63,12 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
     protected getRecommendedExtensions(): string[] {
         return ['vscjava.vscode-java-debug'];
     }
+
+    public abstract getPackageCommand(): string
+
+    public abstract getJavaDebugSubpath(functionAppName: string): string
+
+    public abstract getFunctionAppName(context: IProjectWizardContext): Promise<string | undefined>
 }
 
 export function getJavaDebugSubpath(functionAppName: string): string {
