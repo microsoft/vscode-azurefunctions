@@ -51,7 +51,7 @@ suite('Add Binding', () => {
     });
 
     test('Tree', async () => {
-        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProject0/functions/${functionName}`, await createTestActionContext());
+        const treeItem: AzExtTreeItem | undefined = await ext.tree.findTreeItem(`/localProjecttestWorkspace/0/functions/${functionName}`, await createTestActionContext());
         assert.ok(treeItem, 'Failed to find tree item');
         await validateAddBinding(treeItem, []);
     });
