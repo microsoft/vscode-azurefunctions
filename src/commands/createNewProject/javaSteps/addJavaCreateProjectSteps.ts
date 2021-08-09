@@ -22,7 +22,6 @@ export async function addJavaCreateProjectSteps(
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
     await JavaVersionStep.setDefaultVersion(context);
-
     promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
 
     const picks: IAzureQuickPickItem<JavaBuildTool>[] = [
@@ -32,9 +31,9 @@ export async function addJavaCreateProjectSteps(
     const placeHolder: string = localize('selectJavaBuildTool', 'Select the build tool for Java project');
     context.buildTool = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     if (context.buildTool === JavaBuildTool.maven) {
-        await MavenProjectCreateStep.createStep(context);
+        executeSteps.push(await MavenProjectCreateStep.createStep(context));
     } else if (context.buildTool === JavaBuildTool.gradle) {
-        executeSteps.push(new GradleProjectCreateStep());
+        executeSteps.push(await GradleProjectCreateStep.createStep(context));
     } else {
         throw new Error(localize('invalidJavaBuildTool', 'Internal error: Invalid java build tool "{0}".', context.buildTool));
     }

@@ -6,9 +6,11 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { IActionContext } from 'vscode-azureextensionui';
 import { buildGradleFileName, settingsGradleFileName } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { gradleUtils } from '../../../utils/gradleUtils';
 import { javaUtils } from '../../../utils/javaUtils';
 import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { java11, java8 } from '../javaSteps/JavaVersionStep';
@@ -19,6 +21,15 @@ const metaDataUrl = "https://plugins.gradle.org/m2/com/microsoft/azure/azure-fun
 
 export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = gradleGitignore;
+
+    private constructor() {
+        super();
+    }
+
+    public static async createStep(context: IActionContext): Promise<GradleProjectCreateStep> {
+        await gradleUtils.validateGradleInstalled(context);
+        return new GradleProjectCreateStep();
+    }
 
     public async executeCore(context: IJavaProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         super.executeCore(context, progress);
