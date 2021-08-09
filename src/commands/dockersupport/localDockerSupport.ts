@@ -11,6 +11,7 @@ import { openUrl } from '../../utils/openUrl';
 import { requestUtils } from "../../utils/requestUtils";
 import { prompt } from "./askDockerStep";
 import { validateDockerInstalled } from './validateDockerInstalled';
+import { validateRemoteContainer } from './validateRemoteContainer';
 
 export const DOCKER_PROMPT_YES = "yes";
 
@@ -32,6 +33,10 @@ export async function localDockerPrompt(context: IActionContext, devContainerFol
                         await openUrl('https://docs.docker.com/get-docker/');
                     }
                 });
+                return false;
+            }
+            if (!(await validateRemoteContainer())) {
+                void vscode.window.showInformationMessage(localize('noContainer', 'Cannot open in container. Missing required extension: Remote - Containers'));
                 return false;
             }
             return true;

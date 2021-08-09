@@ -72,14 +72,15 @@ export async function setupProjectFolderParsed(resourceId: string, language: str
             const openInContainer: boolean = await localDockerPrompt(context, devContainerFolderPathUri, node, devContainerName);
             await initProjectForVSCode(context, projectFilePath, getProjectLanguageForLanguage(language));
 
-            void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code with your function app project'));
             // Setting a delay so that users are able to see the message before new window opens
             const delayMilliseconds = 1500;
             if (openInContainer) {
+                void vscode.window.showInformationMessage(localize('openInContainer', 'Restarting VS Code and opening function app project in container.'));
                 setTimeout((commandString, filePath, openFile) => {
                     void vscode.commands.executeCommand(commandString, filePath, openFile);
                 }, delayMilliseconds, 'remote-containers.openFolder', vscode.Uri.file(projectFilePath), true);
             } else {
+                void vscode.window.showInformationMessage(localize('restartingVsCodeInfoMessage', 'Restarting VS Code and opening function app project folder.'));
                 setTimeout((commandString, filePath, openFile) => {
                     void vscode.commands.executeCommand(commandString, filePath, openFile);
                 }, delayMilliseconds, 'vscode.openFolder', vscode.Uri.file(projectFilePath), true);
