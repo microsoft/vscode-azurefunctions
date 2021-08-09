@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
-import { allTemplateSources } from '../global.test';
+import { allTemplateSources, shouldSkipVersion } from '../global.test';
 import { getDotnetScriptValidateOptions, validateProject } from '../project/validateProject';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
@@ -30,12 +30,18 @@ for (const source of allTemplateSources) {
     // NOTE: Only need to test v1 since v2+ emphasizes C# class libraries instead of C#Script
     const tester: CSharpScriptFunctionTester = new CSharpScriptFunctionTester(source);
     suite(tester.suiteName, function (this: Mocha.Suite): void {
-        suiteSetup(async () => {
+        suiteSetup(async function (this: Mocha.Context): Promise<void> {
+            if (shouldSkipVersion(tester.version)) {
+                this.skip();
+            }
+
             await tester.initAsync();
         });
 
         suiteTeardown(async () => {
-            await tester.dispose();
+            if (!shouldSkipVersion(tester.version)) {
+                await tester.dispose();
+            }
         });
 
         // Intentionally testing IoTHub trigger since a partner team plans to use that

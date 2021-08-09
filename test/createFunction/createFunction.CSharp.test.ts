@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
-import { allTemplateSources } from '../global.test';
+import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
@@ -44,6 +44,9 @@ for (const source of allTemplateSources) {
     addSuite(FuncVersion.v2, 'netcoreapp2.1', source);
     addSuite(FuncVersion.v3, 'netcoreapp3.1', source);
     addSuite(FuncVersion.v3, 'net5.0', source, true);
+    addSuite(FuncVersion.v4, 'net5.0', source, true);
+    addSuite(FuncVersion.v4, 'net6.0', source, true);
+    addSuite(FuncVersion.v4, 'net6.0', source, false);
 }
 
 function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {
@@ -76,8 +79,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
             functionName: 'Azure Event Grid trigger',
             inputs: [
                 'TestCompany.TestFunction'
-            ],
-            skip: version === FuncVersion.v2 // https://github.com/microsoft/vscode-azurefunctions/issues/792
+            ]
         },
         {
             functionName: 'Azure Event Hub trigger',
@@ -154,6 +156,7 @@ function addSuite(version: FuncVersion, targetFramework: string, source: Templat
     tester.addParallelSuite(testCases, {
         title,
         timeoutMS: 60 * 1000,
+        isLongRunning: isLongRunningVersion(version),
         suppressParallel: true, // lots of errors like "The process cannot access the file because it is being used by another process" 😢
         addTests: () => {
             if (version === FuncVersion.v2) {

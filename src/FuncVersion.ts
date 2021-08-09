@@ -51,10 +51,6 @@ export function tryParseFuncVersion(data: string | undefined): FuncVersion | und
     return undefined;
 }
 
-export function isPreviewVersion(version: FuncVersion): boolean {
-    return version === FuncVersion.v4;
-}
-
 function osSupportsVersion(version: FuncVersion | undefined): boolean {
     return version !== FuncVersion.v1 || process.platform === 'win32';
 }

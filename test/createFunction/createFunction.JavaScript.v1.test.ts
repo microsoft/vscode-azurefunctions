@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
-import { allTemplateSources } from '../global.test';
+import { allTemplateSources, shouldSkipVersion } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
 import { FunctionTesterBase } from './FunctionTesterBase';
 
@@ -28,12 +28,18 @@ class JSFunctionTesterV1 extends FunctionTesterBase {
 for (const source of allTemplateSources) {
     const jsTester: JSFunctionTesterV1 = new JSFunctionTesterV1(source);
     suite(jsTester.suiteName, function (this: Mocha.Suite): void {
-        suiteSetup(async () => {
+        suiteSetup(async function (this: Mocha.Context): Promise<void> {
+            if (shouldSkipVersion(jsTester.version)) {
+                this.skip();
+            }
+
             await jsTester.initAsync();
         });
 
         suiteTeardown(async () => {
-            await jsTester.dispose();
+            if (!shouldSkipVersion(jsTester.version)) {
+                await jsTester.dispose();
+            }
         });
 
         const blobTrigger: string = 'Blob trigger';

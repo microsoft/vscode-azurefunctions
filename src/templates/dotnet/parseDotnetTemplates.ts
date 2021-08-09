@@ -6,7 +6,7 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { FuncVersion, getMajorVersion } from '../../FuncVersion';
+import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IBindingSetting, ValueType } from '../IBindingTemplate';
 import { IFunctionTemplate, TemplateCategory } from '../IFunctionTemplate';
@@ -97,30 +97,12 @@ export async function parseDotnetTemplates(rawTemplates: object[], version: Func
         }
     }
 
-    const filteredTemplates: IFunctionTemplate[] = filterTemplatesByVersion(functionTemplates, version);
-    if (version === FuncVersion.v3) {
-        // Fall back to v2 templates since v3 templates still use '2' in the id and it's not clear if/when that'll change
-        // https://github.com/microsoft/vscode-azurefunctions/issues/1602
-        const v2Templates: IFunctionTemplate[] = filterTemplatesByVersion(functionTemplates, FuncVersion.v2);
-        for (const v2Template of v2Templates) {
-            if (!filteredTemplates.find(t => normalizeDotnetId(t.id) === normalizeDotnetId(v2Template.id))) {
-                filteredTemplates.push(v2Template);
-            }
-        }
-    }
-
-    await copyCSharpSettingsFromJS(filteredTemplates, version);
+    await copyCSharpSettingsFromJS(functionTemplates, version);
 
     return {
-        functionTemplates: filteredTemplates,
+        functionTemplates,
         bindingTemplates: [] // CSharp does not support binding templates
     };
-}
-
-function filterTemplatesByVersion(templates: IFunctionTemplate[], version: FuncVersion): IFunctionTemplate[] {
-    const majorVersion: string = getMajorVersion(version);
-    const regExp: RegExp = new RegExp(`^Azure\\.Function\\.(F|C)Sharp\\.(Isolated\\.|)[^\\.]*\\.${majorVersion}\\.x$`, 'i');
-    return templates.filter(t => regExp.test(t.id));
 }
 
 /**
