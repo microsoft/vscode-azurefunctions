@@ -58,24 +58,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
             const filePath: string = path.join(templatesPath, 'templates.zip');
             await requestUtils.downloadFile(context, templateRelease.templates, filePath);
 
-            await new Promise(
-                (
-                    resolve: (value?: unknown) => void,
-                    reject: (e: Error) => void
-                ): void => {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                    extract(filePath, { dir: templatesPath }).then(
-                        () => {
-                            resolve();
-                        },
-                        (err) => {
-                            if (err) {
-                                reject(err);
-                            }
-                        }
-                    )
-                }
-            )
+            await extract(filePath, { dir: templatesPath });
 
             return await this.parseTemplates(templatesPath);
         } finally {
