@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ThemeIcon } from 'vscode';
+import { ThemeIcon, WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { isLocalProjectCV } from '../projectContextValues';
@@ -14,8 +14,8 @@ export class InitLocalProjectTreeItem extends LocalProjectTreeItemBase {
 
     private readonly _projectPath: string;
 
-    public constructor(parent: AzExtParentTreeItem, projectPath: string) {
-        super(parent, projectPath);
+    public constructor(parent: AzExtParentTreeItem, projectPath: string, folder: WorkspaceFolder) {
+        super(parent, projectPath, folder);
         this._projectPath = projectPath;
     }
 
