@@ -5,7 +5,7 @@
 
 import { QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
-import { ProjectLanguage } from '../../constants';
+import { JavaBuildTool, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -13,6 +13,7 @@ import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
+import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
 import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
 import { JavaArtifactIdStep } from './javaSteps/JavaArtifactIdStep';
 import { JavaBuildToolStep } from './javaSteps/JavaBuildToolStep';
@@ -22,7 +23,6 @@ import { JavaProjectVersionStep } from './javaSteps/JavaProjectVersionStep';
 import { JavaVersionStep } from './javaSteps/JavaVersionStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
-import { JavaProjectCreateStep } from './ProjectCreateStep/JavaProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
@@ -102,7 +102,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 await JavaVersionStep.setDefaultVersion(context);
                 await JavaBuildToolStep.setDefaultBuildTool(context); // Set build tool to maven as other Java project with other build tool is not supported now
                 promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
-                executeSteps.push(await JavaProjectCreateStep.createStep(context));
+                await addJavaCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Custom:
                 executeSteps.push(new CustomProjectCreateStep());
@@ -118,7 +118,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (language !== ProjectLanguage.Java) {
+        if (context['buildTool'] !== JavaBuildTool.maven) {
             promptSteps.push(await FunctionListStep.create(context, {
                 isProjectWizard: true,
                 templateId: this._templateId,

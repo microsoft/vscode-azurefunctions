@@ -14,14 +14,14 @@ import { nonNullProp } from '../../../utils/nonNull';
 import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
-export class JavaProjectCreateStep extends ProjectCreateStepBase {
+export class MavenProjectCreateStep extends ProjectCreateStepBase {
     private constructor() {
         super();
     }
 
-    public static async createStep(context: IActionContext): Promise<JavaProjectCreateStep> {
+    public static async createStep(context: IActionContext): Promise<MavenProjectCreateStep> {
         await mavenUtils.validateMavenInstalled(context);
-        return new JavaProjectCreateStep();
+        return new MavenProjectCreateStep();
     }
 
     public async executeCore(context: IJavaProjectWizardContext): Promise<void> {
