@@ -44,7 +44,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     private readonly _localFunctionsTreeItem: LocalFunctionsTreeItem;
 
     public constructor(parent: AzExtParentTreeItem, options: LocalProjectOptions) {
-        super(parent, options.preCompiledProjectPath || options.effectiveProjectPath);
+        super(parent, options.preCompiledProjectPath || options.effectiveProjectPath, options.folder);
         this.effectiveProjectPath = options.effectiveProjectPath;
         this.workspacePath = options.folder.uri.fsPath;
         this.workspaceFolder = options.folder;

@@ -74,7 +74,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                     const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
                     const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                     if (language === undefined || version === undefined) {
-                        children.push(new InitLocalProjectTreeItem(this, projectPath));
+                        children.push(new InitLocalProjectTreeItem(this, projectPath, folder));
                     } else {
                         let preCompiledProjectPath: string | undefined;
                         let effectiveProjectPath: string;
@@ -94,7 +94,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         children.push(treeItem);
                     }
                 } catch (error) {
-                    children.push(new InvalidLocalProjectTreeItem(this, projectPath, error));
+                    children.push(new InvalidLocalProjectTreeItem(this, projectPath, error, folder));
                 }
             }
 

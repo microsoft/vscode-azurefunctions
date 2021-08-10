@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { WorkspaceFolder } from 'vscode';
 import { AzExtParentTreeItem, AzExtTreeItem } from 'vscode-azureextensionui';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';
 
@@ -11,8 +12,8 @@ export class InvalidLocalProjectTreeItem extends LocalProjectTreeItemBase {
 
     private readonly _projectError: unknown | undefined;
 
-    public constructor(parent: AzExtParentTreeItem, projectPath: string, projectError: unknown) {
-        super(parent, projectPath);
+    public constructor(parent: AzExtParentTreeItem, projectPath: string, projectError: unknown, folder: WorkspaceFolder) {
+        super(parent, projectPath, folder);
         this._projectError = projectError;
     }
 
