@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
-import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
@@ -42,13 +42,21 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     });
 
     const appName: string = 'javaApp';
-    const javaInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
+    const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
     if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
-        javaInputs.unshift(/11/);
+        javaBaseInputs.unshift(/11/);
     }
+
+    const gradleInputs: (TestInput | string | RegExp)[] = [/Gradle/i];
     testCases.push({
-        ...getJavaValidateOptions(appName, version),
-        inputs: javaInputs
+        ...getJavaValidateOptions(appName, JavaBuildTool.gradle, version),
+        inputs: gradleInputs.concat(javaBaseInputs, /skip for now/i)
+    });
+
+    const mavenInputs: (TestInput | string | RegExp)[] = [/Maven/i];
+    testCases.push({
+        ...getJavaValidateOptions(appName, JavaBuildTool.maven, version),
+        inputs: mavenInputs.concat(javaBaseInputs)
     });
 }
 

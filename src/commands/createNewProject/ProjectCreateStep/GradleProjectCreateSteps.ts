@@ -32,7 +32,7 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     public async executeCore(context: IJavaProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        super.executeCore(context, progress);
+        await super.executeCore(context, progress);
 
         const settingsGradlePath: string = path.join(context.projectPath, settingsGradleFileName);
         if (await confirmOverwriteFile(context, settingsGradlePath)) {
@@ -47,11 +47,15 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     async getLatestGradlePluginVersion(context: IJavaProjectWizardContext): Promise<string> {
-        const templateVersion: string | undefined = await javaUtils.getLatestArtifactVersionFromMetaData(context, metaDataUrl);
-        return templateVersion ? templateVersion : backupGradlePluginVersion;
+        try {
+            const templateVersion: string | undefined = await javaUtils.getLatestArtifactVersionFromMetaData(context, metaDataUrl);
+            return templateVersion ? templateVersion : backupGradlePluginVersion;
+        } catch (error) {
+            return backupGradlePluginVersion;
+        }
     }
 
-    getSettingsGradleContent(context: IJavaProjectWizardContext): any {
+    getSettingsGradleContent(context: IJavaProjectWizardContext): string {
         return `rootProject.name = "${context.javaArtifactId}"`;
     }
 
