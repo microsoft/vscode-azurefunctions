@@ -50,6 +50,10 @@ export const requirementsFileName: string = 'requirements.txt';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
 export const pomXmlFileName: string = 'pom.xml';
 export const buildGradleFileName: string = 'build.gradle';
+export enum JavaBuildTool {
+    maven = 'maven',
+    gradle = 'gradle'
+}
 
 export enum PackageManager {
     npm = 'npm',
