@@ -9,8 +9,8 @@ import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { IJavaProjectWizardContext } from "../../createNewProject/javaSteps/IJavaProjectWizardContext";
 import { isGradleProject, isMavenProject } from "../detectProjectLanguage";
-import { GradleInitVSCodeStep } from "../InitVSCodeStep/GradleInitVSCodeStep";
-import { MavenInitVSCodeStep } from "../InitVSCodeStep/MavenInitVSCodeStep";
+import { JavaInitVSCodeStep } from "../InitVSCodeStep/JavaInitVSCodeStep";
+
 
 export async function addJavaInitVSCodeSteps(
     context: IJavaProjectWizardContext,
@@ -18,11 +18,7 @@ export async function addJavaInitVSCodeSteps(
     if (!context.buildTool) {
         context.buildTool = await getJavaBuildTool(context);
     }
-    if (context.buildTool === JavaBuildTool.maven) {
-        executeSteps.push(new MavenInitVSCodeStep());
-    } else if (context.buildTool === JavaBuildTool.gradle) {
-        executeSteps.push(new GradleInitVSCodeStep());
-    }
+    executeSteps.push(new JavaInitVSCodeStep());
 }
 
 async function getJavaBuildTool(context: IJavaProjectWizardContext): Promise<JavaBuildTool> {

@@ -37,6 +37,7 @@
     "azureFunctions.funcCliPath": "The path to the 'func' executable to use for debug and deploy tasks. For example, set it to 'node_modules/.bin/func' if using the func cli installed as a local npm package.",
     "azureFunctions.initProjectForVSCode": "Initialize Project for Use with VS Code...",
     "azureFunctions.installOrUpdateFuncCoreTools": "Install or Update Azure Functions Core Tools",
+    "azureFunctions.javaBuildTool": "Build tool for Java Functions project",
     "azureFunctions.loadMore": "Load More",
     "azureFunctions.openInPortal": "Open in Portal",
     "azureFunctions.pickProcess": "Pick Process",

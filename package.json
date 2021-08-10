@@ -1039,6 +1039,11 @@
                         "description": "Enable download content and setup project feature using handle uri (experimental)",
                         "default": false
                     },
+                    "azureFunctions.javaBuildTool": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azureFunctions.javaBuildTool%"
+                    },
                     "azureFunctions.templateSource": {
                         "type": "string",
                         "description": "%azureFunctions.templateSource%",
