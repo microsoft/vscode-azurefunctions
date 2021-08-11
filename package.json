@@ -79,7 +79,7 @@
         "onCommand:azureFunctions.addBinding",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
         "onCommand:azureFunctions.reportIssue",
-        "onCommand:azureFunctions.cloneLocally",
+        "onCommand:azureFunctions.downloadProject",
         "workspaceContains:**/host.json",
         "onView:azFuncTree",
         "onDebugInitialConfigurations",
@@ -179,8 +179,8 @@
                 "icon": "$(cloud-upload)"
             },
             {
-                "command": "azureFunctions.cloneLocally",
-                "title": "%azureFunctions.cloneLocally%",
+                "command": "azureFunctions.downloadProject",
+                "title": "%azureFunctions.downloadProject%",
                 "category": "Azure Functions"
             },
             {
@@ -434,7 +434,7 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureFunctions.cloneLocally",
+                    "command": "azureFunctions.downloadProject",
                     "when": "view == azFuncTree && viewItem =~ /^azFunc(Production|)Slot$/",
                     "group": "2@1"
                 },
