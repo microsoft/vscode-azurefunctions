@@ -148,15 +148,6 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
         await client.updateApplicationSettings(settings);
     }
 
-    public async getApplicationLanguage(context: IActionContext): Promise<string> {
-        const client = await this.site.createClient(context);
-        const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
-
-        return !appSettings.properties || !appSettings.properties['FUNCTIONS_WORKER_RUNTIME']
-            ? ''
-            : appSettings.properties['FUNCTIONS_WORKER_RUNTIME'];
-    }
-
     public async getIsConsumption(context: IActionContext): Promise<boolean> {
         let result: boolean | undefined = this._cachedIsConsumption;
         if (result === undefined) {

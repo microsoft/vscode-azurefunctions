@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { setupProjectFolderParsed } from '../../downloadAzureProject/setupProjectFolder';
@@ -17,7 +18,16 @@ export async function downloadProject(context: IActionContext, node?: SlotTreeIt
 
     const filePathUri: vscode.Uri[] = await context.ui.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false });
     const resourceId: string = node.id;
-    const language: string = await node.getApplicationLanguage(context);
+    const language: string = await getApplicationLanguage(node, context);
 
     await setupProjectFolderParsed(resourceId, language, filePathUri[0], context, node);
+}
+
+async function getApplicationLanguage(node: SlotTreeItemBase, context: IActionContext): Promise<string> {
+    const client = await node.site.createClient(context);
+    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+
+    return !appSettings.properties || !appSettings.properties['FUNCTIONS_WORKER_RUNTIME']
+        ? ''
+        : appSettings.properties['FUNCTIONS_WORKER_RUNTIME'];
 }
