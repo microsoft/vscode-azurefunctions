@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { cpUtils } from "../../utils/cpUtils";
+import * as vscode from 'vscode';
+
 
 export async function validateRemoteContainer(): Promise<boolean> {
     let installed: boolean = false;
-    try {
-        const extensions: string = await cpUtils.executeCommand(undefined, undefined, 'code --list-extensions');
-        installed = extensions.includes("ms-vscode-remote.remote-containers");
-    } catch (error) {
-        installed = false;
+    const extension: vscode.Extension<string> | undefined = vscode.extensions.getExtension("ms-vscode-remote.remote-containers");
+    if (extension) {
+        installed = true
     }
+
     return installed;
 }
