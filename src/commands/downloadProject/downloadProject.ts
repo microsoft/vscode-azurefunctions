@@ -5,12 +5,12 @@
 
 import * as vscode from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
-import { setupProjectFolderParsed } from './setupProjectFolder';
+import { setupProjectFolderParsed } from '../../downloadAzureProject/setupProjectFolder';
+import { ext } from '../../extensionVariables';
+import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
-export async function cloneLocally(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function downloadProject(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
