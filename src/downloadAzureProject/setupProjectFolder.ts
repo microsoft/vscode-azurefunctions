@@ -9,7 +9,7 @@ import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
-import { localDockerPrompt } from '../commands/dockersupport/localDockerSupport';
+import { localDockerPrompt } from '../commands/downloadProject/localDockerSupport';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
