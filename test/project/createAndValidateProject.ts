@@ -6,6 +6,7 @@
 import * as path from 'path';
 import { TestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { createNewProjectInternal, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
+// eslint-disable-next-line no-restricted-imports
 import * as api from '../../src/vscode-azurefunctions.api';
 import { testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';

@@ -1074,6 +1074,7 @@
     },
     "devDependencies": {
         "@azure/arm-resources": "^3.0.0",
+        "@microsoft/eslint-config-azuretools": "^0.1.0",
         "@types/fs-extra": "^8.1.0",
         "@types/gulp": "^4.0.6",
         "@types/gulp-filter": "^3.0.33",
@@ -1087,7 +1088,6 @@
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "4.3.0",
         "@typescript-eslint/eslint-plugin": "^4.28.3",
-        "@typescript-eslint/parser": "^4.28.3",
         "copy-webpack-plugin": "^6.0.3",
         "eslint": "^7.19.0",
         "eslint-plugin-import": "^2.22.1",
