@@ -8,6 +8,7 @@ import { Extension, extensions } from "vscode";
 import { runWithInputs } from 'vscode-azureextensiondev';
 import { AzureExtensionApiProvider } from "vscode-azureextensionui/api";
 import { nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
+// eslint-disable-next-line no-restricted-imports
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { testFolderPath } from './global.test';
 import { getJavaScriptValidateOptions, IValidateProjectOptions, validateProject } from './project/validateProject';
