@@ -31,17 +31,14 @@ suite('Backup templates', () => {
             { language: ProjectLanguage.JavaScript, versions: allVersions },
             { language: ProjectLanguage.CSharp, versions: [FuncVersion.v1, FuncVersion.v2] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'netcoreapp3.1', versions: [FuncVersion.v3] },
-            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net5.0-isolated', versions: [FuncVersion.v3] },
-            { language: ProjectLanguage.Java, versions: [FuncVersion.v2, FuncVersion.v3] }
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net5.0-isolated', versions: [FuncVersion.v3, FuncVersion.v4] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0', versions: [FuncVersion.v4] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0-isolated', versions: [FuncVersion.v4] },
+            { language: ProjectLanguage.Java, versions: [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4] }
         ];
 
         for (const worker of workers) {
             for (const version of Object.values(FuncVersion)) {
-                if (version === FuncVersion.v4) {
-                    // v4 doesn't have templates yet
-                    continue;
-                }
-
                 if (!worker.versions?.includes(version)) {
                     continue;
                 }

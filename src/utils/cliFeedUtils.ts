@@ -6,7 +6,7 @@
 import * as semver from 'semver';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext, TemplateSource } from '../extensionVariables';
-import { FuncVersion, getMajorVersion, isPreviewVersion } from '../FuncVersion';
+import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
 
@@ -58,10 +58,13 @@ export namespace cliFeedUtils {
         const majorVersion: string = getMajorVersion(version);
         let tag: string = 'v' + majorVersion;
         const templateProvider = ext.templateProvider.get(context);
-        if (isPreviewVersion(version)) {
-            tag = tag + '-preview';
-        } else if (templateProvider.templateSource === TemplateSource.Staging) {
-            tag = tag + '-prerelease';
+        if (templateProvider.templateSource === TemplateSource.Staging) {
+            const newTag = tag + '-prerelease';
+            if (cliFeed.tags[newTag]) {
+                tag = newTag;
+            } else {
+                ext.outputChannel.appendLog(localize('versionWithoutStaging', 'WARNING: Azure Functions v{0} does not support the staging template source. Using default template source instead.', majorVersion))
+            }
         }
 
         const releaseData = cliFeed.tags[tag];

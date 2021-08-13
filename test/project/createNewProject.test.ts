@@ -6,7 +6,7 @@
 import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
-import { allTemplateSources, runForTemplateSource } from '../global.test';
+import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
 import { getCSharpValidateOptions, getCustomValidateOptions, getDotnetScriptValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions } from './validateProject';
 
@@ -17,13 +17,16 @@ interface CreateProjectTestCase extends ICreateProjectTestOptions {
 const testCases: CreateProjectTestCase[] = [
     { ...getCSharpValidateOptions('netcoreapp2.1', FuncVersion.v2) },
     { ...getCSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], description: 'netcoreapp3.1' },
-    { ...getCSharpValidateOptions('net5.0', FuncVersion.v3), inputs: [/5/], description: 'net5.0 isolated' },
+    { ...getCSharpValidateOptions('net5.0', FuncVersion.v3), inputs: [/5/], description: 'net5.0 isolated v3' },
+    { ...getCSharpValidateOptions('net5.0', FuncVersion.v4), inputs: [/5/], description: 'net5.0 isolated v4' },
+    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6/], description: 'net6.0' },
+    { ...getCSharpValidateOptions('net6.0', FuncVersion.v4), inputs: [/6.*isolated/i], description: 'net6.0 isolated' },
     { ...getFSharpValidateOptions('netcoreapp2.1', FuncVersion.v2), isHiddenLanguage: true },
     { ...getFSharpValidateOptions('netcoreapp3.1', FuncVersion.v3), inputs: [/3/], isHiddenLanguage: true },
 ];
 
 // Test cases that are the same for both v2 and v3
-for (const version of [FuncVersion.v2, FuncVersion.v3]) {
+for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     testCases.push(
         { ...getJavaScriptValidateOptions(true /* hasPackageJson */, version) },
         { ...getTypeScriptValidateOptions(version) },
@@ -61,6 +64,7 @@ for (const testCase of testCases) {
 
         parallelTests.push({
             title,
+            skip: shouldSkipVersion(testCase.version),
             // lots of errors like "The process cannot access the file because it is being used by another process" 😢
             suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {

@@ -6,7 +6,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
-import { allTemplateSources } from '../global.test';
+import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
 import { CreateFunctionTestCase, FunctionTesterBase } from './FunctionTesterBase';
@@ -55,7 +55,7 @@ class PowerShellFunctionTester extends FunctionTesterBase {
     }
 }
 
-for (const version of [FuncVersion.v2, FuncVersion.v3]) {
+for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     for (const source of allTemplateSources) {
         addSuite(new JavaScriptFunctionTester(version, source));
         addSuite(new TypeScriptFunctionTester(version, source));
@@ -162,6 +162,7 @@ function addSuite(tester: FunctionTesterBase): void {
     ];
 
     tester.addParallelSuite(testCases, {
+        isLongRunning: isLongRunningVersion(tester.version),
         addTests: () => {
             // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-local-function
             test('createFunction API (deprecated)', async () => {

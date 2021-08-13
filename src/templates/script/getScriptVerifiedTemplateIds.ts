@@ -5,44 +5,38 @@
 
 import { FuncVersion } from '../../FuncVersion';
 
-export function getScriptVerifiedTemplateIds(version: string): string[] {
+export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)[] {
     let verifiedTemplateIds: string[] = [
-        'BlobTrigger-JavaScript',
-        'HttpTrigger-JavaScript',
-        'QueueTrigger-JavaScript',
-        'TimerTrigger-JavaScript'
+        'BlobTrigger',
+        'HttpTrigger',
+        'QueueTrigger',
+        'TimerTrigger'
     ];
 
     if (version === FuncVersion.v1) {
         verifiedTemplateIds = verifiedTemplateIds.concat([
-            'GenericWebHook-JavaScript',
-            'GitHubWebHook-JavaScript',
-            'HttpTriggerWithParameters-JavaScript',
-            'ManualTrigger-JavaScript'
+            'GenericWebHook',
+            'GitHubWebHook',
+            'HttpTriggerWithParameters',
+            'ManualTrigger'
         ]);
+        return verifiedTemplateIds.map(t => `${t}-JavaScript`);
     } else {
         // For JavaScript, only include triggers that require extensions in v2. v1 doesn't have the same support for 'func extensions install'
         verifiedTemplateIds = verifiedTemplateIds.concat([
-            'CosmosDBTrigger-JavaScript',
-            'DurableFunctionsActivity-JavaScript',
-            'DurableFunctionsHttpStart-JavaScript',
-            'DurableFunctionsOrchestrator-JavaScript',
-            'EventGridTrigger-JavaScript',
-            'EventHubTrigger-JavaScript',
-            'ServiceBusQueueTrigger-JavaScript',
-            'ServiceBusTopicTrigger-JavaScript',
-            'SendGrid-JavaScript',
-            'IoTHubTrigger-JavaScript',
+            'CosmosDBTrigger',
+            'DurableFunctionsActivity',
+            'DurableFunctionsHttpStart',
+            'DurableFunctionsOrchestrator',
+            'EventGridTrigger',
+            'EventHubTrigger',
+            'ServiceBusQueueTrigger',
+            'ServiceBusTopicTrigger',
+            'SendGrid',
+            'IoTHubTrigger',
         ]);
 
-        const javaScriptTemplateIds: string[] = verifiedTemplateIds;
-
         // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'Python')));
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'TypeScript')));
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'PowerShell')));
-        verifiedTemplateIds = verifiedTemplateIds.concat(javaScriptTemplateIds.map(t => t.replace('JavaScript', 'Custom')));
+        return verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript|TypeScript|Python|PowerShell|Custom)$`, 'i'));
     }
-
-    return verifiedTemplateIds;
 }

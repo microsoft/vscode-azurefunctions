@@ -74,8 +74,8 @@ export class CentralTemplateProvider implements Disposable {
                 return templates.functionTemplates.filter((t: IFunctionTemplate) => t.categories.find((c: TemplateCategory) => c === TemplateCategory.Core) !== undefined);
             case TemplateFilter.Verified:
             default:
-                const verifiedTemplateIds: string[] = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
-                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find((vt: string) => vt === t.id));
+                const verifiedTemplateIds = getScriptVerifiedTemplateIds(version).concat(getDotnetVerifiedTemplateIds(version)).concat(getJavaVerifiedTemplateIds());
+                return templates.functionTemplates.filter((t: IFunctionTemplate) => verifiedTemplateIds.find(vt => typeof vt === 'string' ? vt === t.id : vt.test(t.id)));
         }
     }
 

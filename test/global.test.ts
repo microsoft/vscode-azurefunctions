@@ -16,9 +16,9 @@ import { CentralTemplateProvider, deploySubpathSetting, envUtils, ext, FuncVersi
  */
 export const testFolderPath: string = path.join(os.tmpdir(), `azFuncTest${getRandomHexString()}`);
 
-export let longRunningTestsEnabled: boolean;
-export let updateBackupTemplates: boolean;
-export let skipStagingTemplateSource: boolean;
+export const longRunningTestsEnabled: boolean = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
+export const updateBackupTemplates: boolean = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
+export const skipStagingTemplateSource: boolean = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
 const templateProviderMap = new Map<TemplateSource, CentralTemplateProvider>();
 
@@ -55,14 +55,10 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
     ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
-    skipStagingTemplateSource = envUtils.isEnvironmentVariableSet(process.env.SKIP_STAGING_TEMPLATE_SOURCE);
 
-    updateBackupTemplates = envUtils.isEnvironmentVariableSet(process.env.AZFUNC_UPDATE_BACKUP_TEMPLATES);
     if (!updateBackupTemplates) {
         await preLoadTemplates();
     }
-
-    longRunningTestsEnabled = envUtils.isEnvironmentVariableSet(process.env.ENABLE_LONG_RUNNING_TESTS);
 
     // set AzureWebJobsStorage so that it doesn't prompt during tests
     process.env.AzureWebJobsStorage = 'ignore';
@@ -110,6 +106,17 @@ async function preLoadTemplates(): Promise<void> {
         });
     }
     await Promise.all(tasks);
+}
+
+/**
+ * Not worth testing older versions for every build
+ */
+export function isLongRunningVersion(version: FuncVersion): boolean {
+    return version === FuncVersion.v1 || version === FuncVersion.v2;
+}
+
+export function shouldSkipVersion(version: FuncVersion): boolean {
+    return isLongRunningVersion(version) && !longRunningTestsEnabled;
 }
 
 export const allTemplateSources: TemplateSource[] = Object.values(TemplateSource);
