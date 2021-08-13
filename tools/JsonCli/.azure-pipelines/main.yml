@@ -1,7 +1,7 @@
 jobs:
 - job: Windows
   pool:
-    name: VSEng-MicroBuildVS2019
+    name: VSEngSS-MicroBuild2019
   variables:
     SrcPath: 'tools/JsonCli/src'
     ProjectPath: '$(SrcPath)/Microsoft.TemplateEngine.JsonCli.csproj'
