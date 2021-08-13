@@ -7,7 +7,7 @@
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
     "engines": {
-        "vscode": "^1.53.0"
+        "vscode": "^1.57.0"
     },
     "repository": {
         "type": "git",
@@ -1079,11 +1079,11 @@
         "@types/gulp": "^4.0.6",
         "@types/gulp-filter": "^3.0.33",
         "@types/mocha": "^8.2.2",
-        "@types/node": "^12.0.0",
+        "@types/node": "^14.0.0",
         "@types/ps-tree": "^1.1.0",
         "@types/request": "2.0.7",
         "@types/semver": "^5.5.0",
-        "@types/vscode": "1.53.0",
+        "@types/vscode": "1.57.0",
         "@types/websocket": "^1.0.0",
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "4.3.0",
@@ -1105,7 +1105,7 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.87.0",
-        "vscode-azureextensiondev": "^0.9.7",
+        "vscode-azureextensiondev": "^0.10.0",
         "vscode-test": "^1.5.2",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
@@ -1128,8 +1128,8 @@
         "portfinder": "^1.0.23",
         "ps-tree": "^1.1.1",
         "semver": "^5.7.1",
-        "vscode-azureappservice": "^0.85.2",
-        "vscode-azureextensionui": "^0.47.2",
+        "vscode-azureappservice": "^0.86.0",
+        "vscode-azureextensionui": "^0.48.0",
         "vscode-azurekudu": "^0.2.0",
         "vscode-nls": "^4.1.1",
         "websocket": "^1.0.29",

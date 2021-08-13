@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Changed
+- Minimum version of VS Code is now 1.57.0
+
 ## 1.4.1 - 2021-07-14
 ### Fixed
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.4.1%22+is%3Aclosed)
