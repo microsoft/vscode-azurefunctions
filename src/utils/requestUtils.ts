@@ -13,14 +13,18 @@ import { getWorkspaceSetting } from "../vsCodeConfig/settings";
 import { nonNullProp, nonNullValue } from "./nonNull";
 
 export namespace requestUtils {
-    const timeoutKey: string = 'requestTimeout';
+    export const timeoutKey: string = 'requestTimeout';
+
+    export function getRequestTimeoutMS(): number {
+        // Shouldn't be null because the setting has a default value
+        return nonNullValue(getWorkspaceSetting<number>(timeoutKey), timeoutKey) * 1000;
+    }
 
     /**
      * Send a request using the extension's user-controlled timeout setting
      */
     export async function sendRequestWithExtTimeout(context: IActionContext, options: RequestPrepareOptions): Promise<HttpOperationResponse> {
-        // Shouldn't be null because the setting has a default value
-        const timeout: number = nonNullValue(getWorkspaceSetting<number>(timeoutKey), timeoutKey) * 1000;
+        const timeout = getRequestTimeoutMS();
 
         try {
             return await sendRequestWithTimeout(context, options, timeout, undefined);

@@ -9,7 +9,9 @@ import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../c
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
+import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
 import { getDotnetVerifiedTemplateIds } from './dotnet/getDotnetVerifiedTemplateIds';
@@ -205,7 +207,13 @@ export class CentralTemplateProvider implements Disposable {
 
             // 2. Refresh templates if the cache doesn't match latestTemplateVersion
             if (!result) {
-                result = await this.getLatestTemplates(context, provider, latestTemplateVersion);
+                const timeout = requestUtils.getRequestTimeoutMS();
+                result = await Promise.race([
+                    this.getLatestTemplates(context, provider, latestTemplateVersion),
+                    delay(timeout).then(() => {
+                        throw new Error(localize('templatesTimeout', 'Retrieving templates timed out. Modify setting "{0}.{1}" if you want to extend the timeout.', ext.prefix, requestUtils.timeoutKey));
+                    })
+                ]);
             }
         } catch (error) {
             const errorMessage: string = parseError(error).message;
