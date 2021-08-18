@@ -31,18 +31,25 @@ jobs:
     inputs:
       version: 5.0.x
 
-  - task: NuGetCommand@2
-    displayName: 'restore'
+  - task: UseDotNet@2
+    displayName: 'Use .NET sdk 6.0.x'
     inputs:
-      restoreSolution: '$(ProjectPath)'
+      version: 6.0.x
+      includePreviewVersions: true
+
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet restore'
+    inputs:
+      command: restore
+      projects: '$(ProjectPath)'
       feedsToUse: config
       nugetConfigPath: '$(NugetConfigPath)'
 
-  - task: MSBuild@1
-    displayName: 'build'
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet build'
     inputs:
-      solution: '$(ProjectPath)'
-      configuration: '$(BuildConfiguration)'
+      projects: '$(ProjectPath)'
+      arguments: '--configuration $(BuildConfiguration)'
 
   - task: DotNetCoreCLI@2
     displayName: 'dotnet publish 2.0'
@@ -74,6 +81,16 @@ jobs:
       zipAfterPublish: false
       modifyOutputPath: false
 
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet publish 6.0'
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: '$(ProjectPath)'
+      arguments: '--configuration $(BuildConfiguration) --framework net6.0 --no-build'
+      zipAfterPublish: false
+      modifyOutputPath: false
+
   - task: DeleteFiles@1
     displayName: 'Delete unneeded publish files'
     inputs:
@@ -83,23 +100,26 @@ jobs:
         bin/**/publish/**/*.pdb
 
   # Run before we build the signing project, because we don't want to analyze that
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-roslynanalyzers.RoslynAnalyzers@2
+  - task: securedevelopmentteam.vss-secure-development-tools.build-task-roslynanalyzers.RoslynAnalyzers@3
     displayName: 'Run Roslyn Analyzers'
     continueOnError: true
     condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
-
-  - task: NuGetCommand@2
-    displayName: 'restore signing project'
     inputs:
-      restoreSolution: '$(SigningProjectPath)'
+      msBuildCommandline: '$(Agent.ToolsDirectory)\dotnet\dotnet.exe build "$(Build.SourcesDirectory)\$(ProjectPath)" --configuration $(BuildConfiguration)'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet restore signing'
+    inputs:
+      command: restore
+      projects: '$(SigningProjectPath)'
       feedsToUse: config
       nugetConfigPath: '$(NugetConfigPath)'
 
-  - task: MSBuild@1
-    displayName: 'build signing project'
+  - task: DotNetCoreCLI@2
+    displayName: 'dotnet build signing'
     inputs:
-      solution: '$(SigningProjectPath)'
-      configuration: '$(BuildConfiguration)'
+      projects: '$(SigningProjectPath)'
+      arguments: '--configuration $(BuildConfiguration)'
 
   - task: CopyFiles@2
     displayName: 'Copy Files to Staging'
