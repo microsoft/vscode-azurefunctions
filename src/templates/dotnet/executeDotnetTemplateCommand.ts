@@ -59,8 +59,8 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             // ignore
         }
 
-        // Use 3 before 5 because it's LTS
-        const majorVersions: number[] = [3, 5, 2];
+        // Prioritize "LTS", then "Current", then "Preview"
+        const majorVersions: number[] = [3, 5, 6, 2];
 
         let pickedVersion: number | undefined;
 
