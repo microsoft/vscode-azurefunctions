@@ -54,7 +54,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     });
 
     // Use prerelease func cli installed from gulp task (unless otherwise specified in env)
-    ext.funcCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
+    ext.defaultFuncCliPath = process.env.FUNC_PATH || path.join(os.homedir(), 'tools', 'func', 'func');
 
     if (!updateBackupTemplates) {
         await preLoadTemplates();

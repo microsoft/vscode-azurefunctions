@@ -34,9 +34,10 @@ export async function deploySlot(context: IActionContext, target?: vscode.Uri | 
 }
 
 async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItemBase | undefined, arg2: string | {} | undefined, expectedContextValue: string): Promise<void> {
-    addLocalFuncTelemetry(actionContext);
-
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
+
+    addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
+
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
     const node: SlotTreeItemBase = await getDeployNode(context, ext.tree, arg1, arg2, expectedContextValue);
 

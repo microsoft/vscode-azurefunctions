@@ -11,10 +11,13 @@ import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { nonNullValue } from '../utils/nonNull';
 import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
+import { validateNoFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
 
 export async function uninstallFuncCoreTools(context: IActionContext, packageManagers?: PackageManager[]): Promise<void> {
+    validateNoFuncCliSetting();
+
     ext.outputChannel.show();
     packageManagers = packageManagers || await getFuncPackageManagers(true /* isFuncInstalled */);
     let packageManager: PackageManager;
@@ -33,7 +36,7 @@ export async function uninstallFuncCoreTools(context: IActionContext, packageMan
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'npm', 'uninstall', '-g', funcPackageName);
             break;
         case PackageManager.brew:
-            const version: FuncVersion = nonNullValue(await tryGetLocalFuncVersion(), 'localFuncVersion');
+            const version: FuncVersion = nonNullValue(await tryGetLocalFuncVersion(context, undefined), 'localFuncVersion');
             const brewPackageName: string = nonNullValue(await tryGetInstalledBrewPackageName(version), 'brewPackageName');
             await cpUtils.executeCommand(ext.outputChannel, undefined, 'brew', 'uninstall', brewPackageName);
             break;

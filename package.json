@@ -1052,6 +1052,11 @@
                             "%azureFunctions.templateSource.staging%",
                             "%azureFunctions.templateSource.backup%"
                         ]
+                    },
+                    "azureFunctions.funcCliPath": {
+                        "scope": "resource",
+                        "type": "string",
+                        "description": "%azureFunctions.funcCliPath%"
                     }
                 }
             }

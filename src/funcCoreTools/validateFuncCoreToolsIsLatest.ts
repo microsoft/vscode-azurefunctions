@@ -15,6 +15,7 @@ import { openUrl } from '../utils/openUrl';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';
 import { getBrewPackageName } from './getBrewPackageName';
+import { validateNoFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 import { getNpmDistTag } from "./getNpmDistTag";
@@ -33,6 +34,8 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
         const showCoreToolsWarning: boolean = !!getWorkspaceSetting<boolean>(showCoreToolsWarningKey);
 
         if (showCoreToolsWarning || showMultiCoreToolsWarning) {
+            validateNoFuncCliSetting();
+
             const packageManagers: PackageManager[] = await getFuncPackageManagers(true /* isFuncInstalled */);
             let packageManager: PackageManager;
             if (packageManagers.length === 0) {
@@ -57,7 +60,7 @@ export async function validateFuncCoreToolsIsLatest(): Promise<void> {
             }
 
             if (showCoreToolsWarning) {
-                const localVersion: string | null = await getLocalFuncCoreToolsVersion();
+                const localVersion: string | null = await getLocalFuncCoreToolsVersion(context, undefined);
                 if (!localVersion) {
                     return;
                 }

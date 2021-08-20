@@ -13,7 +13,7 @@ const java8: string = '8';
 
 export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
     public static async setDefaultVersion(context: IJavaProjectWizardContext): Promise<void> {
-        if (!await hasMinFuncCliVersion('3.0.2630', context.version)) {
+        if (!await hasMinFuncCliVersion(context, '3.0.2630', context.version)) {
             context.javaVersion = java8;
         }
     }

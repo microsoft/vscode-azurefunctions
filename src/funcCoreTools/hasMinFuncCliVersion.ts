@@ -5,10 +5,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
+import { IActionContext } from 'vscode-azureextensionui';
 import { FuncVersion, getMajorVersion } from "../FuncVersion";
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 
-export async function hasMinFuncCliVersion(minVersion: string, projectVersion: FuncVersion): Promise<boolean> {
+export async function hasMinFuncCliVersion(context: IActionContext, minVersion: string, projectVersion: FuncVersion): Promise<boolean> {
     const majorVersion: string = getMajorVersion(projectVersion);
     if (semver.gtr(minVersion, majorVersion)) {
         return false;
@@ -16,7 +17,7 @@ export async function hasMinFuncCliVersion(minVersion: string, projectVersion: F
         return true;
     } else {
         try {
-            const localCliVersion: string | null = await getLocalFuncCoreToolsVersion();
+            const localCliVersion: string | null = await getLocalFuncCoreToolsVersion(context, undefined);
             if (localCliVersion) {
                 return semver.gte(localCliVersion, minVersion);
             }

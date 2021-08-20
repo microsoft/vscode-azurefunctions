@@ -49,7 +49,7 @@ export namespace ext {
     export let azureAccountTreeItem: AzureAccountTreeItemWithProjects;
     export let outputChannel: IAzExtOutputChannel;
     // eslint-disable-next-line prefer-const
-    export let funcCliPath: string = func;
+    export let defaultFuncCliPath: string = func;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureFunctions';
     export let experimentationService: IExperimentationServiceAdapter;

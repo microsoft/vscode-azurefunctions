@@ -40,7 +40,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
         if (await confirmOverwriteFile(context, requirementsPath)) {
             let isOldFuncCli: boolean;
             try {
-                const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
+                const currentVersion: string | null = await getLocalFuncCoreToolsVersion(context, context.workspacePath);
                 isOldFuncCli = !!currentVersion && semver.lte(currentVersion, oldFuncVersion);
             } catch {
                 isOldFuncCli = false;

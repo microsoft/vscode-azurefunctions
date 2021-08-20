@@ -34,6 +34,7 @@
     "azureFunctions.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureFunctions.enableRemoteDebugging": "Enable remote debugging for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported. (experimental)",
     "azureFunctions.executeFunction": "Execute Function Now...",
+    "azureFunctions.funcCliPath": "The path to the 'func' executable to use for debug and deploy tasks. For example, set it to 'node_modules/.bin/func' if using the func cli installed as a local npm package.",
     "azureFunctions.initProjectForVSCode": "Initialize Project for Use with VS Code...",
     "azureFunctions.installOrUpdateFuncCoreTools": "Install or Update Azure Functions Core Tools",
     "azureFunctions.loadMore": "Load More",

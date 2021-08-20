@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from 'vscode-azureextensionui';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { getLocalFuncCoreToolsVersion } from './getLocalFuncCoreToolsVersion';
 
-export async function tryGetLocalFuncVersion(): Promise<FuncVersion | undefined> {
+export async function tryGetLocalFuncVersion(context: IActionContext, workspacePath: string | undefined): Promise<FuncVersion | undefined> {
     try {
-        const version: string | null = await getLocalFuncCoreToolsVersion();
+        const version: string | null = await getLocalFuncCoreToolsVersion(context, workspacePath);
         if (version) {
             return tryParseFuncVersion(version);
         }
