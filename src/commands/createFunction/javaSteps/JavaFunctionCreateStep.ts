@@ -46,7 +46,7 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
 }
 
 function substituteParametersInTemplate(template: IJavaFunctionTemplate, args: Map<string, string>): string {
-    var javaTemplate = template.templateFiles["function.java"];
+    let javaTemplate = template.templateFiles["function.java"];
     args.forEach((value: string, key: string) => {
         javaTemplate = javaTemplate.replace(new RegExp(`\\$${key}\\$`, 'g'), value);
     });
