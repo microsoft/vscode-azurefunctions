@@ -34,6 +34,6 @@
     "settings": {
         "debug.internalConsoleOptions": "neverOpen",
         "azureFunctions.showHiddenStacks": true,
-        "azureFunctions.requestTimeout": 45
+        "azureFunctions.requestTimeout": 90
     }
 }
