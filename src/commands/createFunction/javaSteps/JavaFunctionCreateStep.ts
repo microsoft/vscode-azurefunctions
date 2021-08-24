@@ -21,7 +21,7 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
             const value = getBindingSetting(context, setting);
             // NOTE: Explicitly checking against undefined. Empty string is a valid value
             if (value !== undefined) {
-                const fixedValue: string = setting.name === "authLevel" ? String(value).toUpperCase() : String(value);
+                const fixedValue: string = setting.valueType === 'enum' ? String(value).toUpperCase() : String(value);
                 args.set(setting.name, fixedValue);
             }
         }
