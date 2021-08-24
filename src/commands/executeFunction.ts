@@ -10,6 +10,7 @@ import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
+import { FuncHostRequest } from '../tree/IProjectTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
@@ -47,15 +48,15 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         }
     }
 
-    let url: string;
+    let triggerRequest: FuncHostRequest;
     let body: {};
     if (node.isHttpTrigger) {
-        url = nonNullValue(await node.triggerUrlTask, 'triggerUrl');
+        triggerRequest = nonNullValue(await node.getTriggerRequest(context), 'triggerRequest');
         body = functionInput;
     } else {
-        const hostUrl = await node.parent.parent.getHostUrl(context);
+        triggerRequest = await node.parent.parent.getHostRequest(context);
         // https://docs.microsoft.com/azure/azure-functions/functions-manually-run-non-http
-        url = `${hostUrl}/admin/functions/${node.name}`;
+        triggerRequest.url = `${triggerRequest.url}/admin/functions/${node.name}`;
         body = { input: functionInput };
     }
 
@@ -66,7 +67,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             headers['x-functions-key'] = (await client.listHostKeys()).masterKey;
         }
         try {
-            responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', url, headers, body })).bodyAsText;
+            responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body })).bodyAsText;
         } catch (error) {
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;

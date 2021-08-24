@@ -11,6 +11,7 @@ import { localize } from '../../localize';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { nonNullValue } from '../../utils/nonNull';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
@@ -70,8 +71,8 @@ async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBa
         hasHttpTriggers = true;
         ext.outputChannel.appendLog(localize('anonymousFunctionUrls', 'HTTP Trigger Urls:'), logOptions);
         for (const func of anonFunctions) {
-            const triggerUrl = await func.triggerUrlTask;
-            ext.outputChannel.appendLine(`  ${func.label}: ${triggerUrl}`);
+            const triggerRequest = nonNullValue(await func.getTriggerRequest(context), 'triggerRequest')
+            ext.outputChannel.appendLine(`  ${func.label}: ${triggerRequest.url}`);
         }
     }
 

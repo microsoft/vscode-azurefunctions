@@ -12,7 +12,7 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersio
 import { envUtils } from '../utils/envUtils';
 import { nonNullValue } from '../utils/nonNull';
 import { treeUtils } from '../utils/treeUtils';
-import { ApplicationSettings, IProjectTreeItem } from './IProjectTreeItem';
+import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
 import { ProxiesTreeItem } from './ProxiesTreeItem';
 import { ProxyTreeItem } from './ProxyTreeItem';
@@ -63,8 +63,8 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
         return this.site.id;
     }
 
-    public async getHostUrl(): Promise<string> {
-        return this.site.defaultHostUrl;
+    public async getHostRequest(): Promise<FuncHostRequest> {
+        return { url: this.site.defaultHostUrl };
     }
 
     public get description(): string | undefined {

@@ -6,7 +6,7 @@
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createGenericClient, IActionContext, parseError, sendRequestWithTimeout } from "vscode-azureextensionui";
+import { AzExtRequestPrepareOptions, createGenericClient, IActionContext, parseError, sendRequestWithTimeout } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";
@@ -23,7 +23,7 @@ export namespace requestUtils {
     /**
      * Send a request using the extension's user-controlled timeout setting
      */
-    export async function sendRequestWithExtTimeout(context: IActionContext, options: RequestPrepareOptions): Promise<HttpOperationResponse> {
+    export async function sendRequestWithExtTimeout(context: IActionContext, options: AzExtRequestPrepareOptions): Promise<HttpOperationResponse> {
         const timeout = getRequestTimeoutMS();
 
         try {
