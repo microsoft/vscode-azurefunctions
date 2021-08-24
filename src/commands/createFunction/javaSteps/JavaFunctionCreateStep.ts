@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as fse from 'fs-extra';
-import { IActionContext } from 'vscode-azureextensionui';
-import { mavenUtils } from "../../../utils/mavenUtils";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaFunctionFilePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
@@ -12,14 +10,6 @@ import { getBindingSetting, IFunctionWizardContext } from '../IFunctionWizardCon
 import { IJavaFunctionTemplate, IJavaFunctionWizardContext } from './IJavaFunctionWizardContext';
 
 export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWizardContext & IJavaProjectWizardContext> {
-    private constructor() {
-        super();
-    }
-
-    public static async createStep(context: IActionContext): Promise<JavaFunctionCreateStep> {
-        await mavenUtils.validateMavenInstalled(context);
-        return new JavaFunctionCreateStep();
-    }
 
     public async executeCore(context: IJavaFunctionWizardContext & IJavaProjectWizardContext): Promise<string> {
         const template: IJavaFunctionTemplate = nonNullProp(context, 'functionTemplate');
