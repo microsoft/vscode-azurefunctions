@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HttpOperationResponse, RequestPrepareOptions } from '@azure/ms-rest-js';
+import { HttpOperationResponse } from '@azure/ms-rest-js';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vscode-azureextensionui';
+import { AzExtRequestPrepareOptions, IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vscode-azureextensionui';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';
@@ -84,7 +84,6 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
         const intervalMs: number = 500;
         const funcPort: string = await getFuncPortFromTaskOrProject(context, funcTask, workspaceFolder);
-        const statusRequest: RequestPrepareOptions = { url: `http://localhost:${funcPort}/admin/host/status`, method: 'GET' };
         let statusRequestTimeout: number = intervalMs;
         const maxTime: number = Date.now() + timeoutInSeconds * 1000;
         while (Date.now() < maxTime) {
@@ -94,21 +93,28 @@ async function startFuncTask(context: IActionContext, workspaceFolder: vscode.Wo
 
             const taskInfo: IRunningFuncTask | undefined = runningFuncTaskMap.get(workspaceFolder);
             if (taskInfo) {
-                try {
-                    // wait for status url to indicate functions host is running
-                    const response: HttpOperationResponse = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                    if (response.parsedBody.state.toLowerCase() === 'running') {
-                        funcTaskReadyEmitter.fire(workspaceFolder);
-                        return taskInfo;
+                for (const scheme of ['http', 'https']) {
+                    const statusRequest: AzExtRequestPrepareOptions = { url: `${scheme}://localhost:${funcPort}/admin/host/status`, method: 'GET' };
+                    if (scheme === 'https') {
+                        statusRequest.rejectUnauthorized = false;
                     }
-                } catch (error) {
-                    if (requestUtils.isTimeoutError(error)) {
-                        // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
-                        statusRequestTimeout *= 2;
-                        context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
-                    } else {
-                        // ignore
+
+                    try {
+                        // wait for status url to indicate functions host is running
+                        const response: HttpOperationResponse = await sendRequestWithTimeout(context, statusRequest, statusRequestTimeout, undefined);
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                        if (response.parsedBody.state.toLowerCase() === 'running') {
+                            funcTaskReadyEmitter.fire(workspaceFolder);
+                            return taskInfo;
+                        }
+                    } catch (error) {
+                        if (requestUtils.isTimeoutError(error)) {
+                            // Timeout likely means localhost isn't ready yet, but we'll increase the timeout each time it fails just in case it's a slow computer that can't handle a request that fast
+                            statusRequestTimeout *= 2;
+                            context.telemetry.measurements.maxStatusTimeout = statusRequestTimeout;
+                        } else {
+                            // ignore
+                        }
                     }
                 }
             }

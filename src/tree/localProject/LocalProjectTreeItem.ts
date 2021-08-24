@@ -13,7 +13,8 @@ import { IParsedHostJson, parseHostJson } from '../../funcConfig/host';
 import { getLocalSettingsJson, ILocalSettingsJson, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
 import { getFuncPortFromTaskOrProject, isFuncHostTask, onFuncTaskStarted, runningFuncPortMap } from '../../funcCoreTools/funcHostTask';
 import { FuncVersion } from '../../FuncVersion';
-import { ApplicationSettings, IProjectTreeItem } from '../IProjectTreeItem';
+import { requestUtils } from '../../utils/requestUtils';
+import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from '../IProjectTreeItem';
 import { isLocalProjectCV, matchesAnyPart, ProjectResource, ProjectSource } from '../projectContextValues';
 import { createRefreshFileWatcher } from './createRefreshFileWatcher';
 import { LocalFunctionsTreeItem } from './LocalFunctionsTreeItem';
@@ -62,14 +63,27 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this._localFunctionsTreeItem = new LocalFunctionsTreeItem(this);
     }
 
-    public async getHostUrl(context: IActionContext): Promise<string> {
+    public async getHostRequest(context: IActionContext): Promise<FuncHostRequest> {
         let port = runningFuncPortMap.get(this.workspaceFolder);
         if (!port) {
             const funcTask: Task | undefined = (await tasks.fetchTasks()).find(t => t.scope === this.workspaceFolder && isFuncHostTask(t));
             port = await getFuncPortFromTaskOrProject(context, funcTask, this.effectiveProjectPath);
         }
 
-        return `http://localhost:${port}`;
+        const url = `http://localhost:${port}`;
+        try {
+            await requestUtils.sendRequestWithExtTimeout(context, { url: url, method: 'GET' });
+        } catch {
+            try {
+                const httpsUrl = url.replace('http', 'https');
+                await requestUtils.sendRequestWithExtTimeout(context, { url: httpsUrl, method: 'GET', rejectUnauthorized: false });
+                return { url: httpsUrl, rejectUnauthorized: false };
+            } catch {
+                // ignore
+            }
+        }
+
+        return { url: url };
     }
 
     public dispose(): void {

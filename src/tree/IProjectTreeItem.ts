@@ -10,9 +10,11 @@ import { ProjectSource } from './projectContextValues';
 
 export type ApplicationSettings = { [propertyName: string]: string };
 
+export type FuncHostRequest = { url: string, rejectUnauthorized?: boolean };
+
 export interface IProjectTreeItem {
     source: ProjectSource;
-    getHostUrl(context: IActionContext): Promise<string>;
+    getHostRequest(context: IActionContext): Promise<FuncHostRequest>;
     getHostJson(context: IActionContext): Promise<IParsedHostJson>;
     getVersion(context: IActionContext): Promise<FuncVersion>;
     getApplicationSettings(context: IActionContext): Promise<ApplicationSettings>;

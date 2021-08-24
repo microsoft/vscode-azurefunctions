@@ -12,13 +12,12 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { treeUtils } from '../utils/treeUtils';
 import { FunctionsTreeItemBase } from './FunctionsTreeItemBase';
-import { ApplicationSettings } from './IProjectTreeItem';
+import { ApplicationSettings, FuncHostRequest } from './IProjectTreeItem';
 import { getProjectContextValue, ProjectResource } from './projectContextValues';
 
 export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public readonly parent: FunctionsTreeItemBase;
     public readonly name: string;
-    public triggerUrlTask: Promise<string | undefined>;
 
     protected readonly _config: ParsedFunctionJson;
     private _disabled: boolean;
@@ -102,32 +101,33 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     public abstract getKey(context: IActionContext): Promise<string | undefined>;
 
     public async initAsync(context: IActionContext): Promise<void> {
-        if (this.isHttpTrigger) {
-            this.triggerUrlTask = this.getTriggerUrl(context);
-        }
-
         await this.refreshDisabledState(context);
     }
 
-    private async getTriggerUrl(context: IActionContext): Promise<string | undefined> {
-        const hostUrl = new url.URL(await this.parent.parent.getHostUrl(context));
-        let triggerUrl: url.URL;
-        if (this._func?.invokeUrlTemplate) {
-            triggerUrl = new url.URL(this._func?.invokeUrlTemplate);
-            triggerUrl.protocol = hostUrl.protocol; // invokeUrlTemplate seems to use the wrong protocol sometimes. Make sure it matches the hostUrl
+    public async getTriggerRequest(context: IActionContext): Promise<FuncHostRequest | undefined> {
+        if (!this.isHttpTrigger) {
+            return undefined;
         } else {
-            triggerUrl = hostUrl;
-            const route: string = (this._config.triggerBinding && this._config.triggerBinding.route) || this.name;
-            const hostJson: IParsedHostJson = await this.parent.parent.getHostJson(context);
-            triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
-        }
+            const funcHostReq = await this.parent.parent.getHostRequest(context);
+            const hostUrl = new url.URL(funcHostReq.url);
+            let triggerUrl: url.URL;
+            if (this._func?.invokeUrlTemplate) {
+                triggerUrl = new url.URL(this._func?.invokeUrlTemplate);
+                triggerUrl.protocol = hostUrl.protocol; // invokeUrlTemplate seems to use the wrong protocol sometimes. Make sure it matches the hostUrl
+            } else {
+                triggerUrl = hostUrl;
+                const route: string = (this._config.triggerBinding && this._config.triggerBinding.route) || this.name;
+                const hostJson: IParsedHostJson = await this.parent.parent.getHostJson(context);
+                triggerUrl.pathname = `${hostJson.routePrefix}/${route}`;
+            }
 
-        const key: string | undefined = await this.getKey(context);
-        if (key) {
-            triggerUrl.searchParams.set('code', key);
-        }
+            const key: string | undefined = await this.getKey(context);
+            if (key) {
+                triggerUrl.searchParams.set('code', key);
+            }
 
-        return triggerUrl.toString();
+            return { url: triggerUrl.toString(), rejectUnauthorized: funcHostReq.rejectUnauthorized };
+        }
     }
 
     /**
