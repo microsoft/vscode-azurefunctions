@@ -43,7 +43,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
     }
 
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
-    const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion() || latestGAVersion;
+    const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
     const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, version, workspaceFolder, projectTemplateKey });

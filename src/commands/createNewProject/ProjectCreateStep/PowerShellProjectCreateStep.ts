@@ -67,7 +67,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
     private readonly azModuleGalleryUrl: string = `https://aka.ms/PwshPackageInfo?id='${this.azModuleName}'`;
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        if (await hasMinFuncCliVersion('3.0.2534', context.version)) {
+        if (await hasMinFuncCliVersion(context, '3.0.2534', context.version)) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             this.localSettingsJson.Values![workerRuntimeVersionKey] = '~7';
         }

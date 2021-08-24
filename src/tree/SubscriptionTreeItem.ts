@@ -170,7 +170,7 @@ async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersi
 
     if (version === undefined) {
         // Try to get the version that matches their local func cli
-        version = await tryGetLocalFuncVersion();
+        version = await tryGetLocalFuncVersion(context, undefined);
         context.telemetry.properties.runtimeSource = 'LocalFuncCli';
     }
 

@@ -41,8 +41,6 @@ export async function createFunctionFromCommand(
 }
 
 export async function createFunctionInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
-    addLocalFuncTelemetry(context);
-
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
     if (workspacePath === undefined) {
@@ -51,6 +49,8 @@ export async function createFunctionInternal(context: IActionContext, options: a
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
+
+    addLocalFuncTelemetry(context, workspacePath);
 
     const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspaceFolder || workspacePath, options);
     if (!projectPath) {

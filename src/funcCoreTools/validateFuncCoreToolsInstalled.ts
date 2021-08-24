@@ -6,27 +6,34 @@
 import { MessageItem } from 'vscode';
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { funcVersionSetting, PackageManager } from '../constants';
-import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
-export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, fsPath: string): Promise<boolean> {
+export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
     const install: MessageItem = { title: localize('install', 'Install') };
 
+    if (hasFuncCliSetting()) {
+        // Defer to the func cli path setting instead of checking here
+        // For example, if the path is set to something like "node_modules/.bin/func", that may not exist until _after_ we run this check when the "npm install" task is run
+        context.telemetry.properties.funcCliSource = 'setting';
+        return true;
+    }
+
     await callWithTelemetryAndErrorHandling('azureFunctions.validateFuncCoreToolsInstalled', async (innerContext: IActionContext) => {
         innerContext.errorHandling.suppressDisplay = true;
 
-        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', fsPath)) {
+        if (!getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath)) {
             innerContext.telemetry.properties.validateFuncCoreTools = 'false';
             installed = true;
-        } else if (await funcToolsInstalled()) {
+        } else if (await funcToolsInstalled(innerContext, workspacePath)) {
             installed = true;
         } else {
             const items: MessageItem[] = [];
@@ -43,7 +50,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
             innerContext.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
-                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath));
+                const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, workspacePath));
                 await installFuncCoreTools(innerContext, packageManagers, version);
                 installed = true;
             } else if (input === DialogResponses.learnMore) {
@@ -62,9 +69,10 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     return installed;
 }
 
-export async function funcToolsInstalled(): Promise<boolean> {
+export async function funcToolsInstalled(context: IActionContext, workspacePath: string | undefined): Promise<boolean> {
     try {
-        await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, '--version');
+        const funcCliPath = await getFuncCliPath(context, workspacePath);
+        await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, '--version');
         return true;
     } catch (error) {
         return false;

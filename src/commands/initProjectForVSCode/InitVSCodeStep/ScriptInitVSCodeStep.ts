@@ -39,7 +39,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
                 this.useFuncExtensionsInstall = true;
                 context.telemetry.properties.hasExtensionsCsproj = 'true';
             } else if (context.version === FuncVersion.v2) { // no need to check v1 or v3+
-                const currentVersion: string | null = await getLocalFuncCoreToolsVersion();
+                const currentVersion: string | null = await getLocalFuncCoreToolsVersion(context, context.workspacePath);
                 // Starting after this version, projects can use extension bundle instead of running "func extensions install"
                 this.useFuncExtensionsInstall = !!currentVersion && semver.lte(currentVersion, '2.5.553');
             }

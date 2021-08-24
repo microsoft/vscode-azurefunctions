@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as semver from 'semver';
+import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
@@ -24,9 +25,9 @@ export async function getPythonVersion(pyAlias: string): Promise<string> {
     }
 }
 
-export async function getSupportedPythonVersions(funcVersionFromSetting: FuncVersion): Promise<string[]> {
+export async function getSupportedPythonVersions(context: IActionContext, funcVersionFromSetting: FuncVersion): Promise<string[]> {
     // Cache the task so we're not waiting on this every time
-    const localVersionTask: Promise<string | null> = getLocalFuncCoreToolsVersion();
+    const localVersionTask: Promise<string | null> = getLocalFuncCoreToolsVersion(context, undefined);
 
     const result: string[] = [];
 

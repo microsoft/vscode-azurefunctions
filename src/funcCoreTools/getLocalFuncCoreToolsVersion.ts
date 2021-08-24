@@ -5,11 +5,12 @@
 
 import * as semver from 'semver';
 import { IActionContext } from 'vscode-azureextensionui';
-import { ext } from '../extensionVariables';
 import { cpUtils } from '../utils/cpUtils';
+import { getFuncCliPath } from './getFuncCliPath';
 
-export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
-    const output: string = await cpUtils.executeCommand(undefined, undefined, ext.funcCliPath, '--version');
+export async function getLocalFuncCoreToolsVersion(context: IActionContext, workspacePath: string | undefined): Promise<string | null> {
+    const funcCliPath = await getFuncCliPath(context, workspacePath);
+    const output: string = await cpUtils.executeCommand(undefined, workspacePath, funcCliPath, '--version');
     const version: string | null = semver.clean(output);
     if (version) {
         return version;
@@ -28,10 +29,10 @@ export async function getLocalFuncCoreToolsVersion(): Promise<string | null> {
     }
 }
 
-export function addLocalFuncTelemetry(context: IActionContext): void {
+export function addLocalFuncTelemetry(context: IActionContext, workspacePath: string | undefined): void {
     context.telemetry.properties.funcCliVersion = 'unknown';
 
-    getLocalFuncCoreToolsVersion().then((version: string) => {
+    getLocalFuncCoreToolsVersion(context, workspacePath).then((version: string) => {
         context.telemetry.properties.funcCliVersion = version || 'none';
     }).catch(() => {
         context.telemetry.properties.funcCliVersion = 'none';

@@ -7,6 +7,7 @@ import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { PackageManager } from '../constants';
 import { FuncVersion, promptForFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
+import { validateNoFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { installFuncCoreTools } from './installFuncCoreTools';
 import { tryGetLocalFuncVersion } from './tryGetLocalFuncVersion';
@@ -14,7 +15,9 @@ import { updateFuncCoreTools } from './updateFuncCoreTools';
 import { funcToolsInstalled, getInstallUrl } from './validateFuncCoreToolsInstalled';
 
 export async function installOrUpdateFuncCoreTools(context: IActionContext): Promise<void> {
-    const isFuncInstalled: boolean = await funcToolsInstalled();
+    validateNoFuncCliSetting();
+
+    const isFuncInstalled: boolean = await funcToolsInstalled(context, undefined);
     const packageManagers: PackageManager[] = await getFuncPackageManagers(isFuncInstalled);
     if (packageManagers.length === 0) {
         context.errorHandling.suppressReportIssue = true;
@@ -31,7 +34,7 @@ export async function installOrUpdateFuncCoreTools(context: IActionContext): Pro
             packageManager = (await context.ui.showQuickPick(picks, { placeHolder, stepName: 'multipleFuncInstalls' })).data;
         }
 
-        let version: FuncVersion | undefined = await tryGetLocalFuncVersion();
+        let version: FuncVersion | undefined = await tryGetLocalFuncVersion(context, undefined);
         if (version === undefined) {
             version = await promptForFuncVersion(context, localize('selectLocalVersion', 'Failed to detect local version automatically. Select your version to update'));
         }

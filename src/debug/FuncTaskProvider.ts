@@ -8,7 +8,7 @@ import { CancellationToken, ShellExecution, ShellExecutionOptions, Task, TaskDef
 import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { buildNativeDeps, extInstallCommand, func, hostStartCommand, packCommand, ProjectLanguage, projectLanguageSetting } from '../constants';
-import { ext } from '../extensionVariables';
+import { getFuncCliPath } from '../funcCoreTools/getFuncCliPath';
 import { venvUtils } from '../utils/venvUtils';
 import { getFuncWatchProblemMatcher, getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getTasks } from '../vsCodeConfig/tasks';
@@ -60,7 +60,7 @@ export class FuncTaskProvider implements TaskProvider {
                             }
 
                             for (const command of commands) {
-                                result.push(await this.createTask(command, folder, projectRoot, language));
+                                result.push(await this.createTask(context, command, folder, projectRoot, language));
                             }
                         }
                     } catch (err) {
@@ -91,15 +91,16 @@ export class FuncTaskProvider implements TaskProvider {
             if (command && task.scope !== undefined && task.scope !== TaskScope.Global && task.scope !== TaskScope.Workspace) {
                 const folder: WorkspaceFolder = task.scope;
                 const language: string | undefined = getWorkspaceSetting(projectLanguageSetting, folder.uri.fsPath);
-                return this.createTask(command, folder, undefined, language, task.definition);
+                return this.createTask(context, command, folder, undefined, language, task.definition);
             }
 
             return undefined;
         });
     }
 
-    private async createTask(command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
-        let commandLine: string = `${ext.funcCliPath} ${command}`;
+    private async createTask(context: IActionContext, command: string, folder: WorkspaceFolder, projectRoot: string | undefined, language: string | undefined, definition?: TaskDefinition): Promise<Task> {
+        const funcCliPath = await getFuncCliPath(context, folder);
+        let commandLine: string = `${funcCliPath} ${command}`;
         if (language === ProjectLanguage.Python) {
             commandLine = venvUtils.convertToVenvCommand(commandLine, folder.uri.fsPath);
         }
