@@ -9,9 +9,9 @@ import * as globby from 'globby';
 import * as path from 'path';
 import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage } from '../../extension.bundle';
 
-const defaultVersion: FuncVersion = FuncVersion.v3;
+export const defaultTestFuncVersion: FuncVersion = FuncVersion.v3;
 
-export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
+export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
         'azureFunctions.projectRuntime': version,
@@ -44,7 +44,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     };
 }
 
-export function getTypeScriptValidateOptions(version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getTypeScriptValidateOptions(version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.TypeScript,
         version,
@@ -74,7 +74,7 @@ export function getTypeScriptValidateOptions(version: FuncVersion = defaultVersi
     };
 }
 
-export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultVersion, numCsproj: number = 1): IValidateProjectOptions {
+export function getCSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultTestFuncVersion, numCsproj: number = 1): IValidateProjectOptions {
     return {
         language: ProjectLanguage.CSharp,
         version,
@@ -107,7 +107,7 @@ export function getCSharpValidateOptions(targetFramework: string, version: FuncV
     };
 }
 
-export function getFSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getFSharpValidateOptions(targetFramework: string, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.FSharp,
         version,
@@ -141,7 +141,7 @@ export function getFSharpValidateOptions(targetFramework: string, version: FuncV
     };
 }
 
-export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getPythonValidateOptions(venvName: string | undefined, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     const expectedTasks: string[] = ['host start'];
     if (venvName) {
         expectedTasks.push('pip install (functions)');
@@ -171,7 +171,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
     };
 }
 
-export function getJavaValidateOptions(appName: string, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getJavaValidateOptions(appName: string, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.Java,
         version,
@@ -202,7 +202,7 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
     };
 }
 
-export function getDotnetScriptValidateOptions(language: ProjectLanguage, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getDotnetScriptValidateOptions(language: ProjectLanguage, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language,
         version,
@@ -226,7 +226,7 @@ export function getDotnetScriptValidateOptions(language: ProjectLanguage, versio
     };
 }
 
-export function getPowerShellValidateOptions(version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getPowerShellValidateOptions(version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.PowerShell,
         version,
@@ -252,7 +252,7 @@ export function getPowerShellValidateOptions(version: FuncVersion = defaultVersi
     };
 }
 
-export function getCustomValidateOptions(version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getCustomValidateOptions(version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.Custom,
         displayLanguage: /custom handler/i,
