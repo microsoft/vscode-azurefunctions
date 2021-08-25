@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
+import { WorkspaceFolder } from 'vscode';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
@@ -16,12 +17,13 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersio
 import { localize } from "../localize";
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
-import { getRootFunctionsWorkerRuntime, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
+import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
+    workspaceFolder?: WorkspaceFolder;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -77,7 +79,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzExtTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
-        const language: string | undefined = getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
+        const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
         const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.subscription, {
@@ -163,9 +165,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 }
 
-async function getDefaultFuncVersion(context: IActionContext): Promise<FuncVersion> {
+async function getDefaultFuncVersion(context: ICreateFunctionAppContext): Promise<FuncVersion> {
+    const settingValue: string | undefined = context.workspaceFolder ? getWorkspaceSetting(funcVersionSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(funcVersionSetting);
     // Try to get VS Code setting for version (aka if they have a project open)
-    let version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSettingFromAnyFolder(funcVersionSetting));
+    let version: FuncVersion | undefined = tryParseFuncVersion(settingValue);
     context.telemetry.properties.runtimeSource = 'VSCodeSetting';
 
     if (version === undefined) {

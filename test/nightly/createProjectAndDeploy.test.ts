@@ -9,31 +9,33 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createTestActionContext, runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
-import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, getRandomHexString, nonNullProp } from '../../extension.bundle';
+import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, FuncVersion, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest, runInSeries } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';
-import { getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
+import { defaultTestFuncVersion, getCSharpValidateOptions, getJavaScriptValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from '../project/validateProject';
 import { getRotatingAuthLevel, getRotatingLocation, getRotatingNodeVersion, getRotatingPythonVersion } from './getRotatingValue';
 import { resourceGroupsToDelete } from './global.nightly.test';
 
 interface CreateProjectAndDeployTestCase extends ICreateProjectAndDeployOptions {
     title: string;
-    buildMachineOsToSkip?: NodeJS.Platform;
+    buildMachineOsToSkip?: NodeJS.Platform | NodeJS.Platform[];
 }
 
 const testCases: CreateProjectAndDeployTestCase[] = [
     { title: 'JavaScript', ...getJavaScriptValidateOptions(true), deployInputs: [getRotatingNodeVersion()] },
     { title: 'TypeScript', ...getTypeScriptValidateOptions(), deployInputs: [getRotatingNodeVersion()] },
-    // C# tests on mac are consistently timing out for some unknown reason. Will skip for now
+    // All C# tests on mac and .NET 6 on windows are consistently timing out for some unknown reason. Will skip for now
     { title: 'C# .NET Core 3.1', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('netcoreapp3.1'), createProjectInputs: [/net.*3/i], deployInputs: [/net.*3/i], createFunctionInputs: ['Company.Function'] },
     { title: 'C# .NET 5', buildMachineOsToSkip: 'darwin', ...getCSharpValidateOptions('net5.0'), createProjectInputs: [/net.*5/i], deployInputs: [/net.*5/i], createFunctionInputs: ['Company.Function'] },
+    { title: 'C# .NET 6', buildMachineOsToSkip: ['darwin', 'win32'], ...getCSharpValidateOptions('net6.0', FuncVersion.v4), createProjectInputs: [/net.*6/i], deployInputs: [/net.*6/i], createFunctionInputs: ['Company.Function'] },
     { title: 'PowerShell', ...getPowerShellValidateOptions(), deployInputs: [/powershell.*7/i] },
     { title: 'Python', buildMachineOsToSkip: 'win32', ...getPythonValidateOptions('.venv'), createProjectInputs: [/3\.6/], deployInputs: [getRotatingPythonVersion()] }
 ]
 
 const parallelTests: ParallelTest[] = [];
 for (const testCase of testCases) {
-    if (testCase.buildMachineOsToSkip !== process.platform) {
+    const osToSkip = Array.isArray(testCase.buildMachineOsToSkip) ? testCase.buildMachineOsToSkip : [testCase.buildMachineOsToSkip];
+    if (!osToSkip.some(o => o === process.platform)) {
         parallelTests.push({
             title: testCase.title,
             callback: async () => {
@@ -63,7 +65,8 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
         options.createProjectInputs = options.createProjectInputs || [];
         options.createFunctionInputs = options.createFunctionInputs || [];
         await context.ui.runWithInputs([testWorkspacePath, options.language, ...options.createProjectInputs, /http\s*trigger/i, functionName, ...options.createFunctionInputs, getRotatingAuthLevel()], async () => {
-            await createNewProjectInternal(context, {})
+            const createProjectOptions = options.version !== defaultTestFuncVersion ? { version: options.version } : {};
+            await createNewProjectInternal(context, createProjectOptions)
         });
     });
 
