@@ -15,6 +15,7 @@ import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
 import { JavaArtifactIdStep } from './javaSteps/JavaArtifactIdStep';
+import { JavaBuildToolStep } from './javaSteps/JavaBuildToolStep';
 import { JavaGroupIdStep } from './javaSteps/JavaGroupIdStep';
 import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
 import { JavaProjectVersionStep } from './javaSteps/JavaProjectVersionStep';
@@ -99,6 +100,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Java:
                 await JavaVersionStep.setDefaultVersion(context);
+                await JavaBuildToolStep.setDefaultBuildTool(context); // Set build tool to maven as other Java project with other build tool is not supported now
                 promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
                 executeSteps.push(await JavaProjectCreateStep.createStep(context));
                 break;

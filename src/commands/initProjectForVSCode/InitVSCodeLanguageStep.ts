@@ -74,7 +74,7 @@ export async function addInitVSCodeSteps(
             executeSteps.push(new PowerShellInitVSCodeStep());
             break;
         case ProjectLanguage.Java:
-            await addJavaInitVSCodeSteps(context, executeSteps);
+            await addJavaInitVSCodeSteps(context, promptSteps, executeSteps);
             break;
         case ProjectLanguage.CSharpScript:
         case ProjectLanguage.FSharpScript:
