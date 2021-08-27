@@ -5,11 +5,12 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { MessageItem, RelativePattern, workspace, WorkspaceFolder } from 'vscode';
+import { MessageItem, WorkspaceFolder } from 'vscode';
 import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { hostFileName, projectSubpathSetting } from '../../constants';
 import { localize } from '../../localize';
 import { telemetryUtils } from '../../utils/telemetryUtils';
+import { findFiles } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { createNewProjectInternal } from './createNewProject';
@@ -41,12 +42,12 @@ export async function tryGetFunctionProjectRoot(context: IActionContext, workspa
                 if (await isFunctionProject(folderPath)) {
                     return folderPath;
                 } else {
-                    const hostJsonUris = await workspace.findFiles(new RelativePattern(workspaceFolder, `*/${hostFileName}`));
+                    const hostJsonUris = await findFiles(workspaceFolder, `*/${hostFileName}`);
                     if (hostJsonUris.length !== 1) {
                         // NOTE: If we found a single project at the root or one level down, we will use that without searching any further.
                         // This will reduce false positives in the case of compiled languages like C# where a 'host.json' file is often copied to a build/publish directory a few levels down
                         // It also maintains consistent historical behavior by giving that project priority because we used to _only_ look at the root and one level down
-                        hostJsonUris.push(...await workspace.findFiles(new RelativePattern(workspaceFolder, `*/*/**/${hostFileName}`)));
+                        hostJsonUris.push(...await findFiles(workspaceFolder, `*/*/**/${hostFileName}`));
                     }
 
                     const projectPaths = hostJsonUris.map(uri => path.dirname(uri.fsPath));
