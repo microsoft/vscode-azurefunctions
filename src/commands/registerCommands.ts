@@ -35,6 +35,7 @@ import { disconnectRepo } from './deployments/disconnectRepo';
 import { redeployDeployment } from './deployments/redeployDeployment';
 import { viewCommitInGitHub } from './deployments/viewCommitInGitHub';
 import { viewDeploymentLogs } from './deployments/viewDeploymentLogs';
+import { downloadProject } from './downloadProject/downloadProject';
 import { editAppSetting } from './editAppSetting';
 import { executeFunction } from './executeFunction';
 import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCode';
@@ -107,4 +108,5 @@ export function registerCommands(): void {
     registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
     registerCommand('azureFunctions.viewProperties', viewProperties);
     registerCommand('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
+    registerCommand('azureFunctions.downloadProject', downloadProject);
 }
