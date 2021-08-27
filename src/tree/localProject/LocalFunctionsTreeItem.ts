@@ -6,7 +6,7 @@
 import { WebSiteManagementModels } from '@azure/arm-appservice';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { RelativePattern, ThemeIcon, workspace } from 'vscode';
+import { ThemeIcon } from 'vscode';
 import { AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
@@ -15,6 +15,7 @@ import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
+import { findFiles } from '../../utils/workspace';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { LocalFunctionTreeItem } from './LocalFunctionTreeItem';
 import { LocalProjectTreeItem } from './LocalProjectTreeItem';
@@ -110,7 +111,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
 
 export async function getFunctionFolders(context: IActionContext, projectPath: string): Promise<string[]> {
     return await telemetryUtils.runWithDurationTelemetry(context, 'getFuncs', async () => {
-        const funcJsonUris = await workspace.findFiles(new RelativePattern(projectPath, `*/${functionJsonFileName}`));
+        const funcJsonUris = await findFiles(projectPath, `*/${functionJsonFileName}`);
         return funcJsonUris.map(uri => path.basename(path.dirname(uri.fsPath)))
     });
 }

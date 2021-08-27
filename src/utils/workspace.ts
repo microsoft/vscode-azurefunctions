@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
@@ -12,6 +13,16 @@ import * as fsUtils from './fs';
 export function isMultiRootWorkspace(): boolean {
     return !!vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
         && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name; // multi-root workspaces always have something like "(Workspace)" appended to their name
+}
+
+/**
+ * Alternative to `vscode.workspace.findFiles` which always returns an empty array if no workspace is open
+ */
+export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: string): Promise<vscode.Uri[]> {
+    // Per globby docs: "Note that glob patterns can only contain forward-slashes, not backward-slashes, so if you want to construct a glob pattern from path components, you need to use path.posix.join() instead of path.join()"
+    const posixBase = path.posix.normalize(typeof base === 'string' ? base : base.uri.fsPath).replace(/\\/g, '/');
+    const fullPattern = path.posix.join(posixBase, pattern);
+    return (await globby(fullPattern)).map(s => vscode.Uri.file(s));
 }
 
 export async function selectWorkspaceFolder(context: IActionContext, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {

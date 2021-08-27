@@ -5,12 +5,12 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { RelativePattern, workspace } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
+import { findFiles } from '../../utils/workspace';
 import { getScriptFileNameFromLanguage } from '../createFunction/scriptSteps/ScriptFunctionCreateStep';
 
 /**
@@ -87,7 +87,7 @@ async function detectScriptLanguages(context: IActionContext, projectPath: strin
         for (const language of Object.values(ProjectLanguage)) {
             const functionFileName: string | undefined = getScriptFileNameFromLanguage(language);
             if (functionFileName) {
-                const uris = await workspace.findFiles(new RelativePattern(projectPath, `*/${functionFileName}`), undefined, 1 /* maxResults */);
+                const uris = await findFiles(projectPath, `*/${functionFileName}`);
                 if (uris.length > 0) {
                     detectedLangs.push(language);
                 }
