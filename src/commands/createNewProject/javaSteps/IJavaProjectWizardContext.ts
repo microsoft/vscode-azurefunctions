@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
+import { JavaBuildTool } from '../../../constants';
 import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../IProjectWizardContext";
 
@@ -14,6 +15,7 @@ export interface IJavaProjectWizardContext extends IProjectWizardContext {
     javaProjectVersion?: string;
     javaPackageName?: string;
     javaAppName?: string;
+    buildTool?: JavaBuildTool;
 }
 
 export function getJavaClassName(name: string): string {

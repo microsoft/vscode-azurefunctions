@@ -7,13 +7,12 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { AzExtTreeItem, AzureAccountTreeItemBase, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
-import { funcVersionSetting, hostFileName, pomXmlFileName, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
+import { getFunctionAppName, getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
+import { funcVersionSetting, hostFileName, javaBuildTool, JavaBuildTool, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { dotnetUtils } from '../utils/dotnetUtils';
-import { mavenUtils } from '../utils/mavenUtils';
 import { treeUtils } from '../utils/treeUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { createRefreshFileWatcher } from './localProject/createRefreshFileWatcher';
@@ -158,11 +157,12 @@ async function getCompiledProjectInfo(context: IActionContext, projectPath: stri
             throw new Error(localize('unableToFindProj', 'Unable to detect project file.'));
         }
     } else if (projectLanguage === ProjectLanguage.Java) {
-        const functionAppName: string | undefined = await mavenUtils.getFunctionAppNameInPom(path.join(projectPath, pomXmlFileName));
+        const buildTool: JavaBuildTool | undefined = getWorkspaceSetting(javaBuildTool, projectPath);
+        const functionAppName: string | undefined = await getFunctionAppName(projectPath, buildTool);
         if (!functionAppName) {
             throw new Error(localize('unableToGetFunctionAppName', 'Unable to detect property "functionAppName" in pom.xml.'));
         } else {
-            return { compiledProjectPath: path.join(projectPath, getJavaDebugSubpath(functionAppName)), isIsolated: false };
+            return { compiledProjectPath: path.join(projectPath, getJavaDebugSubpath(functionAppName, buildTool)), isIsolated: false };
         }
     } else {
         return undefined;
