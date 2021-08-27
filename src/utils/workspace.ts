@@ -20,7 +20,8 @@ export function isMultiRootWorkspace(): boolean {
  */
 export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: string): Promise<vscode.Uri[]> {
     // Per globby docs: "Note that glob patterns can only contain forward-slashes, not backward-slashes, so if you want to construct a glob pattern from path components, you need to use path.posix.join() instead of path.join()"
-    const fullPattern = path.posix.join(typeof base === 'string' ? base : base.uri.fsPath, pattern);
+    const posixBase = path.posix.normalize(typeof base === 'string' ? base : base.uri.fsPath).replace(/\\/g, '/');
+    const fullPattern = path.posix.join(posixBase, pattern);
     return (await globby(fullPattern)).map(s => vscode.Uri.file(s));
 }
 
