@@ -48,7 +48,7 @@ export async function verifyVersionAndLanguage(context: IActionContext, projectP
 
     // Since these are coming from the user's app settings we want to be a bit careful and only track if it's in an expected format
     context.telemetry.properties.remoteVersion = azureVersion || 'Unknown';
-    context.telemetry.properties.remoteRuntime = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
+    context.telemetry.properties.remoteRuntimeV2 = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
 
     const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, localLanguage, projectPath);
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {

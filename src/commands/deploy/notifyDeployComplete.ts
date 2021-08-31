@@ -26,6 +26,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
         await callWithTelemetryAndErrorHandling('postDeploy', async (postDeployContext: IActionContext) => {
             postDeployContext.telemetry.properties.dialogResult = result && result.title;
             postDeployContext.valuesToMask.push(...context.valuesToMask);
+            context.telemetry.eventVersion = 2;
 
             if (result === viewOutput) {
                 ext.outputChannel.show();
