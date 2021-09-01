@@ -18,6 +18,7 @@ import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder): Promise<void> {
+    context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }

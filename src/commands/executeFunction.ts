@@ -16,6 +16,7 @@ import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
+    context.telemetry.eventVersion = 2;
     if (!node) {
         const noItemFoundErrorMessage: string = localize('noFunctions', 'No functions found.');
         node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;/i, { ...context, noItemFoundErrorMessage });
