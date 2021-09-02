@@ -95,7 +95,7 @@ export async function verifyAndPromptToCreateProject(context: IActionContext, wo
             await context.ui.showWarningMessage(message, { modal: true, stepName: 'notAProject' }, DialogResponses.yes);
         }
 
-        options.folderPath = typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
+        options.folderPath ||= typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
         await createNewProjectInternal(context, options);
         return undefined;
     } else {
