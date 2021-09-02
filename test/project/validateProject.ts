@@ -11,11 +11,11 @@ import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITas
 
 const defaultVersion: FuncVersion = FuncVersion.v3;
 
-export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion, relativeProjectFolder?: string): IValidateProjectOptions {
+export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
         'azureFunctions.projectRuntime': version,
-        'azureFunctions.deploySubpath': relativeProjectFolder ?? '.',
+        'azureFunctions.deploySubpath': projectSubpath ?? '.',
         'debug.internalConsoleOptions': 'neverOpen',
     };
     const expectedPaths: string[] = [];
@@ -24,7 +24,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     if (hasPackageJson) {
         expectedSettings['azureFunctions.preDeployTask'] = 'npm prune (functions)';
         expectedSettings['azureFunctions.postDeployTask'] = 'npm install (functions)';
-        expectedPaths.push(path.join(relativeProjectFolder ?? '.', 'package.json'));
+        expectedPaths.push(path.join(projectSubpath ?? '.', 'package.json'));
         expectedTasks.push('npm install (functions)', 'npm prune (functions)');
     }
 
@@ -39,7 +39,8 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
             'Attach to Node Functions'
         ],
         expectedTasks,
-        excludedPaths: []
+        excludedPaths: [],
+        workspaceFolder
     };
 }
 

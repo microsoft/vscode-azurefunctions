@@ -25,8 +25,8 @@ suite(`AzureFunctionsExtensionApi`, () => {
         const functionName: string = 'endpoint1';
         const language: string = ProjectLanguage.JavaScript;
         const workspaceFolder = getTestWorkspaceFolder();
-        const relativeProjectFolder = 'api';
-        const folderPath: string = path.join(workspaceFolder, relativeProjectFolder);
+        const projectSubpath = 'api';
+        const folderPath: string = path.join(workspaceFolder, projectSubpath);
 
         await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
@@ -40,16 +40,14 @@ suite(`AzureFunctionsExtensionApi`, () => {
             });
         });
 
-        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, relativeProjectFolder);
+        const validateOptions: IValidateProjectOptions = getJavaScriptValidateOptions(true, undefined, projectSubpath, workspaceFolder);
         validateOptions.expectedPaths.push(
-            path.join(relativeProjectFolder, functionName, 'index.js'),
-            path.join(relativeProjectFolder, functionName, 'function.json'),
-            path.join(relativeProjectFolder, 'package.json')
+            path.join(projectSubpath, functionName, 'index.js'),
+            path.join(projectSubpath, functionName, 'function.json'),
+            path.join(projectSubpath, 'package.json')
         );
-        validateOptions.expectedSettings
         // Exclude .git because the test workspace folders are already inside a git repo so we don't do git init.
         validateOptions.excludedPaths?.push('.git');
-        validateOptions.workspaceFolder = workspaceFolder;
         await validateProject(folderPath, validateOptions);
     });
 
