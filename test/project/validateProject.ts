@@ -11,11 +11,11 @@ import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITas
 
 const defaultVersion: FuncVersion = FuncVersion.v3;
 
-export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion): IValidateProjectOptions {
+export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultVersion, relativeProjectFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
         'azureFunctions.projectLanguage': ProjectLanguage.JavaScript,
         'azureFunctions.projectRuntime': version,
-        'azureFunctions.deploySubpath': '.',
+        'azureFunctions.deploySubpath': relativeProjectFolder ?? '.',
         'debug.internalConsoleOptions': 'neverOpen',
     };
     const expectedPaths: string[] = [];
@@ -24,7 +24,7 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
     if (hasPackageJson) {
         expectedSettings['azureFunctions.preDeployTask'] = 'npm prune (functions)';
         expectedSettings['azureFunctions.postDeployTask'] = 'npm install (functions)';
-        expectedPaths.push('package.json');
+        expectedPaths.push(path.join(relativeProjectFolder ?? '.', 'package.json'));
         expectedTasks.push('npm install (functions)', 'npm prune (functions)');
     }
 
@@ -38,7 +38,8 @@ export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, ve
         expectedDebugConfigs: [
             'Attach to Node Functions'
         ],
-        expectedTasks
+        expectedTasks,
+        excludedPaths: []
     };
 }
 
@@ -276,12 +277,24 @@ export function getCustomValidateOptions(version: FuncVersion = defaultVersion):
     };
 }
 
-const commonExpectedPaths: string[] = [
+function getCommonExpectedPaths(projectPath: string, workspaceFolder?: string): string[] {
+    let projectRelativePaths = commonExpectedProjectPaths
+    if (workspaceFolder) {
+        const relativeProjectPath = path.relative(workspaceFolder, projectPath);
+        projectRelativePaths = commonExpectedProjectPaths.map(p => path.join(relativeProjectPath, p));
+    }
+    return commonExpectedRootPaths.concat(projectRelativePaths);
+}
+
+const commonExpectedProjectPaths: string[] = [
     'host.json',
     'local.settings.json',
-    '.gitignore',
-    '.git',
     '.funcignore',
+    '.gitignore',
+];
+
+const commonExpectedRootPaths: string[] = [
+    '.git',
     '.vscode/tasks.json',
     '.vscode/launch.json',
     '.vscode/extensions.json',
@@ -304,20 +317,23 @@ export interface IValidateProjectOptions {
      * Any paths listed in commonExpectedPaths that for some reason don't exist for this language
      */
     excludedPaths?: string[];
+    workspaceFolder?: string;
 }
 
 export async function validateProject(projectPath: string, options: IValidateProjectOptions): Promise<void> {
+    const rootPath = options.workspaceFolder ?? projectPath;
+
     //
     // Validate expected files
     //
-    let expectedPaths: ExpectedPath[] = commonExpectedPaths.filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
+    let expectedPaths: ExpectedPath[] = getCommonExpectedPaths(projectPath, options.workspaceFolder).filter(p1 => !options.excludedPaths || !options.excludedPaths.find(p2 => p1 === p2));
     expectedPaths = expectedPaths.concat(options.expectedPaths);
     await Promise.all(expectedPaths.map(async p => {
         if (typeof p === 'object') {
-            const matches = await globby(p.globPattern, { cwd: projectPath })
+            const matches = await globby(p.globPattern, { cwd: rootPath })
             assert.equal(matches.length, p.numMatches, `Path "${p.globPattern}" does not have expected matches.`);
         } else {
-            assert.ok(await fse.pathExists(path.join(projectPath, p)), `Path "${p}" does not exist.`);
+            assert.ok(await fse.pathExists(path.join(rootPath, p)), `Path "${p}" does not exist.`);
         }
     }));
 
@@ -325,7 +341,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate extensions.json
     //
     const recs: string[] = options.expectedExtensionRecs.concat('ms-azuretools.vscode-azurefunctions');
-    const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(projectPath, '.vscode', 'extensions.json'));
+    const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(rootPath, '.vscode', 'extensions.json'));
     extensionsJson.recommendations = extensionsJson.recommendations || [];
     assert.equal(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");
     for (const rec of recs) {
@@ -335,11 +351,11 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate settings.json
     //
-    const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(projectPath, '.vscode', 'settings.json'));
+    const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(rootPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
         const expectedValue: RegExp | string | boolean | object | undefined = options.expectedSettings[key];
-        if (key === 'debug.internalConsoleOptions' && getContainingWorkspace(projectPath)) {
+        if (key === 'debug.internalConsoleOptions' && getContainingWorkspace(rootPath)) {
             // skip validating - it will be set in 'test.code-workspace' file instead of '.vscode/settings.json'
         } else if (expectedValue instanceof RegExp) {
             assert.ok(expectedValue.test(settings[key].toString()), `The setting with key "${key}" does not match RegExp "${expectedValue.source}".`);
@@ -354,7 +370,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate launch.json
     //
     if (expectedPaths.find(p => typeof p === 'string' && p.includes('launch.json'))) {
-        const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(projectPath, '.vscode', 'launch.json'));
+        const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(rootPath, '.vscode', 'launch.json'));
         launchJson.configurations = launchJson.configurations || [];
         assert.equal(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");
         for (const configName of options.expectedDebugConfigs) {
@@ -365,7 +381,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate tasks.json
     //
-    const tasksJson: ITasksJson = <ITasksJson>await fse.readJSON(path.join(projectPath, '.vscode', 'tasks.json'));
+    const tasksJson: ITasksJson = <ITasksJson>await fse.readJSON(path.join(rootPath, '.vscode', 'tasks.json'));
     tasksJson.tasks = tasksJson.tasks || [];
     assert.equal(tasksJson.tasks.length, options.expectedTasks.length, "tasks.json doesn't have the expected number of tasks.");
     for (const task of options.expectedTasks) {
