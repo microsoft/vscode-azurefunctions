@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.5.1 - 2021-09-08
+## 1.5.1 - 2021-09-09
 ### Fixed
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.1%22+is%3Aclosed+)
 
