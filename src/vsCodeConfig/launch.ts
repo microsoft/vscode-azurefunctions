@@ -35,11 +35,11 @@ function isTypeEqual(type1: string, type2: string): boolean {
 }
 
 /**
- * Special case node debug type because it can be either "node" or "node2"
+ * Special case node debug type because it can be either "node", "node2", or "pwa-node"
  * https://github.com/microsoft/vscode-azurefunctions/issues/1259
  */
 function isNodeType(t: string): boolean {
-    return /^node2?$/i.test(t);
+    return /node/i.test(t);
 }
 
 function getLaunchConfig(folder: WorkspaceFolder): WorkspaceConfiguration {
