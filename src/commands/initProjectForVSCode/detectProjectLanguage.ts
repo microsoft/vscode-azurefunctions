@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
-import { localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { buildGradleFileName, localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
@@ -39,7 +39,15 @@ export async function detectProjectLanguage(context: IActionContext, projectPath
 }
 
 async function isJavaProject(projectPath: string): Promise<boolean> {
+    return await isMavenProject(projectPath) || await isGradleProject(projectPath)
+}
+
+export async function isMavenProject(projectPath: string): Promise<boolean> {
     return await fse.pathExists(path.join(projectPath, pomXmlFileName));
+}
+
+export async function isGradleProject(projectPath: string): Promise<boolean> {
+    return await fse.pathExists(path.join(projectPath, buildGradleFileName));
 }
 
 async function isCSharpProject(context: IActionContext, projectPath: string): Promise<boolean> {

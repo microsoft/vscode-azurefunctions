@@ -17,6 +17,7 @@ export const projectOpenBehaviorSetting: string = 'projectOpenBehavior';
 export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
+export const javaBuildTool: string = 'javaBuildTool';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -49,6 +50,11 @@ export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
 export const pomXmlFileName: string = 'pom.xml';
+export const buildGradleFileName: string = 'build.gradle';
+export enum JavaBuildTool {
+    maven = 'maven',
+    gradle = 'gradle'
+}
 
 export enum PackageManager {
     npm = 'npm',

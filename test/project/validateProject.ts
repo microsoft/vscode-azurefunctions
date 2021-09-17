@@ -180,6 +180,7 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'package (functions)',
             'azureFunctions.deploySubpath': `target/azure-functions/${appName}`,
+            'azureFunctions.javaBuildTool': 'maven',
             'debug.internalConsoleOptions': 'neverOpen',
         },
         expectedPaths: [
