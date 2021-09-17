@@ -1042,6 +1042,11 @@
                     "azureFunctions.javaBuildTool": {
                         "scope": "resource",
                         "type": "string",
+                        "default": "maven",
+                        "enum": [
+                            "maven",
+                            "gradle"
+                        ],
                         "description": "%azureFunctions.javaBuildTool%"
                     },
                     "azureFunctions.templateSource": {
