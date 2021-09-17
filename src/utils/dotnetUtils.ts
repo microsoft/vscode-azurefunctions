@@ -5,13 +5,13 @@
 
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { RelativePattern, workspace } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../constants';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 import { cliFeedUtils } from './cliFeedUtils';
 import { telemetryUtils } from './telemetryUtils';
+import { findFiles } from './workspace';
 
 export namespace dotnetUtils {
     export const isolatedSdkName: string = 'Microsoft.Azure.Functions.Worker.Sdk';
@@ -44,7 +44,7 @@ export namespace dotnetUtils {
     export async function getProjFiles(context: IActionContext, projectLanguage: ProjectLanguage, projectPath: string): Promise<ProjectFile[]> {
         return await telemetryUtils.runWithDurationTelemetry(context, 'getNetProjFiles', async () => {
             const pattern = projectLanguage === ProjectLanguage.FSharp ? '*.fsproj' : '*.csproj';
-            const uris = await workspace.findFiles(new RelativePattern(projectPath, pattern))
+            const uris = await findFiles(projectPath, pattern)
             return uris.map(uri => path.basename(uri.fsPath)).filter(f => f.toLowerCase() !== 'extensions.csproj').map(f => new ProjectFile(f, projectPath));
         });
     }

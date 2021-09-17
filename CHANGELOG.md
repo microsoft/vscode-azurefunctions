@@ -1,6 +1,16 @@
 # Change Log
 
-## Unreleased
+## 1.5.1 - 2021-09-09
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.1%22+is%3Aclosed+)
+
+## 1.5.0 - 2021-08-27
+### Added
+- Preview support for .NET 6 on Azure Functions v4
+- Added setting "azureFunctions.funcCliPath" to explicitly control the path of the "func" executable used for debug and deploy tasks
+
+### Fixed
+- [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.0%22+is%3Aclosed)
 
 ### Changed
 - Minimum version of VS Code is now 1.57.0

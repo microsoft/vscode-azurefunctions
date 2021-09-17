@@ -7,5 +7,6 @@ import { FileTreeItem } from 'vscode-azureappservice';
 import { IActionContext } from 'vscode-azureextensionui';
 
 export async function openFile(context: IActionContext, node: FileTreeItem): Promise<void> {
+    context.telemetry.eventVersion = 2;
     await node.openReadOnly(context);
 }
