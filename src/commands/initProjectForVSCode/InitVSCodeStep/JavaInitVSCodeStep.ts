@@ -71,17 +71,16 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
     }
 }
 
-export function getFunctionAppName(projectPath: string, buildTool: JavaBuildTool | undefined): Promise<string | undefined> {
+export async function getFunctionAppName(projectPath: string, buildTool: JavaBuildTool | undefined): Promise<string | undefined> {
     switch (buildTool) {
         case JavaBuildTool.maven:
             const pomXmlPath: string = path.join(projectPath, pomXmlFileName);
             return mavenUtils.getFunctionAppNameInPom(pomXmlPath);
         case JavaBuildTool.gradle:
             const buildGradlePath: string = path.join(projectPath, buildGradleFileName);
-            return fse.readFile(buildGradlePath, 'utf-8').then(content => {
-                const match: RegExpExecArray | null = /appName\s*?=\s*?['|"](.+?)['|"]/g.exec(content);
-                return match ? match[1] : undefined;
-            });
+            const buildGradle: string = (await fse.readFile(buildGradlePath)).toString();
+            const match: RegExpExecArray | null = /appName\s*?=\s*?['|"](.+?)['|"]/g.exec(buildGradle);
+            return match ? match[1] : undefined;
         default:
             throw new Error(localize('invalidJavaBuildTool', 'Invalid java build tool {0}.', buildTool));
     }
