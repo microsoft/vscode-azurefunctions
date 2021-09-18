@@ -9,9 +9,13 @@ import { Progress } from 'vscode';
 import { buildGradleFileName, settingsGradleFileName } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { javaUtils } from '../../../utils/javaUtils';
 import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { java11, java8 } from '../javaSteps/JavaVersionStep';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
+
+const backupGradlePluginVersion = "1.7.0";
+const metaDataUrl = "https://plugins.gradle.org/m2/com/microsoft/azure/azure-functions-gradle-plugin/maven-metadata.xml";
 
 export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = gradleGitignore;
@@ -25,9 +29,15 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
         }
 
         const buildGradlePath: string = path.join(context.projectPath, buildGradleFileName);
+        const buildGradleContent: string = await this.getBuildGradleContent(context);
         if (await confirmOverwriteFile(context, buildGradlePath)) {
-            await fse.writeFile(buildGradlePath, this.getBuildGradleContent(context));
+            await fse.writeFile(buildGradlePath, buildGradleContent);
         }
+    }
+
+    async getLatestGradlePluginVersion(context: IJavaProjectWizardContext): Promise<string> {
+        const templateVersion: string | undefined = await javaUtils.getLatestArtifactVersionFromMetaData(context, metaDataUrl);
+        return templateVersion ? templateVersion : backupGradlePluginVersion;
     }
 
     getSettingsGradleContent(context: IJavaProjectWizardContext): any {
@@ -44,9 +54,9 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    getBuildGradleContent(context: IJavaProjectWizardContext): string {
+    async getBuildGradleContent(context: IJavaProjectWizardContext): Promise<string> {
         return `plugins {
-  id "com.microsoft.azure.azurefunctions" version "1.6.0"
+  id "com.microsoft.azure.azurefunctions" version "${await this.getLatestGradlePluginVersion(context)}"
 }
 apply plugin: 'java'
 apply plugin: "com.microsoft.azure.azurefunctions"
