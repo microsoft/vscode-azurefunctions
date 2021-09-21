@@ -14,13 +14,6 @@ import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageSt
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
-import { JavaAppNameStep } from './javaSteps/JavaAppNameStep';
-import { JavaArtifactIdStep } from './javaSteps/JavaArtifactIdStep';
-import { JavaBuildToolStep } from './javaSteps/JavaBuildToolStep';
-import { JavaGroupIdStep } from './javaSteps/JavaGroupIdStep';
-import { JavaPackageNameStep } from './javaSteps/JavaPackageNameStep';
-import { JavaProjectVersionStep } from './javaSteps/JavaProjectVersionStep';
-import { JavaVersionStep } from './javaSteps/JavaVersionStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -99,9 +92,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(new PowerShellProjectCreateStep());
                 break;
             case ProjectLanguage.Java:
-                await JavaVersionStep.setDefaultVersion(context);
-                await JavaBuildToolStep.setDefaultBuildTool(context); // Set build tool to maven as other Java project with other build tool is not supported now
-                promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
                 await addJavaCreateProjectSteps(context, promptSteps, executeSteps);
                 break;
             case ProjectLanguage.Custom:

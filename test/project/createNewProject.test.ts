@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
-import { FuncVersion, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
@@ -50,13 +50,15 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     const gradleInputs: (TestInput | string | RegExp)[] = [/Gradle/i];
     testCases.push({
         ...getJavaValidateOptions(appName, JavaBuildTool.gradle, version),
-        inputs: gradleInputs.concat(javaBaseInputs, /skip for now/i)
+        inputs: gradleInputs.concat(javaBaseInputs, /skip for now/i),
+        description: JavaBuildTool.gradle
     });
 
     const mavenInputs: (TestInput | string | RegExp)[] = [/Maven/i];
     testCases.push({
         ...getJavaValidateOptions(appName, JavaBuildTool.maven, version),
-        inputs: mavenInputs.concat(javaBaseInputs)
+        inputs: mavenInputs.concat(javaBaseInputs),
+        description: JavaBuildTool.maven
     });
 }
 
@@ -73,7 +75,8 @@ for (const testCase of testCases) {
 
         parallelTests.push({
             title,
-            skip: shouldSkipVersion(testCase.version),
+            // Java template provider based on maven, which does not support gradle project for now
+            skip: shouldSkipVersion(testCase.version) || (testCase.description === JavaBuildTool.gradle && source !== TemplateSource.Backup),
             // lots of errors like "The process cannot access the file because it is being used by another process" 😢
             suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {
