@@ -4,19 +4,21 @@
 
 This tool is leveraged by the Functions extension at the root of this repo. It provides a JSON-based way to interact with .NET Templates. It also allows us to use templates directly from a nuget package, rather than forcing the user to install the templates machine-wide.
 
+> NOTE: This tool assumes the user already has the .NET CLI installed on their machine, but that means we have to ship multiple target frameworks with the extension to work with whatever they have installed. One alternative would be to leverage the [.NET Install Tool](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.vscode-dotnet-runtime) to install a specific version of .NET and then the extension would only need to ship that target framework.
+
 ## Prerequisites
 
-[.NET CLI](https://docs.microsoft.com/dotnet/core/tools/?tabs=netcore2x)
+[.NET CLI](https://docs.microsoft.com/dotnet/core/tools/)
 
 ## Example Usage
 
 ### List
 
 ```bash
-dotnet --require ./projectTemplates-~2.nupkg --require ./itemTemplates-~2.nupkg --operation list
+dotnet --templateDir ./../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/ --operation list
 ```
 
-This will list all templates included in the NuGet packages specified with the `require` parameter. Multiple packages can be specified in the format of a disk path, a NuGet package ID, or a NuGet package ID and version formatted as `{id}::{version}`. Example output:
+This will list all templates based on the `templateDir` parameter. The template directory should have an "item.nupkg" for item templates and a "project.nupkg" for project templates. Example output:
 
 ```json
 [
@@ -49,10 +51,10 @@ This will list all templates included in the NuGet packages specified with the `
 ### Create
 
 ```bash
-dotnet --require projectTemplates-~2.nupkg --require itemTemplates-~2.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.1.x --arg:name TimerTriggerCSharp1 --arg:namespace Company.Function --arg:Schedule "0 */5 * * * *"
+dotnet --templateDir ./../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/ --operation create --identity Azure.Function.CSharp.TimerTrigger.1.x --arg:name TimerTriggerCSharp1 --arg:namespace Company.Function --arg:Schedule "0 */5 * * * *"
 ```
 
-This will create the template with the specified identity. The `require` parameter is the same as used above. The `identity` and `arg` parameters can be retrieved from the result of a list operation, shown above. The `name` and `namespace` args apply to all templates.
+This will create the template with the specified identity. The `templateDir` parameter is the same as used above. The `identity` and `arg` parameters can be retrieved from the result of a list operation, shown above. The `name` and `namespace` args apply to all templates.
 
 ## Contributing
 
@@ -61,14 +63,9 @@ In order to work on this tool, make sure to install the [VS Code Debugger for C#
 ### Debug
 
 1. When prompted, make sure to restore NuGet packages
-1. Ensure the latest .NET templates are downloaded. The easiest way is to F5 the extension at the root of this repo and open the Functions explorer to make sure the extension is activated. This will automatically download the latest NuGet packages to `resources/dotnetTemplates/`.
-1. From the debug window, select either the 'create template' or 'list templates' option based on what you want to test
+1. From the debug window, select either the 'create function', 'create project', or 'list templates' option based on what you want to test
 1. Start debugging!
 
 ### Publish
 
-In order to update the dll's shipped with the extension, you need to run a 'publish':
-
-1. Select 'Run Task' from the command palette
-1. Select 'publish'
-1. Commit changes
+In order to update the dll's shipped with the extension, you need to [run a build](https://devdiv.visualstudio.com/DefaultCollection/DevDiv/_build?definitionId=13600) with `SignType` set to `Real` and download those bits into the `resources/dotnetJsonCli` folder as appropriate.

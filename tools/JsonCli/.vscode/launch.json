@@ -2,16 +2,31 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": ".NET Core Launch (list templates)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "args": [
+                "--templateDir",
+                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",
+                "--operation",
+                "list"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
             "name": ".NET Core Launch (create function)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/projectTemplates-~3.nupkg",
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/itemTemplates-~3.nupkg",
+                "--templateDir",
+                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",
                 "--operation",
                 "create",
                 "--identity",
@@ -32,10 +47,8 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/projectTemplates-~3.nupkg",
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/itemTemplates-~3.nupkg",
+                "--templateDir",
+                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",
                 "--operation",
                 "create",
                 "--identity",
@@ -44,25 +57,6 @@
                 "testProj",
                 "--arg:AzureFunctionsVersion",
                 "v3"
-            ],
-            "cwd": "${workspaceFolder}",
-            "console": "internalConsole",
-            "stopAtEntry": false,
-            "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "name": ".NET Core Launch (list templates)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
-            "args": [
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/projectTemplates-~3.nupkg",
-                "--require",
-                "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/itemTemplates-~3.nupkg",
-                "--operation",
-                "list"
             ],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

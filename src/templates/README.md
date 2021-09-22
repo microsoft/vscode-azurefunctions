@@ -1,15 +1,37 @@
 # Azure Function Templates
 
-The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions CLI Feed](https://aka.ms/V00v5v). The Functions CLI Feed provides a central location to get the latest version of all templates used for functions. Currently, this repo leverages the following templates:
+The code in this folder is used to parse and model the [function templates](https://github.com/Azure/azure-webjobs-sdk-templates) provided by the [Azure Functions CLI Feed](https://aka.ms/AAbbk68). The Functions CLI Feed provides a central location to get the latest version of all templates used for functions.
 
-* [Script Templates](#script-templates) (i.e. JavaScript, C#Script, and Python)
-* [.NET Templates](#.net-templates) (i.e. C#)
+## Template Sources
+
+Templates are retrieved from the following sources, in order:
+1. VS Code extension cache, if the cached version matches the latest version from the CLI Feed
+1. Latest templates from the CLI Feed
+1. VS Code extension cache, if we fail to get the latest templates or it times out
+1. Backup templates stored in `resources/backupTemplates`, if we fail to get the latest templates and the cache is empty
+
+Unit test run separately against all of these template sources (cache, latest, backup) in addition to "staging", which is the pre-production version of "latest". Different template sources can be tested manually with the "azureFunctions.templateSource" setting.
+
+### Updating Backup Templates
+
+Backup templates should be updated every time there is a major change in the latest templates, and otherwise periodically with the release of the extension. In order to update:
+1. Modify `AZFUNC_UPDATE_BACKUP_TEMPLATES` to `1` in `.vscode/launch.json`
+1. Select "Launch Tests" as the debug configuration
+1. F5 the extension
+1. Commit changes
+
+> NOTE: This tool was written as a "test" so that it can run in the context of VS Code and our extension. This allows the "backup template" code to be much more tightly integrated with the core templates code, as opposed to something like a gulp task which would have to be completely separate.
 
 ## Script Templates
 
-Script templates are retrieved from the 'templateApiZip' property in the CLI Feed. The zip contains data in three parts: templates.json, bindingconfig.json, and resources.json. See below for an example of the schema for the TimerTrigger template:
+Basic script templates (i.e. http and timer) are retrieved from the 'templates' property in each entry of the [CLI Feed](https://aka.ms/AAbbk68). More advanced templates (i.e. blob and cosmos) are retrieved from another feed specific to the extension bundle for that project. For example, the default bundle is 'Microsoft.Azure.Functions.ExtensionBundle' and the matching feed is https://functionscdn.azureedge.net/public/ExtensionBundles/Microsoft.Azure.Functions.ExtensionBundle/index-v2.json
 
-### Templates.json
+> NOTE: Both template feeds support 'staging' environments for us to test against before moving to production. The main CLI Feed uses a "vX-prerelease" tag, while the bundle feed has a completely different url leveraging "functionscdnstaging" instead of "functionscdn".
+
+In both cases, the templates are split into three parts: templates.json, bindings.json, and resources.json. See below for an example of the schema for the TimerTrigger template:
+
+<details>
+<summary>templates.json</summary>
 
 ```json
 [
@@ -50,7 +72,10 @@ Script templates are retrieved from the 'templateApiZip' property in the CLI Fee
 ]
 ```
 
-### BindingConfig.json
+</details>
+
+<details>
+<summary>bindings.json</summary>
 
 ```json
 {
@@ -101,7 +126,10 @@ Script templates are retrieved from the 'templateApiZip' property in the CLI Fee
 }
 ```
 
-### Resources.json
+</details>
+
+<details>
+<summary>resources.json</summary>
 
 ```json
 {
@@ -121,46 +149,8 @@ Script templates are retrieved from the 'templateApiZip' property in the CLI Fee
 }
 ```
 
+</details>
+
 ## .NET Templates
 
-.NET templates are retrieved from the 'itemTemplates' and 'projectTemplates' properties in the CLI Feed. These properties reference two nuget packages. We then leverage the 'Microsoft.TemplateEngine.JsonCli' dll which provides a JSON-based way to interact with .NET templates.
-
-The following is an example command used to list templates:
-
-```
-dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-~1.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-~1.nupkg --operation list
-```
-
-Example format for the Timer Trigger:
-
-```json
-{
-    "Author": "Microsoft",
-    "Classifications": [
-        "Azure Function"
-    ],
-    "DefaultName": "TimerTriggerCSharp",
-    "Identity": "Azure.Function.CSharp.TimerTrigger.1.x",
-    "GroupIdentity": "Azure.Function.TimerTrigger",
-    "Name": "TimerTrigger",
-    "ShortName": "Timer",
-    "Parameters": [
-        {
-            "Documentation": "Enter a cron expression of the format '{second} {minute} {hour} {day} {month} {day of week}' to specify the schedule.",
-            "Name": "Schedule",
-            "Priority": 0,
-            "Type": null,
-            "IsName": false,
-            "DefaultValue": "0 */5 * * * *",
-            "DataType": null,
-            "Choices": null
-        }
-    ]
-}
-```
-
-And the following is an example command for creating a template:
-
-```
-dotnet <path to extension>/resources/dotnetJsonCli/Microsoft.TemplateEngine.JsonCli.dll --require <path to extension>/resources/dotnetTemplates/itemTemplates-~2.nupkg --require <path to extension>/resources/dotnetTemplates/projectTemplates-~2.nupkg --operation create --identity Azure.Function.CSharp.TimerTrigger.2.x --arg:Schedule 0 */5 * * * * --arg:name TimerTriggerCSharp --arg:namespace Company.Function
-```
+.NET templates are retrieved from the 'itemTemplates' and 'projectTemplates' properties in the CLI Feed. A single version of the Azure Functions runtime might support multiple versions of the .NET runtime, so we use the target framework and sdk from a user's `*.csproj` file to pick the matching templates. We then leverage the JsonCLI tool ('Microsoft.TemplateEngine.JsonCli') which provides a JSON-based way to interact with .NET templates. More information on that tool can be found in the [tools/JsonCli](https://github.com/microsoft/vscode-azurefunctions/tree/main/tools/JsonCli) folder at the root of this repo.
