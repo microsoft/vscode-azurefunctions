@@ -63,7 +63,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
 bin
 obj
 appsettings.json
-local.settings.json`));
+local.settings.json
+
+# Azurite artifacts
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json`));
         }
 
         const funcIgnorePath: string = path.join(context.projectPath, '.funcignore');
