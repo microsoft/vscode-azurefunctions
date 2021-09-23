@@ -69,7 +69,7 @@ dist
 stats.json
 
 # debugging artifacts
-resources/dotnetTemplates
+resources/backupTemplates/dotnet/**/cache/
 
 # macOS related extra files
 .DS_Store
