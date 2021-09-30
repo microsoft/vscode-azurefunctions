@@ -14,6 +14,7 @@ import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
+import { validateFuncCoreToolsInstalledFromApi } from './commands/api/validateFuncCoreToolsInstalledFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
 import { func } from './constants';
@@ -105,7 +106,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         createFunction: createFunctionFromApi,
         downloadAppSettings: downloadAppSettingsFromApi,
         uploadAppSettings: uploadAppSettingsFromApi,
-        apiVersion: '1.4.0'
+        validateFuncCoreToolsInstalled: validateFuncCoreToolsInstalledFromApi,
+        apiVersion: '1.5.0'
     }]);
 }
 

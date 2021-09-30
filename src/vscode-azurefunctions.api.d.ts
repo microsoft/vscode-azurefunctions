@@ -11,6 +11,7 @@ export interface AzureFunctionsExtensionApi {
     createFunction(options: ICreateFunctionOptions): Promise<void>;
     downloadAppSettings(client: IAppSettingsClient): Promise<void>;
     uploadAppSettings(client: IAppSettingsClient): Promise<void>;
+    validateFuncCoreToolsInstalled(message: string, workspacePath: string): Promise<boolean | undefined>;
 }
 
 export type ProjectLanguage = 'JavaScript' | 'TypeScript' | 'C#' | 'Python' | 'PowerShell' | 'Java';
