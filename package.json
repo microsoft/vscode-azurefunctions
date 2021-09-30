@@ -29,92 +29,132 @@
         "multi-root ready"
     ],
     "activationEvents": [
-        "onCommand:azureFunctions.refresh",
-        "onCommand:azureFunctions.loadMore",
-        "onCommand:azureFunctions.createNewProject",
-        "onCommand:azureFunctions.initProjectForVSCode",
+        "onCommand:azureFunctions.addBinding",
+        "onCommand:azureFunctions.appSettings.add",
+        "onCommand:azureFunctions.appSettings.decrypt",
+        "onCommand:azureFunctions.appSettings.delete",
+        "onCommand:azureFunctions.appSettings.download",
+        "onCommand:azureFunctions.appSettings.edit",
+        "onCommand:azureFunctions.appSettings.encrypt",
+        "onCommand:azureFunctions.appSettings.rename",
+        "onCommand:azureFunctions.appSettings.toggleSlotSetting",
+        "onCommand:azureFunctions.appSettings.upload",
+        "onCommand:azureFunctions.browseWebsite",
+        "onCommand:azureFunctions.configureDeploymentSource",
+        "onCommand:azureFunctions.connectToGitHub",
+        "onCommand:azureFunctions.copyFunctionUrl",
         "onCommand:azureFunctions.createFunction",
         "onCommand:azureFunctions.createFunctionApp",
         "onCommand:azureFunctions.createFunctionAppAdvanced",
-        "onCommand:azureFunctions.openInPortal",
-        "onCommand:azureFunctions.browseWebsite",
-        "onCommand:azureFunctions.startFunctionApp",
-        "onCommand:azureFunctions.stopFunctionApp",
-        "onCommand:azureFunctions.restartFunctionApp",
-        "onCommand:azureFunctions.deleteFunctionApp",
-        "onCommand:azureFunctions.deleteSlot",
-        "onCommand:azureFunctions.copyFunctionUrl",
-        "onCommand:azureFunctions.executeFunction",
-        "onCommand:azureFunctions.viewProperties",
+        "onCommand:azureFunctions.createNewProject",
+        "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.deleteFunction",
-        "onCommand:azureFunctions.enableFunction",
-        "onCommand:azureFunctions.disableFunction",
+        "onCommand:azureFunctions.deleteFunctionApp",
+        "onCommand:azureFunctions.deleteProxy",
+        "onCommand:azureFunctions.deleteSlot",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.deploySlot",
-        "onCommand:azureFunctions.configureDeploymentSource",
-        "onCommand:azureFunctions.startRemoteDebug",
-        "onCommand:azureFunctions.startJavaRemoteDebug",
-        "onCommand:azureFunctions.appSettings.add",
-        "onCommand:azureFunctions.appSettings.download",
-        "onCommand:azureFunctions.appSettings.upload",
-        "onCommand:azureFunctions.appSettings.edit",
-        "onCommand:azureFunctions.appSettings.rename",
-        "onCommand:azureFunctions.appSettings.delete",
-        "onCommand:azureFunctions.appSettings.encrypt",
-        "onCommand:azureFunctions.appSettings.decrypt",
-        "onCommand:azureFunctions.appSettings.toggleSlotSetting",
-        "onCommand:azureFunctions.pickProcess",
-        "onCommand:azureFunctions.startStreamingLogs",
-        "onCommand:azureFunctions.stopStreamingLogs",
-        "onCommand:azureFunctions.deleteProxy",
-        "onCommand:azureFunctions.uninstallFuncCoreTools",
-        "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
-        "onCommand:azureFunctions.viewDeploymentLogs",
-        "onCommand:azureFunctions.redeploy",
-        "onCommand:azureFunctions.viewCommitInGitHub",
+        "onCommand:azureFunctions.disableFunction",
         "onCommand:azureFunctions.disconnectRepo",
-        "onCommand:azureFunctions.connectToGitHub",
-        "onCommand:azureFunctions.createSlot",
-        "onCommand:azureFunctions.swapSlot",
-        "onCommand:azureFunctions.addBinding",
-        "onCommand:azureFunctions.setAzureWebJobsStorage",
+        "onCommand:azureFunctions.enableFunction",
+        "onCommand:azureFunctions.executeFunction",
+        "onCommand:azureFunctions.initProjectForVSCode",
+        "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
+        "onCommand:azureFunctions.loadMore",
+        "onCommand:azureFunctions.openInPortal",
+        "onCommand:azureFunctions.pickProcess",
+        "onCommand:azureFunctions.redeploy",
+        "onCommand:azureFunctions.refresh",
         "onCommand:azureFunctions.reportIssue",
-        "workspaceContains:**/host.json",
-        "onView:azFuncTree",
+        "onCommand:azureFunctions.restartFunctionApp",
+        "onCommand:azureFunctions.setAzureWebJobsStorage",
+        "onCommand:azureFunctions.startFunctionApp",
+        "onCommand:azureFunctions.startJavaRemoteDebug",
+        "onCommand:azureFunctions.startRemoteDebug",
+        "onCommand:azureFunctions.startStreamingLogs",
+        "onCommand:azureFunctions.stopFunctionApp",
+        "onCommand:azureFunctions.stopStreamingLogs",
+        "onCommand:azureFunctions.swapSlot",
+        "onCommand:azureFunctions.uninstallFuncCoreTools",
+        "onCommand:azureFunctions.viewCommitInGitHub",
+        "onCommand:azureFunctions.viewDeploymentLogs",
+        "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
-        "onUri"
+        "onUri",
+        "onView:azFuncTree",
+        "workspaceContains:**/host.json"
     ],
     "main": "./main.js",
     "contributes": {
         "commands": [
             {
-                "command": "azureFunctions.selectSubscriptions",
-                "title": "Select Subscriptions...",
-                "icon": "$(filter)"
-            },
-            {
-                "command": "azureFunctions.refresh",
-                "title": "%azureFunctions.refresh%",
-                "category": "Azure Functions",
-                "icon": "$(refresh)"
-            },
-            {
-                "command": "azureFunctions.loadMore",
-                "title": "%azureFunctions.loadMore%",
+                "command": "azureFunctions.addBinding",
+                "title": "%azureFunctions.addBinding%",
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.createNewProject",
-                "title": "%azureFunctions.createNewProject%",
-                "category": "Azure Functions",
-                "icon": {
-                    "light": "resources/light/CreateNewProject.svg",
-                    "dark": "resources/dark/CreateNewProject.svg"
-                }
+                "command": "azureFunctions.appSettings.add",
+                "title": "%azureFunctions.appSettings.add%",
+                "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.initProjectForVSCode",
-                "title": "%azureFunctions.initProjectForVSCode%",
+                "command": "azureFunctions.appSettings.decrypt",
+                "title": "%azureFunctions.appSettings.decrypt%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.delete",
+                "title": "%azureFunctions.appSettings.delete%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.download",
+                "title": "%azureFunctions.appSettings.download%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.edit",
+                "title": "%azureFunctions.appSettings.edit%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.encrypt",
+                "title": "%azureFunctions.appSettings.encrypt%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.rename",
+                "title": "%azureFunctions.appSettings.rename%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.toggleSlotSetting",
+                "title": "%azureFunctions.appSettings.toggleSlotSetting%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.appSettings.upload",
+                "title": "%azureFunctions.appSettings.upload%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.browseWebsite",
+                "title": "%azureFunctions.browseWebsite%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.configureDeploymentSource",
+                "title": "%azureFunctions.configureDeploymentSource%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.connectToGitHub",
+                "title": "%azureFunctions.connectToGitHub%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.copyFunctionUrl",
+                "title": "%azureFunctions.copyFunctionUrl%",
                 "category": "Azure Functions"
             },
             {
@@ -137,33 +177,32 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.openInPortal",
-                "title": "%azureFunctions.openInPortal%",
+                "command": "azureFunctions.createNewProject",
+                "title": "%azureFunctions.createNewProject%",
+                "category": "Azure Functions",
+                "icon": {
+                    "light": "resources/light/CreateNewProject.svg",
+                    "dark": "resources/dark/CreateNewProject.svg"
+                }
+            },
+            {
+                "command": "azureFunctions.createSlot",
+                "title": "%azureFunctions.createSlot%",
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.browseWebsite",
-                "title": "%azureFunctions.browseWebsite%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.startFunctionApp",
-                "title": "%azureFunctions.startFunctionApp%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.stopFunctionApp",
-                "title": "%azureFunctions.stopFunctionApp%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.restartFunctionApp",
-                "title": "%azureFunctions.restartFunctionApp%",
+                "command": "azureFunctions.deleteFunction",
+                "title": "%azureFunctions.deleteFunction%",
                 "category": "Azure Functions"
             },
             {
                 "command": "azureFunctions.deleteFunctionApp",
                 "title": "%azureFunctions.deleteFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.deleteProxy",
+                "title": "%azureFunctions.deleteProxy%",
                 "category": "Azure Functions"
             },
             {
@@ -183,143 +222,8 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.configureDeploymentSource",
-                "title": "%azureFunctions.configureDeploymentSource%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.startRemoteDebug",
-                "title": "%azureFunctions.startRemoteDebug%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.startJavaRemoteDebug",
-                "title": "%azureFunctions.startJavaRemoteDebug%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.copyFunctionUrl",
-                "title": "%azureFunctions.copyFunctionUrl%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.executeFunction",
-                "title": "%azureFunctions.executeFunction%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.viewProperties",
-                "title": "%azureFunctions.viewProperties%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.deleteFunction",
-                "title": "%azureFunctions.deleteFunction%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.enableFunction",
-                "title": "%azureFunctions.enableFunction%",
-                "category": "Azure Functions"
-            },
-            {
                 "command": "azureFunctions.disableFunction",
                 "title": "%azureFunctions.disableFunction%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.add",
-                "title": "%azureFunctions.appSettings.add%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.download",
-                "title": "%azureFunctions.appSettings.download%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.upload",
-                "title": "%azureFunctions.appSettings.upload%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.edit",
-                "title": "%azureFunctions.appSettings.edit%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.rename",
-                "title": "%azureFunctions.appSettings.rename%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.delete",
-                "title": "%azureFunctions.appSettings.delete%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.encrypt",
-                "title": "%azureFunctions.appSettings.encrypt%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.decrypt",
-                "title": "%azureFunctions.appSettings.decrypt%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.appSettings.toggleSlotSetting",
-                "title": "%azureFunctions.appSettings.toggleSlotSetting%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.pickProcess",
-                "title": "%azureFunctions.pickProcess%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.startStreamingLogs",
-                "title": "%azureFunctions.startStreamingLogs%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.stopStreamingLogs",
-                "title": "%azureFunctions.stopStreamingLogs%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.deleteProxy",
-                "title": "%azureFunctions.deleteProxy%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.uninstallFuncCoreTools",
-                "title": "%azureFunctions.uninstallFuncCoreTools%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.installOrUpdateFuncCoreTools",
-                "title": "%azureFunctions.installOrUpdateFuncCoreTools%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.redeploy",
-                "title": "%azureFunctions.redeploy%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.viewDeploymentLogs",
-                "title": "%azureFunctions.viewDeploymentLogs%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.viewCommitInGitHub",
-                "title": "%azureFunctions.viewCommitInGitHub%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.connectToGitHub",
-                "title": "%azureFunctions.connectToGitHub%",
                 "category": "Azure Functions"
             },
             {
@@ -328,8 +232,99 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.createSlot",
-                "title": "%azureFunctions.createSlot%",
+                "command": "azureFunctions.enableFunction",
+                "title": "%azureFunctions.enableFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.executeFunction",
+                "title": "%azureFunctions.executeFunction%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.initProjectForVSCode",
+                "title": "%azureFunctions.initProjectForVSCode%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.installOrUpdateFuncCoreTools",
+                "title": "%azureFunctions.installOrUpdateFuncCoreTools%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.loadMore",
+                "title": "%azureFunctions.loadMore%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.openInPortal",
+                "title": "%azureFunctions.openInPortal%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.pickProcess",
+                "title": "%azureFunctions.pickProcess%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.redeploy",
+                "title": "%azureFunctions.redeploy%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.refresh",
+                "title": "%azureFunctions.refresh%",
+                "category": "Azure Functions",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureFunctions.reportIssue",
+                "title": "%azureFunctions.reportIssue%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.restartFunctionApp",
+                "title": "%azureFunctions.restartFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.selectSubscriptions",
+                "title": "Select Subscriptions...",
+                "icon": "$(filter)"
+            },
+            {
+                "command": "azureFunctions.setAzureWebJobsStorage",
+                "title": "%azureFunctions.setAzureWebJobsStorage%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startFunctionApp",
+                "title": "%azureFunctions.startFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startJavaRemoteDebug",
+                "title": "%azureFunctions.startJavaRemoteDebug%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startRemoteDebug",
+                "title": "%azureFunctions.startRemoteDebug%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.startStreamingLogs",
+                "title": "%azureFunctions.startStreamingLogs%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.stopFunctionApp",
+                "title": "%azureFunctions.stopFunctionApp%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.stopStreamingLogs",
+                "title": "%azureFunctions.stopStreamingLogs%",
                 "category": "Azure Functions"
             },
             {
@@ -344,18 +339,23 @@
                 "icon": "$(eye)"
             },
             {
-                "command": "azureFunctions.addBinding",
-                "title": "%azureFunctions.addBinding%",
+                "command": "azureFunctions.uninstallFuncCoreTools",
+                "title": "%azureFunctions.uninstallFuncCoreTools%",
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.setAzureWebJobsStorage",
-                "title": "%azureFunctions.setAzureWebJobsStorage%",
+                "command": "azureFunctions.viewCommitInGitHub",
+                "title": "%azureFunctions.viewCommitInGitHub%",
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.reportIssue",
-                "title": "%azureFunctions.reportIssue%",
+                "command": "azureFunctions.viewDeploymentLogs",
+                "title": "%azureFunctions.viewDeploymentLogs%",
+                "category": "Azure Functions"
+            },
+            {
+                "command": "azureFunctions.viewProperties",
+                "title": "%azureFunctions.viewProperties%",
                 "category": "Azure Functions"
             }
         ],
@@ -371,14 +371,14 @@
         "menus": {
             "view/title": [
                 {
-                    "command": "azureFunctions.createNewProject",
-                    "when": "view == azFuncTree",
-                    "group": "navigation@1"
-                },
-                {
                     "command": "azureFunctions.createFunction",
                     "when": "view == azFuncTree",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "when": "view == azFuncTree",
+                    "group": "navigation@1"
                 },
                 {
                     "command": "azureFunctions.deploy",
@@ -665,9 +665,9 @@
             ],
             "explorer/context": [
                 {
-                    "command": "azureFunctions.deploy",
-                    "when": "explorerResourceIsFolder == true",
-                    "group": "zzz_azuretools_deploy@2"
+                    "command": "azureFunctions.addBinding",
+                    "when": "resourceFilename==function.json",
+                    "group": "zzz_binding@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.decrypt",
@@ -680,20 +680,12 @@
                     "group": "zzz_appSettings@2"
                 },
                 {
-                    "command": "azureFunctions.addBinding",
-                    "when": "resourceFilename==function.json",
-                    "group": "zzz_binding@1"
+                    "command": "azureFunctions.deploy",
+                    "when": "explorerResourceIsFolder == true",
+                    "group": "zzz_azuretools_deploy@2"
                 }
             ],
             "commandPalette": [
-                {
-                    "command": "azureFunctions.selectSubscriptions",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.refresh",
-                    "when": "never"
-                },
                 {
                     "command": "azureFunctions.loadMore",
                     "when": "never"
@@ -703,12 +695,20 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFunctions.startRemoteDebug",
-                    "when": "config.azureFunctions.enableRemoteDebugging == true"
+                    "command": "azureFunctions.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFunctions.selectSubscriptions",
+                    "when": "never"
                 },
                 {
                     "command": "azureFunctions.startJavaRemoteDebug",
                     "when": "config.azureFunctions.enableJavaRemoteDebugging == true"
+                },
+                {
+                    "command": "azureFunctions.startRemoteDebug",
+                    "when": "config.azureFunctions.enableRemoteDebugging == true"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
@@ -1110,6 +1110,7 @@
         "gulp-chmod": "^2.0.0",
         "gulp-decompress": "^2.0.3",
         "gulp-filter": "^5.1.0",
+        "husky": "^7.0.2",
         "mocha": "^8.3.2",
         "mocha-junit-reporter": "^2.0.0",
         "mocha-multi-reporters": "^1.5.1",
