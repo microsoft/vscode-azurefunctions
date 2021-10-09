@@ -9,7 +9,6 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand } f
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
-import { ProxyTreeItem } from '../tree/ProxyTreeItem';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 import { addBinding } from './addBinding/addBinding';
 import { decryptLocalSettings } from './appSettings/decryptLocalSettings';
@@ -75,7 +74,6 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.createSlot', createSlot);
     registerCommand('azureFunctions.deleteFunction', deleteFunction);
     registerCommand('azureFunctions.deleteFunctionApp', deleteFunctionApp);
-    registerCommand('azureFunctions.deleteProxy', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ProxyTreeItem.contextValue, node));
     registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));
     registerCommand('azureFunctions.disableFunction', disableFunction);
     registerSiteCommand('azureFunctions.deploy', deployProductionSlot);

@@ -41,7 +41,6 @@ export enum TemplateFilter {
 export const hostFileName: string = 'host.json';
 export const localSettingsFileName: string = 'local.settings.json';
 export const functionJsonFileName: string = 'function.json';
-export const proxiesFileName: string = 'proxies.json';
 export const tasksFileName: string = 'tasks.json';
 export const launchFileName: string = 'launch.json';
 export const settingsFileName: string = 'settings.json';

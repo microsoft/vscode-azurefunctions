@@ -21,7 +21,6 @@
     "azureFunctions.createSlot": "Create Slot...",
     "azureFunctions.deleteFunction": "Delete Function...",
     "azureFunctions.deleteFunctionApp": "Delete Function App...",
-    "azureFunctions.deleteProxy": "Delete Proxy...",
     "azureFunctions.deleteSlot": "Delete Slot...",
     "azureFunctions.deploy": "Deploy to Function App...",
     "azureFunctions.deploySlot": "Deploy to Slot...",

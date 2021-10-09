@@ -50,7 +50,6 @@
         "onCommand:azureFunctions.createSlot",
         "onCommand:azureFunctions.deleteFunction",
         "onCommand:azureFunctions.deleteFunctionApp",
-        "onCommand:azureFunctions.deleteProxy",
         "onCommand:azureFunctions.deleteSlot",
         "onCommand:azureFunctions.deploy",
         "onCommand:azureFunctions.deploySlot",
@@ -198,11 +197,6 @@
             {
                 "command": "azureFunctions.deleteFunctionApp",
                 "title": "%azureFunctions.deleteFunctionApp%",
-                "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.deleteProxy",
-                "title": "%azureFunctions.deleteProxy%",
                 "category": "Azure Functions"
             },
             {
@@ -606,16 +600,6 @@
                     "command": "azureFunctions.toggleAppSettingVisibility",
                     "when": "view == azFuncTree && viewItem == applicationSettingItem",
                     "group": "inline"
-                },
-                {
-                    "command": "azureFunctions.refresh",
-                    "when": "view == azFuncTree && viewItem == azFuncProxies",
-                    "group": "1@1"
-                },
-                {
-                    "command": "azureFunctions.deleteProxy",
-                    "when": "view == azFuncTree && viewItem == azFuncProxy",
-                    "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.disconnectRepo",
