@@ -14,8 +14,6 @@ import { nonNullValue } from '../utils/nonNull';
 import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
-import { ProxiesTreeItem } from './ProxiesTreeItem';
-import { ProxyTreeItem } from './ProxyTreeItem';
 import { RemoteFunctionsTreeItem } from './remoteProject/RemoteFunctionsTreeItem';
 
 export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
@@ -29,7 +27,6 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
     public abstract readonly label: string;
 
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
-    private _proxiesTreeItem: ProxiesTreeItem | undefined;
     private readonly _logFilesTreeItem: LogFilesTreeItem;
     private readonly _siteFilesTreeItem: SiteFilesTreeItem;
     private _cachedVersion: FuncVersion | undefined;
@@ -174,11 +171,8 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, this);
         }
 
-        if (!this._proxiesTreeItem) {
-            this._proxiesTreeItem = await ProxiesTreeItem.createProxiesTreeItem(context, this);
-        }
 
-        return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode, this._proxiesTreeItem];
+        return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
@@ -188,10 +182,6 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
                 case AppSettingsTreeItem.contextValue:
                 case AppSettingTreeItem.contextValue:
                     return this.appSettingsTreeItem;
-                case ProxiesTreeItem.contextValue:
-                case ProxyTreeItem.contextValue:
-                case ProxyTreeItem.readOnlyContextValue:
-                    return this._proxiesTreeItem;
                 case DeploymentsTreeItem.contextValueConnected:
                 case DeploymentsTreeItem.contextValueUnconnected:
                 case DeploymentTreeItem.contextValue:

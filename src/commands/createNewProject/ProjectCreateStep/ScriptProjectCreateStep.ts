@@ -8,7 +8,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { gitignoreFileName, hostFileName, localSettingsFileName, proxiesFileName, workerRuntimeKey } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { FuncVersion } from '../../../FuncVersion';
@@ -46,14 +46,6 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
             }
 
             await writeFormattedJson(localSettingsJsonPath, this.localSettingsJson);
-        }
-
-        const proxiesJsonPath: string = path.join(context.projectPath, proxiesFileName);
-        if (await confirmOverwriteFile(context, proxiesJsonPath)) {
-            await writeFormattedJson(proxiesJsonPath, {
-                $schema: 'http://json.schemastore.org/proxies',
-                proxies: {}
-            });
         }
 
         const gitignorePath: string = path.join(context.projectPath, gitignoreFileName);
