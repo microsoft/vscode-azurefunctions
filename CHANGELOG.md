@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.5.2 - 2021-10-12
+### Added
+- AzureFunctionsExtensionApi command `validateFuncCoreToolsInstalled`
+
+### Changed
+- `proxies.json` are no longer created when calling `Create New Project...`
+- Proxy tree items are no longer displayed in local project tree view
+
 ## 1.5.1 - 2021-09-09
 ### Fixed
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.1%22+is%3Aclosed+)
