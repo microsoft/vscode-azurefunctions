@@ -4,20 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
-import { getMajorVersion } from '../../../FuncVersion';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
+import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
-import { IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
 import { getStackPicks } from './getStackPicks';
 
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const placeHolder: string = localize('selectRuntimeStack', 'Select a runtime stack.');
-        const majorVersion = getMajorVersion(context.version);
-        const noPicksMessage = context.stackFilter ?
-            localize('noStacksFoundWithFilter', '$(warning) No stacks found for "{0}" on Azure Functions v{1}', context.stackFilter, majorVersion) :
-            localize('noStacksFound', '$(warning) No stacks found for Azure Functions v{0}', majorVersion);
-        context.newSiteStack = (await context.ui.showQuickPick(getStackPicks(context), { placeHolder, enableGrouping: true, noPicksMessage })).data;
+
+        let result: FullFunctionAppStack | undefined;
+        while (true) {
+            result = (await context.ui.showQuickPick(this.getPicks(context), { placeHolder, enableGrouping: true })).data;
+            if (!result) {
+                context.version = await promptForFuncVersion(context);
+            } else {
+                break;
+            }
+        }
+        context.newSiteStack = result;
 
         if (!context.newSiteStack.minorVersion.stackSettings.linuxRuntimeSettings) {
             context.newSiteOS = WebsiteOS.windows;
@@ -39,5 +45,31 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
             await setLocationsTask(context);
             return undefined;
         }
+    }
+
+    private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
+        const picks: IAzureQuickPickItem<FullFunctionAppStack | undefined>[] = await getStackPicks(context);
+        if (picks.length === 0) {
+            const majorVersion = getMajorVersion(context.version);
+            const noPicksMessage = context.stackFilter ?
+                localize('noStacksFoundWithFilter', '$(warning) No stacks found for "{0}" on Azure Functions v{1}', context.stackFilter, majorVersion) :
+                localize('noStacksFound', '$(warning) No stacks found for Azure Functions v{0}', majorVersion);
+            picks.push({
+                label: noPicksMessage,
+                data: undefined,
+                onPicked: () => {
+                    // do nothing
+                }
+            })
+        }
+
+        picks.push({
+            label: localize('changeFuncVersion', '$(gear) Change Azure Functions version'),
+            description: localize('currentFuncVersion', 'Current: {0}', context.version),
+            data: undefined,
+            suppressPersistence: true
+        });
+
+        return picks;
     }
 }
