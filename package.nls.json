@@ -56,7 +56,7 @@
     "azureFunctions.projectRuntime.v1": "Azure Functions v1",
     "azureFunctions.projectRuntime.v2": "Azure Functions v2",
     "azureFunctions.projectRuntime.v3": "Azure Functions v3",
-    "azureFunctions.projectRuntime.v4": "Azure Functions v4 (Preview)",
+    "azureFunctions.projectRuntime.v4": "Azure Functions v4",
     "azureFunctions.projectSubpath": "The default subpath of a workspace folder to use for project operations. This is only necessary if you have multiple projects in one workspace. See https://aka.ms/AA4nmfy for more information.",
     "azureFunctions.projectTemplateKey": "A key used to identify which templates to use for this project. In most cases, this will be automatically detected and should not need to be set.",
     "azureFunctions.pythonVenv": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",

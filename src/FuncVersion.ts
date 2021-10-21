@@ -14,12 +14,13 @@ export enum FuncVersion {
     v4 = '~4'
 }
 
-export const latestGAVersion: FuncVersion = FuncVersion.v3;
+export const latestGAVersion: FuncVersion = FuncVersion.v4;
 
 export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     const recommended: string = localize('recommended', '(Recommended)');
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
-        { label: 'Azure Functions v3', description: recommended, data: FuncVersion.v3 },
+        { label: 'Azure Functions v4', description: recommended, data: FuncVersion.v4 },
+        { label: 'Azure Functions v3', data: FuncVersion.v3 },
         { label: 'Azure Functions v2', data: FuncVersion.v2 },
         { label: 'Azure Functions v1', data: FuncVersion.v1 }
     ];
