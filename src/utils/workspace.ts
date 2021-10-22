@@ -82,9 +82,9 @@ export async function selectWorkspaceItem(context: IActionContext, placeHolder: 
     return folder && folder.data ? folder.data : (await context.ui.showOpenDialog(options))[0].fsPath;
 }
 
-export function getContainingWorkspace(fsPath: string): vscode.WorkspaceFolder | undefined {
+export function getContainingWorkspace(fsPath: string, acceptSubpath = true): vscode.WorkspaceFolder | undefined {
     const openFolders: readonly vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders || [];
     return openFolders.find((f: vscode.WorkspaceFolder): boolean => {
-        return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || fsUtils.isSubpath(f.uri.fsPath, fsPath);
+        return fsUtils.isPathEqual(f.uri.fsPath, fsPath) || (acceptSubpath && fsUtils.isSubpath(f.uri.fsPath, fsPath));
     });
 }

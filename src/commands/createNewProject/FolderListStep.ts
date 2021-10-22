@@ -13,7 +13,7 @@ export class FolderListStep extends AzureWizardPromptStep<IProjectWizardContext>
 
     public static setProjectPath(context: Partial<IProjectWizardContext>, projectPath: string): void {
         context.projectPath = projectPath;
-        context.workspaceFolder = getContainingWorkspace(projectPath);
+        context.workspaceFolder = getContainingWorkspace(projectPath, false);
         context.workspacePath = (context.workspaceFolder && context.workspaceFolder.uri.fsPath) || projectPath;
         if (context.workspaceFolder) {
             context.openBehavior = 'AlreadyOpen';
