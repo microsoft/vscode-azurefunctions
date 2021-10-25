@@ -293,14 +293,14 @@ const commonExpectedProjectPaths: string[] = [
     'local.settings.json',
     '.funcignore',
     '.gitignore',
-];
-
-const commonExpectedRootPaths: string[] = [
-    '.git',
     '.vscode/tasks.json',
     '.vscode/launch.json',
     '.vscode/extensions.json',
     '.vscode/settings.json'
+];
+
+const commonExpectedRootPaths: string[] = [
+    '.git'
 ];
 
 type ExpectedPath = string | { globPattern: string; numMatches: number };
