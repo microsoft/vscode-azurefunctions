@@ -114,8 +114,12 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
     private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteModels.SiteConfig> {
         const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
-        const newSiteConfig: SiteModels.SiteConfig = stackSettings.siteConfigPropertiesDictionary;
+        // https://github.com/microsoft/vscode-azurefunctions/issues/2990
+        if (context.newSiteOS === 'windows' && context.version === FuncVersion.v4) {
+            stackSettings.siteConfigPropertiesDictionary.netFrameworkVersion = 'v6.0'
+        }
 
+        const newSiteConfig: SiteModels.SiteConfig = stackSettings.siteConfigPropertiesDictionary;
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
         const appSettings: SiteModels.NameValuePair[] = [

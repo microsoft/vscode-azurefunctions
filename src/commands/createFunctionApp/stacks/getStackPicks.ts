@@ -6,6 +6,7 @@
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createGenericClient, IAzureQuickPickItem, parseError } from 'vscode-azureextensionui';
 import { hiddenStacksSetting } from '../../../constants';
+import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -130,14 +131,14 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
 
         context._stacks = stacksArmResponse.value.map(d => d.properties);
 
-        removeHiddenStacks(context._stacks);
+        removeHiddenStacksAndProperties(context._stacks);
     }
 
     return context._stacks;
 }
 
 
-function removeHiddenStacks(stacks: FunctionAppStack[]): void {
+function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
     const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
     for (const stack of stacks) {
         for (const major of stack.majorVersions) {
@@ -161,6 +162,14 @@ function removeHiddenStacks(stacks: FunctionAppStack[]): void {
                     if (minor.stackSettings.windowsRuntimeSettings?.isHidden) {
                         delete minor.stackSettings.windowsRuntimeSettings;
                     }
+                }
+
+                if (minor.stackSettings.windowsRuntimeSettings?.supportedFunctionsExtensionVersions.includes(FuncVersion.v3) &&
+                    minor.stackSettings.windowsRuntimeSettings?.supportedFunctionsExtensionVersions.includes(FuncVersion.v4)) {
+                    // Temporary workaround becausecurrently there are stacks that support both v3 and v4, but if netFrameworkVersion v6.0
+                    // is set for ~3 app, it will break so delete the netFrameworkVersion and only set to v6.0 for ~4
+                    // https://github.com/microsoft/vscode-azurefunctions/issues/2990
+                    delete minor.stackSettings.windowsRuntimeSettings.siteConfigPropertiesDictionary.netFrameworkVersion;
                 }
             }
         }
