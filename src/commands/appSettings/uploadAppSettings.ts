@@ -17,7 +17,7 @@ import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder): Promise<void> {
+export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
@@ -25,11 +25,11 @@ export async function uploadAppSettings(context: IActionContext, node?: AppSetti
 
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);
     await node.runWithTemporaryDescription(context, localize('uploading', 'Uploading...'), async () => {
-        await uploadAppSettingsInternal(context, client, workspaceFolder);
+        await uploadAppSettingsInternal(context, client, workspaceFolder, exclude);
     });
 }
 
-export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspaceFolder?: vscode.WorkspaceFolder): Promise<void> {
+export async function uploadAppSettingsInternal(context: IActionContext, client: api.IAppSettingsClient, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     const message: string = localize('selectLocalSettings', 'Select the local settings file to upload.');
     const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
@@ -48,6 +48,14 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
         if (!remoteSettings.properties) {
             remoteSettings.properties = {};
+        }
+
+        if (exclude) {
+            Object.keys(localSettings.Values).forEach((settingName) => {
+                if (exclude.some((exclusion) => typeof exclusion === 'string' ? settingName === exclusion : settingName.match(exclusion))) {
+                    delete localSettings.Values?.[settingName];
+                }
+            });
         }
 
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
