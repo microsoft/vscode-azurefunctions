@@ -29,6 +29,7 @@ export interface SiteConfigPropertiesDictionary {
     linuxFxVersion?: string;
     javaVersion?: string;
     powerShellVersion?: string;
+    netFrameworkVersion?: string
 }
 
 export interface FunctionAppRuntimeSettings extends CommonSettings {
