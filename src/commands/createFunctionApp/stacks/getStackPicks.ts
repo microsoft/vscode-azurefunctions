@@ -107,10 +107,9 @@ function getPriority(ss: FunctionAppRuntimes): number {
     }
 }
 
-type StacksArmResponse = { value: { properties: FunctionAppStack }[] };
 async function getStacks(context: IFunctionAppWizardContext & { _stacks?: FunctionAppStack[] }): Promise<FunctionAppStack[]> {
     if (!context._stacks) {
-        let stacksArmResponse: StacksArmResponse;
+        let stacksArmResponse: FunctionAppStack[];
         try {
             const client: ServiceClient = await createGenericClient(context, context);
             const result: HttpOperationResponse = await client.sendRequest({
@@ -124,15 +123,15 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
                     removeDepcrecatedStacks: true
                 }
             });
-            stacksArmResponse = <StacksArmResponse>result.parsedBody;
+            stacksArmResponse = <FunctionAppStack[]>result.parsedBody;
         } catch (error) {
             // Some environments (like Azure Germany/Mooncake) don't support the stacks ARM API yet
             // And since the stacks don't change _that_ often, we'll just use a backup hard-coded value
-            stacksArmResponse = <StacksArmResponse>JSON.parse(backupStacks);
+            stacksArmResponse = <FunctionAppStack[]>JSON.parse(backupStacks);
             context.telemetry.properties.getStacksError = parseError(error).message;
         }
 
-        context._stacks = stacksArmResponse.value.map(d => d.properties);
+        context._stacks = stacksArmResponse;
 
         removeHiddenStacksAndProperties(context._stacks);
     }
