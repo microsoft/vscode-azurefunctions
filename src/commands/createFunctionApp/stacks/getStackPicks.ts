@@ -114,11 +114,14 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
         try {
             const client: ServiceClient = await createGenericClient(context, context);
             const result: HttpOperationResponse = await client.sendRequest({
+                baseUrl: 'https://functions-release.azure.com',
                 method: 'GET',
-                pathTemplate: '/providers/Microsoft.Web/functionappstacks',
+                pathTemplate: '/stacks/functionappstacks',
                 queryParameters: {
                     'api-version': '2020-10-01',
-                    removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
+                    removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks')),
+                    removeHiddenStacks: true,
+                    removeDepcrecatedStacks: true
                 }
             });
             stacksArmResponse = <StacksArmResponse>result.parsedBody;
