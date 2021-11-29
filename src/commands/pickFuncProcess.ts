@@ -157,7 +157,7 @@ type ActualUnixPS = unixPsTree.PS & { COMM?: string };
 
 async function getUnixChildren(pid: number): Promise<OSAgnosticProcess[]> {
     const processes: ActualUnixPS[] = await new Promise((resolve, reject): void => {
-        unixPsTree(pid, (error: Error | undefined, result: unixPsTree.PS[]) => {
+        unixPsTree(pid, (error: Error | null, result: unixPsTree.PS[]) => {
             if (error) {
                 reject(error);
             } else {
