@@ -15,8 +15,6 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         start: 'func start',
         test: 'echo \"No tests yet...\"'
     };
-    protected packageJsonDeps: { [key: string]: string } = {};
-    protected packageJsonDevDeps: { [key: string]: string } = {};
 
     constructor() {
         super();
@@ -33,10 +31,14 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
                 version: '1.0.0',
                 description: '',
                 scripts: this.packageJsonScripts,
-                dependencies: this.packageJsonDeps,
-                devDependencies: this.packageJsonDevDeps
+                dependencies: {},
+                devDependencies: this.getPackageJsonDevDeps(context)
             });
         }
+    }
+
+    protected getPackageJsonDevDeps(_context: IProjectWizardContext): { [key: string]: string } {
+        return {};
     }
 }
 
