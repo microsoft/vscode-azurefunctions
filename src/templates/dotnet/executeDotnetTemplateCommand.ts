@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
+import { coerce as semVerCoerce, SemVer } from 'semver';
 import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from '../../FuncVersion';
@@ -60,25 +61,26 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
         }
 
         // Prioritize "LTS", then "Current", then "Preview"
-        const majorVersions: number[] = [3, 5, 6, 2];
+        const netVersions: string[] = ['6.0', '5.0', '3.1'];
+        const semVersions: SemVer[] = netVersions.map(v => semVerCoerce(v) as SemVer);
 
-        let pickedVersion: number | undefined;
+        let pickedVersion: SemVer | undefined;
 
         // Try to get a GA version first (i.e. "1.0.0")
-        for (const majorVersion of majorVersions) {
-            const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.[0-9]+\\.[0-9]+(\\s|$)`, 'm');
+        for (const semVersion of semVersions) {
+            const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.[0-9]+(\\s|$)`, 'm');
             if (regExp.test(versions)) {
-                pickedVersion = majorVersion;
+                pickedVersion = semVersion;
                 break;
             }
         }
 
         // Otherwise allow a preview version (i.e. "1.0.0-alpha")
         if (!pickedVersion) {
-            for (const majorVersion of majorVersions) {
-                const regExp: RegExp = new RegExp(`^\\s*${majorVersion}\\.`, 'm');
+            for (const semVersion of semVersions) {
+                const regExp: RegExp = new RegExp(`^\\s*${semVersion.major}\\.${semVersion.minor}\\.`, 'm');
                 if (regExp.test(versions)) {
-                    pickedVersion = majorVersion;
+                    pickedVersion = semVersion;
                     break;
                 }
             }
@@ -89,7 +91,7 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
             context.errorHandling.suppressReportIssue = true;
             throw new Error(localize('noMatchingFramework', 'You must have the [.NET Core SDK](https://aka.ms/AA4ac70) installed to perform this operation. See [here](https://aka.ms/AA1tpij) for supported versions.'));
         } else {
-            cachedFramework = `net${pickedVersion < 4 ? 'coreapp' : ''}${pickedVersion}.0`;
+            cachedFramework = `${pickedVersion.major < 4 ? 'netcoreapp' : 'net'}${pickedVersion.major}.${pickedVersion.minor}`;
         }
     }
 
