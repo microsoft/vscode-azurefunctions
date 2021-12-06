@@ -28,12 +28,6 @@ steps:
   inputs:
     version: 3.1.x
 
-- script: dotnet --version
-  displayName: 'Dotnet version'
-
-- script: dotnet --list-sdks
-  displayName: 'List Dotnet SDKs'
-
 - task: Npm@1
   displayName: 'Test'
   inputs:
