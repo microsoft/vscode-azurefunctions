@@ -44,7 +44,7 @@ export class PythonAliasListStep extends AzureWizardPromptStep<IPythonVenvWizard
 async function getPicks(context: IPythonVenvWizardContext): Promise<IAzureQuickPickItem<string | boolean>[]> {
     const supportedVersions: string[] = await getSupportedPythonVersions(context, context.version);
 
-    const aliasesToTry: string[] = ['python3', 'python', 'py'];
+    const aliasesToTry: string[] = ['python', 'python3', 'py'];
     for (const version of supportedVersions) {
         aliasesToTry.push(`python${version}`, `py -${version}`);
     }

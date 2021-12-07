@@ -26,7 +26,7 @@ jobs:
 
 - job: macOS
   pool:
-    vmImage: macOS-10.14 # Using 10.14 instead of latest (10.15) because of "ENOTCONN" errors during tests
+    vmImage: macOS-latest
   steps:
   - template: common/build.yml
   - template: common/package.yml
