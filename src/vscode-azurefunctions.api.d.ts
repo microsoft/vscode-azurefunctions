@@ -82,5 +82,5 @@ export interface ICreateFunctionOptions {
     /**
      * If set, it will automatically select the worker runtime for .NET with the matching targetFramework
      */
-    targetFramework?: string;
+    targetFrameworks?: string[];
 }
