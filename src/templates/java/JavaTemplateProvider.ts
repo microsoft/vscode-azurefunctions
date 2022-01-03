@@ -34,7 +34,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplateVersion(): Promise<string> {
-        await this.validateGradleProject();
+        this.validateGradleProject();
         const pomPath: string = path.join(this.getProjectPath(), pomXmlFileName);
         const pomContents: string = (await fse.readFile(pomPath)).toString();
         const match: RegExpMatchArray | null = pomContents.match(/<azure.functions.maven.plugin.version>(.*)<\/azure.functions.maven.plugin.version>/i);
@@ -46,7 +46,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplates(context: IActionContext): Promise<ITemplates> {
-        await this.validateGradleProject();
+        this.validateGradleProject();
         await mavenUtils.validateMavenInstalled(context);
         const projectPath: string = this.getProjectPath();
         const commandResult: string = await mavenUtils.executeMvnCommand(context.telemetry.properties, undefined, projectPath, 'azure-functions:list');
@@ -74,10 +74,10 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         return 'Java';
     }
 
-    private async validateGradleProject(): Promise<void> {
+    private validateGradleProject(): void {
         const buildTool: JavaBuildTool | undefined = getWorkspaceSetting(javaBuildTool, this.getProjectPath());
         if (buildTool === JavaBuildTool.gradle) {
-            throw new Error(localize('gradleUpdateTemplate', 'Update function template is not supported for gradle proeject.'));
+            throw new Error(localize('gradleUpdateTemplate', 'Update function template is not supported for gradle project.'));
         }
     }
 
