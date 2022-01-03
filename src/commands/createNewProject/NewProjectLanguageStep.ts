@@ -5,7 +5,7 @@
 
 import { QuickPickOptions } from 'vscode';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from 'vscode-azureextensionui';
-import { JavaBuildTool, ProjectLanguage } from '../../constants';
+import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -108,13 +108,11 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // All languages except Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (context['buildTool'] !== JavaBuildTool.maven) {
-            promptSteps.push(await FunctionListStep.create(context, {
-                isProjectWizard: true,
-                templateId: this._templateId,
-                functionSettings: this._functionSettings
-            }));
-        }
+        promptSteps.push(await FunctionListStep.create(context, {
+            isProjectWizard: true,
+            templateId: this._templateId,
+            functionSettings: this._functionSettings
+        }));
 
         return wizardOptions;
     }

@@ -5,7 +5,6 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep } from "vscode-azureextensionui";
 import { JavaBuildTool } from "../../../constants";
-import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
 import { IJavaProjectWizardContext } from "../../createNewProject/javaSteps/IJavaProjectWizardContext";
 import { JavaBuildToolStep } from "../../createNewProject/javaSteps/JavaBuildToolStep";
@@ -19,14 +18,12 @@ export async function addJavaInitVSCodeSteps(
     if (!context.buildTool) {
         const isMaven: boolean = await isMavenProject(context.projectPath);
         const isGradle: boolean = await isGradleProject(context.projectPath);
-        if (isMaven && isGradle) {
+        if (isMaven === isGradle) {
             promptSteps.push(new JavaBuildToolStep());
         } else if (isMaven) {
             context.buildTool = JavaBuildTool.maven;
         } else if (isGradle) {
             context.buildTool = JavaBuildTool.gradle;
-        } else {
-            throw new Error(localize('pomNotFound', 'Cannot find `pom.xml` or `build.gradle` in current project, please make sure the language setting is correct.'));
         }
     }
     executeSteps.push(new JavaInitVSCodeStep());

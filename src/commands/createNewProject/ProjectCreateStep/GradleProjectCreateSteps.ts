@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { IActionContext } from 'vscode-azureextensionui';
-import { buildGradleFileName, settingsGradleFileName } from '../../../constants';
+import { buildGradleFileName, JavaBuildTool, settingsGradleFileName } from '../../../constants';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { gradleUtils } from '../../../utils/gradleUtils';
@@ -44,6 +44,10 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
         if (await confirmOverwriteFile(context, buildGradlePath)) {
             await fse.writeFile(buildGradlePath, buildGradleContent);
         }
+    }
+
+    public shouldExecute(context: IJavaProjectWizardContext): boolean {
+        return context.buildTool === JavaBuildTool.gradle;
     }
 
     async getLatestGradlePluginVersion(context: IJavaProjectWizardContext): Promise<string> {

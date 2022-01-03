@@ -47,17 +47,15 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
         javaBaseInputs.unshift(/11/);
     }
 
-    const gradleInputs: (TestInput | string | RegExp)[] = [/Gradle/i];
     testCases.push({
         ...getJavaValidateOptions(appName, JavaBuildTool.gradle, version),
-        inputs: gradleInputs.concat(javaBaseInputs, /skip for now/i),
+        inputs: javaBaseInputs.concat(/Gradle/i, /skip for now/i),
         description: JavaBuildTool.gradle
     });
 
-    const mavenInputs: (TestInput | string | RegExp)[] = [/Maven/i];
     testCases.push({
         ...getJavaValidateOptions(appName, JavaBuildTool.maven, version),
-        inputs: mavenInputs.concat(javaBaseInputs),
+        inputs: javaBaseInputs.concat(/Maven/i),
         description: JavaBuildTool.maven
     });
 }

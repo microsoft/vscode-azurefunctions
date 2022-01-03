@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep } from "vscode-azureextensionui";
-import { JavaBuildTool } from "../../../constants";
-import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../IProjectWizardContext";
 import { GradleProjectCreateStep } from "../ProjectCreateStep/GradleProjectCreateSteps";
 import { MavenProjectCreateStep } from "../ProjectCreateStep/MavenProjectCreateSteps";
@@ -23,14 +21,6 @@ export async function addJavaCreateProjectSteps(
     promptSteps: AzureWizardPromptStep<IProjectWizardContext>[],
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
     await JavaVersionStep.setDefaultVersion(context);
-    promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep());
-
-    await new JavaBuildToolStep().prompt(context);
-    if (context.buildTool === JavaBuildTool.maven) {
-        executeSteps.push(await MavenProjectCreateStep.createStep(context));
-    } else if (context.buildTool === JavaBuildTool.gradle) {
-        executeSteps.push(await GradleProjectCreateStep.createStep(context));
-    } else {
-        throw new Error(localize('invalidJavaBuildTool', 'Internal error: Invalid java build tool "{0}".', context.buildTool));
-    }
+    promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep(), new JavaBuildToolStep());
+    executeSteps.push(await MavenProjectCreateStep.createStep(context), await GradleProjectCreateStep.createStep(context));
 }

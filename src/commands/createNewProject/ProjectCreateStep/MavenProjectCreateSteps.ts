@@ -7,6 +7,7 @@ import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import { IActionContext } from 'vscode-azureextensionui';
+import { JavaBuildTool } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import * as fsUtil from '../../../utils/fs';
 import { mavenUtils } from '../../../utils/mavenUtils';
@@ -22,6 +23,10 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
     public static async createStep(context: IActionContext): Promise<MavenProjectCreateStep> {
         await mavenUtils.validateMavenInstalled(context);
         return new MavenProjectCreateStep();
+    }
+
+    public shouldExecute(context: IJavaProjectWizardContext): boolean {
+        return context.buildTool === JavaBuildTool.maven;
     }
 
     public async executeCore(context: IJavaProjectWizardContext): Promise<void> {
