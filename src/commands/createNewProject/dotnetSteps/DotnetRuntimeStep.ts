@@ -14,13 +14,14 @@ import { IProjectWizardContext } from "../IProjectWizardContext";
 
 export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public static async createStep(context: IProjectWizardContext): Promise<DotnetRuntimeStep> {
-        if (context.targetFrameworks) {
+        if (context.targetFramework) {
+            context.targetFramework = typeof context.targetFramework === 'string' ? [context.targetFramework] : context.targetFramework;
             const runtimes = await getRuntimes(context);
             // if a targetFramework was provided from createNewProject
-            const workerRuntime = runtimes.find(runtime => context.targetFrameworks?.includes(runtime.targetFramework));
+            const workerRuntime = runtimes.find(runtime => context.targetFramework?.includes(runtime.targetFramework));
             if (!workerRuntime) {
                 throw new Error(localize('unknownFramework', 'Unrecognized target frameworks: "{0}". Available frameworks: {1}.',
-                    context.targetFrameworks.map(tf => `"${tf}"`).join(', '),
+                    context.targetFramework.map(tf => `"${tf}"`).join(', '),
                     runtimes.map(rt => `"${rt.targetFramework}"`).join(', ')));
             }
             setWorkerRuntime(context, workerRuntime);
