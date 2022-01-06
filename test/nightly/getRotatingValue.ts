@@ -25,7 +25,7 @@ export function getRotatingNodeVersion(): RegExp {
 }
 
 let pyVersionCount: number = getStartingIndex();
-const pyVersions: RegExp[] = [/python.*3\.6/i, /python.*3\.7/i, /python.*3\.8/i, /python.*3\.9/i];
+const pyVersions: RegExp[] = [/python.*3\.7/i, /python.*3\.8/i, /python.*3\.9/i];
 export function getRotatingPythonVersion(): RegExp {
     pyVersionCount += 1;
     return pyVersions[pyVersionCount % pyVersions.length];

@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.6.0 - 2021-11-04
+### Added
+- Remove preview flag from Azure Functions v4
+- Option to change Azure Functions runtime version when selecting runtime
+
+### Removed
+- AzureFunctionsExtensionApi command `validateFuncCoreToolsInstalled`
+
 ## 1.5.2 - 2021-10-12
 ### Added
 - AzureFunctionsExtensionApi command `validateFuncCoreToolsInstalled`
