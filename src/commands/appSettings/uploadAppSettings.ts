@@ -53,7 +53,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         const excludedAppSettings: string[] = [];
         if (exclude) {
             Object.keys(localSettings.Values).forEach((settingName) => {
-                if (exclude.some((exclusion) => typeof exclusion === 'string' ? settingName === exclusion : settingName.match(exclusion))) {
+                if (exclude.some((exclusion) => typeof exclusion === 'string' ? settingName.toLowerCase() === exclusion.toLowerCase() : settingName.match(new RegExp(exclusion, 'i')))) {
                     delete localSettings.Values?.[settingName];
                     excludedAppSettings.push(settingName);
                 }
