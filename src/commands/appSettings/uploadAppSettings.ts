@@ -50,10 +50,12 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
             remoteSettings.properties = {};
         }
 
+        const excludedAppSettings: string[] = [];
         if (exclude) {
             Object.keys(localSettings.Values).forEach((settingName) => {
                 if (exclude.some((exclusion) => typeof exclusion === 'string' ? settingName === exclusion : settingName.match(exclusion))) {
                     delete localSettings.Values?.[settingName];
+                    excludedAppSettings.push(settingName);
                 }
             });
         }
@@ -61,6 +63,11 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         const uploadSettings: string = localize('uploadingSettings', 'Uploading settings...');
         ext.outputChannel.appendLog(uploadSettings, { resourceName: client.fullName });
         await confirmOverwriteSettings(context, localSettings.Values, remoteSettings.properties, client.fullName);
+
+        if (excludedAppSettings.length) {
+            ext.outputChannel.appendLog(localize('excludedSettings', 'Excluded the following settings:'));
+            excludedAppSettings.forEach((key) => ext.outputChannel.appendLine(`- ${key}`));
+        }
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('uploadingSettingsTo', 'Uploading settings to "{0}"...', client.fullName) }, async () => {
             await client.updateApplicationSettings(remoteSettings);
