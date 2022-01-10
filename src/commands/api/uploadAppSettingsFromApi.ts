@@ -6,8 +6,8 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "vscode-azuree
 import { IAppSettingsClient } from "../../vscode-azurefunctions.api";
 import { uploadAppSettingsInternal } from "../appSettings/uploadAppSettings";
 
-export async function uploadAppSettingsFromApi(client: IAppSettingsClient): Promise<void> {
+export async function uploadAppSettingsFromApi(client: IAppSettingsClient, exclude?: (RegExp | string)[]): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.uploadAppSettings', async (context: IActionContext) => {
-        await uploadAppSettingsInternal(context, client);
+        await uploadAppSettingsInternal(context, client, undefined, exclude);
     });
 }
