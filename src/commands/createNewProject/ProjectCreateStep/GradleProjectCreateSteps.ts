@@ -22,10 +22,6 @@ const metaDataUrl = "https://plugins.gradle.org/m2/com/microsoft/azure/azure-fun
 export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = gradleGitignore;
 
-    private constructor() {
-        super();
-    }
-
     public static async createStep(context: IActionContext): Promise<GradleProjectCreateStep> {
         await gradleUtils.validateGradleInstalled(context);
         return new GradleProjectCreateStep();

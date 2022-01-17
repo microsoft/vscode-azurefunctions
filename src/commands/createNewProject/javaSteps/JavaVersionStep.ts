@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "vscode-azureextensionui";
-import { previewDescription } from "../../../constants";
 import { hasMinFuncCliVersion } from "../../../funcCoreTools/hasMinFuncCliVersion";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
@@ -22,7 +21,7 @@ export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardCon
     public async prompt(context: IJavaProjectWizardContext): Promise<void> {
         const picks: IAzureQuickPickItem<string>[] = [
             { label: 'Java 8', data: java8 },
-            { label: 'Java 11', description: previewDescription, data: java11 },
+            { label: 'Java 11', data: java11 },
         ];
         const placeHolder: string = localize('selectJavaVersion', 'Select a version of Java');
         context.javaVersion = (await context.ui.showQuickPick(picks, { placeHolder })).data;

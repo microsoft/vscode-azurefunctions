@@ -14,8 +14,8 @@ export namespace javaUtils {
     export async function getLatestArtifactVersionFromMetaData(context: IActionContext, metaDataUrl: string): Promise<string | undefined> {
         if (!cachedVersions.has(metaDataUrl)) {
             const response: HttpOperationResponse = await requestUtils.sendRequestWithExtTimeout(context, { method: 'GET', url: metaDataUrl });
-            const metadate: string = nonNullProp(response, 'bodyAsText');
-            const match: RegExpMatchArray | null = metadate.match(/<release>(.*)<\/release>/i);
+            const metaData: string = nonNullProp(response, 'bodyAsText');
+            const match: RegExpMatchArray | null = metaData.match(/<release>(.*)<\/release>/i);
             if (match) {
                 cachedVersions.set(metaDataUrl, match[1].trim());
             }

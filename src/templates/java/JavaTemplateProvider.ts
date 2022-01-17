@@ -77,7 +77,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     private validateGradleProject(): void {
         const buildTool: JavaBuildTool | undefined = getWorkspaceSetting(javaBuildTool, this.getProjectPath());
         if (buildTool === JavaBuildTool.gradle) {
-            throw new Error(localize('gradleUpdateTemplate', 'Update function template is not supported for gradle project.'));
+            throw Error('Internal error: Update function template is not supported for gradle project.');
         }
     }
 
