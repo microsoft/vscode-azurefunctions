@@ -142,6 +142,12 @@ jobs:
       AllTools: true
     condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
 
+  - task: ComponentGovernanceComponentDetection@0
+    displayName: 'Component Detection'
+    condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+    inputs:
+      sourceScanPath: tools/JsonCli # Scope only to the JSON CLI tool, since that's all this build is for
+
 trigger: none
 
 pr: none
