@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
-import { FuncVersion, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
 import { createAndValidateProject, ICreateProjectTestOptions } from './createAndValidateProject';
@@ -42,13 +42,21 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     });
 
     const appName: string = 'javaApp';
-    const javaInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
+    const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
     if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
-        javaInputs.unshift(/11/);
+        javaBaseInputs.unshift(/11/);
     }
+
     testCases.push({
-        ...getJavaValidateOptions(appName, version),
-        inputs: javaInputs
+        ...getJavaValidateOptions(appName, JavaBuildTool.gradle, version),
+        inputs: javaBaseInputs.concat(/Gradle/i, /skip for now/i),
+        description: JavaBuildTool.gradle
+    });
+
+    testCases.push({
+        ...getJavaValidateOptions(appName, JavaBuildTool.maven, version),
+        inputs: javaBaseInputs.concat(/Maven/i),
+        description: JavaBuildTool.maven
     });
 }
 
@@ -65,7 +73,8 @@ for (const testCase of testCases) {
 
         parallelTests.push({
             title,
-            skip: shouldSkipVersion(testCase.version),
+            // Java template provider based on maven, which does not support gradle project for now
+            skip: shouldSkipVersion(testCase.version) || (testCase.description === JavaBuildTool.gradle && source !== TemplateSource.Backup),
             // lots of errors like "The process cannot access the file because it is being used by another process" 😢
             suppressParallel: [ProjectLanguage.FSharp, ProjectLanguage.CSharp, ProjectLanguage.Java].includes(testCase.language),
             callback: async () => {

@@ -5,7 +5,7 @@
 
 import * as escape from 'escape-string-regexp';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
-import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
+import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
 import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
@@ -180,7 +180,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        return !context.functionTemplate;
+        return !context.functionTemplate && context['buildTool'] !== JavaBuildTool.maven;
     }
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {

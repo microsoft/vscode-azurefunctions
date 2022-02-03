@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
-import { FuncVersion, getRandomHexString, initProjectForVSCode, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';
 
@@ -87,7 +87,7 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
         await initAndValidateProject({ ...getFSharpValidateOptions('netstandard2.0', FuncVersion.v2), mockFiles });
     });
 
-    test('Java', async () => {
+    test('Java - Maven', async () => {
         const appName: string = 'javaApp1';
         const mockFiles: MockFile[] = [
             {
@@ -100,7 +100,20 @@ suite('Init Project For VS Code', function (this: Mocha.Suite): void {
             },
             { fsPath: 'src', isDir: true }
         ];
-        await initAndValidateProject({ ...getJavaValidateOptions(appName), mockFiles });
+        await initAndValidateProject({ ...getJavaValidateOptions(appName, JavaBuildTool.maven), mockFiles });
+    });
+
+    test('Java - Gradle', async () => {
+        const appName: string = 'javaApp1';
+        const mockFiles: MockFile[] = [
+            {
+                fsPath: 'build.gradle',
+                contents: `azurefunctions {
+    appName = '${appName}'
+}`
+            }
+        ];
+        await initAndValidateProject({ ...getJavaValidateOptions(appName, JavaBuildTool.gradle), mockFiles });
     });
 
     test('PowerShell', async () => {
