@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
-import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, ProjectLanguage } from '../../extension.bundle';
+import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v3;
 
@@ -171,7 +171,7 @@ export function getPythonValidateOptions(venvName: string | undefined, version: 
     };
 }
 
-export function getJavaValidateOptions(appName: string, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
+export function getJavaValidateOptions(appName: string, buildTool: string, version: FuncVersion = defaultTestFuncVersion): IValidateProjectOptions {
     return {
         language: ProjectLanguage.Java,
         version,
@@ -179,19 +179,12 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
             'azureFunctions.projectLanguage': ProjectLanguage.Java,
             'azureFunctions.projectRuntime': version,
             'azureFunctions.preDeployTask': 'package (functions)',
-            'azureFunctions.deploySubpath': `target/azure-functions/${appName}`,
-            'azureFunctions.javaBuildTool': 'maven',
+            'azureFunctions.javaBuildTool': buildTool,
+            'azureFunctions.deploySubpath': buildTool === JavaBuildTool.maven ? `target/azure-functions/${appName}` : `build/azure-functions/${appName}`,
             'debug.internalConsoleOptions': 'neverOpen',
         },
-        expectedPaths: [
-            'src',
-            'pom.xml'
-        ],
         expectedExtensionRecs: [
             'vscjava.vscode-java-debug'
-        ],
-        excludedPaths: [
-            '.funcignore'
         ],
         expectedDebugConfigs: [
             'Attach to Java Functions'
@@ -199,7 +192,9 @@ export function getJavaValidateOptions(appName: string, version: FuncVersion = d
         expectedTasks: [
             'host start',
             'package (functions)'
-        ]
+        ],
+        expectedPaths: buildTool === JavaBuildTool.maven ? ['src', 'pom.xml'] : ['build.gradle'],
+        excludedPaths: buildTool === JavaBuildTool.maven ? ['.funcignore'] : []
     };
 }
 

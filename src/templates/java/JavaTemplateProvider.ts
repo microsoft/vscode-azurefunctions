@@ -6,10 +6,11 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { pomXmlFileName } from '../../constants';
+import { JavaBuildTool, javaBuildTool, pomXmlFileName } from '../../constants';
 import { localize } from '../../localize';
 import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { ITemplates } from '../ITemplates';
 import { parseScriptTemplates } from '../script/parseScriptTemplates';
 import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
@@ -33,6 +34,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplateVersion(): Promise<string> {
+        this.validateGradleProject();
         const pomPath: string = path.join(this.getProjectPath(), pomXmlFileName);
         const pomContents: string = (await fse.readFile(pomPath)).toString();
         const match: RegExpMatchArray | null = pomContents.match(/<azure.functions.maven.plugin.version>(.*)<\/azure.functions.maven.plugin.version>/i);
@@ -44,8 +46,8 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     }
 
     public async getLatestTemplates(context: IActionContext): Promise<ITemplates> {
+        this.validateGradleProject();
         await mavenUtils.validateMavenInstalled(context);
-
         const projectPath: string = this.getProjectPath();
         const commandResult: string = await mavenUtils.executeMvnCommand(context.telemetry.properties, undefined, projectPath, 'azure-functions:list');
         const regExp: RegExp = />> templates begin <<([\S\s]+)^.+INFO.+ >> templates end <<$[\S\s]+>> bindings begin <<([\S\s]+)^.+INFO.+ >> bindings end <<$[\S\s]+>> resources begin <<([\S\s]+)^.+INFO.+ >> resources end <<$/gm;
@@ -70,6 +72,13 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     // eslint-disable-next-line @typescript-eslint/require-await
     protected async getCacheKeySuffix(): Promise<string> {
         return 'Java';
+    }
+
+    private validateGradleProject(): void {
+        const buildTool: JavaBuildTool | undefined = getWorkspaceSetting(javaBuildTool, this.getProjectPath());
+        if (buildTool === JavaBuildTool.gradle) {
+            throw Error('Internal error: Update function template is not supported for gradle project.');
+        }
     }
 
     private getProjectPath(): string {
