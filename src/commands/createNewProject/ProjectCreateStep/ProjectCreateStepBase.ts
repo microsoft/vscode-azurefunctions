@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import { Progress } from 'vscode';
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';

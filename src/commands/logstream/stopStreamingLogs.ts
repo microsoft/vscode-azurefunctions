@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as appservice from 'vscode-azureappservice';
-import { ParsedSite } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
+import * as appservice from '@microsoft/vscode-azext-azureappservice';
+import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';

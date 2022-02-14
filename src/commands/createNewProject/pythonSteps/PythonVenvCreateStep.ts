@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { requirementsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";

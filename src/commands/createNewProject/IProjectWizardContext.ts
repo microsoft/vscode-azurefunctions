@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
-import { IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage } from "../../constants";
 import { FuncVersion } from "../../FuncVersion";
 import { cliFeedUtils } from "../../utils/cliFeedUtils";

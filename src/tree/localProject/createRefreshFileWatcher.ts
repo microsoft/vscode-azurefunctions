@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { Disposable, FileSystemWatcher, workspace } from 'vscode';
-import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
 
 export function createRefreshFileWatcher(ti: AzExtTreeItem, globPattern: string): Disposable {
     const refreshMethod: () => Promise<void> = async (): Promise<void> => {

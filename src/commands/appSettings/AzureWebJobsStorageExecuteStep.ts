@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, IStorageAccountWizardContext } from 'vscode-azureextensionui';
+import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { localEmulatorConnectionString } from '../../constants';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
 import { getStorageConnectionString } from '../../utils/azure';

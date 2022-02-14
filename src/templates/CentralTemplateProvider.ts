@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';

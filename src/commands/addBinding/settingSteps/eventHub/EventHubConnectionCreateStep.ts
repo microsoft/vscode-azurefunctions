@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
+import { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
@@ -20,10 +20,10 @@ export class EventHubConnectionCreateStep extends AzureConnectionCreateStepBase<
         const client: EventHubManagementClient = await createEventHubClient(context);
         let connectionString: string;
         if (context.isNamespaceAuthRule) {
-            const keys: EventHubManagementModels.AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRuleName);
+            const keys: AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRuleName);
             connectionString = `${nonNullProp(keys, 'primaryConnectionString')};EntityPath=${eventHubName}`;
         } else {
-            const keys: EventHubManagementModels.AccessKeys = await client.eventHubs.listKeys(resourceGroupName, namespaceName, eventHubName, authRuleName);
+            const keys: AccessKeys = await client.eventHubs.listKeys(resourceGroupName, namespaceName, eventHubName, authRuleName);
             connectionString = nonNullProp(keys, 'primaryConnectionString');
         }
 

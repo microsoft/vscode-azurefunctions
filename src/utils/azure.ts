@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageManagementClient, StorageManagementModels } from '@azure/arm-storage';
+import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
+import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { IActionContext, IAzureQuickPickItem, IStorageAccountWizardContext } from 'vscode-azureextensionui';
 import { localize } from '../localize';
 import { createStorageClient } from './azureClients';
 import { nonNullProp, nonNullValue } from './nonNull';
@@ -64,11 +65,11 @@ export interface IResourceResult {
 
 export async function getStorageConnectionString(context: IStorageAccountWizardContext): Promise<IResourceResult> {
     const client: StorageManagementClient = await createStorageClient(context);
-    const storageAccount: StorageManagementModels.StorageAccount = nonNullProp(context, 'storageAccount');
+    const storageAccount: StorageAccount = nonNullProp(context, 'storageAccount');
     const name: string = nonNullProp(storageAccount, 'name');
 
     const resourceGroup: string = getResourceGroupFromId(nonNullProp(storageAccount, 'id'));
-    const result: StorageManagementModels.StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
+    const result: StorageAccountListKeysResult = await client.storageAccounts.listKeys(resourceGroup, name);
     const key: string = nonNullProp(nonNullValue(nonNullProp(result, 'keys')[0], 'keys[0]'), 'value');
 
     let endpointSuffix: string = nonNullProp(context.environment, 'storageEndpointSuffix');

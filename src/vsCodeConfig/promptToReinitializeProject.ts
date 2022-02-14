@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { localize } from '../localize';
 import { getWorkspaceSetting, updateWorkspaceSetting } from './settings';

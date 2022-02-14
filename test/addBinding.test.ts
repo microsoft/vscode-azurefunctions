@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Uri } from 'vscode';
 import { createTestActionContext, runWithTestActionContext } from 'vscode-azureextensiondev';
-import { AzExtTreeItem } from 'vscode-azureextensionui';
 import { addBinding, createNewProjectInternal, ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
 import { cleanTestWorkspace, getTestWorkspaceFolder } from './global.test';
 

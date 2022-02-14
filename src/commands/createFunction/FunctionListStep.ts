@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
@@ -180,7 +180,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public shouldPrompt(context: IFunctionWizardContext): boolean {
-        return !context.functionTemplate;
+        return !context.functionTemplate && context['buildTool'] === '';
     }
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionActionContext } from 'vscode-azureextensionui';
+import { ISubscriptionActionContext } from '@microsoft/vscode-azext-utils';
 
 export interface IEventHubWizardContext extends ISubscriptionActionContext {
     namespaceName?: string;

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { commands, Uri, workspace, WorkspaceFolder } from 'vscode';
-import { AzureWizardExecuteStep } from 'vscode-azureextensionui';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 export class OpenFolderStep extends AzureWizardExecuteStep<IProjectWizardContext> {

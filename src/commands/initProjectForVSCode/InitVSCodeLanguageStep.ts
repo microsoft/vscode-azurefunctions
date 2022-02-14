@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickItem, QuickPickOptions } from 'vscode';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from 'vscode-azureextensionui';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';

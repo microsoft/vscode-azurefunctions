@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import * as fsUtil from '../../../utils/fs';
 import { mavenUtils } from '../../../utils/mavenUtils';

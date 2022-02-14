@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels as AIModels } from '@azure/arm-appinsights';
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import * as appservice from 'vscode-azureappservice';
-import { ParsedSite } from 'vscode-azureappservice';
-import { AzExtTreeItem, DialogResponses, IActionContext } from 'vscode-azureextensionui';
+import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModels } from '@azure/arm-appinsights';
+import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
+import * as appservice from '@microsoft/vscode-azext-azureappservice';
+import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
@@ -37,7 +37,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
     } else {
         const verifyLoggingEnabled: () => Promise<void> = async (): Promise<void> => {
             const client = await site.createClient(context);
-            const logsConfig: WebSiteManagementModels.SiteLogsConfig = await client.getLogsConfig();
+            const logsConfig: SiteLogsConfig = await client.getLogsConfig();
             if (!isApplicationLoggingEnabled(logsConfig)) {
                 const message: string = localize('enableApplicationLogging', 'Do you want to enable application logging for "{0}"?', client.fullName);
                 await context.ui.showWarningMessage(message, { modal: true, stepName: 'enableAppLogging' }, DialogResponses.yes);
@@ -55,15 +55,15 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
  */
 async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, node: AzExtTreeItem): Promise<void> {
     const client = await site.createClient(context);
-    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+    const appSettings: StringDictionary = await client.listApplicationSettings();
     const aiKey: string | undefined = appSettings.properties && appSettings.properties.APPINSIGHTS_INSTRUMENTATIONKEY;
     if (!aiKey) {
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
         const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node]);
-        const components: AIModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
-        const component: AIModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
+        const components: ApplicationInsightsManagementModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
+        const component: ApplicationInsightsManagementModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {
             throw new Error(localize('failedToFindAI', 'Failed to find application insights component.'));
         } else {
@@ -81,7 +81,7 @@ async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, 
     }
 }
 
-function isApplicationLoggingEnabled(config: WebSiteManagementModels.SiteLogsConfig): boolean {
+function isApplicationLoggingEnabled(config: SiteLogsConfig): boolean {
     if (config.applicationLogs) {
         if (config.applicationLogs.fileSystem) {
             return config.applicationLogs.fileSystem.level !== undefined && config.applicationLogs.fileSystem.level.toLowerCase() !== 'off';

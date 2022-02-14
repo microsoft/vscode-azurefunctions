@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition } from 'vscode';
-import { DialogResponses, parseError } from 'vscode-azureextensionui';
 import { func, hostStartCommand, ProjectLanguage } from '../../../constants';
 import { FuncVersion, tryParseFuncVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";

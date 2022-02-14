@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';

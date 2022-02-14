@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
+import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, INewStorageAccountDefaults, LocationListStep, parseError, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, VerifyProvidersStep } from 'vscode-azureextensionui';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
@@ -42,11 +43,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
-        let webAppCollection: WebSiteManagementModels.WebAppCollection;
+        let webAppCollection: Site[];
         try {
-            webAppCollection = this._nextLink ?
-                await client.webApps.listNext(this._nextLink) :
-                await client.webApps.list();
+            webAppCollection = await uiUtils.listAllIterator(client.webApps.list());
         } catch (error) {
             if (parseError(error).errorType.toLowerCase() === 'notfound') {
                 // This error type means the 'Microsoft.Web' provider has not been registered in this subscription
@@ -58,19 +57,17 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }
         }
 
-        this._nextLink = webAppCollection.nextLink;
-
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidFunctionApp',
-            (site: WebSiteManagementModels.Site) => {
+            (site: Site) => {
                 const parsedSite = new ParsedSite(site, this.subscription);
                 if (parsedSite.isFunctionApp) {
                     return new ProductionSlotTreeItem(this, parsedSite);
                 }
                 return undefined;
             },
-            (site: WebSiteManagementModels.Site) => {
+            (site: Site) => {
                 return site.name;
             }
         );

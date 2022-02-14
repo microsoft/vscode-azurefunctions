@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { IActionContext } from 'vscode-azureextensionui';
 import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
 import { extensionsCsprojFileName, extInstallCommand, hostFileName, ProjectLanguage, settingsFileName, tasksFileName, vscodeFolderName } from '../constants';

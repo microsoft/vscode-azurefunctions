@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
-import { createGenericClient, IAzureQuickPickItem, parseError } from 'vscode-azureextensionui';
+import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
+import { IAzureQuickPickItem, parseError } from '@microsoft/vscode-azext-utils';
 import { hiddenStacksSetting } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';

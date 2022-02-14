@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { FunctionEnvelope } from '@azure/arm-appservice';
+import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { AzExtTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { delay } from '../../utils/delay';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
@@ -43,13 +43,11 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         }
 
         const client = await this.parent.site.createClient(context);
-        let funcs: WebSiteManagementModels.FunctionEnvelopeCollection;
+        let funcs: FunctionEnvelope[];
         const maxTime = Date.now() + 2 * 60 * 1000;
         let attempt = 1;
         while (true) {
-            funcs = this._nextLink ?
-                await client.listFunctionsNext(this._nextLink) :
-                await client.listFunctions();
+            funcs = await client.listFunctions();
 
             // https://github.com/Azure/azure-functions-host/issues/3502
             if (!isArray(funcs)) {
@@ -66,20 +64,18 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             }
         }
 
-        this._nextLink = funcs.nextLink;
-
         return await this.createTreeItemsWithErrorHandling(
             funcs,
             'azFuncInvalidFunction',
-            async (fe: WebSiteManagementModels.FunctionEnvelope) => await RemoteFunctionTreeItem.create(context, this, fe),
-            (fe: WebSiteManagementModels.FunctionEnvelope) => {
+            async (fe: FunctionEnvelope) => await RemoteFunctionTreeItem.create(context, this, fe),
+            (fe: FunctionEnvelope) => {
                 return fe.id ? getFunctionNameFromId(fe.id) : undefined;
             }
         );
     }
 }
 
-function isWarmupFunction(func: WebSiteManagementModels.FunctionEnvelope): boolean {
+function isWarmupFunction(func: FunctionEnvelope): boolean {
     try {
         return !!func.id && getFunctionNameFromId(func.id).toLowerCase() === 'warmup';
     } catch {

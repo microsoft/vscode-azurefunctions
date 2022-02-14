@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { localSettingsFileName } from '../constants';
 import { localize } from '../localize';
 import * as fsUtil from '../utils/fs';

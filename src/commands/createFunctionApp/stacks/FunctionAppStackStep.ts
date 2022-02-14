@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { setLocationsTask, SiteOSStep, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from 'vscode-azureextensionui';
+import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';

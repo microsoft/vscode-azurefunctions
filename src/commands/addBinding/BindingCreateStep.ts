@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
 import { Progress, Uri, window, workspace } from "vscode";
-import { AzureWizardExecuteStep } from "vscode-azureextensionui";
 import { IFunctionBinding, IFunctionJson } from "../../funcConfig/function";
 import { IBindingTemplate } from "../../templates/IBindingTemplate";
 import { confirmEditJsonFile } from '../../utils/fs';

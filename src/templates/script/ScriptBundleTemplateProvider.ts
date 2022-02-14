@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { hostFileName } from '../../constants';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
 import { localize } from '../../localize';

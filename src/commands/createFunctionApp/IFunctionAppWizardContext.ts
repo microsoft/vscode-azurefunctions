@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAppServiceWizardContext } from 'vscode-azureappservice';
-import { ICreateChildImplContext } from 'vscode-azureextensionui';
+import { IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { FuncVersion } from '../../FuncVersion';
 import { AppStackMajorVersion, AppStackMinorVersion } from './stacks/models/AppStackModel';
 import { FunctionAppRuntimes, FunctionAppStack } from './stacks/models/FunctionAppStackModel';

@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { FunctionEnvelope } from '@azure/arm-appservice';
+import { AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
-import { AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
@@ -87,11 +87,11 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
                 rejectUnauthorized: hostRequest.rejectUnauthorized
             });
             return await this.createTreeItemsWithErrorHandling(
-                <WebSiteManagementModels.FunctionEnvelope[]>functions.parsedBody,
+                <FunctionEnvelope[]>functions.parsedBody,
                 'azFuncInvalidLocalFunction',
                 async func => {
                     func = requestUtils.convertToAzureSdkObject(func);
-                    return LocalFunctionTreeItem.create(context, this, nonNullProp(func, 'name'), func.config, undefined, func);
+                    return LocalFunctionTreeItem.create(context, this, nonNullProp(func, 'name'), new ParsedFunctionJson(func.config), undefined, func);
                 },
                 func => func.name
             );

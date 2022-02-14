@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, parseError } from "vscode-azureextensionui";
+import { AzureWizardPromptStep, parseError } from "@microsoft/vscode-azext-utils";
 import { localize } from "../../../localize";
 import { IPythonVenvWizardContext } from "./IPythonVenvWizardContext";
 import { getPythonVersion, getSupportedPythonVersions, isSupportedPythonVersion } from './pythonVersion';

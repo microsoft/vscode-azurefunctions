@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtParentTreeItem, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { WorkspaceFolder } from 'vscode';
-import { AzExtParentTreeItem, TreeItemIconPath } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { treeUtils } from '../../utils/treeUtils';
 

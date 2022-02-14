@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext, IAzExtOutputChannel, TelemetryProperties } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { DialogResponses, IActionContext, IAzExtOutputChannel, TelemetryProperties } from "vscode-azureextensionui";
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
 import { cpUtils } from './cpUtils';

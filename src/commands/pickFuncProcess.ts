@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { AzExtRequestPrepareOptions, sendRequestWithTimeout } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as unixPsTree from 'ps-tree';
 import * as vscode from 'vscode';
-import { AzExtRequestPrepareOptions, IActionContext, sendRequestWithTimeout, UserCancelledError } from 'vscode-azureextensionui';
 import { hostStartTaskName } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from '../debug/validatePreDebug';
 import { ext } from '../extensionVariables';

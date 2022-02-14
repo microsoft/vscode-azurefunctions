@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem } from "vscode-azureextensionui";
+import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { hiddenStacksSetting } from "../../../constants";
 import { promptForFuncVersion } from "../../../FuncVersion";
 import { localize } from "../../../localize";

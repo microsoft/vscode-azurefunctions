@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from "@azure/arm-appservice";
+import { StringDictionary } from "@azure/arm-appservice";
+import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "vscode-azureappservice";
-import { IActionContext } from "vscode-azureextensionui";
 import { localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
@@ -45,7 +45,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
     }
 
     if (localSettings.Values) {
-        const remoteSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+        const remoteSettings: StringDictionary = await client.listApplicationSettings();
         if (!remoteSettings.properties) {
             remoteSettings.properties = {};
         }

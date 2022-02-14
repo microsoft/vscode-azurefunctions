@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FileTreeItem } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
+import { FileTreeItem } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 
 export async function openFile(context: IActionContext, node: FileTreeItem): Promise<void> {
     context.telemetry.eventVersion = 2;

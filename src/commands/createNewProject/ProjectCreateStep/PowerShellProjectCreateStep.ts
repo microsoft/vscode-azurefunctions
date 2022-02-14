@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { IActionContext } from 'vscode-azureextensionui';
 import { workerRuntimeVersionKey } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { hasMinFuncCliVersion } from '../../../funcCoreTools/hasMinFuncCliVersion';

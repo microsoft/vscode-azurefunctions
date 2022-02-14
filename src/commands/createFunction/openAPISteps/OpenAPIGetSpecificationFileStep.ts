@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { OpenDialogOptions, Uri, workspace } from "vscode";
-import { AzureWizardPromptStep } from "vscode-azureextensionui";
 import { IFunctionWizardContext } from "../IFunctionWizardContext";
 
 export class OpenAPIGetSpecificationFileStep extends AzureWizardPromptStep<IFunctionWizardContext> {

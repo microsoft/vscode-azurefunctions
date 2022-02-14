@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep } from "vscode-azureextensionui";
+import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { JavaBuildTool } from "../../../constants";
 import { localize } from "../../../localize";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";

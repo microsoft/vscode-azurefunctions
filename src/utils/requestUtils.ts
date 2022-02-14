@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
+import { AzExtRequestPrepareOptions, createGenericClient, sendRequestWithTimeout } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { AzExtRequestPrepareOptions, createGenericClient, IActionContext, parseError, sendRequestWithTimeout } from "vscode-azureextensionui";
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from "../vsCodeConfig/settings";

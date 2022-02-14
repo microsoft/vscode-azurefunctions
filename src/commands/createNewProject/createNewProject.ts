@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
-import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';

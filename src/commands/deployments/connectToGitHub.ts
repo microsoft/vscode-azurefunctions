@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeploymentsTreeItem, editScmType } from "vscode-azureappservice";
-import { GenericTreeItem, IActionContext } from "vscode-azureextensionui";
+import { DeploymentsTreeItem, editScmType } from "@microsoft/vscode-azext-azureappservice";
+import { GenericTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ProductionSlotTreeItem } from "../../tree/ProductionSlotTreeItem";

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels as Models } from '@azure/arm-appservice';
+import { Site } from '@azure/arm-appservice';
+import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { tryGetWebApp } from 'vscode-azureappservice';
 import { runWithInputs, runWithTestActionContext } from 'vscode-azureextensiondev';
 import { createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString, ProjectLanguage, registerOnActionStartHandler } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
@@ -48,7 +48,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
                 await createFunctionAppAdvanced(context);
             });
         });
-        const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         assert.ok(createdApp);
     });
 
@@ -59,7 +59,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
                 await createFunctionAppAdvanced(context);
             });
         });
-        const createdApp: Models.Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
+        const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.ok(createdApp);
     });
 
@@ -74,7 +74,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
             await runWithInputs(commandId, inputs, registerOnActionStartHandler, async () => {
                 const actualFuncAppId: string = <string>await vscode.commands.executeCommand(commandId, testAccount.getSubscriptionContext().subscriptionId, apiRgName);
-                const site: Models.Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
+                const site: Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
                 assert.ok(site);
                 assert.equal(actualFuncAppId, site.id);
             });
@@ -87,7 +87,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
                 await deleteFunctionApp(context);
             });
         });
-        const site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, appName);
+        const site: Site | undefined = await tryGetWebApp(testClient, rgName, appName);
         assert.equal(site, undefined);
     });
 
@@ -97,7 +97,7 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
                 await deleteFunctionApp(context);
             });
         });
-        const site: Models.Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
+        const site: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.equal(site, undefined);
     });
 });

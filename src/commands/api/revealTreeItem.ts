@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "vscode-azureextensionui";
+import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 
 export async function revealTreeItem(resourceId: string): Promise<void> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from 'vscode-azureextensionui';
+import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';

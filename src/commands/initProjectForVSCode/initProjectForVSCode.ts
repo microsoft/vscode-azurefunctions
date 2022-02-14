@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { window, workspace, WorkspaceFolder } from 'vscode';
-import { AzureWizard, IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectTemplateKeySetting } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';

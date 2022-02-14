@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { workspace, WorkspaceFolder } from "vscode";
-import { IActionContext } from 'vscode-azureextensionui';
 import { localSettingsFileName } from "../../constants";
 import { selectWorkspaceFile } from "../../utils/workspace";
 import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
-import { AzureWizardExecuteStep, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ProjectLanguage } from "../../../constants";
 import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";

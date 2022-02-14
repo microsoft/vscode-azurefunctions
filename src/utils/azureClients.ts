@@ -9,7 +9,7 @@ import { CosmosDBManagementClient } from '@azure/arm-cosmosdb';
 import { EventHubManagementClient } from '@azure/arm-eventhub';
 import { ServiceBusManagementClient } from '@azure/arm-servicebus';
 import { StorageManagementClient } from '@azure/arm-storage';
-import { AzExtClientContext, createAzureClient } from 'vscode-azureextensionui';
+import { AzExtClientContext, createAzureClient } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
 // NOTE: The client is the only import that matters, the rest of the types disappear when compiled to JavaScript

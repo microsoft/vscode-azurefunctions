@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon, WorkspaceFolder } from 'vscode';
-import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { isLocalProjectCV } from '../projectContextValues';
 import { LocalProjectTreeItemBase } from './LocalProjectTreeItemBase';

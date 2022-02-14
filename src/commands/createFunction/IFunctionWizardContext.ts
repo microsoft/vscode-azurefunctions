@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionContext } from "vscode-azureextensionui";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { BindingSettingValue } from "../../funcConfig/function";
 import { IBindingSetting } from "../../templates/IBindingTemplate";
 import { IFunctionTemplate } from "../../templates/IFunctionTemplate";
