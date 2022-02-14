@@ -6,6 +6,7 @@
 'use strict';
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
+import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
@@ -37,6 +38,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     context.subscriptions.push(ext.outputChannel);
 
     registerUIExtensionVariables(ext);
+    registerAzureUtilsExtensionVariables(ext);
     registerAppServiceExtensionVariables(ext);
 
     await callWithTelemetryAndErrorHandling('azureFunctions.activate', async (activateContext: IActionContext) => {
