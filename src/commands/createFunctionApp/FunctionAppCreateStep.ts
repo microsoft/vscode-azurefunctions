@@ -81,9 +81,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return site;
     }
 
-    /**
-     * Has a few temporary workarounds so that the sdk allows some newer properties on the plan
-     */
     private addCustomLocationProperties(site: Site, customLocation: CustomLocation): void {
         nonNullProp(site, 'siteConfig').alwaysOn = true;
         site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
