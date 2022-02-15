@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { RemoteDebugLanguage } from 'vscode-azureappservice';
+import { SiteConfig } from '@azure/arm-appservice';
+import { RemoteDebugLanguage } from '@microsoft/vscode-azext-azureappservice';
 
-export function getRemoteDebugLanguage(siteConfig: WebSiteManagementModels.SiteConfig): RemoteDebugLanguage {
+export function getRemoteDebugLanguage(siteConfig: SiteConfig): RemoteDebugLanguage {
     // Read siteConfig.linuxFxVersion to determine debugging support
     //   If the Function App is running on Windows, it will be empty
     //   If the Function App is running on Linux consumption, it will be empty

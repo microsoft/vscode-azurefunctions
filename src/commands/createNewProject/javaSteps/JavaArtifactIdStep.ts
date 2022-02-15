@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { InputBoxOptions } from "vscode";
-import { AzureWizardPromptStep } from "vscode-azureextensionui";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext, validateMavenIdentifier } from "./IJavaProjectWizardContext";
 

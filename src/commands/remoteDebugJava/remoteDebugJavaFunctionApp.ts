@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { SiteConfigResource, StringDictionary, User } from '@azure/arm-appservice';
+import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
-import { SiteClient } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
@@ -24,7 +24,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
     }
     const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await portfinder.getPortPromise();
-    const publishCredential: WebSiteManagementModels.User = await client.getWebAppPublishCredential();
+    const publishCredential: User = await client.getWebAppPublishCredential();
     const debugProxy: DebugProxy = new DebugProxy(node.site, portNumber, publishCredential);
 
     debugProxy.on('error', (err: Error) => {
@@ -36,8 +36,8 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
         // eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-explicit-any, no-async-promise-executor
         return new Promise(async (resolve: (value: unknown) => void, reject: (e: any) => void): Promise<void> => {
             try {
-                const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
-                const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+                const siteConfig: SiteConfigResource = await client.getSiteConfig();
+                const appSettings: StringDictionary = await client.listApplicationSettings();
                 if (needUpdateSiteConfig(siteConfig) || (appSettings.properties && needUpdateAppSettings(appSettings.properties))) {
                     const confirmMsg: string = localize('confirmRemoteDebug', 'The configurations of the selected app will be changed before debugging. Would you like to continue?');
                     const result: vscode.MessageItem = await context.ui.showWarningMessage(confirmMsg, { modal: true }, DialogResponses.yes, DialogResponses.learnMore);
@@ -81,7 +81,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
 
 }
 
-async function updateSiteConfig(client: SiteClient, p: vscode.Progress<{}>, siteConfig: WebSiteManagementModels.SiteConfigResource): Promise<void> {
+async function updateSiteConfig(client: SiteClient, p: vscode.Progress<{}>, siteConfig: SiteConfigResource): Promise<void> {
     p.report({ message: 'Fetching site configuration...' });
     ext.outputChannel.appendLog('Fetching site configuration...');
     if (needUpdateSiteConfig(siteConfig)) {
@@ -95,7 +95,7 @@ async function updateSiteConfig(client: SiteClient, p: vscode.Progress<{}>, site
     }
 }
 
-async function updateAppSettings(client: SiteClient, p: vscode.Progress<{}>, appSettings: WebSiteManagementModels.StringDictionary): Promise<void> {
+async function updateAppSettings(client: SiteClient, p: vscode.Progress<{}>, appSettings: StringDictionary): Promise<void> {
     p.report({ message: 'Fetching application settings...' });
     ext.outputChannel.appendLog('Fetching application settings...');
     if (appSettings.properties && needUpdateAppSettings(appSettings.properties)) {
@@ -109,7 +109,7 @@ async function updateAppSettings(client: SiteClient, p: vscode.Progress<{}>, app
     }
 }
 
-function needUpdateSiteConfig(siteConfig: WebSiteManagementModels.SiteConfigResource): boolean {
+function needUpdateSiteConfig(siteConfig: SiteConfigResource): boolean {
     return siteConfig.use32BitWorkerProcess || !siteConfig.webSocketsEnabled;
 }
 

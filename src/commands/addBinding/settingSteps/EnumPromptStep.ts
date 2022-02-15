@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from "vscode-azureextensionui";
+import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { BindingSettingValue } from "../../../funcConfig/function";
 import { IBindingWizardContext } from "../IBindingWizardContext";
 import { BindingSettingStepBase } from "./BindingSettingStepBase";

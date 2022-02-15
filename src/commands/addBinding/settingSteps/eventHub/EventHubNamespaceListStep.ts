@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
-import { AzureWizardPromptStep } from 'vscode-azureextensionui';
+import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { getResourceGroupFromId, promptForResource } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -15,7 +16,8 @@ export class EventHubNamespaceListStep extends AzureWizardPromptStep<IEventHubWi
     public async prompt(context: IEventHubWizardContext): Promise<void> {
         const placeHolder: string = localize('placeHolder', 'Select an event hub namespace');
         const client: EventHubManagementClient = await createEventHubClient(context);
-        const result: EventHubManagementModels.EHNamespace | undefined = await promptForResource(context, placeHolder, client.namespaces.list());
+        const result: EHNamespace | undefined = await promptForResource(context, placeHolder,
+            uiUtils.listAllIterator(client.namespaces.list()));
         if (result) {
             context.namespaceName = nonNullProp(result, 'name');
             context.resourceGroupName = getResourceGroupFromId(nonNullProp(result, 'id'));

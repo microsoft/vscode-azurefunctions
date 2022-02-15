@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { handleFailedPreDeployTask, IDeployContext, IPreDeployTaskResult, tryRunPreDeployTask } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { handleFailedPreDeployTask, IDeployContext, IPreDeployTaskResult, tryRunPreDeployTask } from 'vscode-azureappservice';
-import { DialogResponses, UserCancelledError } from 'vscode-azureextensionui';
 import { buildNativeDeps, packTaskName, preDeployTaskSetting, tasksFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { validateFuncCoreToolsInstalled } from '../../funcCoreTools/validateFuncCoreToolsInstalled';

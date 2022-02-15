@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
-import { AzureWizard, IActionContext } from "vscode-azureextensionui";
 import { ProjectLanguage, projectTemplateKeySetting } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from "../../FuncVersion";

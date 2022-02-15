@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizard, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureWizard, DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { IPythonVenvWizardContext } from '../commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
 import { PythonAliasListStep } from '../commands/createNewProject/pythonSteps/PythonAliasListStep';
 import { PythonVenvCreateStep } from '../commands/createNewProject/pythonSteps/PythonVenvCreateStep';

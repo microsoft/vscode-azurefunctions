@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, ITreeItemPickerContext } from 'vscode-azureextensionui';
+import { AzExtTreeItem, IActionContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../localize';
 import { deleteNode } from './deleteNode';
 

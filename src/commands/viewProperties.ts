@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
 import { Uri, window } from 'vscode';
-import { IActionContext, openReadOnlyJson } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';

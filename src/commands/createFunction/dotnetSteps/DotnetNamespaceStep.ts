@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from 'vscode-azureextensionui';
+import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import * as XRegExp from 'xregexp';
 import { localize } from "../../../localize";
 import { IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';

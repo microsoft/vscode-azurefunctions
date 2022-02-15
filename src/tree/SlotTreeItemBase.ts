@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from 'vscode-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { SiteConfig, SiteSourceControl, StringDictionary } from '@azure/arm-appservice';
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from '@microsoft/vscode-azext-azureappservice';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { runFromPackageKey } from '../constants';
 import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -98,7 +98,7 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
             let version: FuncVersion | undefined;
             try {
                 const client = await this.site.createClient(context);
-                const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+                const appSettings: StringDictionary = await client.listApplicationSettings();
                 version = tryParseFuncVersion(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
             } catch {
                 // ignore and use default
@@ -131,13 +131,13 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
         const client = await this.site.createClient(context);
-        const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+        const appSettings: StringDictionary = await client.listApplicationSettings();
         return appSettings.properties || {};
     }
 
     public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
         const client = await this.site.createClient(context);
-        const settings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+        const settings: StringDictionary = await client.listApplicationSettings();
         if (!settings.properties) {
             settings.properties = {};
         }
@@ -163,8 +163,8 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         const client = await this.site.createClient(context);
-        const siteConfig: WebSiteManagementModels.SiteConfig = await client.getSiteConfig();
-        const sourceControl: WebSiteManagementModels.SiteSourceControl = await client.getSourceControl();
+        const siteConfig: SiteConfig = await client.getSiteConfig();
+        const sourceControl: SiteSourceControl = await client.getSourceControl();
         this.deploymentsNode = new DeploymentsTreeItem(this, this.site, siteConfig, sourceControl);
 
         if (!this._functionsTreeItem) {
@@ -207,7 +207,7 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
 
     public async isReadOnly(context: IActionContext): Promise<boolean> {
         const client = await this.site.createClient(context);
-        const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+        const appSettings: StringDictionary = await client.listApplicationSettings();
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
     }
 

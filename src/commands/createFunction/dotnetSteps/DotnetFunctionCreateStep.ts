@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';

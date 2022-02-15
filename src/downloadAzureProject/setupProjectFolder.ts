@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { HostKeys } from '@azure/arm-appservice';
 import { RequestPrepareOptions } from '@azure/ms-rest-js';
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
 import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
@@ -38,7 +38,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
             }
 
             const client = await slotTreeItem.site.createClient(context);
-            const hostKeys: WebSiteManagementModels.HostKeys | undefined = await client.listHostKeys();
+            const hostKeys: HostKeys | undefined = await client.listHostKeys();
             const defaultHostName: string | undefined = slotTreeItem.site.defaultHostName;
 
             if (!!hostKeys && hostKeys.masterKey && defaultHostName) {

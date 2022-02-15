@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
-import { AzExtTreeItem, AzureAccountTreeItemBase, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from 'vscode-azureextensionui';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { getFunctionAppName, getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
 import { funcVersionSetting, hostFileName, javaBuildTool, JavaBuildTool, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';

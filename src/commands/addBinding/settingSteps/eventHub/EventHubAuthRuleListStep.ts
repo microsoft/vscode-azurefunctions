@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient, EventHubManagementModels } from '@azure/arm-eventhub';
-import { AzureWizardPromptStep } from 'vscode-azureextensionui';
+import { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { IBaseResourceWithName, promptForResource } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -22,16 +23,16 @@ export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWiz
         const namespaceDescription: string = localize('namespacePolicy', '(namespace policy)');
         const hubDescription: string = localize('hubPolicy', '(hub policy)');
         // concats hub policies with namespace policies and adds a description to each
-        async function getEventHubAuthRules(): Promise<EventHubManagementModels.AuthorizationRule[]> {
-            const namespaceRules: EventHubManagementModels.AuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName);
+        async function getEventHubAuthRules(): Promise<AuthorizationRule[]> {
+            const namespaceRules: AuthorizationRule[] = await uiUtils.listAllIterator(client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName));
             namespaceRules.forEach((r: IBaseResourceWithName) => r._description = namespaceDescription);
-            const hubRules: EventHubManagementModels.AuthorizationRule[] = await client.eventHubs.listAuthorizationRules(resourceGroupName, namespaceName, eventHubName);
+            const hubRules: AuthorizationRule[] = await uiUtils.listAllIterator(client.eventHubs.listAuthorizationRules(resourceGroupName, namespaceName, eventHubName));
             hubRules.forEach((r: IBaseResourceWithName) => r._description = hubDescription);
             return hubRules.concat(namespaceRules);
         }
 
         const placeHolder: string = localize('placeHolder', 'Select an event hub policy');
-        const result: (EventHubManagementModels.AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(context, placeHolder, getEventHubAuthRules());
+        const result: (AuthorizationRule & IBaseResourceWithName) | undefined = await promptForResource(context, placeHolder, getEventHubAuthRules());
         if (result) {
             context.authRuleName = nonNullProp(result, 'name');
             context.isNamespaceAuthRule = result._description === namespaceDescription;

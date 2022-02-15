@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { User } from '@azure/arm-appservice';
+import { ParsedSite, pingFunctionApp } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { EventEmitter } from 'events';
 import { createServer, Server, Socket } from 'net';
-import { ParsedSite, pingFunctionApp } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
 import * as websocket from 'websocket';
 import { ext } from '../../extensionVariables';
 
@@ -17,10 +17,10 @@ export class DebugProxy extends EventEmitter {
     private _wsconnection: websocket.connection | undefined;
     private readonly _site: ParsedSite;
     private readonly _port: number;
-    private readonly _publishCredential: WebSiteManagementModels.User;
+    private readonly _publishCredential: User;
     private _keepAlive: boolean;
 
-    constructor(site: ParsedSite, port: number, publishCredential: WebSiteManagementModels.User) {
+    constructor(site: ParsedSite, port: number, publishCredential: User) {
         super();
         this._site = site;
         this._port = port;

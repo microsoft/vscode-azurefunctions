@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { FunctionEnvelope } from '@azure/arm-appservice';
+import { AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as url from 'url';
-import { AzExtTreeItem, IActionContext, TreeItemIconPath } from 'vscode-azureextensionui';
 import { HttpAuthLevel, ParsedFunctionJson } from '../funcConfig/function';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
@@ -21,9 +21,9 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
 
     protected readonly _config: ParsedFunctionJson;
     private _disabled: boolean;
-    private _func: WebSiteManagementModels.FunctionEnvelope | undefined;
+    private _func: FunctionEnvelope | undefined;
 
-    protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: WebSiteManagementModels.FunctionEnvelope | undefined) {
+    protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: FunctionEnvelope | undefined) {
         super(parent);
         this._config = config;
         this.name = name;

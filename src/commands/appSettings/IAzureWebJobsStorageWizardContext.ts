@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, ISubscriptionContext } from "vscode-azureextensionui";
+import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 
 export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;

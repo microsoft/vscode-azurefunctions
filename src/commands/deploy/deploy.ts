@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { SiteConfigResource } from '@azure/arm-appservice';
+import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext } from 'vscode-azureextensionui';
 import { deploySubpathSetting, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -51,7 +51,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     const client = await node.site.createClient(actionContext);
-    const siteConfig: WebSiteManagementModels.SiteConfigResource = await client.getSiteConfig();
+    const siteConfig: SiteConfigResource = await client.getSiteConfig();
     const isConsumption: boolean = await client.getIsConsumption(actionContext);
     let isZipDeploy: boolean = siteConfig.scmType !== ScmType.LocalGit && siteConfig.scmType !== ScmType.GitHub;
     if (!isZipDeploy && node.site.isLinux && isConsumption) {
@@ -113,7 +113,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: WebSiteManagementModels.SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;
@@ -130,7 +130,7 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
         if (dialogResult === deployAnyway) {
             return;
         }
-        const config: WebSiteManagementModels.SiteConfigResource = {
+        const config: SiteConfigResource = {
             use32BitWorkerProcess: false
         };
         const client = await node.site.createClient(context);

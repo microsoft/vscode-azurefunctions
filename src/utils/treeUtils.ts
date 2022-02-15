@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { TreeItemIconPath } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 
 export namespace treeUtils {

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { FunctionEnvelope, HostKeys } from '@azure/arm-appservice';
+import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
+import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { ProgressLocation, window } from 'vscode';
-import { IFunctionKeys } from 'vscode-azureappservice';
-import { DialogResponses, IActionContext, parseError } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
@@ -17,11 +17,11 @@ import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
     public readonly parent: RemoteFunctionsTreeItem;
 
-    private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string, func: WebSiteManagementModels.FunctionEnvelope) {
+    private constructor(parent: RemoteFunctionsTreeItem, config: ParsedFunctionJson, name: string, func: FunctionEnvelope) {
         super(parent, config, name, func);
     }
 
-    public static async create(context: IActionContext, parent: RemoteFunctionsTreeItem, func: WebSiteManagementModels.FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
+    public static async create(context: IActionContext, parent: RemoteFunctionsTreeItem, func: FunctionEnvelope): Promise<RemoteFunctionTreeItem> {
         const config: ParsedFunctionJson = new ParsedFunctionJson(func.config);
         const name: string = getFunctionNameFromId(nonNullProp(func, 'id'));
         const ti: RemoteFunctionTreeItem = new RemoteFunctionTreeItem(parent, config, name, func);
@@ -70,7 +70,7 @@ export class RemoteFunctionTreeItem extends FunctionTreeItemBase {
             }
         }
 
-        const hostKeys: WebSiteManagementModels.HostKeys = await client.listHostKeys();
+        const hostKeys: HostKeys = await client.listHostKeys();
         return nonNullProp(hostKeys, 'masterKey');
     }
 }

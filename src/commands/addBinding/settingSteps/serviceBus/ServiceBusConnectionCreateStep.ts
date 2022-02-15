@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceBusManagementClient, ServiceBusManagementModels } from '@azure/arm-servicebus';
+import { AccessKeys, SBAuthorizationRule, SBNamespace, ServiceBusManagementClient } from '@azure/arm-servicebus';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { localize } from '../../../../localize';
 import { getResourceGroupFromId } from '../../../../utils/azure';
 import { createServiceBusClient } from '../../../../utils/azureClients';
@@ -14,18 +15,18 @@ import { IServiceBusWizardContext } from './IServiceBusWizardContext';
 
 export class ServiceBusConnectionCreateStep extends AzureConnectionCreateStepBase<IServiceBusWizardContext & IBindingWizardContext> {
     public async getConnection(context: IServiceBusWizardContext): Promise<IConnection> {
-        const sbNamespace: ServiceBusManagementModels.SBNamespace = nonNullProp(context, 'sbNamespace');
+        const sbNamespace: SBNamespace = nonNullProp(context, 'sbNamespace');
         const id: string = nonNullProp(sbNamespace, 'id');
         const name: string = nonNullProp(sbNamespace, 'name');
 
         const resourceGroup: string = getResourceGroupFromId(id);
         const client: ServiceBusManagementClient = await createServiceBusClient(context);
-        const authRules: ServiceBusManagementModels.SBAuthorizationRule[] = await client.namespaces.listAuthorizationRules(resourceGroup, name);
-        const authRule: ServiceBusManagementModels.SBAuthorizationRule | undefined = authRules.find(ar => ar.rights.some(r => r.toLowerCase() === 'listen'));
+        const authRules: SBAuthorizationRule[] = await uiUtils.listAllIterator(client.namespaces.listAuthorizationRules(resourceGroup, name));
+        const authRule: SBAuthorizationRule | undefined = authRules.find(ar => ar.rights && ar.rights.some(r => r.toLowerCase() === 'listen'));
         if (!authRule) {
             throw new Error(localize('noAuthRule', 'Failed to get connection string for service bus namespace "{0}".', name));
         }
-        const keys: ServiceBusManagementModels.AccessKeys = await client.namespaces.listKeys(resourceGroup, name, nonNullProp(authRule, 'name'));
+        const keys: AccessKeys = await client.namespaces.listKeys(resourceGroup, name, nonNullProp(authRule, 'name'));
         return {
             name: name,
             connectionString: nonNullProp(keys, 'primaryConnectionString')

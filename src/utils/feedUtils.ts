@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
-import { IActionContext } from 'vscode-azureextensionui';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { nonNullProp } from './nonNull';
 import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';

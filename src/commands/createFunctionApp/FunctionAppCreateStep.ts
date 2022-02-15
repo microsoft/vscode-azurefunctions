@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementMappers, WebSiteManagementModels as SiteModels, WebSiteManagementModels } from '@azure/arm-appservice';
+import { NameValuePair, Site, SiteConfig, WebSiteManagementClient } from '@azure/arm-appservice';
+import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
-import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from 'vscode-azureappservice';
-import { AzureWizardExecuteStep, LocationListStep, parseError } from 'vscode-azureextensionui';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { azureWebJobsStorageKey } from '../../funcConfig/local.settings';
@@ -42,7 +43,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         const rgName: string = nonNullProp(nonNullProp(context, 'resourceGroup'), 'name');
 
         const client: WebSiteManagementClient = await createWebSiteClient(context);
-        context.site = await client.webApps.createOrUpdate(rgName, siteName, await this.getNewSite(context, stack));
+        context.site = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context, stack));
 
         const site = new ParsedSite(context.site, context);
         if (!site.isLinux) { // not supported on linux
@@ -61,9 +62,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return !context.site;
     }
 
-    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<WebSiteManagementModels.Site> {
+    private async getNewSite(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<Site> {
         const location = await LocationListStep.getLocation(context, webProvider);
-        const site: WebSiteManagementModels.Site = {
+        const site: Site = {
             name: context.newSiteName,
             kind: getSiteKind(context),
             location: nonNullProp(location, 'name'),
@@ -80,49 +81,22 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         return site;
     }
 
-    /**
-     * Has a few temporary workarounds so that the sdk allows some newer properties on the plan
-     */
-    private addCustomLocationProperties(site: WebSiteManagementModels.Site, customLocation: CustomLocation): void {
+    private addCustomLocationProperties(site: Site, customLocation: CustomLocation): void {
         nonNullProp(site, 'siteConfig').alwaysOn = true;
-
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        WebSiteManagementMappers.Site.type.modelProperties!.extendedLocation = {
-            serializedName: 'extendedLocation',
-            type: {
-                name: "Composite",
-                modelProperties: {
-                    name: {
-                        serializedName: "name",
-                        type: {
-                            name: "String"
-                        }
-                    },
-                    type: {
-                        serializedName: "type",
-                        type: {
-                            name: "String"
-                        }
-                    }
-                }
-            }
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        (<any>site).extendedLocation = { name: customLocation.id, type: 'customLocation' };
+        site.extendedLocation = { name: customLocation.id, type: 'customLocation' };
     }
 
-    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteModels.SiteConfig> {
+    private async getNewSiteConfig(context: IFunctionAppWizardContext, stack: FullFunctionAppStack): Promise<SiteConfig> {
         const stackSettings: FunctionAppRuntimeSettings = nonNullProp(stack.minorVersion.stackSettings, context.newSiteOS === WebsiteOS.linux ? 'linuxRuntimeSettings' : 'windowsRuntimeSettings');
         // https://github.com/microsoft/vscode-azurefunctions/issues/2990
         if (context.newSiteOS === 'windows' && context.version === FuncVersion.v4) {
             stackSettings.siteConfigPropertiesDictionary.netFrameworkVersion = 'v6.0'
         }
 
-        const newSiteConfig: SiteModels.SiteConfig = stackSettings.siteConfigPropertiesDictionary;
+        const newSiteConfig: SiteConfig = stackSettings.siteConfigPropertiesDictionary;
         const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
-        const appSettings: SiteModels.NameValuePair[] = [
+        const appSettings: NameValuePair[] = [
             {
                 name: azureWebJobsStorageKey,
                 value: storageConnectionString

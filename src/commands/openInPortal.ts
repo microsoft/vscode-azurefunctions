@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, openInPortal as uiOpenInPortal } from 'vscode-azureextensionui';
+import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 

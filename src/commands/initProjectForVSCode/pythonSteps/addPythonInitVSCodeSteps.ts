@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
-import { AzureWizardExecuteStep, AzureWizardPromptStep } from "vscode-azureextensionui";
 import { venvUtils } from '../../../utils/venvUtils';
 import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem, WorkspaceFolder } from 'vscode';
-import { DialogResponses, IActionContext, IAzureQuickPickItem } from 'vscode-azureextensionui';
 import { hostFileName, projectSubpathSetting } from '../../constants';
 import { localize } from '../../localize';
 import { telemetryUtils } from '../../utils/telemetryUtils';

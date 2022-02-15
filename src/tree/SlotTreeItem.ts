@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ParsedSite } from 'vscode-azureappservice';
+import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { SlotsTreeItem } from './SlotsTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 

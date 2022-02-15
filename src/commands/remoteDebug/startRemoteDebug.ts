@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { SiteConfig } from '@azure/arm-appservice';
+import * as appservice from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import * as appservice from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../extensionVariables';
 import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
@@ -18,7 +18,7 @@ export async function startRemoteDebug(context: IActionContext, node?: SlotTreeI
     }
 
     const siteClient = await node.site.createClient(context);
-    const siteConfig: WebSiteManagementModels.SiteConfig = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, cancellable: true }, async (progress, token) => {
+    const siteConfig: SiteConfig = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, cancellable: true }, async (progress, token) => {
         appservice.reportMessage('Fetching site configuration...', progress, token);
         return await siteClient.getSiteConfig();
     });

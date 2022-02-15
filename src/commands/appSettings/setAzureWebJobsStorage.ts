@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { AzureWizard, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../../localize';
 import { AzureWebJobsStorageExecuteStep } from './AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from './AzureWebJobsStoragePromptStep';

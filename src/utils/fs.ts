@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DialogResponses, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as crypto from "crypto";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { MessageItem } from "vscode";
-import { DialogResponses, IActionContext, parseError } from "vscode-azureextensionui";
 import { localize } from "../localize";
 
 export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { IActionContext } from 'vscode-azureextensionui';
 import { ext } from '../../../extensionVariables';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';

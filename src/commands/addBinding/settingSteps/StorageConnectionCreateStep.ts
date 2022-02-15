@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStorageAccountWizardContext } from 'vscode-azureextensionui';
+import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { getStorageConnectionString } from '../../../utils/azure';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';

@@ -14,8 +14,8 @@
 //
 // The tests should import '../extension.bundle'. At design-time they live in tests/ and so will pick up this file (extension.bundle.ts).
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
-export * from 'vscode-azureappservice';
-export * from 'vscode-azureextensionui';
+export { createAzureClient, createGenericClient } from '@microsoft/vscode-azext-azureutils';
+export { AzExtTreeDataProvider, DialogResponses, IActionContext, nonNullValue, parseError, registerOnActionStartHandler } from '@microsoft/vscode-azext-utils';
 export * from './src/commands/addBinding/addBinding';
 export * from './src/commands/copyFunctionUrl';
 export * from './src/commands/createFunction/createFunction';

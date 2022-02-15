@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
-import { ParsedSite } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
+import { SiteLogsConfig } from '@azure/arm-appservice';
+import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 
-export async function enableFileLogging(context: IActionContext, site: ParsedSite, logsConfig?: WebSiteManagementModels.SiteLogsConfig): Promise<void> {
+export async function enableFileLogging(context: IActionContext, site: ParsedSite, logsConfig?: SiteLogsConfig): Promise<void> {
     const client = await site.createClient(context);
     logsConfig = logsConfig || await client.getLogsConfig();
 

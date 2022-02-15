@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
-import { IActionContext } from 'vscode-azureextensionui';
 import { FuncVersion, getMajorVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { requestUtils } from '../utils/requestUtils';

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementModels } from '@azure/arm-appservice';
+import { StringDictionary } from '@azure/arm-appservice';
+import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ParsedSite } from 'vscode-azureappservice';
-import { IActionContext } from 'vscode-azureextensionui';
 import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
@@ -21,7 +21,7 @@ type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumpt
 
 export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
     const client = await node.site.createClient(context);
-    const appSettings: WebSiteManagementModels.StringDictionary = await client.listApplicationSettings();
+    const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 

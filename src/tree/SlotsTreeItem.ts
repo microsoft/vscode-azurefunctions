@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebSiteManagementClient, WebSiteManagementModels } from '@azure/arm-appservice';
-import { createSlot, ParsedSite } from 'vscode-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, ICreateChildImplContext, TreeItemIconPath } from 'vscode-azureextensionui';
+import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
+import { createSlot, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, ICreateChildImplContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { showSiteCreated } from '../commands/createFunctionApp/showSiteCreated';
 import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
@@ -45,19 +46,16 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
         }
 
         const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
-        const webAppCollection: WebSiteManagementModels.WebAppCollection = this._nextLink ?
-            await client.webApps.listSlotsNext(this._nextLink) :
-            await client.webApps.listSlots(this.parent.site.resourceGroup, this.parent.site.siteName);
-
-        this._nextLink = webAppCollection.nextLink;
+        // https://github.com/Azure/azure-sdk-for-js/issues/20380
+        const webAppCollection: Site[] = await uiUtils.listAllIterator(client.webApps.listSlots(this.parent.site.resourceGroup, this.parent.site.siteName));
 
         return await this.createTreeItemsWithErrorHandling(
             webAppCollection,
             'azFuncInvalidSlot',
-            (site: WebSiteManagementModels.Site) => {
+            (site: Site) => {
                 return new SlotTreeItem(this, new ParsedSite(site, this.subscription));
             },
-            (site: WebSiteManagementModels.Site) => {
+            (site: Site) => {
                 return site.name;
             }
         );
@@ -65,7 +63,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
         const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
-        const newSite: WebSiteManagementModels.Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
+        const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
         const parsedSite = new ParsedSite(newSite, this.subscription);
         showSiteCreated(parsedSite, context);
         return new SlotTreeItem(this, parsedSite);
