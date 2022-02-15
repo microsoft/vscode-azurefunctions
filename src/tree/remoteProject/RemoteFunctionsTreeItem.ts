@@ -47,6 +47,7 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
         const maxTime = Date.now() + 2 * 60 * 1000;
         let attempt = 1;
         while (true) {
+            // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
             funcs = await client.listFunctions();
 
             // https://github.com/Azure/azure-functions-host/issues/3502

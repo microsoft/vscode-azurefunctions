@@ -46,6 +46,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
         }
 
         const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
+        // https://github.com/Azure/azure-sdk-for-js/issues/20380
         const webAppCollection: Site[] = await uiUtils.listAllIterator(client.webApps.listSlots(this.parent.site.resourceGroup, this.parent.site.siteName));
 
         return await this.createTreeItemsWithErrorHandling(
