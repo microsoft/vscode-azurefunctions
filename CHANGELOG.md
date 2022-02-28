@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.6.1 - 2021-02-28
+### Changed
+- `createFunction` API handles multiple target frameworks
+
 ## 1.6.0 - 2021-11-04
 ### Added
 - Remove preview flag from Azure Functions v4
