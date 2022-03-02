@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
@@ -16,18 +15,14 @@ import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContex
 import { java11, java8 } from '../javaSteps/JavaVersionStep';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
-const backupGradlePluginVersion = "1.7.0";
+const backupGradlePluginVersion = "1.8.2";
 const metaDataUrl = "https://plugins.gradle.org/m2/com/microsoft/azure/azure-functions-gradle-plugin/maven-metadata.xml";
 
 export class GradleProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = gradleGitignore;
 
-    public static async createStep(context: IActionContext): Promise<GradleProjectCreateStep> {
-        await gradleUtils.validateGradleInstalled(context);
-        return new GradleProjectCreateStep();
-    }
-
     public async executeCore(context: IJavaProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        await gradleUtils.validateGradleInstalled(context);
         await super.executeCore(context, progress);
 
         const settingsGradlePath: string = path.join(context.projectPath, settingsGradleFileName);
