@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
@@ -16,20 +15,14 @@ import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContex
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class MavenProjectCreateStep extends ProjectCreateStepBase {
-    private constructor() {
-        super();
-    }
-
-    public static async createStep(context: IActionContext): Promise<MavenProjectCreateStep> {
-        await mavenUtils.validateMavenInstalled(context);
-        return new MavenProjectCreateStep();
-    }
 
     public shouldExecute(context: IJavaProjectWizardContext): boolean {
         return context.buildTool === JavaBuildTool.maven;
     }
 
     public async executeCore(context: IJavaProjectWizardContext): Promise<void> {
+        await mavenUtils.validateMavenInstalled(context);
+
         const javaVersion: string = nonNullProp(context, 'javaVersion');
         const artifactId: string = nonNullProp(context, 'javaArtifactId');
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());

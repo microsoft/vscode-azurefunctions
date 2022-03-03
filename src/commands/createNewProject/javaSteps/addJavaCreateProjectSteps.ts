@@ -22,5 +22,5 @@ export async function addJavaCreateProjectSteps(
     executeSteps: AzureWizardExecuteStep<IProjectWizardContext>[]): Promise<void> {
     await JavaVersionStep.setDefaultVersion(context);
     promptSteps.push(new JavaVersionStep(), new JavaGroupIdStep(), new JavaArtifactIdStep(), new JavaProjectVersionStep(), new JavaPackageNameStep(), new JavaAppNameStep(), new JavaBuildToolStep());
-    executeSteps.push(await MavenProjectCreateStep.createStep(context), await GradleProjectCreateStep.createStep(context));
+    executeSteps.push(new MavenProjectCreateStep(), new GradleProjectCreateStep());
 }
