@@ -5,9 +5,9 @@
 
 import { Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
+import { runWithInputs, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { runWithInputs, runWithTestActionContext } from 'vscode-azureextensiondev';
 import { createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString, ProjectLanguage, registerOnActionStartHandler } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';
