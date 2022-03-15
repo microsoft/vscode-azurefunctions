@@ -8,24 +8,27 @@ jobs:
   main:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout triage-actions
+      - name: Checkout Actions
         uses: actions/checkout@v2
         with:
-          repository: "microsoft/vscode-azuretools"
-          path: ./azuretools
-          ref: v0.2.0-triage-actions
-      - name: npm install
-        run: npm install --production --prefix ./azuretools/triage-actions
+          repository: "microsoft/vscode-github-triage-actions"
+          path: ./actions
+          ref: stable
+      - name: Install Actions
+        run: npm install --production --prefix ./actions
       - name: Run Stale Closer
-        uses: ./azuretools/triage-actions/stale-closer
+        uses: ./actions/stale-closer
         with:
           token: ${{secrets.AZCODE_BOT_PAT}}
-          closeDays: 240
-          closeComment: ":slightly_frowning_face: In the last 60 days, this issue has received less than 5 community upvotes and we closed it. Still a big Thank You to you for taking the time to create it! To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
-          warnDays: 60
-          warnComment: "This issue has become stale and is at risk of being closed. The community has 60 days to upvote the issue. If it receives 5 upvotes we will keep it open and take another look. If not, we will close it. To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          candidateMilestoneID: 42
+          candidateMilestoneName: "Backlog Candidates"
+          featureRequestLabel: "feature"
           upvotesRequired: 5
           numCommentsOverride: 10
-          candidateMilestone: "Backlog Candidates"
+          rejectComment: ":slightly_frowning_face: In the last 60 days, this issue has received less than 5 community upvotes and we closed it. Still a big Thank You to you for taking the time to create it! To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          rejectLabel: "out of scope"
+          warnComment: "This issue has become stale and is at risk of being closed. The community has 60 days to upvote the issue. If it receives 5 upvotes we will keep it open and take another look. If not, we will close it. To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
           labelsToExclude: "P0,P1"
-          staleLabel: "out of scope"
+          warnDays: 60
+          closeDays: 240
+          milestoneDelaySeconds: 60
