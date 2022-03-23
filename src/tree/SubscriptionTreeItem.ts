@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
@@ -19,8 +19,9 @@ import { localize } from "../localize";
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
-import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
+import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
+import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
@@ -62,9 +63,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             webAppCollection,
             'azFuncInvalidFunctionApp',
             (site: Site) => {
-                const parsedSite = new ParsedSite(site, this.subscription);
-                if (parsedSite.isFunctionApp) {
-                    return new ProductionSlotTreeItem(this, parsedSite);
+                const resolved = new ResolvedFunctionAppResource(this.subscription, site);
+                if (resolved.site.isFunctionApp) {
+                    return new SlotTreeItemBase(this, resolved);
                 }
                 return undefined;
             },
@@ -155,7 +156,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await wizard.execute();
 
-        return new ProductionSlotTreeItem(this, new ParsedSite(nonNullProp(wizardContext, 'site'), this.subscription));
+        const resolved = new ResolvedFunctionAppResource(this.subscription, nonNullProp(wizardContext, 'site'));
+        return new SlotTreeItemBase(this, resolved);
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

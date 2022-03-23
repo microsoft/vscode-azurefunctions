@@ -11,20 +11,21 @@ import { showSiteCreated } from '../commands/createFunctionApp/showSiteCreated';
 import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
 import { treeUtils } from '../utils/treeUtils';
-import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
+import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 import { SlotTreeItem } from './SlotTreeItem';
+import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class SlotsTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azFuncSlots';
     public readonly contextValue: string = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
-    public readonly parent: ProductionSlotTreeItem;
+    public readonly parent: SlotTreeItemBase;
     public suppressMaskLabel: boolean = true;
 
     private _nextLink: string | undefined;
 
-    public constructor(parent: ProductionSlotTreeItem) {
+    public constructor(parent: SlotTreeItemBase) {
         super(parent);
     }
 
@@ -53,7 +54,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
             webAppCollection,
             'azFuncInvalidSlot',
             (site: Site) => {
-                return new SlotTreeItem(this, new ParsedSite(site, this.subscription));
+                return new SlotTreeItemBase(this, new ResolvedFunctionAppResource(this.subscription, site));
             },
             (site: Site) => {
                 return site.name;
@@ -66,6 +67,6 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
         const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
         const parsedSite = new ParsedSite(newSite, this.subscription);
         showSiteCreated(parsedSite, context);
-        return new SlotTreeItem(this, parsedSite);
+        return new SlotTreeItemBase(this, new ResolvedFunctionAppResource(this.subscription, newSite));
     }
 }

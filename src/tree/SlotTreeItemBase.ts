@@ -3,215 +3,103 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfig, SiteSourceControl, StringDictionary } from '@azure/arm-appservice';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from '@microsoft/vscode-azext-azureappservice';
+import { AppSettingsTreeItem, DeploymentsTreeItem, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { runFromPackageKey } from '../constants';
-import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
-import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
-import { envUtils } from '../utils/envUtils';
-import { nonNullValue } from '../utils/nonNull';
-import { treeUtils } from '../utils/treeUtils';
+import { IParsedHostJson } from '../funcConfig/host';
+import { FuncVersion } from '../FuncVersion';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
-import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
-import { RemoteFunctionsTreeItem } from './remoteProject/RemoteFunctionsTreeItem';
+import { ProjectSource } from './projectContextValues';
+import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 
-export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
+export class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
     public site: ParsedSite;
 
-    public abstract readonly contextValue: string;
-    public abstract readonly label: string;
+    public readonly contextValue: string;
 
-    private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
-    private readonly _logFilesTreeItem: LogFilesTreeItem;
-    private readonly _siteFilesTreeItem: SiteFilesTreeItem;
-    private _cachedVersion: FuncVersion | undefined;
-    private _cachedHostJson: IParsedHostJson | undefined;
-    private _cachedIsConsumption: boolean | undefined;
+    public resolved: ResolvedFunctionAppResource;
 
-    public constructor(parent: AzExtParentTreeItem, site: ParsedSite) {
+    public constructor(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource) {
         super(parent);
-        this.site = site;
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this, site);
-        this._siteFilesTreeItem = new SiteFilesTreeItem(this, site, true);
-        this._logFilesTreeItem = new LogFilesTreeItem(this, site);
+        this.resolved = resolvedFunctionAppResource;
+    }
 
-        const valuesToMask = [
-            site.siteName, site.slotName, site.defaultHostName, site.resourceGroup,
-            site.planName, site.planResourceGroup, site.kuduHostName, site.gitUrl,
-            site.rawSite.repositorySiteName, ...(site.rawSite.hostNames || []), ...(site.rawSite.enabledHostNames || [])
-        ];
-        for (const v of valuesToMask) {
-            if (v) {
-                this.valuesToMask.push(v);
-            }
-        }
+    public get label(): string {
+        return this.resolved.label;
     }
 
     public get logStreamLabel(): string {
-        return this.site.fullName;
+        return this.resolved.logStreamLabel;
     }
 
     public get id(): string {
-        return this.site.id;
+        return this.resolved.id;
     }
 
     public async getHostRequest(): Promise<FuncHostRequest> {
-        return { url: this.site.defaultHostUrl };
+        return await this.resolved.getHostRequest();
     }
 
     public get description(): string | undefined {
-        return this._state?.toLowerCase() !== 'running' ? this._state : undefined;
+        return this.resolved.description;
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath(this.contextValue);
-    }
-
-    private get _state(): string | undefined {
-        return this.site.rawSite.state;
+        return this.resolved.iconPath;
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return false;
+        return this.resolved.hasMoreChildrenImpl();
     }
 
     /**
      * NOTE: We need to be extra careful in this method because it blocks many core scenarios (e.g. deploy) if the tree item is listed as invalid
      */
     public async refreshImpl(context: IActionContext): Promise<void> {
-        this._cachedVersion = undefined;
-        this._cachedHostJson = undefined;
-        this._cachedIsConsumption = undefined;
-
-        const client = await this.site.createClient(context);
-        this.site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this.subscription);
+        return await this.resolved.refreshImpl(context);
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {
-        let result: FuncVersion | undefined = this._cachedVersion;
-        if (result === undefined) {
-            let version: FuncVersion | undefined;
-            try {
-                const client = await this.site.createClient(context);
-                const appSettings: StringDictionary = await client.listApplicationSettings();
-                version = tryParseFuncVersion(appSettings.properties && appSettings.properties.FUNCTIONS_EXTENSION_VERSION);
-            } catch {
-                // ignore and use default
-            }
-            result = version || latestGAVersion;
-            this._cachedVersion = result;
-        }
-
-        return result;
+        return await this.resolved.getVersion(context);
     }
 
     public async getHostJson(context: IActionContext): Promise<IParsedHostJson> {
-        let result: IParsedHostJson | undefined = this._cachedHostJson;
-        if (!result) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let data: any;
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                data = JSON.parse((await getFile(context, this.site, 'site/wwwroot/host.json')).data);
-            } catch {
-                // ignore and use default
-            }
-            const version: FuncVersion = await this.getVersion(context);
-            result = parseHostJson(data, version);
-            this._cachedHostJson = result;
-        }
-
-        return result;
+        return await this.resolved.getHostJson(context);
     }
 
     public async getApplicationSettings(context: IActionContext): Promise<ApplicationSettings> {
-        const client = await this.site.createClient(context);
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-        return appSettings.properties || {};
+        return await this.resolved.getApplicationSettings(context);
     }
 
     public async setApplicationSetting(context: IActionContext, key: string, value: string): Promise<void> {
-        const client = await this.site.createClient(context);
-        const settings: StringDictionary = await client.listApplicationSettings();
-        if (!settings.properties) {
-            settings.properties = {};
-        }
-        settings.properties[key] = value;
-        await client.updateApplicationSettings(settings);
+        return await this.resolved.setApplicationSetting(context, key, value);
     }
 
     public async getIsConsumption(context: IActionContext): Promise<boolean> {
-        let result: boolean | undefined = this._cachedIsConsumption;
-        if (result === undefined) {
-            try {
-                const client = await this.site.createClient(context);
-                result = await client.getIsConsumption(context);
-            } catch {
-                // ignore and use default
-                result = true;
-            }
-            this._cachedIsConsumption = result;
-        }
-
-        return result;
+        return await this.resolved.getIsConsumption(context);
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const client = await this.site.createClient(context);
-        const siteConfig: SiteConfig = await client.getSiteConfig();
-        const sourceControl: SiteSourceControl = await client.getSourceControl();
-        this.deploymentsNode = new DeploymentsTreeItem(this, this.site, siteConfig, sourceControl);
-
-        if (!this._functionsTreeItem) {
-            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, this);
-        }
-
-
-        return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
+        return await this.resolved.loadMoreChildrenImpl(_clearCache, context);
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
-        for (const expectedContextValue of expectedContextValues) {
-            switch (expectedContextValue) {
-                case AppSettingsTreeItem.contextValue:
-                case AppSettingTreeItem.contextValue:
-                    return this.appSettingsTreeItem;
-                case DeploymentsTreeItem.contextValueConnected:
-                case DeploymentsTreeItem.contextValueUnconnected:
-                case DeploymentTreeItem.contextValue:
-                    return this.deploymentsNode;
-                default:
-                    if (typeof expectedContextValue === 'string') {
-                        // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                        if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
-                            return this.deploymentsNode;
-                        }
-                    } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
-                        return this._functionsTreeItem;
-                    }
-            }
-        }
-
-        return undefined;
+        return await this.resolved.pickTreeItemImpl(expectedContextValues);
     }
 
     public compareChildrenImpl(): number {
-        return 0; // already sorted
+        return this.resolved.compareChildrenImpl();
     }
 
     public async isReadOnly(context: IActionContext): Promise<boolean> {
-        const client = await this.site.createClient(context);
-        const appSettings: StringDictionary = await client.listApplicationSettings();
-        return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
+        return await this.resolved.isReadOnly(context);
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        await deleteSite(context, this.site);
+        return await this.resolved.deleteTreeItemImpl(context);
     }
 }
