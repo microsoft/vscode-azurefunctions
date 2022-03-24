@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.6.1 - 2022-02-28
+## 1.6.1 - 2022-03-24
 ### Changed
 - `createFunction` API handles multiple target frameworks
 
