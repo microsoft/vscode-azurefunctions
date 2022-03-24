@@ -3,6 +3,7 @@
 ## 1.6.1 - 2022-03-24
 ### Changed
 - `createFunction` API handles multiple target frameworks
+- Microsoft Cloud Deutschland (Azure Germany) is no longer supported. [Migration information](https://www.microsoft.com/en-us/cloud-platform/germany-cloud-regions)
 
 ## 1.6.0 - 2021-11-04
 ### Added
