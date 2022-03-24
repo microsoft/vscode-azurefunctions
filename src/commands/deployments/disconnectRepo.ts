@@ -10,7 +10,7 @@ import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 
 export async function disconnectRepo(context: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected, context);
     }
 
     if (node.parent instanceof SlotTreeItemBase) {

@@ -12,7 +12,6 @@ import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
 import { treeUtils } from '../utils/treeUtils';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
-import { SlotTreeItem } from './SlotTreeItem';
 import { SlotTreeItemBase } from './SlotTreeItemBase';
 
 export class SlotsTreeItem extends AzExtParentTreeItem {
@@ -63,7 +62,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
     }
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
-        const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
+        const existingSlots: SlotTreeItemBase[] = <SlotTreeItemBase[]>await this.getCachedChildren(context);
         const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
         const parsedSite = new ParsedSite(newSite, this.subscription);
         showSiteCreated(parsedSite, context);

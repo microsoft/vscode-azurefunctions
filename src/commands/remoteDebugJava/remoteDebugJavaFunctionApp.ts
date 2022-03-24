@@ -10,7 +10,7 @@ import * as portfinder from 'portfinder';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { openUrl } from '../../utils/openUrl';
 import { DebugProxy } from './DebugProxy';
@@ -20,7 +20,7 @@ const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:tra
 
 export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
     const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await portfinder.getPortPromise();

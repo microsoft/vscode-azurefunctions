@@ -6,15 +6,15 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { SlotsTreeItem } from '../tree/SlotsTreeItem';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
+import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 import { ISiteCreatedOptions } from './createFunctionApp/showSiteCreated';
 
 export async function createSlot(context: IActionContext, node?: SlotsTreeItem): Promise<string> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
     }
 
     (<ISiteCreatedOptions>context).showCreatedNotification = true;
-    const slotNode: SlotTreeItem = await node.createChild(context);
+    const slotNode: SlotTreeItemBase = await node.createChild(context);
     return slotNode.fullId;
 }

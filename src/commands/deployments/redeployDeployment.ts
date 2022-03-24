@@ -9,7 +9,7 @@ import { ext } from "../../extensionVariables";
 
 export async function redeployDeployment(context: IActionContext, node?: DeploymentTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<DeploymentTreeItem>(DeploymentTreeItem.contextValue, context);
     }
     await node.redeployDeployment(context);
 }

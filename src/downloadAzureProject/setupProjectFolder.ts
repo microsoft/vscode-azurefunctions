@@ -32,7 +32,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
             // NOTE: We don't want to download app content for compiled languages.
-            const slotTreeItem: SlotTreeItemBase | undefined = await ext.tree.findTreeItem(resourceId, { ...context, loadAll: true });
+            const slotTreeItem: SlotTreeItemBase | undefined = await ext.rgApi.tree.findTreeItem(resourceId, { ...context, loadAll: true });
             if (!slotTreeItem) {
                 throw new Error(localize('failedToFindApp', 'Failed to find function app with id "{0}"', resourceId));
             }

@@ -19,7 +19,7 @@ import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
 export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<AppSettingsTreeItem>(AppSettingsTreeItem.contextValue, context);
     }
 
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);

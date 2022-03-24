@@ -13,11 +13,9 @@ import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersio
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
-import { ProductionSlotTreeItem } from "./ProductionSlotTreeItem";
 import { matchesAnyPart, ProjectResource, ProjectSource } from "./projectContextValues";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
-import { SlotTreeItem } from "./SlotTreeItem";
 import { SlotTreeItemBase } from "./SlotTreeItemBase";
 
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
@@ -40,6 +38,9 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
+    public static productionContextValue: string = 'azFuncProductionSlot';
+    public static slotContextValue: string = 'azFuncSlot';
+
     commandId?: string | undefined;
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;
@@ -54,7 +55,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
         ];
 
-        this.contextValuesToAdd = [ProductionSlotTreeItem.contextValue];
+        this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
 
         for (const v of valuesToMask) {
             if (v) {
@@ -211,7 +212,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             for (const expectedContextValue of expectedContextValues) {
                 switch (expectedContextValue) {
                     case SlotsTreeItem.contextValue:
-                    case SlotTreeItem.contextValue:
+                    case ResolvedFunctionAppResource.slotContextValue:
                         return this._slotsTreeItem;
                     default:
                 }
@@ -255,6 +256,4 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         await deleteSite(context, this.site);
     }
-
 }
-

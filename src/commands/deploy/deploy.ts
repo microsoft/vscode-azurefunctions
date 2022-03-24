@@ -12,8 +12,7 @@ import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
@@ -26,11 +25,11 @@ import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, ProductionSlotTreeItem.contextValue);
+    await deploy(context, target, functionAppId, ResolvedFunctionAppResource.productionContextValue);
 }
 
 export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, SlotTreeItem.contextValue);
+    await deploy(context, target, functionAppId, ResolvedFunctionAppResource.slotContextValue);
 }
 
 async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItemBase | undefined, arg2: string | {} | undefined, expectedContextValue: string): Promise<void> {
@@ -39,7 +38,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
-    const node: SlotTreeItemBase = await getDeployNode(context, ext.tree, arg1, arg2, expectedContextValue);
+    const node: SlotTreeItemBase = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, expectedContextValue);
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;

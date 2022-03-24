@@ -85,6 +85,13 @@
     ],
     "main": "./main.js",
     "contributes": {
+        "x-azResources": {
+            "activation": {
+                "onFetch": [
+                    "microsoft.web/sites"
+                ]
+            }
+        },
         "commands": [
             {
                 "command": "azureFunctions.addBinding",

@@ -8,13 +8,13 @@ import { Uri, window } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
+import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 export async function viewProperties(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ProductionSlotTreeItem>(ProductionSlotTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
     if (node instanceof LocalFunctionTreeItem) {

@@ -5,21 +5,14 @@
 
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
-import { AzureResourceGroupsExtensionApi } from '../api';
-import { getApiExport } from '../getExtensionApi';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
 
 export async function startFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
     if (!node) {
-        const rgApi = await getApiExport<AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
-        if (!rgApi) {
-            throw new Error();
-        }
-
-        node = await rgApi.getApi<AzureResourceGroupsExtensionApi>('0.0.1').tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ProductionSlotTreeItem.contextValue), context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
     const client: SiteClient = await node.site.createClient(context);
