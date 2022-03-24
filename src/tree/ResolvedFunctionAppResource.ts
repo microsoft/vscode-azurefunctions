@@ -16,7 +16,7 @@ import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
 import { matchesAnyPart, ProjectResource, ProjectSource } from "./projectContextValues";
 import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
 import { SlotsTreeItem } from "./SlotsTreeItem";
-import { SlotTreeItemBase } from "./SlotTreeItemBase";
+import { SlotTreeItem } from "./SlotTreeItem";
 
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public site: ParsedSite;
@@ -89,7 +89,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 
     public get iconPath(): TreeItemIconPath {
-        const proxyTree: SlotTreeItemBase = this as unknown as SlotTreeItemBase;
+        const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
         return treeUtils.getIconPath(proxyTree.contextValue);
     }
 
@@ -186,7 +186,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         const client = await this.site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
         const sourceControl: SiteSourceControl = await client.getSourceControl();
-        const proxyTree: SlotTreeItemBase = this as unknown as SlotTreeItemBase;
+        const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
         this.deploymentsNode = new DeploymentsTreeItem(proxyTree, this.site, siteConfig, sourceControl);
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site);

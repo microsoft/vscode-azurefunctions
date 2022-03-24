@@ -12,19 +12,19 @@ import { localize } from '../localize';
 import { createWebSiteClient } from '../utils/azureClients';
 import { treeUtils } from '../utils/treeUtils';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from './SlotTreeItemBase';
+import { SlotTreeItem } from './SlotTreeItem';
 
 export class SlotsTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azFuncSlots';
     public readonly contextValue: string = SlotsTreeItem.contextValue;
     public readonly label: string = localize('slots', 'Slots');
     public readonly childTypeLabel: string = localize('slot', 'Slot');
-    public readonly parent: SlotTreeItemBase;
+    public readonly parent: SlotTreeItem;
     public suppressMaskLabel: boolean = true;
 
     private _nextLink: string | undefined;
 
-    public constructor(parent: SlotTreeItemBase) {
+    public constructor(parent: SlotTreeItem) {
         super(parent);
     }
 
@@ -53,7 +53,7 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
             webAppCollection,
             'azFuncInvalidSlot',
             (site: Site) => {
-                return new SlotTreeItemBase(this, new ResolvedFunctionAppResource(this.subscription, site));
+                return new SlotTreeItem(this, new ResolvedFunctionAppResource(this.subscription, site));
             },
             (site: Site) => {
                 return site.name;
@@ -62,10 +62,10 @@ export class SlotsTreeItem extends AzExtParentTreeItem {
     }
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
-        const existingSlots: SlotTreeItemBase[] = <SlotTreeItemBase[]>await this.getCachedChildren(context);
+        const existingSlots: SlotTreeItem[] = <SlotTreeItem[]>await this.getCachedChildren(context);
         const newSite: Site = await createSlot(this.parent.site, existingSlots.map(s => s.site), context);
         const parsedSite = new ParsedSite(newSite, this.subscription);
         showSiteCreated(parsedSite, context);
-        return new SlotTreeItemBase(this, new ResolvedFunctionAppResource(this.subscription, newSite));
+        return new SlotTreeItem(this, new ResolvedFunctionAppResource(this.subscription, newSite));
     }
 }

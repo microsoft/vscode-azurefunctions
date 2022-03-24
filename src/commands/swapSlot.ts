@@ -7,14 +7,14 @@ import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTreeItemBase): Promise<void> {
+export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTreeItem): Promise<void> {
     if (!sourceSlotNode) {
-        sourceSlotNode = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(ResolvedFunctionAppResource.slotContextValue, { ...context, suppressCreatePick: true });
+        sourceSlotNode = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(ResolvedFunctionAppResource.slotContextValue, { ...context, suppressCreatePick: true });
     }
 
-    const deploymentSlots: SlotTreeItemBase[] = <SlotTreeItemBase[]>await sourceSlotNode.parent?.getCachedChildren(context);
+    const deploymentSlots: SlotTreeItem[] = <SlotTreeItem[]>await sourceSlotNode.parent?.getCachedChildren(context);
     await appservice.swapSlot(context, sourceSlotNode.site, deploymentSlots.map(ds => ds.site));
     await sourceSlotNode.parent?.parent?.refresh(context);
 }

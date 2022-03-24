@@ -10,11 +10,11 @@ import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function viewProperties(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
     if (node instanceof LocalFunctionTreeItem) {
@@ -24,8 +24,8 @@ export async function viewProperties(context: IActionContext, node?: SlotTreeIte
         await window.showTextDocument(Uri.file(node.functionJsonPath));
     } else {
         let data: {};
-        if (node instanceof SlotTreeItemBase) {
-            const siteNode: SlotTreeItemBase = node;
+        if (node instanceof SlotTreeItem) {
+            const siteNode: SlotTreeItem = node;
             await node.runWithTemporaryDescription(context, localize('retrievingProps', 'Retrieving properties...'), async () => {
                 // `siteConfig` already exists on `node.site`, but has very limited properties for some reason. We want to get the full site config
                 const client = await siteNode.site.createClient(context);

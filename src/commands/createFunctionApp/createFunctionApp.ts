@@ -6,7 +6,7 @@
 import { AzExtParentTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 import { ISiteCreatedOptions } from './showSiteCreated';
 
@@ -25,7 +25,7 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
 
     context.newResourceGroupName = newResourceGroupName;
     (<ISiteCreatedOptions>context).showCreatedNotification = true;
-    const funcAppNode: SlotTreeItemBase = await node.createChild(context);
+    const funcAppNode: SlotTreeItem = await node.createChild(context);
     return funcAppNode.fullId;
 }
 

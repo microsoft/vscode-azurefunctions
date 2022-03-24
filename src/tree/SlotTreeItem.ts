@@ -11,7 +11,7 @@ import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProje
 import { ProjectSource } from './projectContextValues';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 
-export class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
+export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeItem {
     public logStreamPath: string = '';
     public readonly appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;

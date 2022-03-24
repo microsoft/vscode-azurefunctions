@@ -9,12 +9,12 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { getRemoteDebugLanguage } from './getRemoteDebugLanguage';
 
-export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function startRemoteDebug(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
     const siteClient = await node.site.createClient(context);

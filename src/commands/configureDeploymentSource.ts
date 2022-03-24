@@ -7,11 +7,11 @@ import { editScmType } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function configureDeploymentSource(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function configureDeploymentSource(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
     const updatedScmType: string | undefined = await editScmType(context, node.site, node.subscription);

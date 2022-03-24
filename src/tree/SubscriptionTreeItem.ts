@@ -21,7 +21,7 @@ import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from './SlotTreeItemBase';
+import { SlotTreeItem } from './SlotTreeItem';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
@@ -65,7 +65,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             (site: Site) => {
                 const resolved = new ResolvedFunctionAppResource(this.subscription, site);
                 if (resolved.site.isFunctionApp) {
-                    return new SlotTreeItemBase(this, resolved);
+                    return new SlotTreeItem(this, resolved);
                 }
                 return undefined;
             },
@@ -157,7 +157,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.execute();
 
         const resolved = new ResolvedFunctionAppResource(this.subscription, nonNullProp(wizardContext, 'site'));
-        return new SlotTreeItemBase(this, resolved);
+        return new SlotTreeItem(this, resolved);
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

@@ -9,13 +9,13 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 
-export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
+export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItemBase>(new RegExp(ResolvedFunctionAppResource.productionContextValue), { ...context, suppressCreatePick: true });
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), { ...context, suppressCreatePick: true });
     }
 
-    const site: ParsedSite = node instanceof SlotTreeItemBase ? node.site : node.parent.parent.site;
+    const site: ParsedSite = node instanceof SlotTreeItem ? node.site : node.parent.parent.site;
     await appservice.stopStreamingLogs(site, node.logStreamPath);
 }

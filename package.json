@@ -80,7 +80,6 @@
         "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
         "onUri",
-        "onView:azFuncTree",
         "workspaceContains:**/host.json"
     ],
     "main": "./main.js",
@@ -88,6 +87,9 @@
         "x-azResources": {
             "activation": {
                 "onFetch": [
+                    "microsoft.web/sites"
+                ],
+                "onResolve": [
                     "microsoft.web/sites"
                 ]
             }
@@ -360,38 +362,7 @@
                 "category": "Azure Functions"
             }
         ],
-        "views": {
-            "azure": [
-                {
-                    "id": "azFuncTree",
-                    "name": "Functions",
-                    "when": "config.azureFunctions.showExplorer == true"
-                }
-            ]
-        },
         "menus": {
-            "view/title": [
-                {
-                    "command": "azureFunctions.createFunction",
-                    "when": "view == azFuncTree",
-                    "group": "navigation@2"
-                },
-                {
-                    "command": "azureFunctions.createNewProject",
-                    "when": "view == azFuncTree",
-                    "group": "navigation@1"
-                },
-                {
-                    "command": "azureFunctions.deploy",
-                    "when": "view == azFuncTree",
-                    "group": "navigation@3"
-                },
-                {
-                    "command": "azureFunctions.refresh",
-                    "when": "view == azFuncTree",
-                    "group": "navigation@3"
-                }
-            ],
             "view/item/context": [
                 {
                     "command": "azureFunctions.selectSubscriptions",
