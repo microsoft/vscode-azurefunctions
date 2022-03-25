@@ -48,6 +48,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public constructor(subscription: ISubscriptionContext, site: Site) {
         this.site = new ParsedSite(site, subscription);
         this._subscription = subscription;
+        this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
 
         const valuesToMask = [
             this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
@@ -55,7 +56,6 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
         ];
 
-        this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
 
         for (const v of valuesToMask) {
             if (v) {
