@@ -10,6 +10,7 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { AzExtApi } from './api';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
@@ -26,6 +27,8 @@ import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
+import { getApiExport } from './getExtensionApi';
+import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
@@ -86,12 +89,17 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, powershellDebugProvider)));
-
+        ``
         context.subscriptions.push(vscode.window.registerUriHandler({
             handleUri
         }));
 
         ext.experimentationService = await createExperimentationService(context);
+        const rgApi = await getApiExport<AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
+
+        if (rgApi) {
+            rgApi.getApi<AzExtApi>('0.0.1').registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
+        }
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
