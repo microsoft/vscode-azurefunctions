@@ -19,7 +19,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     context.telemetry.eventVersion = 2;
     if (!node) {
         const noItemFoundErrorMessage: string = localize('noFunctions', 'No functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;/i, { ...context, noItemFoundErrorMessage });
+        node = await ext.rgApi.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;/i, { ...context, noItemFoundErrorMessage });
     }
 
     const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;

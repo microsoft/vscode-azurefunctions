@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { deleteNode } from './deleteNode';
 
 export async function deleteFunctionApp(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
-    await deleteNode(context, ProductionSlotTreeItem.contextValue, node)
+    await deleteNode(context, new RegExp(ResolvedFunctionAppResource.productionContextValue), node)
 }

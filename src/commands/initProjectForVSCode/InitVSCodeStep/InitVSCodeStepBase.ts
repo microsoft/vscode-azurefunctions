@@ -7,7 +7,7 @@ import { AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
-import { deploySubpathSetting, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -251,7 +251,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
             context,
             extensionsJsonPath,
             (data: IExtensionsJson): {} => {
-                const recommendations: string[] = ['ms-azuretools.vscode-azurefunctions'];
+                const recommendations: string[] = [extensionId];
                 if (this.getRecommendedExtensions) {
                     recommendations.push(...this.getRecommendedExtensions(language));
                 }

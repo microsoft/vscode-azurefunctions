@@ -11,7 +11,7 @@ import { ISiteCreatedOptions } from './createFunctionApp/showSiteCreated';
 
 export async function createSlot(context: IActionContext, node?: SlotsTreeItem): Promise<string> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
+        node = await ext.rgApi.tree.showTreeItemPicker<SlotsTreeItem>(SlotsTreeItem.contextValue, context);
     }
 
     (<ISiteCreatedOptions>context).showCreatedNotification = true;

@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -16,7 +16,7 @@ import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
-import { func } from './constants';
+import { extensionId, func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -26,6 +26,8 @@ import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
+import { FunctionAppResolver } from './FunctionAppResolver';
+import { getResourceGroupsApi } from './getExtensionApi';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
@@ -51,9 +53,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         context.subscriptions.push(ext.azureAccountTreeItem);
-        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
-        ext.treeView = vscode.window.createTreeView('azFuncTree', { treeDataProvider: ext.tree, showCollapseAll: true });
-        context.subscriptions.push(ext.treeView);
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         void callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
@@ -92,6 +91,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         }));
 
         ext.experimentationService = await createExperimentationService(context);
+        ext.rgApi = await getResourceGroupsApi();
+        ext.rgApi.registerApplicationResourceResolver(extensionId, new FunctionAppResolver());
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

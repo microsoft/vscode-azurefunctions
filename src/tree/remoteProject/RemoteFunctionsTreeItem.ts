@@ -9,20 +9,20 @@ import { isArray } from 'util';
 import { localize } from '../../localize';
 import { delay } from '../../utils/delay';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
-import { SlotTreeItemBase } from '../SlotTreeItemBase';
+import { SlotTreeItem } from '../SlotTreeItem';
 import { getFunctionNameFromId, RemoteFunctionTreeItem } from './RemoteFunctionTreeItem';
 
 export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
-    public readonly parent: SlotTreeItemBase;
+    public readonly parent: SlotTreeItem;
     public isReadOnly: boolean;
 
     private _nextLink: string | undefined;
 
-    private constructor(parent: SlotTreeItemBase) {
+    private constructor(parent: SlotTreeItem) {
         super(parent);
     }
 
-    public static async createFunctionsTreeItem(context: IActionContext, parent: SlotTreeItemBase): Promise<RemoteFunctionsTreeItem> {
+    public static async createFunctionsTreeItem(context: IActionContext, parent: SlotTreeItem): Promise<RemoteFunctionsTreeItem> {
         const ti: RemoteFunctionsTreeItem = new RemoteFunctionsTreeItem(parent);
         // initialize
         await ti.refreshImpl(context);
