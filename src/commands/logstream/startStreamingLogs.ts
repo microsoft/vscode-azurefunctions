@@ -10,20 +10,20 @@ import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { enableFileLogging } from './enableFileLogging';
 
-export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
+export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+        treeItem = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
-    const site: ParsedSite = treeItem instanceof SlotTreeItemBase ? treeItem.site : treeItem.parent.parent.site;
+    const site: ParsedSite = treeItem instanceof SlotTreeItem ? treeItem.site : treeItem.parent.parent.site;
 
     if (site.isLinux) {
         try {

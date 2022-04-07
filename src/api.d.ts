@@ -6,6 +6,16 @@
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ICreateChildImplContext, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
+export interface AzureResourceGroupsExtensionApi {
+    readonly tree: AzExtTreeDataProvider;
+    readonly treeView: vscode.TreeView<AzExtTreeItem>;
+
+    readonly apiVersion: string;
+    revealTreeItem(resourceId: string): Promise<void>;
+    registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): vscode.Disposable;
+    registerLocalResourceProvider(id: string, provider: LocalResourceProvider): vscode.Disposable;
+}
+
 /**
  * An abstract interface for GenericResource
  */
@@ -32,6 +42,7 @@ export interface GroupNodeConfiguration {
     readonly keyLabel?: string;
     readonly description?: string;
     readonly icon?: vscode.ThemeIcon;
+    readonly iconPath?: string | vscode.Uri | { light: string | vscode.Uri; dark: string | vscode.Uri } | vscode.ThemeIcon;
     readonly contextValue?: string;
 }
 
@@ -157,26 +168,36 @@ export interface AbstractAzExtTreeItem {
     isAncestorOfImpl?(contextValue: string | RegExp): boolean;
 }
 
-export type ResolvedAppResourceTreeItemBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & AbstractAzExtTreeItem;
+interface ContextValuesToAdd {
+    /**
+     * Resolvers are not allowed to set the context value. Instead, they must provide `contextValuesToAdd`
+     */
+    contextValue?: never;
 
-export type ResolvedAppResource = ResolvedAppResourceTreeItemBase;
+    /**
+     * These will be added to a Set<string> of context values. The array is *not* pre-initialized as an empty array.
+     */
+    contextValuesToAdd?: string[];
+}
 
-export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceTreeItemBase> = AppResource & Omit<T, keyof ResolvedAppResourceTreeItemBase>;
+export type ResolvedAppResourceBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & Partial<AbstractAzExtTreeItem> & ContextValuesToAdd;
+
+export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceBase> = AppResource & SealedAzExtTreeItem & Omit<T, keyof ResolvedAppResourceBase>;
 
 export type LocalResource = AzExtTreeItem;
 
 export interface AppResourceResolver {
-    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResource>;
+    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResourceBase>;
+    matchesResource(resource: AppResource): boolean;
 }
 
 /**
  * Resource extensions call this to register app resource resolvers.
  *
+ * @param id
  * @param resolver
- * @param resourceType
- * @param resourceKind
  */
-export declare function registerApplicationResourceResolver(resolver: AppResourceResolver, resourceType: string, resourceKind?: string): vscode.Disposable;
+export declare function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): vscode.Disposable;
 
 // Not part of public interface to start with--only Resource Groups extension will call it (for now)
 // currently implemented as AzureResourceProvider

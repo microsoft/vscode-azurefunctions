@@ -7,17 +7,16 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { AzExtApi } from './api';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
 import { downloadAppSettingsFromApi } from './commands/api/downloadAppSettingsFromApi';
 import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
-import { func } from './constants';
+import { extensionId, func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -27,7 +26,8 @@ import { handleUri } from './downloadAzureProject/handleUri';
 import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
-import { getApiExport } from './getExtensionApi';
+import { FunctionAppResolver } from './FunctionAppResolver';
+import { getResourceGroupsApi } from './getExtensionApi';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
@@ -54,9 +54,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
         context.subscriptions.push(ext.azureAccountTreeItem);
-        ext.tree = new AzExtTreeDataProvider(ext.azureAccountTreeItem, 'azureFunctions.loadMore');
-        ext.treeView = vscode.window.createTreeView('azFuncTree', { treeDataProvider: ext.tree, showCollapseAll: true });
-        context.subscriptions.push(ext.treeView);
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         void callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
@@ -89,17 +86,16 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('java', javaDebugProvider));
         context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('PowerShell', powershellDebugProvider));
         context.subscriptions.push(vscode.workspace.registerTaskProvider(func, new FuncTaskProvider(nodeDebugProvider, pythonDebugProvider, javaDebugProvider, powershellDebugProvider)));
-        ``
+
         context.subscriptions.push(vscode.window.registerUriHandler({
             handleUri
         }));
 
         ext.experimentationService = await createExperimentationService(context);
-        const rgApi = await getApiExport<AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
+        ext.rgApi = await getResourceGroupsApi();
+        ext.rgApi.registerApplicationResourceResolver(extensionId, new FunctionAppResolver());
+        ext.rgApi.registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
 
-        if (rgApi) {
-            rgApi.getApi<AzExtApi>('0.0.1').registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
-        }
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

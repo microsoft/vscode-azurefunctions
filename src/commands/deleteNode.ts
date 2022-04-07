@@ -8,7 +8,7 @@ import { ext } from '../extensionVariables';
 
 export async function deleteNode(context: IActionContext, expectedContextValue: string | RegExp, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker(expectedContextValue, { ...context, suppressCreatePick: true });
+        node = await ext.rgApi.tree.showTreeItemPicker(expectedContextValue, { ...context, suppressCreatePick: true });
     }
 
     await node.deleteTreeItem(context);

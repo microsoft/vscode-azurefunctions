@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
-import { FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
+import { extensionId, FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 
 export const defaultTestFuncVersion: FuncVersion = FuncVersion.v3;
 
@@ -337,7 +337,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate extensions.json
     //
-    const recs: string[] = options.expectedExtensionRecs.concat('ms-azuretools.vscode-azurefunctions');
+    const recs: string[] = options.expectedExtensionRecs.concat(extensionId);
     const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(rootPath, '.vscode', 'extensions.json'));
     extensionsJson.recommendations = extensionsJson.recommendations || [];
     assert.equal(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");

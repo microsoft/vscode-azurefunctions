@@ -3,30 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, UserCancelledError } from "@microsoft/vscode-azext-utils";
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
-import { commands, Extension, extensions } from "vscode";
+import { Extension, extensions } from "vscode";
+import { AzureResourceGroupsExtensionApi } from "./api";
 import { localize } from "./localize";
-import { AzureFunctionsExtensionApi } from "./vscode-azurefunctions.api";
 
-/**
- * @param installMessage Override default message shown if extension is not installed.
- */
-export async function getFunctionsApi(context: IActionContext, installMessage?: string): Promise<AzureFunctionsExtensionApi> {
-    const funcExtensionId: string = 'ms-azuretools.vscode-azurefunctions';
-    const funcExtension: AzureExtensionApiProvider | undefined = await getApiExport(funcExtensionId);
-
-    if (funcExtension) {
-        return funcExtension.getApi<AzureFunctionsExtensionApi>('^1.7.0');
-    }
-
-    await context.ui.showWarningMessage(installMessage ?? localize('funcInstall', 'You must have the "Azure Functions" extension installed to perform this operation.'), { title: 'Install', stepName: 'installFunctions' });
-    const commandToRun: string = 'extension.open';
-    void commands.executeCommand(commandToRun, funcExtensionId);
-
-    // we still need to throw an error even if the user installs
-    throw new UserCancelledError('postInstallFunctions');
-}
 export async function getApiExport<T>(extensionId: string): Promise<T | undefined> {
     const extension: Extension<T> | undefined = extensions.getExtension(extensionId);
     if (extension) {
@@ -38,4 +19,13 @@ export async function getApiExport<T>(extensionId: string): Promise<T | undefine
     }
 
     return undefined;
+}
+
+export async function getResourceGroupsApi(): Promise<AzureResourceGroupsExtensionApi> {
+    const rgApiProvider = await getApiExport<AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
+    if (rgApiProvider) {
+        return rgApiProvider.getApi<AzureResourceGroupsExtensionApi>('0.0.1');
+    } else {
+        throw new Error(localize('noResourceGroupExt', 'Could not find the Azure Resource Groups extension'));
+    }
 }

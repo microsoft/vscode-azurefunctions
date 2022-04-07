@@ -3,61 +3,81 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfig, SiteSourceControl, StringDictionary } from '@azure/arm-appservice';
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { runFromPackageKey } from '../constants';
-import { IParsedHostJson, parseHostJson } from '../funcConfig/host';
-import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
-import { envUtils } from '../utils/envUtils';
-import { nonNullValue } from '../utils/nonNull';
-import { treeUtils } from '../utils/treeUtils';
-import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
-import { matchesAnyPart, ProjectResource, ProjectSource } from './projectContextValues';
-import { RemoteFunctionsTreeItem } from './remoteProject/RemoteFunctionsTreeItem';
+import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
+import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
+import { AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ResolvedAppResourceBase } from "../api";
+import { runFromPackageKey } from "../constants";
+import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
+import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
+import { envUtils } from "../utils/envUtils";
+import { treeUtils } from "../utils/treeUtils";
+import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
+import { matchesAnyPart, ProjectResource, ProjectSource } from "./projectContextValues";
+import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem";
+import { SlotsTreeItem } from "./SlotsTreeItem";
+import { SlotTreeItem } from "./SlotTreeItem";
 
-export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IProjectTreeItem {
+export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
+    public site: ParsedSite;
+    private _subscription: ISubscriptionContext;
     public logStreamPath: string = '';
-    public readonly appSettingsTreeItem: AppSettingsTreeItem;
+    public appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
-    public site: ParsedSite;
 
-    public abstract readonly contextValue: string;
-    public abstract readonly label: string;
+    public contextValuesToAdd?: string[] | undefined;
+    public maskedValuesToAdd: string[] = [];
 
+    private _slotsTreeItem: SlotsTreeItem;
     private _functionsTreeItem: RemoteFunctionsTreeItem | undefined;
-    private readonly _logFilesTreeItem: LogFilesTreeItem;
-    private readonly _siteFilesTreeItem: SiteFilesTreeItem;
+    private _logFilesTreeItem: LogFilesTreeItem;
+    private _siteFilesTreeItem: SiteFilesTreeItem;
+
     private _cachedVersion: FuncVersion | undefined;
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
-    public constructor(parent: AzExtParentTreeItem, site: ParsedSite) {
-        super(parent);
-        this.site = site;
-        this.appSettingsTreeItem = new AppSettingsTreeItem(this, site);
-        this._siteFilesTreeItem = new SiteFilesTreeItem(this, site, true);
-        this._logFilesTreeItem = new LogFilesTreeItem(this, site);
+    public static productionContextValue: string = 'azFuncProductionSlot';
+    public static slotContextValue: string = 'azFuncSlot';
+
+    commandId?: string | undefined;
+    tooltip?: string | undefined;
+    commandArgs?: unknown[] | undefined;
+
+    public constructor(subscription: ISubscriptionContext, site: Site) {
+        this.site = new ParsedSite(site, subscription);
+        this._subscription = subscription;
+        this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
 
         const valuesToMask = [
-            site.siteName, site.slotName, site.defaultHostName, site.resourceGroup,
-            site.planName, site.planResourceGroup, site.kuduHostName, site.gitUrl,
-            site.rawSite.repositorySiteName, ...(site.rawSite.hostNames || []), ...(site.rawSite.enabledHostNames || [])
+            this.site.siteName, this.site.slotName, this.site.defaultHostName, this.site.resourceGroup,
+            this.site.planName, this.site.planResourceGroup, this.site.kuduHostName, this.site.gitUrl,
+            this.site.rawSite.repositorySiteName, ...(this.site.rawSite.hostNames || []), ...(this.site.rawSite.enabledHostNames || [])
         ];
+
+
         for (const v of valuesToMask) {
             if (v) {
-                this.valuesToMask.push(v);
+                this.maskedValuesToAdd.push(v);
             }
         }
     }
 
-    public get logStreamLabel(): string {
-        return this.site.fullName;
+    public get name(): string {
+        return this.label;
+    }
+
+    public get label(): string {
+        return this.site.slotName ?? this.site.fullName;
     }
 
     public get id(): string {
         return this.site.id;
+    }
+
+    public get logStreamLabel(): string {
+        return this.site.fullName;
     }
 
     public async getHostRequest(): Promise<FuncHostRequest> {
@@ -69,7 +89,8 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath(this.contextValue);
+        const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
+        return treeUtils.getIconPath(proxyTree.contextValue);
     }
 
     private get _state(): string | undefined {
@@ -89,7 +110,7 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
         this._cachedIsConsumption = undefined;
 
         const client = await this.site.createClient(context);
-        this.site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this.subscription);
+        this.site = new ParsedSite(nonNullValue(await client.getSite(), 'site'), this._subscription);
     }
 
     public async getVersion(context: IActionContext): Promise<FuncVersion> {
@@ -165,18 +186,39 @@ export abstract class SlotTreeItemBase extends AzExtParentTreeItem implements IP
         const client = await this.site.createClient(context);
         const siteConfig: SiteConfig = await client.getSiteConfig();
         const sourceControl: SiteSourceControl = await client.getSourceControl();
-        this.deploymentsNode = new DeploymentsTreeItem(this, this.site, siteConfig, sourceControl);
+        const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
+
+        this.deploymentsNode = new DeploymentsTreeItem(proxyTree, this.site, siteConfig, sourceControl);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site);
+        this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, this.site, true);
+        this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, this.site);
 
         if (!this._functionsTreeItem) {
-            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, this);
+            this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
         }
 
+        const children: AzExtTreeItem[] = [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
+        if (!this.site.isSlot) {
+            this._slotsTreeItem = new SlotsTreeItem(proxyTree);
+            children.push(this._slotsTreeItem);
+        }
 
-        return [this._functionsTreeItem, this.appSettingsTreeItem, this._siteFilesTreeItem, this._logFilesTreeItem, this.deploymentsNode];
+        return children;
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[]): Promise<AzExtTreeItem | undefined> {
+        if (!this.site.isSlot) {
+            for (const expectedContextValue of expectedContextValues) {
+                switch (expectedContextValue) {
+                    case SlotsTreeItem.contextValue:
+                    case ResolvedFunctionAppResource.slotContextValue:
+                        return this._slotsTreeItem;
+                    default:
+                }
+            }
+        }
+
         for (const expectedContextValue of expectedContextValues) {
             switch (expectedContextValue) {
                 case AppSettingsTreeItem.contextValue:
