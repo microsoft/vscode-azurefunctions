@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
+import { createTestActionContext, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createTestActionContext, runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, FuncVersion, getRandomHexString, nonNullProp } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest, runInSeries } from '../addParallelSuite';
 import { getTestWorkspaceFolder } from '../global.test';

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { runWithTestActionContext } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { runWithFuncSetting } from '../runWithSetting';

@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { runWithTestActionContext, TestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
-import { runWithTestActionContext, TestActionContext } from 'vscode-azureextensiondev';
 import { createFunctionInternal, FuncVersion, getRandomHexString, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelSuiteOptions, ParallelTest } from '../addParallelSuite';
 import { runForTemplateSource, testFolderPath } from '../global.test';
