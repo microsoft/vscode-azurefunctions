@@ -80,7 +80,6 @@
         "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
         "onUri",
-        "onView:azFuncTree",
         "onView:azureWorkspace",
         "workspaceContains:**/host.json"
     ],
@@ -369,11 +368,6 @@
                 {
                     "command": "azureFunctions.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
-                    "group": "inline"
-                },
-                {
-                    "command": "azureFunctions.createFunction",
-                    "when": "view == azFuncTree && viewItem == azFuncLocalProject",
                     "group": "inline"
                 },
                 {
