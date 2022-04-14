@@ -25,6 +25,8 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     public constructor(parent: AzExtParentTreeItem, resolvedFunctionAppResource: ResolvedFunctionAppResource) {
         super(parent);
         this.resolved = resolvedFunctionAppResource;
+        // this is for the slotContextValue because it never gets resolved by the Resources extension
+        this.contextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
     }
 
     public get label(): string {
