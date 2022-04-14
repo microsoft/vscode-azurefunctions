@@ -63,7 +63,6 @@
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.pickProcess",
         "onCommand:azureFunctions.redeploy",
-        "onCommand:azureFunctions.refresh",
         "onCommand:azureFunctions.reportIssue",
         "onCommand:azureFunctions.restartFunctionApp",
         "onCommand:azureFunctions.setAzureWebJobsStorage",
@@ -275,12 +274,6 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.refresh",
-                "title": "%azureFunctions.refresh%",
-                "category": "Azure Functions",
-                "icon": "$(refresh)"
-            },
-            {
                 "command": "azureFunctions.reportIssue",
                 "title": "%azureFunctions.reportIssue%",
                 "category": "Azure Functions"
@@ -289,11 +282,6 @@
                 "command": "azureFunctions.restartFunctionApp",
                 "title": "%azureFunctions.restartFunctionApp%",
                 "category": "Azure Functions"
-            },
-            {
-                "command": "azureFunctions.selectSubscriptions",
-                "title": "Select Subscriptions...",
-                "icon": "$(filter)"
             },
             {
                 "command": "azureFunctions.setAzureWebJobsStorage",
@@ -365,11 +353,6 @@
         "menus": {
             "view/item/context": [
                 {
-                    "command": "azureFunctions.selectSubscriptions",
-                    "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
-                    "group": "inline"
-                },
-                {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
@@ -385,7 +368,7 @@
                     "group": "2@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "3@1"
                 },
@@ -396,7 +379,7 @@
                 },
                 {
                     "command": "azureFunctions.browseWebsite",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "1@2"
                 },
                 {
@@ -411,22 +394,22 @@
                 },
                 {
                     "command": "azureFunctions.configureDeploymentSource",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "2@2"
                 },
                 {
                     "command": "azureFunctions.startFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.stopFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "3@2"
                 },
                 {
                     "command": "azureFunctions.restartFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "3@3"
                 },
                 {
@@ -446,12 +429,12 @@
                 },
                 {
                     "command": "azureFunctions.startStreamingLogs",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "4@1"
                 },
                 {
                     "command": "azureFunctions.stopStreamingLogs",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "4@2"
                 },
                 {
@@ -466,12 +449,12 @@
                 },
                 {
                     "command": "azureFunctions.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "6@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/",
+                    "command": "azureResourceGroups.refresh",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "6@2"
                 },
                 {
@@ -480,12 +463,12 @@
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == azFuncSlots",
                     "group": "2@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /Functions;/i",
                     "group": "1@1"
                 },
@@ -550,7 +533,7 @@
                     "group": "1@3"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == applicationSettings",
                     "group": "2@1"
                 },
@@ -585,7 +568,7 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /^deployments(C|Unc)onnected$/",
                     "group": "2@1"
                 },
@@ -610,17 +593,17 @@
                     "group": "1@4"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == siteFiles",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == logFiles",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureFunctions.refresh",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == folder",
                     "group": "1@1"
                 }
@@ -654,14 +637,6 @@
                 },
                 {
                     "command": "azureFunctions.pickProcess",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.refresh",
-                    "when": "never"
-                },
-                {
-                    "command": "azureFunctions.selectSubscriptions",
                     "when": "never"
                 },
                 {

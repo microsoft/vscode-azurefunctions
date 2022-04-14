@@ -61,7 +61,6 @@
     "azureFunctions.projectTemplateKey": "A key used to identify which templates to use for this project. In most cases, this will be automatically detected and should not need to be set.",
     "azureFunctions.pythonVenv": "The name of the Python virtual environment used for your project. A virtual environment is required to debug and deploy Python functions.",
     "azureFunctions.redeploy": "Redeploy",
-    "azureFunctions.refresh": "Refresh",
     "azureFunctions.reportIssue": "Report Issue...",
     "azureFunctions.requestTimeout": "The timeout (in seconds) to be used when making requests, for example getting the latest templates.",
     "azureFunctions.restartFunctionApp": "Restart",
