@@ -5,8 +5,7 @@
 
 import { SiteConfigResource, StringDictionary, User } from '@azure/arm-appservice';
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as portfinder from 'portfinder';
+import { DialogResponses, findFreePort, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -23,7 +22,7 @@ export async function remoteDebugJavaFunctionApp(context: IActionContext, node?:
         node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
     }
     const client: SiteClient = await node.site.createClient(context);
-    const portNumber: number = await portfinder.getPortPromise();
+    const portNumber: number = await findFreePort();
     const publishCredential: User = await client.getWebAppPublishCredential();
     const debugProxy: DebugProxy = new DebugProxy(node.site, portNumber, publishCredential);
 
