@@ -216,7 +216,19 @@ export interface LocalResourceProvider {
 
 // called from host extension (Resource Groups)
 // Will need a manifest of extensions mapping type => extension ID
-export declare function registerApplicationResourceProvider(id: string, provider: AppResourceProvider): vscode.Disposable;
+export declare function registerApplicationResourceProvider(provider: AppResourceProvider): vscode.Disposable;
 
 // resource extensions need to activate onView:localResourceView and call this
-export declare function registerLocalResourceProvider(id: string, provider: LocalResourceProvider): vscode.Disposable;
+export declare function registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): vscode.Disposable;
+
+export type AzExtApi = {
+    registerApplicationResourceResolver(
+        provider: AppResourceResolver,
+        resourceType: string,
+        resourceKind?: string
+    ): vscode.Disposable;
+
+    registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): vscode.Disposable;
+
+    apiVersion: string;
+}

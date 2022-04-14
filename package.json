@@ -79,6 +79,7 @@
         "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
         "onUri",
+        "onView:azureWorkspace",
         "workspaceContains:**/host.json"
     ],
     "main": "./main.js",
@@ -352,6 +353,11 @@
         ],
         "menus": {
             "view/item/context": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace && viewItem == azFuncLocalProject",
+                    "group": "inline"
+                },
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",

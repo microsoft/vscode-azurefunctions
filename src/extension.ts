@@ -28,6 +28,7 @@ import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { FunctionAppResolver } from './FunctionAppResolver';
 import { getResourceGroupsApi } from './getExtensionApi';
+import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
@@ -93,6 +94,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi();
         ext.rgApi.registerApplicationResourceResolver(extensionId, new FunctionAppResolver());
+        ext.rgApi.registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
+
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
