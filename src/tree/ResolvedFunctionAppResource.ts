@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
+import { AppSettingsTreeItem, AppSettingTreeItem, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { ResolvedAppResourceBase } from "../api";
 import { runFromPackageKey } from "../constants";
@@ -251,9 +251,5 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         const client = await this.site.createClient(context);
         const appSettings: StringDictionary = await client.listApplicationSettings();
         return [runFromPackageKey, 'WEBSITE_RUN_FROM_ZIP'].some(key => appSettings.properties && envUtils.isEnvironmentVariableSet(appSettings.properties[key]));
-    }
-
-    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        await deleteSite(context, this.site);
     }
 }

@@ -25,7 +25,9 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
 
     context.newResourceGroupName = newResourceGroupName;
     (<ISiteCreatedOptions>context).showCreatedNotification = true;
-    const funcAppNode: SlotTreeItem = await node.createChild(context);
+
+    const funcAppNode: SlotTreeItem = await SubscriptionTreeItem.createChild(context as ICreateFunctionAppContext, node as SubscriptionTreeItem);
+
     return funcAppNode.fullId;
 }
 

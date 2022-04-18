@@ -25,7 +25,7 @@ import { createFunctionApp, createFunctionAppAdvanced } from './createFunctionAp
 import { createNewProjectFromCommand } from './createNewProject/createNewProject';
 import { createSlot } from './createSlot';
 import { deleteFunction } from './deleteFunction';
-import { deleteFunctionApp } from './deleteFunctionApp';
+import { deleteFunctionApp } from './deleteFunctionApp/deleteFunctionApp';
 import { deleteNode } from './deleteNode';
 import { deployProductionSlot, deploySlot } from './deploy/deploy';
 import { connectToGitHub } from './deployments/connectToGitHub';

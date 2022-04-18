@@ -13,9 +13,11 @@ import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../com
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
+import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
+import { createActivityContext } from '../utils/activityUtils';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
@@ -75,17 +77,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzExtTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
-        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.subscription, {
+        const wizardContext: IFunctionAppWizardContext = Object.assign(context, subscription.subscription, {
             newSiteKind: AppKind.functionapp,
             resourceGroupDeferLocationStep: true,
             version,
-            language
+            language,
+            ...(await createActivityContext())
         });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
@@ -142,7 +145,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt();
-        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
         if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
@@ -154,10 +156,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.newAppInsightsName = newName;
         }
 
+        wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
 
-        const resolved = new ResolvedFunctionAppResource(this.subscription, nonNullProp(wizardContext, 'site'));
-        return new SlotTreeItem(this, resolved);
+        const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
+        await ext.rgApi.tree.refresh(context);
+        return new SlotTreeItem(subscription, resolved);
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

@@ -7,6 +7,7 @@ import { NameValuePair, Site, SiteConfig, WebSiteManagementClient } from '@azure
 import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
+import { AppResource } from '@microsoft/vscode-azext-utils/unified';
 import { Progress } from 'vscode';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -44,6 +45,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         const client: WebSiteManagementClient = await createWebSiteClient(context);
         context.site = await client.webApps.beginCreateOrUpdateAndWait(rgName, siteName, await this.getNewSite(context, stack));
+        context.activityResult = context.site as AppResource;
 
         const site = new ParsedSite(context.site, context);
         if (!site.isLinux) { // not supported on linux
