@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
-import { AppSettingsTreeItem, AppSettingTreeItem, deleteSite, DeploymentsTreeItem, DeploymentTreeItem, getFile, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
-import { AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { ResolvedAppResourceBase } from "../api";
+import { AppSettingsTreeItem, AppSettingTreeItem, DeleteLastServicePlanStep, DeleteSiteStep, DeploymentsTreeItem, DeploymentTreeItem, getFile, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
+import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { runFromPackageKey } from "../constants";
 import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
+import { localize } from "../localize";
+import { createActivityContext } from "../utils/activityUtils";
 import { envUtils } from "../utils/envUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { ApplicationSettings, FuncHostRequest } from "./IProjectTreeItem";
@@ -254,6 +256,20 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        await deleteSite(context, this.site);
+        const wizardContext: IDeleteSiteWizardContext = Object.assign(context, {
+            site: this.site,
+            ...(await createActivityContext())
+        });
+
+        const confirmationMessage = localize('deleteConfirmation', 'Are you sure you want to delete function app "{0}"?', this.site.fullName);
+
+        const wizard = new AzureWizard(wizardContext, {
+            title: localize('deleteSwa', 'Delete Function App "{0}"', this.label),
+            promptSteps: [new DeleteConfirmationStep(confirmationMessage), new DeleteLastServicePlanStep()],
+            executeSteps: [new DeleteSiteStep()]
+        });
+
+        await wizard.prompt();
+        await wizard.execute();
     }
 }

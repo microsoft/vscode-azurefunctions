@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
+import { ExecuteActivityContext, ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
 import { FuncVersion } from '../../FuncVersion';
 import { AppStackMajorVersion, AppStackMinorVersion } from './stacks/models/AppStackModel';
 import { FunctionAppRuntimes, FunctionAppStack } from './stacks/models/FunctionAppStackModel';
@@ -15,7 +15,7 @@ export type FullFunctionAppStack = {
     minorVersion: AppStackMinorVersion<FunctionAppRuntimes>;
 };
 
-export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext {
+export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICreateChildImplContext, ExecuteActivityContext {
     version: FuncVersion;
     language: string | undefined;
     stackFilter?: string;

@@ -1,5 +1,5 @@
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceResolver } from "./api";
+import { AppResource, AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
 import { getResourceGroupFromId } from "./utils/azure";
 import { createWebSiteClient } from "./utils/azureClients";
