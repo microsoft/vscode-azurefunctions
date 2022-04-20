@@ -20,6 +20,24 @@
             }
         },
         {
+            "name": "Launch Extension + Host",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azureresourcegroups"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}",
+            "env": {
+                "DEBUGTELEMETRY": "v",
+                "NODE_DEBUG": ""
+            }
+        },
+        {
             "name": "Launch Extension (webpack)",
             "type": "extensionHost",
             "request": "launch",

@@ -100,4 +100,8 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     public async isReadOnly(context: IActionContext): Promise<boolean> {
         return await this.resolved.isReadOnly(context);
     }
+
+    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
+        await this.resolved.deleteTreeItemImpl(context);
+    }
 }
