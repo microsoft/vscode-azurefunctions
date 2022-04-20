@@ -454,22 +454,22 @@
                 },
                 {
                     "command": "azureFunctions.startRemoteDebug",
-                    "when": "view == azureResourceGroups && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableRemoteDebugging == true",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/ && config.azureFunctions.enableRemoteDebugging == true",
                     "group": "5@1"
                 },
                 {
                     "command": "azureFunctions.startJavaRemoteDebug",
-                    "when": "view == azureResourceGroups && viewItem =~ /^azFunc(Production|)Slot$/ && config.azureFunctions.enableJavaRemoteDebugging == true",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot/ && config.azureFunctions.enableJavaRemoteDebugging == true",
                     "group": "5@2"
                 },
                 {
                     "command": "azureFunctions.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s).*slot/",
                     "group": "6@1"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s).*slot/",
                     "group": "6@2"
                 },
                 {

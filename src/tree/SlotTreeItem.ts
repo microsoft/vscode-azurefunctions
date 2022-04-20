@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingsTreeItem, DeploymentsTreeItem, ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
 import { treeUtils } from '../utils/treeUtils';
@@ -27,8 +27,11 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
         super(parent);
         this.resolved = resolvedFunctionAppResource;
         // this is for the slotContextValue because it never gets resolved by the Resources extension
-        this.contextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
+        const slotContextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
+        const contextValues = [slotContextValue, 'slot'];
+        this.contextValue = Array.from(new Set(contextValues)).sort().join(';');
         this.site = this.resolved.site;
+        this.iconPath = treeUtils.getIconPath(slotContextValue);
     }
 
     public get label(): string {
@@ -49,10 +52,6 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
 
     public get description(): string | undefined {
         return this.resolved.description;
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {
