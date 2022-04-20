@@ -7,7 +7,7 @@ import { NameValuePair, Site, SiteConfig, WebSiteManagementClient } from '@azure
 import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '@microsoft/vscode-azext-utils/unified';
+import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from "vscode";
-import { LocalResourceProvider } from "./api";
 import { tryGetFunctionProjectRoot } from "./commands/createNewProject/verifyIsProject";
 import { getFunctionAppName, getJavaDebugSubpath } from "./commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep";
 import { funcVersionSetting, JavaBuildTool, javaBuildTool, ProjectLanguage, projectLanguageSetting } from "./constants";
@@ -17,7 +17,7 @@ import { LocalProjectTreeItem } from "./tree/localProject/LocalProjectTreeItem";
 import { dotnetUtils } from "./utils/dotnetUtils";
 import { getWorkspaceSetting } from "./vsCodeConfig/settings";
 
-export class FunctionsLocalResourceProvider implements LocalResourceProvider {
+export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider {
 
     public disposables: Disposable[] = [];
 

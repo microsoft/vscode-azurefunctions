@@ -6,7 +6,7 @@
 import { Site, SiteConfig, SiteSourceControl, StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, AppSettingTreeItem, DeleteLastServicePlanStep, DeleteSiteStep, DeploymentsTreeItem, DeploymentTreeItem, getFile, IDeleteSiteWizardContext, LogFilesTreeItem, ParsedSite, SiteFilesTreeItem } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtTreeItem, AzureWizard, DeleteConfirmationStep, IActionContext, ISubscriptionContext, nonNullValue, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { ResolvedAppResourceBase } from "../api";
+import { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { runFromPackageKey } from "../constants";
 import { IParsedHostJson, parseHostJson } from "../funcConfig/host";
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from "../FuncVersion";
