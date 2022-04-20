@@ -7,6 +7,7 @@ import { AppSettingsTreeItem, DeploymentsTreeItem, ParsedSite } from '@microsoft
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { IParsedHostJson } from '../funcConfig/host';
 import { FuncVersion } from '../FuncVersion';
+import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectSource } from './projectContextValues';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
@@ -27,6 +28,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
         this.resolved = resolvedFunctionAppResource;
         // this is for the slotContextValue because it never gets resolved by the Resources extension
         this.contextValue = this.resolved.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue;
+        this.site = this.resolved.site;
     }
 
     public get label(): string {
@@ -50,7 +52,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     }
 
     public get iconPath(): TreeItemIconPath {
-        return this.resolved.iconPath;
+        return treeUtils.getIconPath(this.contextValue);
     }
 
     public hasMoreChildrenImpl(): boolean {
