@@ -543,22 +543,22 @@
                 },
                 {
                     "command": "azureFunctions.appSettings.rename",
-                    "when": "view == azureResourceGroups && /applicationSettingItem.*azureFunctions/",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.delete",
-                    "when": "view == azureResourceGroups && /applicationSettingItem.*azureFunctions/",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view == azureResourceGroups && /applicationSettingItem.*azureFunctions/",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "view == azureResourceGroups && /applicationSettingItem.*azureFunctions/",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "inline"
                 },
                 {
