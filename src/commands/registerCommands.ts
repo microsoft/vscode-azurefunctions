@@ -82,7 +82,6 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
-    registerCommand('azureFunctions.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.rgApi.tree.loadMore(node, context));
     registerCommand('azureFunctions.openFile', openFile);
     registerCommand('azureFunctions.openInPortal', openInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);

@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.6.3-alpha.1",
+    "version": "1.6.3-alpha.2",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -59,7 +59,6 @@
         "onCommand:azureFunctions.executeFunction",
         "onCommand:azureFunctions.initProjectForVSCode",
         "onCommand:azureFunctions.installOrUpdateFuncCoreTools",
-        "onCommand:azureFunctions.loadMore",
         "onCommand:azureFunctions.openInPortal",
         "onCommand:azureFunctions.pickProcess",
         "onCommand:azureFunctions.redeploy",
@@ -263,11 +262,6 @@
                 "category": "Azure Functions"
             },
             {
-                "command": "azureFunctions.loadMore",
-                "title": "%azureFunctions.loadMore%",
-                "category": "Azure Functions"
-            },
-            {
                 "command": "azureFunctions.openInPortal",
                 "title": "%azureFunctions.openInPortal%",
                 "category": "Azure Functions"
@@ -369,23 +363,13 @@
                 },
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /(azureextensionui.azureSubscription|azureResourceTypeGroup/microsoft.web/sites/functionapp)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup.*microsoft.web/sites/functionapp/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
-                    "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup.*microsoft.web/sites/functionapp/",
                     "group": "1@2"
-                },
-                {
-                    "command": "azureFunctions.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
-                    "group": "2@1"
-                },
-                {
-                    "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
-                    "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
@@ -646,10 +630,6 @@
                 }
             ],
             "commandPalette": [
-                {
-                    "command": "azureFunctions.loadMore",
-                    "when": "never"
-                },
                 {
                     "command": "azureFunctions.pickProcess",
                     "when": "never"

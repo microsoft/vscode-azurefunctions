@@ -30,7 +30,6 @@ import { FunctionAppResolver } from './FunctionAppResolver';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
-import { AzureAccountTreeItemWithProjects } from './tree/AzureAccountTreeItemWithProjects';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
@@ -51,9 +50,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         void runPostFunctionCreateStepsFromCache();
 
         void validateFuncCoreToolsIsLatest();
-
-        ext.azureAccountTreeItem = new AzureAccountTreeItemWithProjects();
-        context.subscriptions.push(ext.azureAccountTreeItem);
 
         const validateEventId: string = 'azureFunctions.validateFunctionProjects';
         void callWithTelemetryAndErrorHandling(validateEventId, async (actionContext: IActionContext) => {
