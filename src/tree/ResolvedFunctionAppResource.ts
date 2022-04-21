@@ -191,7 +191,9 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
         this.deploymentsNode = new DeploymentsTreeItem(proxyTree, this.site, siteConfig, sourceControl);
-        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site);
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, {
+            contextValuesToAdd: ['azureFunctions']
+        });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, this.site, true);
         this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, this.site);
 
