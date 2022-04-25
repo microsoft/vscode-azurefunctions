@@ -372,11 +372,6 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureFunctions.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFuncProductionSlot/",
-                    "group": "1@1"
-                },
-                {
                     "command": "azureFunctions.browseWebsite",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s)/",
                     "group": "1@2"
@@ -468,7 +463,7 @@
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /Functions;/i",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFunc.*Functions;/i",
                     "group": "1@1"
                 },
                 {
@@ -518,92 +513,92 @@
                 },
                 {
                     "command": "azureFunctions.appSettings.add",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettings",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettings.*azureFunctions/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.download",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettings",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettings.*azureFunctions/",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.upload",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettings",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettings.*azureFunctions/",
                     "group": "1@3"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettings",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettings.*azureFunctions/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.edit",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettingItem",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.appSettings.rename",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettingItem",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.appSettings.delete",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettingItem",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.appSettings.toggleSlotSetting",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettingItem",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "1@4"
                 },
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
-                    "when": "view == azureResourceGroups && viewItem == applicationSettingItem",
+                    "when": "view == azureResourceGroups && viewItem =~ /applicationSettingItem.*azureFunctions/",
                     "group": "inline"
                 },
                 {
                     "command": "azureFunctions.disconnectRepo",
-                    "when": "view == azureResourceGroups && viewItem == deploymentsConnected",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*deploymentsConnected/",
                     "group": "1@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /^deployments(C|Unc)onnected$/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*(deployments(C|Unc)onnected)/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.viewDeploymentLogs",
-                    "when": "view == azureResourceGroups && viewItem =~ /^deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*deployment//",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.redeploy",
-                    "when": "view == azureResourceGroups && viewItem =~ /^deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*deployment//",
                     "group": "1@2"
                 },
                 {
                     "command": "azureFunctions.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /^deployment//",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*deployment//",
                     "group": "1@3"
                 },
                 {
                     "command": "azureFunctions.viewCommitInGitHub",
-                    "when": "view == azureResourceGroups && viewItem == deployment/github",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*deployment/github/",
                     "group": "1@4"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == siteFiles",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*siteFiles/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == logFiles",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*logFiles/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == folder",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureFunctions.*folder/",
                     "group": "1@1"
                 }
             ],
@@ -1066,7 +1061,7 @@
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^0.2.0",
+        "@microsoft/vscode-azext-azureappservice": "file:../vscode-azuretools/appservice/microsoft-vscode-azext-azureappservice-0.3.0.tgz",
         "@microsoft/vscode-azext-azureutils": "^0.2.0",
         "@microsoft/vscode-azext-utils": "^0.2.0",
         "escape-string-regexp": "^4.0.0",

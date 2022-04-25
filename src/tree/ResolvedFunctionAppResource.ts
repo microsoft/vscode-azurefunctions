@@ -190,10 +190,24 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         const sourceControl: SiteSourceControl = await client.getSourceControl();
         const proxyTree: SlotTreeItem = this as unknown as SlotTreeItem;
 
-        this.deploymentsNode = new DeploymentsTreeItem(proxyTree, this.site, siteConfig, sourceControl);
-        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site);
-        this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, this.site, true);
-        this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, this.site);
+        this.deploymentsNode = new DeploymentsTreeItem(proxyTree, {
+            site: this.site,
+            siteConfig,
+            sourceControl,
+            contextValuesToAdd: ['azureFunctions']
+        });
+        this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, {
+            contextValuesToAdd: ['azureFunctions']
+        });
+        this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
+            site: this.site,
+            isReadOnly: true,
+            contextValuesToAdd: ['azureFunctions']
+        });
+        this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, {
+            site: this.site,
+            contextValuesToAdd: ['azureFunctions']
+        });
 
         if (!this._functionsTreeItem) {
             this._functionsTreeItem = await RemoteFunctionsTreeItem.createFunctionsTreeItem(context, proxyTree);
