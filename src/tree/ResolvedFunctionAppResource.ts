@@ -236,23 +236,24 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         }
 
         for (const expectedContextValue of expectedContextValues) {
-            switch (expectedContextValue) {
-                case AppSettingsTreeItem.contextValue:
-                case AppSettingTreeItem.contextValue:
+            if (expectedContextValue instanceof RegExp) {
+                const appSettingsContextValues = [AppSettingsTreeItem.contextValue, AppSettingTreeItem.contextValue];
+                if (matchContextValue(expectedContextValue, appSettingsContextValues)) {
                     return this.appSettingsTreeItem;
-                case DeploymentsTreeItem.contextValueConnected:
-                case DeploymentsTreeItem.contextValueUnconnected:
-                case DeploymentTreeItem.contextValue:
+                }
+                const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
+                if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
                     return this.deploymentsNode;
-                default:
-                    if (typeof expectedContextValue === 'string') {
-                        // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
-                        if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
-                            return this.deploymentsNode;
-                        }
-                    } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
-                        return this._functionsTreeItem;
-                    }
+                }
+            }
+
+            if (typeof expectedContextValue === 'string') {
+                // DeploymentTreeItem.contextValue is a RegExp, but the passed in contextValue can be a string so check for a match
+                if (DeploymentTreeItem.contextValue.test(expectedContextValue)) {
+                    return this.deploymentsNode;
+                }
+            } else if (matchesAnyPart(expectedContextValue, ProjectResource.Functions, ProjectResource.Function)) {
+                return this._functionsTreeItem;
             }
         }
 
@@ -285,5 +286,23 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
 
         await wizard.prompt();
         await wizard.execute();
+    }
+}
+
+function matchContextValue(expectedContextValue: RegExp | string, matches: (string | RegExp)[]): boolean {
+    if (expectedContextValue instanceof RegExp) {
+        return matches.some((match) => {
+            if (match instanceof RegExp) {
+                return expectedContextValue.toString() === match.toString();
+            }
+            return expectedContextValue.test(match);
+        });
+    } else {
+        return matches.some((match) => {
+            if (match instanceof RegExp) {
+                return match.test(expectedContextValue);
+            }
+            return expectedContextValue === match;
+        });
     }
 }

@@ -53,9 +53,9 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
     registerCommand('azureFunctions.addBinding', addBinding);
-    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, AppSettingsTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
-    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, AppSettingTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommand('azureFunctions.appSettings.edit', editAppSetting);
     registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
