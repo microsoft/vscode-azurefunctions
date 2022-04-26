@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 
@@ -13,5 +13,5 @@ export async function openInPortal(context: IActionContext, node?: AzExtTreeItem
         node = await ext.rgApi.tree.showTreeItemPicker<AzExtTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
-    await uiOpenInPortal(node, node.fullId);
+    await uiOpenInPortal(node, `${nonNullProp(node, 'parent').parent?.id}/Deployments/${nonNullProp(node, 'id')}`);
 }
