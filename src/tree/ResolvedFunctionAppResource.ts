@@ -194,19 +194,19 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             site: this.site,
             siteConfig,
             sourceControl,
-            contextValuesToAdd: ['azureFunctions']
+            contextValuesToAdd: ['azFunc']
         });
         this.appSettingsTreeItem = new AppSettingsTreeItem(proxyTree, this.site, {
-            contextValuesToAdd: ['azureFunctions']
+            contextValuesToAdd: ['azFunc']
         });
         this._siteFilesTreeItem = new SiteFilesTreeItem(proxyTree, {
             site: this.site,
             isReadOnly: true,
-            contextValuesToAdd: ['azureFunctions']
+            contextValuesToAdd: ['azFunc']
         });
         this._logFilesTreeItem = new LogFilesTreeItem(proxyTree, {
             site: this.site,
-            contextValuesToAdd: ['azureFunctions']
+            contextValuesToAdd: ['azFunc']
         });
 
         if (!this._functionsTreeItem) {
