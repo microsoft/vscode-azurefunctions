@@ -39,7 +39,7 @@ import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCod
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
 import { openFile } from './openFile';
-import { openInPortal } from './openInPortal';
+import { openDeploymentInPortal } from './openInPortal';
 import { pickFuncProcess } from './pickFuncProcess';
 import { startRemoteDebug } from './remoteDebug/startRemoteDebug';
 import { remoteDebugJavaFunctionApp } from './remoteDebugJava/remoteDebugJavaFunctionApp';
@@ -53,9 +53,9 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
     registerCommand('azureFunctions.addBinding', addBinding);
-    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, AppSettingsTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
-    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, AppSettingTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommand('azureFunctions.appSettings.edit', editAppSetting);
     registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
@@ -83,7 +83,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommand('azureFunctions.openFile', openFile);
-    registerCommand('azureFunctions.openInPortal', openInPortal);
+    registerCommand('azureFunctions.openInPortal', openDeploymentInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
