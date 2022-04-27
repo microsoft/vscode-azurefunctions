@@ -39,7 +39,7 @@ import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCod
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
 import { openFile } from './openFile';
-import { openInPortal } from './openInPortal';
+import { openDeploymentInPortal } from './openInPortal';
 import { pickFuncProcess } from './pickFuncProcess';
 import { startRemoteDebug } from './remoteDebug/startRemoteDebug';
 import { remoteDebugJavaFunctionApp } from './remoteDebugJava/remoteDebugJavaFunctionApp';
@@ -83,7 +83,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommand('azureFunctions.openFile', openFile);
-    registerCommand('azureFunctions.openInPortal', openInPortal);
+    registerCommand('azureFunctions.openInPortal', openDeploymentInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);

@@ -8,7 +8,7 @@ import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-az
 import { ext } from '../extensionVariables';
 import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 
-export async function openInPortal(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
+export async function openDeploymentInPortal(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.tree.showTreeItemPicker<AzExtTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
