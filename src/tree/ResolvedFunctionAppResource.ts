@@ -20,6 +20,10 @@ import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { SlotTreeItem } from "./SlotTreeItem";
 
+export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBase {
+    return (ti as unknown as ResolvedFunctionAppResource).kind === ResolvedFunctionAppResource.kind;
+}
+
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public site: ParsedSite;
     private _subscription: ISubscriptionContext;
@@ -27,6 +31,9 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
+
+    public static kind = 'resolvedFunctionApp';
+    public readonly kind = ResolvedFunctionAppResource.kind;
 
     public contextValuesToAdd?: string[] | undefined;
     public maskedValuesToAdd: string[] = [];
