@@ -25,14 +25,14 @@ import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, ResolvedFunctionAppResource.productionContextValue);
+    await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.productionContextValue));
 }
 
 export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
     await deploy(context, target, functionAppId, ResolvedFunctionAppResource.slotContextValue);
 }
 
-async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue: string): Promise<void> {
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue: string | RegExp): Promise<void> {
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
