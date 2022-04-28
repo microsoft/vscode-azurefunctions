@@ -40,6 +40,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
+    public static pickSlotContextValue: RegExp = new RegExp(/azFuncSlot(?!s)/);
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
 

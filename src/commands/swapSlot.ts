@@ -11,7 +11,7 @@ import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTreeItem): Promise<void> {
     if (!sourceSlotNode) {
-        sourceSlotNode = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(ResolvedFunctionAppResource.slotContextValue, { ...context, suppressCreatePick: true });
+        sourceSlotNode = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(ResolvedFunctionAppResource.pickSlotContextValue, { ...context, suppressCreatePick: true });
     }
 
     const deploymentSlots: SlotTreeItem[] = <SlotTreeItem[]>await sourceSlotNode.parent?.getCachedChildren(context);
