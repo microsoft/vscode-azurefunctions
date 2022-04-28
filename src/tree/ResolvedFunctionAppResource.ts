@@ -245,6 +245,10 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
                 if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
                     return this.deploymentsNode;
                 }
+
+                if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
+                    return this._slotsTreeItem;
+                }
             }
 
             if (typeof expectedContextValue === 'string') {
