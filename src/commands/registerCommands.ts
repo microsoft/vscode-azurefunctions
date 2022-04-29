@@ -73,7 +73,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.createSlot', createSlot);
     registerCommand('azureFunctions.deleteFunction', deleteFunction);
     registerCommand('azureFunctions.deleteFunctionApp', deleteFunctionApp);
-    registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.slotContextValue, node));
+    registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(ResolvedFunctionAppResource.slotContextValue), node));
     registerCommand('azureFunctions.disableFunction', disableFunction);
     registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
     registerSiteCommand('azureFunctions.deploySlot', deploySlot);

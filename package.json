@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.6.3-alpha.5",
+    "version": "1.6.3-alpha.6",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -383,7 +383,7 @@
                 },
                 {
                     "command": "azureFunctions.deploySlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "2@1"
                 },
                 {
@@ -408,7 +408,7 @@
                 },
                 {
                     "command": "azureFunctions.swapSlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "3@4"
                 },
                 {
@@ -418,7 +418,7 @@
                 },
                 {
                     "command": "azureFunctions.deleteSlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "3@5"
                 },
                 {

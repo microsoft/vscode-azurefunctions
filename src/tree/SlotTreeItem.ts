@@ -10,7 +10,12 @@ import { FuncVersion } from '../FuncVersion';
 import { treeUtils } from '../utils/treeUtils';
 import { ApplicationSettings, FuncHostRequest, IProjectTreeItem } from './IProjectTreeItem';
 import { ProjectSource } from './projectContextValues';
+import { RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
+
+export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem): treeItem is SlotTreeItem {
+    return !!(treeItem as SlotTreeItem).site;
+}
 
 export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeItem {
     public logStreamPath: string = '';
@@ -86,7 +91,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        return await this.resolved.loadMoreChildrenImpl(_clearCache, context);
+        return await this.resolved.loadMoreChildrenImpl.call(this, _clearCache, context) as AzExtTreeItem[];
     }
 
     // eslint-disable-next-line @typescript-eslint/require-await
