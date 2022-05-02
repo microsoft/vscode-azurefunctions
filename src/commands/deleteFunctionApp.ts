@@ -10,7 +10,13 @@ import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function deleteFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), { ...context, suppressCreatePick: true });
+        node = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
+            filter: {
+                type: 'microsoft.web/sites',
+                kind: 'functionapp',
+            },
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
 
     await node.deleteTreeItem(context);
