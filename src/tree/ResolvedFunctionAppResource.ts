@@ -21,7 +21,7 @@ import { SlotsTreeItem } from "./SlotsTreeItem";
 import { SlotTreeItem } from "./SlotTreeItem";
 
 export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBase {
-    return (ti as unknown as ResolvedFunctionAppResource).kind === ResolvedFunctionAppResource.kind;
+    return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
 }
 
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
@@ -32,8 +32,8 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
 
-    public static kind = 'resolvedFunctionApp';
-    public readonly kind = ResolvedFunctionAppResource.kind;
+    public static instance = 'resolvedFunctionApp';
+    public readonly instance = ResolvedFunctionAppResource.instance;
 
     public contextValuesToAdd?: string[] | undefined;
     public maskedValuesToAdd: string[] = [];
