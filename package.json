@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.6.3-alpha.4",
+    "version": "1.6.3-alpha.7",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -383,7 +383,7 @@
                 },
                 {
                     "command": "azureFunctions.deploySlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "2@1"
                 },
                 {
@@ -408,7 +408,7 @@
                 },
                 {
                     "command": "azureFunctions.swapSlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "3@4"
                 },
                 {
@@ -418,7 +418,7 @@
                 },
                 {
                     "command": "azureFunctions.deleteSlot",
-                    "when": "view == azureResourceGroups && viewItem == azFuncSlot",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
                     "group": "3@5"
                 },
                 {
@@ -468,27 +468,27 @@
                 },
                 {
                     "command": "azureFunctions.copyFunctionUrl",
-                    "when": "view == azureResourceGroups && viewItem =~ /Function;Http;/i",
+                    "when": "view =~ /(azureWorkspace|azureResourceGroups)/ && viewItem =~ /Function;Http;/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.executeFunction",
-                    "when": "view == azureResourceGroups && viewItem =~ /Function;/i",
+                    "when": "view =~ /(azureWorkspace|azureResourceGroups)/ && viewItem =~ /Function;/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.addBinding",
-                    "when": "view == azureResourceGroups && viewItem =~ /Local;ReadWrite;Function;/i",
+                    "when": "view =~ /(azureWorkspace|azureResourceGroups)/ && viewItem =~ /Local;ReadWrite;Function;/i",
                     "group": "3@1"
                 },
                 {
                     "command": "azureFunctions.enableFunction",
-                    "when": "view == azureResourceGroups && viewItem =~ /Function;.*;Disabled;/i",
+                    "when": "view =~ /(azureWorkspace|azureResourceGroups)/ && viewItem =~ /Function;.*;Disabled;/i",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.disableFunction",
-                    "when": "view == azureResourceGroups && viewItem =~ /Function;.*;Enabled;/i",
+                    "when": "view =~ /(azureWorkspace|azureResourceGroups)/ && viewItem =~ /Function;.*;Enabled;/i",
                     "group": "2@1"
                 },
                 {
@@ -1061,7 +1061,7 @@
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^0.4.0",
+        "@microsoft/vscode-azext-azureappservice": "^0.4.3",
         "@microsoft/vscode-azext-azureutils": "^0.2.0",
         "@microsoft/vscode-azext-utils": "^0.2.1",
         "escape-string-regexp": "^4.0.0",

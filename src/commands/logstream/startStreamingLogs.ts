@@ -12,7 +12,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -23,7 +23,7 @@ export async function startStreamingLogs(context: IActionContext, treeItem?: Slo
         treeItem = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
     }
 
-    const site: ParsedSite = treeItem instanceof SlotTreeItem ? treeItem.site : treeItem.parent.parent.site;
+    const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;
 
     if (site.isLinux) {
         try {
@@ -61,7 +61,7 @@ async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, 
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
-        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node]);
+        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node.subscription]);
         const components: ApplicationInsightsManagementModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
         const component: ApplicationInsightsManagementModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {

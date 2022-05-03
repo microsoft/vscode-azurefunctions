@@ -46,7 +46,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
+        const client: WebSiteManagementClient = await createWebSiteClient([context, this.subscription]);
         let webAppCollection: Site[];
         try {
             webAppCollection = await uiUtils.listAllIterator(client.webApps.list());
