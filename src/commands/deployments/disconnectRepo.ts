@@ -6,14 +6,14 @@
 import { DeploymentsTreeItem, disconnectRepo as disconnectRepository } from "@microsoft/vscode-azext-azureappservice";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
-import { SlotTreeItem } from '../../tree/SlotTreeItem';
+import { isResolvedFunctionApp } from "../../tree/ResolvedFunctionAppResource";
 
 export async function disconnectRepo(context: IActionContext, node?: DeploymentsTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.tree.showTreeItemPicker<DeploymentsTreeItem>(DeploymentsTreeItem.contextValueConnected, context);
     }
 
-    if (node.parent instanceof SlotTreeItem) {
+    if (isResolvedFunctionApp(node.parent)) {
         await disconnectRepository(context, node.site, node.subscription);
         await node.refresh(context);
     } else {

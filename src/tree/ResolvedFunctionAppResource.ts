@@ -20,6 +20,10 @@ import { RemoteFunctionsTreeItem } from "./remoteProject/RemoteFunctionsTreeItem
 import { SlotsTreeItem } from "./SlotsTreeItem";
 import { SlotTreeItem } from "./SlotTreeItem";
 
+export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBase {
+    return (ti as unknown as ResolvedFunctionAppResource).instance === ResolvedFunctionAppResource.instance;
+}
+
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public site: ParsedSite;
     private _subscription: ISubscriptionContext;
@@ -27,6 +31,9 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public appSettingsTreeItem: AppSettingsTreeItem;
     public deploymentsNode: DeploymentsTreeItem | undefined;
     public readonly source: ProjectSource = ProjectSource.Remote;
+
+    public static instance = 'resolvedFunctionApp';
+    public readonly instance = ResolvedFunctionAppResource.instance;
 
     public contextValuesToAdd?: string[] | undefined;
     public maskedValuesToAdd: string[] = [];
@@ -40,6 +47,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
+    public static pickSlotContextValue: RegExp = new RegExp(/azFuncSlot(?!s)/);
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
 
@@ -244,6 +252,10 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
                 const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
                 if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
                     return this.deploymentsNode;
+                }
+
+                if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
+                    return this._slotsTreeItem;
                 }
             }
 
