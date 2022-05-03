@@ -6,7 +6,6 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
-import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 import { openUrl } from '../utils/openUrl';
 
@@ -14,7 +13,6 @@ export async function browseWebsite(context: IActionContext, node?: SlotTreeItem
     if (!node) {
         node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
             filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
         });
     }
 
