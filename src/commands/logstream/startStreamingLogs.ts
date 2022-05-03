@@ -8,6 +8,7 @@ import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
@@ -20,7 +21,10 @@ import { enableFileLogging } from './enableFileLogging';
 
 export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
+        treeItem = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
 
     const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;

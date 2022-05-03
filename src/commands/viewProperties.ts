@@ -5,6 +5,7 @@
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
 import { Uri, window } from 'vscode';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
@@ -14,7 +15,10 @@ import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function viewProperties(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
+        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
 
     if (node instanceof LocalFunctionTreeItem) {

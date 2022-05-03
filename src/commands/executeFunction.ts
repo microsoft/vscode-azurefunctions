@@ -6,6 +6,7 @@
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -19,7 +20,10 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
     context.telemetry.eventVersion = 2;
     if (!node) {
         const noItemFoundErrorMessage: string = localize('noFunctions', 'No functions found.');
-        node = await ext.rgApi.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;/i, { ...context, noItemFoundErrorMessage });
+        node = await ext.rgApi.pickAppResource<FunctionTreeItemBase>({ ...context, noItemFoundErrorMessage }, {
+            filter: functionFilter,
+            expectedChildContextValue: /Function;/i
+        });
     }
 
     const client: SiteClient | undefined = node instanceof RemoteFunctionTreeItem ? await node.parent.parent.site.createClient(context) : undefined;
