@@ -5,7 +5,7 @@
 
 import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
-import { functionFilter, ProjectLanguage, projectTemplateKeySetting } from "../../constants";
+import { ProjectLanguage, projectTemplateKeySetting } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { FuncVersion } from "../../FuncVersion";
 import { localize } from "../../localize";
@@ -36,10 +36,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
     } else {
         if (!data) {
             const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
-            data = await ext.rgApi.pickAppResource<LocalFunctionTreeItem>({ ...context, noItemFoundErrorMessage }, {
-                filter: functionFilter,
-                expectedChildContextValue: /Local;ReadWrite;Function;/i
-            });
+            data = await ext.rgApi.workspaceResourceTree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
         }
 
         if (!data.functionJsonPath) {

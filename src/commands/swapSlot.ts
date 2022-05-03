@@ -14,7 +14,7 @@ export async function swapSlot(context: IActionContext, sourceSlotNode?: SlotTre
     if (!sourceSlotNode) {
         sourceSlotNode = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
             filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.pickSlotContextValue)
         });
     }
 
