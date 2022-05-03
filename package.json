@@ -640,6 +640,10 @@
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.viewProperties",
+                    "when": "never"
                 }
             ],
             "editor/context": [
