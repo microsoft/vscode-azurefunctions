@@ -4,15 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 
 export async function deleteNode(context: IActionContext, expectedContextValue: string | RegExp, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<AzExtTreeItem>({ ...context, suppressCreatePick: true }, {
-            filter: {
-                type: 'microsoft.web/sites',
-                kind: 'functionapp',
-            },
+            filter: functionFilter,
             expectedChildContextValue: expectedContextValue
         });
     }
