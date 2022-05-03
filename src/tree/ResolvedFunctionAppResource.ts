@@ -47,6 +47,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     private _cachedHostJson: IParsedHostJson | undefined;
     private _cachedIsConsumption: boolean | undefined;
 
+    public static pickSlotContextValue: RegExp = new RegExp(/azFuncSlot(?!s)/);
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
 
@@ -251,6 +252,10 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
                 const deploymentsContextValues = [DeploymentsTreeItem.contextValueConnected, DeploymentsTreeItem.contextValueUnconnected, DeploymentTreeItem.contextValue];
                 if (matchContextValue(expectedContextValue, deploymentsContextValues)) {
                     return this.deploymentsNode;
+                }
+
+                if (matchContextValue(expectedContextValue, [ResolvedFunctionAppResource.slotContextValue])) {
+                    return this._slotsTreeItem;
                 }
             }
 
