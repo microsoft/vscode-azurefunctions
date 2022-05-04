@@ -8,7 +8,7 @@ import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } fro
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as vscode from 'vscode';
-import { localSettingsFileName, viewOutput } from "../../constants";
+import { functionFilter, localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
@@ -20,7 +20,10 @@ import { getLocalSettingsFile } from "./getLocalSettingsFile";
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<AppSettingsTreeItem>(new RegExp(AppSettingsTreeItem.contextValue), context);
+        node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(AppSettingsTreeItem.contextValue)
+        });
     }
 
     const client: IAppSettingsClient = await node.clientProvider.createClient(context);

@@ -5,11 +5,15 @@
 
 import { AppSettingTreeItem } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 
 export async function renameAppSetting(context: IActionContext, node?: AppSettingTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<AppSettingTreeItem>(new RegExp(AppSettingTreeItem.contextValue), context);
+        node = await ext.rgApi.pickAppResource<AppSettingTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(AppSettingTreeItem.contextValue)
+        });
     }
 
     await node.rename(context);

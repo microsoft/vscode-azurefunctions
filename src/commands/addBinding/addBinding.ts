@@ -36,7 +36,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
     } else {
         if (!data) {
             const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
-            data = await ext.rgApi.tree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
+            data = await ext.rgApi.workspaceResourceTree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
         }
 
         if (!data.functionJsonPath) {

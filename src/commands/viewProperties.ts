@@ -5,18 +5,12 @@
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
 import { Uri, window } from 'vscode';
-import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { LocalFunctionTreeItem } from '../tree/localProject/LocalFunctionTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
-import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 
-export async function viewProperties(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.rgApi.tree.showTreeItemPicker<SlotTreeItem>(new RegExp(ResolvedFunctionAppResource.productionContextValue), context);
-    }
-
+export async function viewProperties(context: IActionContext, node: SlotTreeItem | RemoteFunctionTreeItem | LocalFunctionTreeItem): Promise<void> {
     if (node instanceof LocalFunctionTreeItem) {
         if (!node.functionJsonPath) {
             throw new Error(localize('viewPropsNotSupported', 'View function properties is not supported for this project type.'));

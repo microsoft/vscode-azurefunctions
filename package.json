@@ -640,6 +640,10 @@
                 {
                     "command": "azureFunctions.toggleAppSettingVisibility",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.viewProperties",
+                    "when": "never"
                 }
             ],
             "editor/context": [
@@ -1063,7 +1067,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^0.4.3",
         "@microsoft/vscode-azext-azureutils": "^0.2.0",
-        "@microsoft/vscode-azext-utils": "^0.2.1",
+        "@microsoft/vscode-azext-utils": "^0.2.4",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",
         "fs-extra": "^4.0.2",
