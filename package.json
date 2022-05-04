@@ -626,6 +626,10 @@
             ],
             "commandPalette": [
                 {
+                    "command": "azureFunctions.openInPortal",
+                    "when": "never"
+                },
+                {
                     "command": "azureFunctions.pickProcess",
                     "when": "never"
                 },
