@@ -7,7 +7,7 @@ import { SiteConfigResource } from '@azure/arm-appservice';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
@@ -29,7 +29,7 @@ export async function deployProductionSlot(context: IActionContext, target?: vsc
 }
 
 export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, ResolvedFunctionAppResource.slotContextValue);
+    await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.pickSlotContextValue));
 }
 
 async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue: string | RegExp): Promise<void> {
@@ -38,7 +38,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
-    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, expectedContextValue);
+    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => ext.rgApi.pickAppResource(context, {
+        filter: functionFilter,
+        expectedChildContextValue: expectedContextValue
+    }));
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
