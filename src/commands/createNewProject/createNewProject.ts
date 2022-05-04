@@ -49,6 +49,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const version: string = options.version || getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, undefined) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
     const wizardContext: Partial<IFunctionWizardContext> & IActionContext = Object.assign(context, options, { language, version: tryParseFuncVersion(version), projectTemplateKey });
+    const optionalExecuteStep = options.executeStep;
 
     if (options.folderPath) {
         FolderListStep.setProjectPath(wizardContext, options.folderPath);
@@ -64,7 +65,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
         promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
-        executeSteps: [new OpenFolderStep()]
+        ...(optionalExecuteStep !== undefined ? { executeSteps: [optionalExecuteStep, new OpenFolderStep()] } : { executeSteps: [new OpenFolderStep()] }),
     });
     await wizard.prompt();
     await wizard.execute();
