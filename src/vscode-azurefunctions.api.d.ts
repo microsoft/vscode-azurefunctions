@@ -87,7 +87,7 @@ export interface ICreateFunctionOptions {
     targetFramework?: string | string[];
 
     /**
-     * If set, it will include a step that will be executed prior to OpenFolderStep
+     * If set, it will include a step that will be executed prior to OpenFolderStep based on the priority of the step
      */
     executeStep?: AzureWizardExecuteStep<IActionContext>;
 }

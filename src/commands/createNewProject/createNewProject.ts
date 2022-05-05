@@ -65,7 +65,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         title: localize('createNewProject', 'Create new project'),
         promptSteps: [new FolderListStep(), new NewProjectLanguageStep(options.templateId, options.functionSettings), new OpenBehaviorStep()],
-        ...(optionalExecuteStep !== undefined ? { executeSteps: [optionalExecuteStep, new OpenFolderStep()] } : { executeSteps: [new OpenFolderStep()] }),
+        executeSteps: optionalExecuteStep ? [optionalExecuteStep, new OpenFolderStep()] : [new OpenFolderStep()]
     });
     await wizard.prompt();
     await wizard.execute();
