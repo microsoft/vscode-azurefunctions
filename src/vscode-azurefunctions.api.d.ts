@@ -87,7 +87,8 @@ export interface ICreateFunctionOptions {
     targetFramework?: string | string[];
 
     /**
-     * If set, it will include a step that will be executed prior to OpenFolderStep based on the priority of the step
+     * If set, it will include a step that will be executed prior to OpenFolderStep determined by the priority of the step
+     * OpenFolder priority is 250 (https://github.com/microsoft/vscode-azurefunctions/blob/main/src/commands/createNewProject/OpenFolderStep.ts#L11)
      */
     executeStep?: AzureWizardExecuteStep<IActionContext>;
 }
