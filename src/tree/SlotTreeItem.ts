@@ -13,7 +13,7 @@ import { ProjectSource } from './projectContextValues';
 import { RemoteFunctionTreeItem } from './remoteProject/RemoteFunctionTreeItem';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
 
-export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem): treeItem is SlotTreeItem {
+export function isSlotTreeItem(treeItem: SlotTreeItem | RemoteFunctionTreeItem | AzExtParentTreeItem): treeItem is SlotTreeItem {
     return !!(treeItem as SlotTreeItem).site;
 }
 
