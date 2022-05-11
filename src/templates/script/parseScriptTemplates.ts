@@ -221,6 +221,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         functionJson,
         isHttpTrigger: functionJson.isHttpTrigger,
         isTimerTrigger: functionJson.isTimerTrigger,
+        isSqlBindingTrigger: /Sql.*Binding/i.test(rawTemplate.id),
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
