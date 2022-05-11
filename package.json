@@ -96,7 +96,8 @@
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "title": "%azureFunctions.createFunctionApp%",
-                    "type": "microsoft.web/sites"
+                    "type": "microsoft.web/sites",
+                    "detail": "%azureFunctions.createFunctionAppDetail%"
                 }
             ]
         },
