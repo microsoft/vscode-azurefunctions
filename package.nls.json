@@ -16,6 +16,7 @@
     "azureFunctions.createFunction": "Create Function...",
     "azureFunctions.createFunctionApp": "Create Function App in Azure...",
     "azureFunctions.createFunctionAppAdvanced": "Create Function App in Azure... (Advanced)",
+    "azureFunctions.createFunctionAppDetail": "For serverless, event driven apps and automation.",
     "azureFunctions.createNewProject": "Create New Project...",
     "azureFunctions.createPythonVenv": "Create a virtual environment when creating a new Python project.",
     "azureFunctions.createSlot": "Create Slot...",
