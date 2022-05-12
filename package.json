@@ -355,13 +355,14 @@
             }
         ],
         "menus": {
-            "view/title": [],
-            "view/item/context": [
+            "azureWorkspaceCreate": [
                 {
                     "command": "azureFunctions.createFunction",
-                    "when": "view == azureWorkspace && viewItem == azFuncLocalProject",
-                    "group": "inline"
-                },
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                }
+            ],
+            "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup.*microsoft.web/sites/functionapp/",
