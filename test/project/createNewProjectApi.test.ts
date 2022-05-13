@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { runWithInputs } from 'vscode-azureextensiondev';
 import { FuncVersion, registerOnActionStartHandler } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getJavaScriptValidateOptions, validateProject } from './validateProject';

@@ -1,0 +1,42 @@
+name: Feature Request Manager
+on:
+  issues:
+    types: [milestoned]
+  schedule:
+    - cron: 15 5 * * * # 10:15pm PT
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions
+        if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'feature-request')
+        uses: actions/checkout@v3
+        with:
+          repository: "microsoft/vscode-github-triage-actions"
+          path: ./actions
+          ref: stable
+      - name: Install Actions
+        if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'feature-request')
+        run: npm install --production --prefix ./actions
+      - name: Run Feature Request Manager
+        if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'feature-request')
+        uses: ./actions/feature-request
+        with:
+          token: ${{secrets.AZCODE_BOT_PAT}}
+          candidateMilestoneID: 42
+          candidateMilestoneName: "Backlog Candidates"
+          backlogMilestoneID: 56
+          featureRequestLabel: "feature"
+          upvotesRequired: 5
+          numCommentsOverride: 10
+          initComment: "This feature request is now a candidate for our backlog. The community has 240 days to upvote the issue. If it receives 5 upvotes we will move it to our backlog. If not, we will close it. To learn more about how we handle feature requests, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          rejectComment: ":slightly_frowning_face: In the last 60 days, this issue has received less than 5 community upvotes and we closed it. Still a big Thank You to you for taking the time to create it! To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          rejectLabel: "out of scope"
+          warnComment: "This issue has become stale and is at risk of being closed. The community has 60 days to upvote the issue. If it receives 5 upvotes we will keep it open and take another look. If not, we will close it. To learn more about how we handle issues, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          labelsToExclude: "P0,P1"
+          acceptComment: ":slightly_smiling_face: This feature request received a sufficient number of community upvotes and we moved it to our backlog. To learn more about how we handle feature requests, please see our [documentation](https://aka.ms/azcodeissuetriaging).\n\nHappy Coding!"
+          warnDays: 60
+          closeDays: 240
+          milestoneDelaySeconds: 60

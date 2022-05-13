@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as msRest from '@azure/ms-rest-js';
+import { gulp_installAzureAccount, gulp_installResourceGroups, gulp_installVSCodeExtension, gulp_webpack } from '@microsoft/vscode-azext-dev';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as chmod from 'gulp-chmod';
@@ -14,7 +15,6 @@ import * as path from 'path';
 import * as request from 'request';
 import * as buffer from 'vinyl-buffer';
 import * as source from 'vinyl-source-stream';
-import { gulp_installAzureAccount, gulp_installResourceGroups, gulp_installVSCodeExtension, gulp_webpack } from 'vscode-azureextensiondev';
 
 async function prepareForWebpack(): Promise<void> {
     const mainJsPath: string = path.join(__dirname, 'main.js');

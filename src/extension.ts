@@ -99,7 +99,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         createFunction: createFunctionFromApi,
         downloadAppSettings: downloadAppSettingsFromApi,
         uploadAppSettings: uploadAppSettingsFromApi,
-        apiVersion: '1.7.0'
+        apiVersion: '1.8.0'
     }]);
 }
 

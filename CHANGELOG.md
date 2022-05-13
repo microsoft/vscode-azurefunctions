@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.6.2 - 2022-04-13
+### Fixed
+- Zip deploy fails with ECONNRESET or 400 Bad Request on VS Code versions `>=1.66.0` [#2844](https://github.com/microsoft/vscode-azurefunctions/issues/2844)
+
+
 ## 1.6.1 - 2022-03-24
 ### Changed
 - `createFunction` API handles multiple target frameworks

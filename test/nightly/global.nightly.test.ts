@@ -5,8 +5,8 @@
 
 import { WebSiteManagementClient } from '@azure/arm-appservice';
 import { ResourceManagementClient } from '@azure/arm-resources';
+import { createTestActionContext, TestAzureAccount } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
-import { createTestActionContext, TestAzureAccount } from 'vscode-azureextensiondev';
 import { AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
 import { longRunningTestsEnabled } from '../global.test';
 

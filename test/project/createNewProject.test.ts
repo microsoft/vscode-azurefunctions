@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
+import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import { FuncVersion, JavaBuildTool, ProjectLanguage, TemplateSource } from '../../extension.bundle';
 import { addParallelSuite, ParallelTest } from '../addParallelSuite';
 import { allTemplateSources, runForTemplateSource, shouldSkipVersion } from '../global.test';
