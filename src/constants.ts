@@ -99,8 +99,8 @@ export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 
 export const webProvider: string = 'Microsoft.Web';
-
 export const functionFilter = {
     type: 'microsoft.web/sites',
     kind: 'functionapp',
 };
+export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
