@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, AzExtTreeItem, IActionContext, IAzExtOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
-import { ExtensionContext, TreeView } from "vscode";
+import { IActionContext, IAzExtOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
+import { AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
+import { ExtensionContext } from "vscode";
 import { func } from "./constants";
 import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
@@ -44,8 +45,6 @@ class ActionVariable<T> {
  */
 export namespace ext {
     export let context: ExtensionContext;
-    export let tree: AzExtTreeDataProvider;
-    export let treeView: TreeView<AzExtTreeItem>;
     export let azureAccountTreeItem: AzureAccountTreeItemWithProjects;
     export let outputChannel: IAzExtOutputChannel;
     // eslint-disable-next-line prefer-const
@@ -54,6 +53,7 @@ export namespace ext {
     export const prefix: string = 'azureFunctions';
     export let experimentationService: IExperimentationServiceAdapter;
     export const templateProvider = new ActionVariable<CentralTemplateProvider>('_centralTemplateProvider');
+    export let rgApi: AzureHostExtensionApi;
 }
 
 export enum TemplateSource {

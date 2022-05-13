@@ -5,6 +5,7 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
@@ -12,7 +13,10 @@ import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 export async function copyFunctionUrl(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {
     if (!node) {
         const noItemFoundErrorMessage: string = localize('noHTTPFunctions', 'No HTTP functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(/Function;Http;/i, { ...context, noItemFoundErrorMessage });
+        node = await ext.rgApi.pickAppResource<FunctionTreeItemBase>({ ...context, noItemFoundErrorMessage }, {
+            filter: functionFilter,
+            expectedChildContextValue: /Function;Http;/i
+        });
     }
 
     const triggerRequest = await node.getTriggerRequest(context);

@@ -6,16 +6,20 @@
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
+import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 
-export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
+export async function stopStreamingLogs(context: IActionContext, node?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, { ...context, suppressCreatePick: true });
+        node = await ext.rgApi.pickAppResource<SlotTreeItem>({ ...context, suppressCreatePick: true }, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
 
-    const site: ParsedSite = node instanceof SlotTreeItemBase ? node.site : node.parent.parent.site;
+    const site: ParsedSite = isSlotTreeItem(node) ? node.site : node.parent.parent.site;
     await appservice.stopStreamingLogs(site, node.logStreamPath);
 }

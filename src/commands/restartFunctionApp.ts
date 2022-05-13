@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { SlotTreeItemBase } from '../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../tree/SlotTreeItem';
 import { startFunctionApp } from './startFunctionApp';
 import { stopFunctionApp } from './stopFunctionApp';
 
-export async function restartFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function restartFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     node = await stopFunctionApp(context, node);
     await startFunctionApp(context, node);
 }

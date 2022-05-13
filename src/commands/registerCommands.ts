@@ -5,11 +5,10 @@
 
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
-import { SlotTreeItem } from '../tree/SlotTreeItem';
+import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { addBinding } from './addBinding/addBinding';
 import { decryptLocalSettings } from './appSettings/decryptLocalSettings';
 import { downloadAppSettings } from './appSettings/downloadAppSettings';
@@ -40,7 +39,7 @@ import { initProjectForVSCode } from './initProjectForVSCode/initProjectForVSCod
 import { startStreamingLogs } from './logstream/startStreamingLogs';
 import { stopStreamingLogs } from './logstream/stopStreamingLogs';
 import { openFile } from './openFile';
-import { openInPortal } from './openInPortal';
+import { openDeploymentInPortal } from './openInPortal';
 import { pickFuncProcess } from './pickFuncProcess';
 import { startRemoteDebug } from './remoteDebug/startRemoteDebug';
 import { remoteDebugJavaFunctionApp } from './remoteDebugJava/remoteDebugJavaFunctionApp';
@@ -54,9 +53,9 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
     registerCommand('azureFunctions.addBinding', addBinding);
-    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, AppSettingsTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.add', async (context: IActionContext, node?: AzExtParentTreeItem) => await createChildNode(context, new RegExp(AppSettingsTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.decrypt', decryptLocalSettings);
-    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, AppSettingTreeItem.contextValue, node));
+    registerCommand('azureFunctions.appSettings.delete', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, new RegExp(AppSettingTreeItem.contextValue), node));
     registerCommand('azureFunctions.appSettings.download', downloadAppSettings);
     registerCommand('azureFunctions.appSettings.edit', editAppSetting);
     registerCommand('azureFunctions.appSettings.encrypt', encryptLocalSettings);
@@ -74,7 +73,7 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.createSlot', createSlot);
     registerCommand('azureFunctions.deleteFunction', deleteFunction);
     registerCommand('azureFunctions.deleteFunctionApp', deleteFunctionApp);
-    registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, SlotTreeItem.contextValue, node));
+    registerCommand('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node));
     registerCommand('azureFunctions.disableFunction', disableFunction);
     registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
     registerSiteCommand('azureFunctions.deploySlot', deploySlot);
@@ -83,14 +82,11 @@ export function registerCommands(): void {
     registerCommand('azureFunctions.executeFunction', executeFunction);
     registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommand('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
-    registerCommand('azureFunctions.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.tree.loadMore(node, context));
     registerCommand('azureFunctions.openFile', openFile);
-    registerCommand('azureFunctions.openInPortal', openInPortal);
+    registerCommand('azureFunctions.openInPortal', openDeploymentInPortal);
     registerCommand('azureFunctions.pickProcess', pickFuncProcess);
     registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
-    registerCommand('azureFunctions.refresh', async (context: IActionContext, node?: AzExtTreeItem) => await ext.tree.refresh(context, node));
     registerCommand('azureFunctions.restartFunctionApp', restartFunctionApp);
-    registerCommand('azureFunctions.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
     registerCommand('azureFunctions.startFunctionApp', startFunctionApp);
     registerCommand('azureFunctions.startJavaRemoteDebug', remoteDebugJavaFunctionApp);

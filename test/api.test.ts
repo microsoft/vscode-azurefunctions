@@ -7,7 +7,7 @@ import { runWithInputs } from '@microsoft/vscode-azext-dev';
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import * as path from 'path';
 import { Extension, extensions } from "vscode";
-import { nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
+import { extensionId, nonNullValue, ProjectLanguage, registerOnActionStartHandler } from '../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import { AzureFunctionsExtensionApi } from '../src/vscode-azurefunctions.api';
 import { getTestWorkspaceFolder, testFolderPath } from './global.test';
@@ -17,7 +17,7 @@ suite(`AzureFunctionsExtensionApi`, () => {
     let api: AzureFunctionsExtensionApi;
 
     suiteSetup(() => {
-        const extension: Extension<AzureExtensionApiProvider> | undefined = extensions.getExtension('ms-azuretools.vscode-azurefunctions');
+        const extension: Extension<AzureExtensionApiProvider> | undefined = extensions.getExtension(extensionId);
         api = nonNullValue(extension).exports.getApi<AzureFunctionsExtensionApi>('^1.0.0');
     });
 

@@ -7,14 +7,13 @@ import { SiteConfigResource } from '@azure/arm-appservice';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -25,21 +24,24 @@ import { runPreDeployTask } from './runPreDeployTask';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, ProductionSlotTreeItem.contextValue);
+export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
+    await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.productionContextValue));
 }
 
-export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItemBase, functionAppId?: string | {}): Promise<void> {
-    await deploy(context, target, functionAppId, SlotTreeItem.contextValue);
+export async function deploySlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
+    await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.pickSlotContextValue));
 }
 
-async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItemBase | undefined, arg2: string | {} | undefined, expectedContextValue: string): Promise<void> {
+async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string | SlotTreeItem | undefined, arg2: string | {} | undefined, expectedContextValue: string | RegExp): Promise<void> {
     const deployPaths: IDeployPaths = await getDeployFsPath(actionContext, arg1);
 
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
-    const node: SlotTreeItemBase = await getDeployNode(context, ext.tree, arg1, arg2, expectedContextValue);
+    const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => ext.rgApi.pickAppResource(context, {
+        filter: functionFilter,
+        expectedChildContextValue: expectedContextValue
+    }));
 
     const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
     context.telemetry.properties.projectLanguage = language;
@@ -113,7 +115,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItemBase, language: ProjectLanguage): Promise<void> {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage): Promise<void> {
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;

@@ -7,19 +7,23 @@ import { SiteConfigResource, StringDictionary, User } from '@azure/arm-appservic
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, findFreePort, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { openUrl } from '../../utils/openUrl';
 import { DebugProxy } from './DebugProxy';
 
 const HTTP_PLATFORM_DEBUG_PORT: string = '8898';
 const JAVA_OPTS: string = `-Djava.net.preferIPv4Stack=true -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${HTTP_PLATFORM_DEBUG_PORT}`;
 
-export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItemBase): Promise<void> {
+export async function remoteDebugJavaFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
     const client: SiteClient = await node.site.createClient(context);
     const portNumber: number = await findFreePort();

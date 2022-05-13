@@ -10,12 +10,12 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { RemoteFunctionsTreeItem } from '../../tree/remoteProject/RemoteFunctionsTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { nonNullValue } from '../../utils/nonNull';
 import { uploadAppSettings } from '../appSettings/uploadAppSettings';
 import { startStreamingLogs } from '../logstream/startStreamingLogs';
 
-export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItemBase, workspaceFolder: WorkspaceFolder): Promise<void> {
+export async function notifyDeployComplete(context: IActionContext, node: SlotTreeItem, workspaceFolder: WorkspaceFolder): Promise<void> {
     const deployComplete: string = localize('deployComplete', 'Deployment to "{0}" completed.', node.site.fullName);
     const viewOutput: MessageItem = { title: localize('viewOutput', 'View output') };
     const streamLogs: MessageItem = { title: localize('streamLogs', 'Stream logs') };
@@ -59,7 +59,7 @@ export async function notifyDeployComplete(context: IActionContext, node: SlotTr
     }
 }
 
-async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItemBase): Promise<void> {
+async function listHttpTriggerUrls(context: IActionContext, node: SlotTreeItem): Promise<void> {
     const children: AzExtTreeItem[] = await node.getCachedChildren(context);
     const functionsNode: RemoteFunctionsTreeItem = <RemoteFunctionsTreeItem>children.find(n => n instanceof RemoteFunctionsTreeItem);
     await node.treeDataProvider.refresh(context, functionsNode);

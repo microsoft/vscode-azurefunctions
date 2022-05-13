@@ -10,6 +10,7 @@ import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
+import { LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
 import { getContainingWorkspace } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -24,12 +25,16 @@ import { IFunctionWizardContext } from './IFunctionWizardContext';
  */
 export async function createFunctionFromCommand(
     context: IActionContext,
-    folderPath?: string,
+    folderPath?: string | LocalProjectTreeItem,
     templateId?: string,
     functionName?: string,
     functionSettings?: { [key: string]: string | undefined },
     language?: ProjectLanguage,
     version?: FuncVersion): Promise<void> {
+
+    if (folderPath && typeof folderPath !== 'string') {
+        folderPath = undefined;
+    }
 
     await createFunctionInternal(context, {
         folderPath,

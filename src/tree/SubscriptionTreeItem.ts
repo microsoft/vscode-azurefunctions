@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, ParsedSite, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
@@ -13,14 +13,17 @@ import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../com
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
+import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
+import { createActivityContext } from '../utils/activityUtils';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
-import { ProductionSlotTreeItem } from './ProductionSlotTreeItem';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
+import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
+import { SlotTreeItem } from './SlotTreeItem';
 
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
@@ -43,7 +46,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        const client: WebSiteManagementClient = await createWebSiteClient([context, this]);
+        const client: WebSiteManagementClient = await createWebSiteClient([context, this.subscription]);
         let webAppCollection: Site[];
         try {
             webAppCollection = await uiUtils.listAllIterator(client.webApps.list());
@@ -62,9 +65,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             webAppCollection,
             'azFuncInvalidFunctionApp',
             (site: Site) => {
-                const parsedSite = new ParsedSite(site, this.subscription);
-                if (parsedSite.isFunctionApp) {
-                    return new ProductionSlotTreeItem(this, parsedSite);
+                const resolved = new ResolvedFunctionAppResource(this.subscription, site);
+                if (resolved.site.isFunctionApp) {
+                    return new SlotTreeItem(this, resolved);
                 }
                 return undefined;
             },
@@ -74,17 +77,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         );
     }
 
-    public async createChildImpl(context: ICreateFunctionAppContext): Promise<AzExtTreeItem> {
+    public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
-        const wizardContext: IFunctionAppWizardContext = Object.assign(context, this.subscription, {
+        const wizardContext: IFunctionAppWizardContext = Object.assign(context, subscription.subscription, {
             newSiteKind: AppKind.functionapp,
             resourceGroupDeferLocationStep: true,
             version,
-            language
+            language,
+            ...(await createActivityContext())
         });
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
@@ -141,7 +145,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt();
-        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newSiteName'));
         if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {
@@ -153,9 +156,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.newAppInsightsName = newName;
         }
 
+        wizardContext.activityTitle = localize('functionAppCreateActivityTitle', 'Create Function App "{0}"', nonNullProp(wizardContext, 'newSiteName'))
         await wizard.execute();
 
-        return new ProductionSlotTreeItem(this, new ParsedSite(nonNullProp(wizardContext, 'site'), this.subscription));
+        const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
+        await ext.rgApi.tree.refresh(context);
+        return new SlotTreeItem(subscription, resolved);
     }
 
     public isAncestorOfImpl(contextValue: string | RegExp): boolean {

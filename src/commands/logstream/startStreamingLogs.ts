@@ -8,22 +8,26 @@ import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
-import { ProductionSlotTreeItem } from '../../tree/ProductionSlotTreeItem';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
+import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { enableFileLogging } from './enableFileLogging';
 
-export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItemBase | RemoteFunctionTreeItem): Promise<void> {
+export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
-        treeItem = await ext.tree.showTreeItemPicker<SlotTreeItemBase>(ProductionSlotTreeItem.contextValue, context);
+        treeItem = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
+            filter: functionFilter,
+            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+        });
     }
 
-    const site: ParsedSite = treeItem instanceof SlotTreeItemBase ? treeItem.site : treeItem.parent.parent.site;
+    const site: ParsedSite = isSlotTreeItem(treeItem) ? treeItem.site : treeItem.parent.parent.site;
 
     if (site.isLinux) {
         try {
@@ -61,7 +65,7 @@ async function openLiveMetricsStream(context: IActionContext, site: ParsedSite, 
         // https://github.com/microsoft/vscode-azurefunctions/issues/1432
         throw new Error(localize('mustConfigureAI', 'You must configure Application Insights to stream logs on Linux Function Apps.'));
     } else {
-        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node]);
+        const aiClient: ApplicationInsightsManagementClient = await createAppInsightsClient([context, node.subscription]);
         const components: ApplicationInsightsManagementModels.ApplicationInsightsComponentListResult = await aiClient.components.list();
         const component: ApplicationInsightsManagementModels.ApplicationInsightsComponent | undefined = components.find(c => c.instrumentationKey === aiKey);
         if (!component) {

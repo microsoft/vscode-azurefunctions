@@ -4,14 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import { ext } from '../extensionVariables';
-import { ProductionSlotTreeItem } from '../tree/ProductionSlotTreeItem';
+import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 
-export async function openInPortal(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
-    if (!node) {
-        node = await ext.tree.showTreeItemPicker<AzExtTreeItem>(ProductionSlotTreeItem.contextValue, context);
-    }
-
-    await uiOpenInPortal(node, node.fullId);
+export async function openDeploymentInPortal(_context: IActionContext, node: AzExtTreeItem): Promise<void> {
+    await uiOpenInPortal(node, `${nonNullProp(node, 'parent').parent?.id}/Deployments/${nonNullProp(node, 'id')}`);
 }

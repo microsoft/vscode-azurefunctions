@@ -4,11 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 
 export async function createChildNode(context: IActionContext, expectedContextValue: string | RegExp, node?: AzExtParentTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<AzExtParentTreeItem>(expectedContextValue, context);
+        node = await ext.rgApi.pickAppResource<AzExtParentTreeItem>({ ...context, suppressCreatePick: true }, {
+            filter: functionFilter,
+            expectedChildContextValue: expectedContextValue
+        });
     }
 
     await node.createChild(context);

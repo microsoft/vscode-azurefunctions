@@ -5,6 +5,7 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
+import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -22,7 +23,10 @@ async function updateDisabledState(context: IActionContext, node: FunctionTreeIt
     if (!node) {
         const expectedContextValue: RegExp = new RegExp(`Function;.*;${isDisabled ? 'Enabled' : 'Disabled'};`);
         const noItemFoundErrorMessage: string = isDisabled ? localize('noEnabledFuncs', 'No enabled functions found.') : localize('noDisabledFuncs', 'No disabled functions found.');
-        node = await ext.tree.showTreeItemPicker<FunctionTreeItemBase>(expectedContextValue, { ...context, noItemFoundErrorMessage });
+        node = await ext.rgApi.pickAppResource<FunctionTreeItemBase>({ ...context, noItemFoundErrorMessage }, {
+            filter: functionFilter,
+            expectedChildContextValue: expectedContextValue
+        });
     }
 
     const version: FuncVersion = await node.parent.parent.getVersion(context);

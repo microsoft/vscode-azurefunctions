@@ -11,7 +11,7 @@ import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeK
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { SlotTreeItemBase } from '../../tree/SlotTreeItemBase';
+import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 
 /**
@@ -19,7 +19,7 @@ import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '..
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItemBase, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
