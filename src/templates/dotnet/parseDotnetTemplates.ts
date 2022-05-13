@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { ProjectLanguage, TemplateFilter } from '../../constants';
+import { ProjectLanguage, sqlBindingTemplateRegex, TemplateFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -74,7 +74,7 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
     return {
         isHttpTrigger: /^http/i.test(rawTemplate.Name) || /webhook$/i.test(rawTemplate.Name),
         isTimerTrigger: /^timer/i.test(rawTemplate.Name),
-        isSqlBindingTrigger: /Sql.*Binding/i.test(rawTemplate.Name),
+        isSqlBindingTemplate: sqlBindingTemplateRegex.test(rawTemplate.Name),
         id: rawTemplate.Identity,
         name: rawTemplate.Name,
         defaultFunctionName: rawTemplate.DefaultName,
