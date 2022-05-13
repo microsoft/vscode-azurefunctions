@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { createTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { createTestActionContext } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, ProjectLanguage, verifyVersionAndLanguage } from '../extension.bundle';
 import { assertThrowsAsync } from './assertThrowsAsync';
 import { testFolderPath } from './global.test';

@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureWizardExecuteStep, IActionContext } from "@microsoft/vscode-azext-utils";
+
 export interface AzureFunctionsExtensionApi {
     apiVersion: string;
 
@@ -83,4 +85,10 @@ export interface ICreateFunctionOptions {
      * If set, it will automatically select the worker runtime for .NET with the matching targetFramework
      */
     targetFramework?: string | string[];
+
+    /**
+     * If set, it will include a step that will be executed prior to OpenFolderStep determined by the priority of the step
+     * OpenFolder priority is 250 (https://github.com/microsoft/vscode-azurefunctions/blob/main/src/commands/createNewProject/OpenFolderStep.ts#L11)
+     */
+    executeStep?: AzureWizardExecuteStep<IActionContext>;
 }

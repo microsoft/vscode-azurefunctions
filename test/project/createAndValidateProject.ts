@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import * as path from 'path';
-import { TestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { createNewProjectInternal, getRandomHexString, hiddenStacksSetting, ProjectLanguage } from '../../extension.bundle';
 // eslint-disable-next-line no-restricted-imports
 import * as api from '../../src/vscode-azurefunctions.api';

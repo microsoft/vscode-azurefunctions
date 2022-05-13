@@ -15,6 +15,7 @@ import { getContainingWorkspace } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
+import { createNewProjectInternal } from '../createNewProject/createNewProject';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -49,7 +50,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
     if (workspacePath === undefined) {
-        workspaceFolder = await getWorkspaceFolder(context);
+        workspaceFolder = await getWorkspaceFolder(context, options);
         workspacePath = workspaceFolder.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
@@ -72,7 +73,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     await wizard.execute();
 }
 
-async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFolder> {
+async function getWorkspaceFolder(context: IActionContext, options: api.ICreateFunctionOptions): Promise<WorkspaceFolder> {
     let folder: WorkspaceFolder | undefined;
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
         const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
@@ -82,7 +83,7 @@ async function getWorkspaceFolder(context: IActionContext): Promise<WorkspaceFol
 
         if (result === newProject) {
             // don't wait
-            void commands.executeCommand('azureFunctions.createNewProject');
+            void createNewProjectInternal(context, options);
             context.telemetry.properties.noWorkspaceResult = 'createNewProject';
         } else {
             const uri: Uri[] = await context.ui.showOpenDialog({

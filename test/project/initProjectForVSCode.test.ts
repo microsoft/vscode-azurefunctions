@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { runWithTestActionContext, TestInput } from 'vscode-azureextensiondev';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
 import { getCSharpValidateOptions, getCustomValidateOptions, getFSharpValidateOptions, getJavaScriptValidateOptions, getJavaValidateOptions, getPowerShellValidateOptions, getPythonValidateOptions, getTypeScriptValidateOptions, IValidateProjectOptions, validateProject } from './validateProject';

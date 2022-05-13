@@ -10,7 +10,7 @@
 // See https://github.com/Microsoft/vscode-azuretools/wiki/webpack for guidance
 
 const process = require('process');
-const dev = require("vscode-azureextensiondev");
+const dev = require("@microsoft/vscode-azext-dev");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 let DEBUG_WEBPACK = !/^(false|0)?$/i.test(process.env.DEBUG_WEBPACK || '');
