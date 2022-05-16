@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.6.3-alpha.12",
+    "version": "1.6.3-alpha.13",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -365,12 +365,12 @@
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup.*microsoft.web/sites/functionapp/",
+                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceTypeGroup.*microsoft.web/sites/functionapp/",
+                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp.*azureResourceTypeGroup/i",
                     "group": "1@2"
                 },
                 {
