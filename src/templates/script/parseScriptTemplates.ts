@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isString } from 'util';
-import { ProjectLanguage } from '../../constants';
+import { ProjectLanguage, sqlBindingTemplateRegex } from '../../constants';
 import { IFunctionBinding, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
 import { IBindingSetting, IBindingTemplate, IEnumValue, ResourceType, ValueType } from '../IBindingTemplate';
@@ -221,6 +221,7 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         functionJson,
         isHttpTrigger: functionJson.isHttpTrigger,
         isTimerTrigger: functionJson.isTimerTrigger,
+        isSqlBindingTemplate: sqlBindingTemplateRegex.test(rawTemplate.id),
         id: rawTemplate.id,
         name: getResourceValue(resources, rawTemplate.metadata.name),
         defaultFunctionName: rawTemplate.metadata.defaultFunctionName,
