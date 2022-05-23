@@ -16,7 +16,7 @@ Use the Azure Functions extension to quickly create, debug, manage, and deploy s
 
 1. Select the button to create a new project in the Azure Functions explorer
 
-    ![createNewProject](resources/readme/createNewProject.png)
+    ![createNewProject](resources/readme/createFunction.png)
 
 1. Select a new, _empty_ folder to contain your project
 1. Select your desired programming language
@@ -38,7 +38,7 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
     > TIP: The "Terminal" panel should pop up automatically and you know your project is running if you see output
 1. Expand your _local project_ in the Azure Functions explorer to copy your function's url
 
-    ![debug2](resources/readme/debug2.png)
+    ![debug2](resources/readme/copyFunctionUrl.png)
 
 1. Navigate to a browser, paste the url, and append `?name=world`
     > TIP: Your url should look like this: `http://localhost:7071/api/HttpTrigger1?name=world`
@@ -51,21 +51,32 @@ This extension integrates with the [Azure Functions Core Tools](https://docs.mic
 
 1. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Functions explorer
     >  If you don't already have an Azure Account, click "Create a Free Azure Account"
-1. Select the button to deploy
+1. Select the 'plus' button to open the "Create Resource" menu
 
-    ![deploy](resources/readme/deploy.png)
+    ![Create resource](resources/readme/deploy/createResource.png)
 
-1. Choose "Create new Function App in Azure..."
+1. Choose "Create Function App in Azure..."
+
+    ![Create Function App in Azure](resources/readme/deploy/createFunctionApp.png)
+
 1. Enter a globally unique name for your Function App
 1. If multiple versions of your language's runtime are supported (i.e. Node.js 10 and Node.js 12), select your desired version (the latest is recommended)
 1. Select a location
-1. Wait for deployment to complete. Progress will be shown in the bottom right corner of your window
+1. Wait for your Function App to be created. Progress will be shown in the Activity Log panel
 
-    ![deploy2](resources/readme/deploy2.png)
+    ![deploy2](resources/readme/deploy/activityLog.png)
+
+1. Once your Function App has been created, reveal the resource in the Resources view.
+
+    ![Finished creating Function App](resources/readme/deploy/createComplete.png)
+
+1. Right click your Function App and select "Deploy to Function App"
+
+    ![Deploy to Function App](resources/readme/deploy/deploy.png)
 
 1. Once deployment is complete, expand your _subscription_ in the Azure Functions explorer to copy your deployed function's url
 
-    ![deploy3](resources/readme/deploy3.png)
+    ![deploy3](resources/readme/deploy/copyFunctionUrl.png)
 
 1. Navigate to a browser, paste the url, and append `?name=world`
     > TIP: Your url should look like this: `https://<function app name>.azurewebsites.net/api/HttpTrigger1?name=world`
