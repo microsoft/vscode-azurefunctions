@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.7.0 - 2022-05-24
+
+<!-- insert link to app centric changelog -->
+
+### Changed
+- Add Execute Step in createFunction API [#3150](https://github.com/microsoft/vscode-azurefunctions/pull/3150)
+
+### Fixed
+- Fix "Create Project" flow losing options [#3116](https://github.com/microsoft/vscode-azurefunctions/pull/3116)
+
 ## 1.6.2 - 2022-04-13
 ### Fixed
 - Zip deploy fails with ECONNRESET or 400 Bad Request on VS Code versions `>=1.66.0` [#2844](https://github.com/microsoft/vscode-azurefunctions/issues/2844)
