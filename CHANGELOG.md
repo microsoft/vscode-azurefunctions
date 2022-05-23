@@ -2,7 +2,7 @@
 
 ## 1.7.0 - 2022-05-24
 
-<!-- insert link to app centric changelog -->
+We've made some large design changes to the Azure extensions for VS Code. [View App Centric release notes](https://aka.ms/AzCode/AppCentric)
 
 ### Changed
 - Add Execute Step in createFunction API [#3150](https://github.com/microsoft/vscode-azurefunctions/pull/3150)
