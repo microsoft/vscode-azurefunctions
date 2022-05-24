@@ -30,8 +30,17 @@ const defaultRequirements: string = `# DO NOT include azure-functions-worker in 
 azure-functions
 `;
 
+export enum PythonModel {
+    Legacy,
+    Preview
+}
+
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
+
+    constructor(private readonly model: PythonModel) {
+        super();
+    }
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);

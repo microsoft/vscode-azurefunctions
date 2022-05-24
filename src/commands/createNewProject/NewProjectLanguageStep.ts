@@ -18,7 +18,7 @@ import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreate
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
-import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
+import { PythonModel, PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
 
@@ -41,6 +41,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: ProjectLanguage.TypeScript },
             { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
             { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
+            { label: localize('pythonPreview', 'Python (Preview)'), data: ProjectLanguage.PythonPreview },
             { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
             { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell },
             { label: localize('customHandler', 'Custom Handler'), data: ProjectLanguage.Custom }
@@ -86,7 +87,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
-                executeSteps.push(new PythonProjectCreateStep());
+                executeSteps.push(new PythonProjectCreateStep(PythonModel.Legacy));
+                break;
+            case ProjectLanguage.PythonPreview:
+                executeSteps.push(new PythonProjectCreateStep(PythonModel.Preview));
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());

@@ -29,6 +29,7 @@ export enum ProjectLanguage {
     JavaScript = 'JavaScript',
     PowerShell = 'PowerShell',
     Python = 'Python',
+    PythonPreview = 'PythonPreview',
     TypeScript = 'TypeScript',
     Custom = 'Custom'
 }
