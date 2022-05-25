@@ -108,13 +108,17 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
-        // All languages except Java support creating a function after creating a project
+        const isPythonV2Plus = context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1;
+
+        // Languages except Python v2+ and Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        promptSteps.push(await FunctionListStep.create(context, {
-            isProjectWizard: true,
-            templateId: this._templateId,
-            functionSettings: this._functionSettings
-        }));
+        if (!isPythonV2Plus) {
+            promptSteps.push(await FunctionListStep.create(context, {
+                isProjectWizard: true,
+                templateId: this._templateId,
+                functionSettings: this._functionSettings
+            }));
+        }
 
         return wizardOptions;
     }
