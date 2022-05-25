@@ -362,6 +362,20 @@
                     "group": "navigation@1"
                 }
             ],
+            "azureWorkspaceDeploy": [
+                {
+                    "command": "azureFunctions.deploy",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                }
+            ],
+            "view/title": [
+                {
+                    "submenu": "azureWorkspaceDeploy",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@2"
+                }
+            ],
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
@@ -744,6 +758,13 @@
                 "name": "func-python-watch",
                 "label": "%azureFunctions.problemMatchers.funcPythonWatch%",
                 "base": "$func-watch"
+            }
+        ],
+        "submenus": [
+            {
+                "id": "azureWorkspaceDeploy",
+                "icon": "$(cloud-upload)",
+                "label": "Deploy..."
             }
         ],
         "configuration": [
