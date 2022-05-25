@@ -30,19 +30,21 @@ const defaultRequirements: string = `# DO NOT include azure-functions-worker in 
 azure-functions
 `;
 
-export enum PythonModel {
-    Legacy,
-    Preview
-}
+const azureWebJobsFeatureFlagsKey = 'AzureWebJobsFeatureFlags';
 
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 
-    constructor(private readonly model: PythonModel) {
+    constructor(private readonly model?: number) {
         super();
     }
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        // The new (i.e. > 1) Python model requires enabling worker indexing...
+        if (this.model && this.model > 1) {
+            this.localSettingsJson.Values![azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
+        }
+
         await super.executeCore(context, progress);
 
         const requirementsPath: string = path.join(context.projectPath, requirementsFileName);

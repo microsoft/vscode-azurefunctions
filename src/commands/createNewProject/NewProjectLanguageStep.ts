@@ -18,7 +18,7 @@ import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreate
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
-import { PythonModel, PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
+import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
 
@@ -36,32 +36,33 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // Only display 'supported' languages that can be debugged in VS Code
-        let languagePicks: IAzureQuickPickItem<ProjectLanguage | undefined>[] = [
-            { label: ProjectLanguage.JavaScript, data: ProjectLanguage.JavaScript },
-            { label: ProjectLanguage.TypeScript, data: ProjectLanguage.TypeScript },
-            { label: ProjectLanguage.CSharp, data: ProjectLanguage.CSharp },
-            { label: ProjectLanguage.Python, data: ProjectLanguage.Python },
-            { label: localize('pythonPreview', 'Python (Preview)'), data: ProjectLanguage.PythonPreview },
-            { label: ProjectLanguage.Java, data: ProjectLanguage.Java },
-            { label: ProjectLanguage.PowerShell, data: ProjectLanguage.PowerShell },
-            { label: localize('customHandler', 'Custom Handler'), data: ProjectLanguage.Custom }
+        let languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number } | undefined>[] = [
+            { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
+            { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
+            { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
+            { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
+            { label: localize('pythonPreview', 'Python (Preview)'), data: { language: ProjectLanguage.Python, model: 2 } },
+            { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
+            { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
+            { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
         ];
 
         languagePicks.push({ label: localize('viewSamples', '$(link-external) View sample projects'), data: undefined, suppressPersistence: true });
 
         if (context.languageFilter) {
             languagePicks = languagePicks.filter(p => {
-                return p.data !== undefined && context.languageFilter?.test(p.data);
+                return p.data !== undefined && context.languageFilter?.test(p.data.language);
             });
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
-        const result: ProjectLanguage | undefined = (await context.ui.showQuickPick(languagePicks, options)).data;
+        const result = (await context.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
             await openUrl('https://aka.ms/AA4ul9b');
             throw new UserCancelledError('viewSampleProjects');
         } else {
-            context.language = result;
+            context.language = result.language;
+            context.languageModel = result.model;
         }
     }
 
@@ -87,10 +88,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
-                executeSteps.push(new PythonProjectCreateStep(PythonModel.Legacy));
-                break;
-            case ProjectLanguage.PythonPreview:
-                executeSteps.push(new PythonProjectCreateStep(PythonModel.Preview));
+                executeSteps.push(new PythonProjectCreateStep(context.languageModel));
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());
