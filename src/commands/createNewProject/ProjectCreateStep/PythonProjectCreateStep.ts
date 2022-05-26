@@ -7,7 +7,7 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { Progress } from 'vscode';
-import { requirementsFileName } from '../../../constants';
+import { pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -32,6 +32,17 @@ azure-functions
 
 const azureWebJobsFeatureFlagsKey = 'AzureWebJobsFeatureFlags';
 
+const defaultFunctionAppSource = `import azure.functions as func
+
+app = func.FunctionApp(auth_level=func.AuthLevel.ANONYMOUS)
+
+# Uncomment to create an HTTP trigger-based function.
+# @app.function_name(name="HttpTrigger1")
+# @app.route(route="hello")
+# def test_function(req: func.HttpRequest) -> func.HttpResponse:
+#    return func.HttpResponse("HttpTrigger1 function processed a request!!!")
+`;
+
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 
@@ -40,8 +51,10 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+        const isModelV2Plus = this.model && this.model > 1;
+
         // The new (i.e. > 1) Python model requires enabling worker indexing...
-        if (this.model && this.model > 1) {
+        if (isModelV2Plus) {
             this.localSettingsJson.Values![azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
         }
 
@@ -58,6 +71,16 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
             }
 
             await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
+        }
+
+        // THe new (i.e. > 1) Python model has a single, project-level source file.
+        if (isModelV2Plus)
+        {
+            const functionAppPath: string = path.join(context.projectPath, pythonFunctionAppFileName);
+
+            if (await confirmOverwriteFile(context, functionAppPath)) {
+                await fse.writeFile(functionAppPath, defaultFunctionAppSource);
+            }
         }
     }
 }

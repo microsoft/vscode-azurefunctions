@@ -49,6 +49,7 @@ export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
+export const pythonFunctionAppFileName: string = 'function_app.py';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
 export const pomXmlFileName: string = 'pom.xml';
 export const buildGradleFileName: string = 'build.gradle';
