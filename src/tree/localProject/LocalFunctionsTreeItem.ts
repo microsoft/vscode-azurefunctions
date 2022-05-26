@@ -8,7 +8,7 @@ import { AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscod
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
-import { functionJsonFileName } from '../../constants';
+import { functionJsonFileName, ProjectLanguage } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
@@ -34,7 +34,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (this.parent.isIsolated) {
+        const isParentPythonV2Plus = this.parent.langauge === ProjectLanguage.Python && this.parent.languageModel && this.parent.languageModel > 1;
+
+        if (this.parent.isIsolated || isParentPythonV2Plus) {
             return await this.getChildrenForIsolatedProject(context);
         } else {
             const functions: string[] = await getFunctionFolders(context, this.parent.effectiveProjectPath);
