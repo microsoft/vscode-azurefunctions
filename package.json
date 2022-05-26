@@ -812,6 +812,11 @@
                             ""
                         ]
                     },
+                    "azureFunctions.projectLanguageModel": {
+                        "scope": "resource",
+                        "type": "number",
+                        "description": "%azureFunctions.projectLanguageModel%"
+                    },
                     "azureFunctions.projectTemplateKey": {
                         "scope": "resource",
                         "type": "string",

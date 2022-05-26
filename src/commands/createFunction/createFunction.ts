@@ -63,7 +63,13 @@ export async function createFunctionInternal(context: IActionContext, options: a
         return;
     }
 
-    const [language, version] = await verifyInitForVSCode(context, projectPath, options.language, options.version);
+    const { language, languageModel, version } = await verifyInitForVSCode(context, projectPath, options.language, /* TODO: languageModel: */ undefined, options.version);
+
+    if (language == ProjectLanguage.Python && languageModel && languageModel > 1) {
+        // TODO: Localize!
+        throw new Error('Python v2+ functions are not added via the command palette.');
+    }
+
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
     const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, projectTemplateKey });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {

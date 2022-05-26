@@ -32,7 +32,9 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         workspaceFolder = nonNullValue(getContainingWorkspace(functionJsonPath), 'workspaceFolder');
         workspacePath = workspaceFolder.uri.fsPath;
         projectPath = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt') || workspacePath;
-        [language, version] = await verifyInitForVSCode(context, projectPath);
+        const verifiedInit = await verifyInitForVSCode(context, projectPath);
+        language = verifiedInit.language;
+        version = verifiedInit.version;
     } else {
         if (!data) {
             const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');

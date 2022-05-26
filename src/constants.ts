@@ -7,6 +7,7 @@ import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
+export const projectLanguageModelSetting: string = 'projectLanguageModel';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const projectSubpathSetting: string = 'projectSubpath';
 export const templateFilterSetting: string = 'templateFilter';
