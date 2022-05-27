@@ -45,7 +45,12 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await fse.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
 
-    await vscode.commands.executeCommand('azureFunctions.refresh'); // activate the extension before tests begin
+    const funcExtension = vscode.extensions.getExtension('ms-azuretools.vscode-azurefunctions');
+    if (!funcExtension) {
+        throw new Error('Could not find the Azure Functions extension.');
+    }
+    await funcExtension.activate(); // activate the extension before tests begin
+
     ext.outputChannel = new TestOutputChannel();
 
     registerOnActionStartHandler(context => {
