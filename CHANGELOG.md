@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.7.2 - 2022-05-27
+
+### Fixed
+- Error when picking Create new local app setting from local.settings.json when creating blob trigger [#3191](https://github.com/microsoft/vscode-azurefunctions/issues/3191)
+
 ## 1.7.1 - 2022-05-26
 
 ### Added
