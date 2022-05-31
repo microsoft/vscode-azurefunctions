@@ -3,19 +3,16 @@
 ## 1.7.3 - 2022-06-01
 
 ### Changed
-
 - Update @vscode/extension-telemetry to 0.5.2 [#3206](https://github.com/microsoft/vscode-azurefunctions/issues/3206)
 
 ## 1.7.2 - 2022-05-27
 
 ### Fixed
-
 - Error when picking Create new local app setting from local.settings.json when creating blob trigger [#3191](https://github.com/microsoft/vscode-azurefunctions/issues/3191)
 
 ## 1.7.1 - 2022-05-26
 
 ### Added
-
 - Deploy command is now accessible via the Workspace Deploy menu
 
 ## 1.7.0 - 2022-05-24
@@ -23,150 +20,115 @@
 We've made some large design changes to the Azure extensions for VS Code. [View App Centric release notes](https://aka.ms/AzCode/AppCentric)
 
 ### Changed
-
 - Add Execute Step in createFunction API [#3150](https://github.com/microsoft/vscode-azurefunctions/pull/3150)
 
 ### Fixed
-
 - Fix "Create Project" flow losing options [#3116](https://github.com/microsoft/vscode-azurefunctions/pull/3116)
 
 ## 1.6.2 - 2022-04-13
-
 ### Fixed
-
 - Zip deploy fails with ECONNRESET or 400 Bad Request on VS Code versions `>=1.66.0` [#2844](https://github.com/microsoft/vscode-azurefunctions/issues/2844)
 
+
 ## 1.6.1 - 2022-03-24
-
 ### Changed
-
 - `createFunction` API handles multiple target frameworks
 - Microsoft Cloud Deutschland (Azure Germany) is no longer supported. [Migration information](https://www.microsoft.com/en-us/cloud-platform/germany-cloud-regions)
 
 ## 1.6.0 - 2021-11-04
-
 ### Added
-
 - Remove preview flag from Azure Functions v4
 - Option to change Azure Functions runtime version when selecting runtime
 
 ### Removed
-
 - AzureFunctionsExtensionApi command `validateFuncCoreToolsInstalled`
 
 ## 1.5.2 - 2021-10-12
-
 ### Added
-
 - AzureFunctionsExtensionApi command `validateFuncCoreToolsInstalled`
 
 ### Changed
-
 - `proxies.json` are no longer created when calling `Create New Project...`
 - Proxy tree items are no longer displayed in local project tree view
 
 ## 1.5.1 - 2021-09-09
-
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.1%22+is%3Aclosed+)
 
 ## 1.5.0 - 2021-08-27
-
 ### Added
-
 - Preview support for .NET 6 on Azure Functions v4
 - Added setting "azureFunctions.funcCliPath" to explicitly control the path of the "func" executable used for debug and deploy tasks
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.5.0%22+is%3Aclosed)
 
 ### Changed
-
 - Minimum version of VS Code is now 1.57.0
 
 ## 1.4.1 - 2021-07-14
-
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.4.1%22+is%3Aclosed)
 
 ## 1.4.0 - 2021-05-25
-
 ### Added
-
 - Support Azure Functions on Kubernetes with Azure Arc (Preview)
 
 ### Changed
-
 - Minimum version of VS Code is now 1.53.0
 - Icons updated to match VS Code's theme. Install new product icon themes [here](https://marketplace.visualstudio.com/search?term=tag%3Aproduct-icon-theme&target=VSCode)
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.4.0%22+is%3Aclosed)
 
 ## 1.3.0 - 2021-03-10
-
 ### Added
-
 - .NET 5 support for creating projects/functions, copying http trigger urls, and creating a Function App in Azure
 - Now depends on the "Azure Resources" extension, which provides a "Resource Groups" and "Help and Feedback" view
 
 ### Changed
-
 - TypeScript projects default to TypeScript v4.0
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.3.0%22+is%3Aclosed)
-
 - Extension may become unresponsive when deploying on WSL or Codespaces
 - Debugging a C# project on Mac/Linux may take ~30 seconds longer than before v1.2.1 of the extension
 
 ## 1.2.1 - 2021-02-09
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.2.1%22+is%3Aclosed)
-
 - Fixed failure to debug on VS Code v1.53+ because extension did not activate
 - Mitigated "ECONNRESET" errors by retrying the request
 
 ## 1.2.0 - 2021-01-21
 
 ### Added
-
 - Allow Python v3.9 when creating a virtual environment for a local project
 - Remove "Preview" label for custom handler projects
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.2.0%22+is%3Aclosed)
-
 - Python project fails to attach debugger with error "The operation has timed out."
 
 ## 1.1.0 - 2020-12-11
 
 ### Added
-
 - Support debugging .NET 5 projects
 - Modified post-debug behavior so that "func host start" output remains viewable and to optimistically fix issue where VS Code becomes unresponsive [#1401](https://github.com/microsoft/vscode-azurefunctions/issues/1401)
 - Added "Reload Templates" option when creating a function that will also clear the template cache (Use setting "azureFunctions.showReloadTemplates" to enable)
 
 ### Changed
-
 - "Report an Issue" button has been removed from errors. Instead, use the "Report Issue" command in the [command palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette)
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.1.0%22+is%3Aclosed)
 
 ## 1.0.1 - 2020-11-11
 
 ### Added
-
 - Dynamically retrieve the runtime stacks available in Azure so that the extension supports them as soon as possible, including upcoming preview support for Node 14
 
 ## 1.0.0 - 2020-10-20
 
 ### Added
-
 - Preview support for creating custom handler projects and functions
 - Preview support for generating functions from an OpenAPI specification
 - Extended deployment slot support to Linux consumption apps
@@ -174,7 +136,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - Allow comments in "local.settings.json"
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%221.0.0%22+is%3Aclosed)
 
 ## 0.24.1 - 2020-09-21
@@ -187,67 +148,55 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.24.0 - 2020-08-25
 
 ### Added
-
 - Create, debug, and deploy PowerShell 7 and Java 11 projects
 - Preview support to deploy [custom handler](https://docs.microsoft.com/azure/azure-functions/functions-custom-handlers) projects
 - Improved extension activation time (by switching to the [azure-sdk-for-js](https://github.com/Azure/azure-sdk-for-js))
 
 ### Changed
-
 - Minimum version of VS Code is now 1.48.0
 - Support for PowerShell 6 projects has been deprecated
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.24.0%22+is%3Aclosed)
 
 ## 0.23.0 - 2020-07-08
 
 ### Added
-
 - Added "Execute Function Now" for all trigger types
 - Support viewing remote files on Linux consumption plans
 
 ### Changed
-
 - To improve performance, "WEBSITE_RUN_FROM_PACKAGE" will automatically be added to all Windows plans when deploying. Set "WEBSITE_RUN_FROM_PACKAGE" to "0" to override this behavior
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.23.0%22+is%3Aclosed)
 
 ## 0.22.1 - 2020-05-15
 
 ### Added
-
 - Enhanced deployment logs to show more information and more accurately detect failures
 - Added setting "azureFunctions.validateFuncCoreTools" to skip validating Azure Functions Core Tools before debugging
 
 ### Fixed
-
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.22.1%22+is%3Aclosed)
 
 ### Changed
-
 - Minimum version of VS Code is now 1.40.0
 
 ## 0.22.0 - 2020-04-08
 
 ### Added
-
 - Enable/disable a function
 - Added setting "azureFunctions.postDeployTask" to run a task after every deploy. New JavaScript/TypeScript projects will run "npm install" by default
 - Improved performance of loading templates
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.22.0%22+is%3Aclosed)
-
 - Pre-deploy task notification becomes unresponsive and prevents deploy
 - Updated C# recommended extension id to "ms-dotnettools.csharp"
 
 ## 0.21.0 - 2020-03-03
 
 ### Added
-
 - Java and C# support for the local project tree item
   - Copy local http trigger urls
   - Execute local timer triggers
@@ -257,14 +206,12 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - Logging is enabled by default when creating a Function App in Azure
 
 ### Changed
-
 - Bindings are no longer displayed in the tree. View properties on the function instead
 - "Add Binding..." was moved from the local "Bindings" tree item to the function tree item
 - Prompt for runtime before OS when creating a Function App in Azure. OS will not be prompted if the runtime doesn't support it
 - Inline button to view deployment logs was removed. Left or right click the tree item instead
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.21.0%22+is%3Aclosed)
-
 - Reduced time to create the first Function App in Azure on some new subscriptions
 - Prompt to select existing resource group instead of "403" error when subscription doesn't have permissions to create
 - "Init project for VS Code" will detect projects using "extensions.csproj" and configure to use "func extensions install" instead of bundle
@@ -272,12 +219,10 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.20.2 - 2020-01-23
 
 ### Added
-
 - Browse to website
 - Added option to create a Node 12.x Function App, only supported in v3 of the Azure Functions runtime
 
 ### Changed
-
 - If the Azure Functions runtime version cannot be automatically detected, default to v3 instead of v2
 - Removed ability to update app settings in Azure if language or runtime version don't match when deploying. Instead, create a new Function App in Azure
 
@@ -288,17 +233,14 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.20.1 - 2019-12-05
 
 ### Added
-
 - Select Python version (3.6.x or 3.7.x) when creating a project
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.20.1%22+is%3Aclosed)
-
-- Linux Premium Function App fails to run because it's missing CONTENT\* app settings
+- Linux Premium Function App fails to run because it's missing CONTENT* app settings
 
 ## 0.20.0 - 2019-11-04
 
 ### Added
-
 - Select Node.js or Python runtime version when creating a Function App in Azure
 - Added support for [Azure Functions v3 Preview](https://aka.ms/AA6i3ev) in the following existing features:
   - Install func cli from the command palette (brew and npm only)
@@ -323,7 +265,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.19.0 - 2019-10-14
 
 ### Added
-
 - Added support for deployment slots (feature flag no longer required)
   - Deploy
   - Stream logs
@@ -334,7 +275,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - Add option to use a Premium (preview) hosting plan when creating a Function App in Azure
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.19.0%22+is%3Aclosed)
-
 - Fixed subfolders of a symbolically linked folder not included during deploy
 - Fixed bundle dependency not added during "Add Binding"
 - Reduced false positive deploy failures when listing triggers or logs
@@ -349,7 +289,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.18.0 - 2019-08-19
 
 ### Added
-
 - Added Python project support for remote build. Follow these steps to enable: https://aka.ms/AA5vsfd
 - Added Application Insights support when creating a Function App in Azure
 - Added a local project tree item to the Azure Functions view (does not apply to Java or C#)
@@ -359,13 +298,11 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - Removed "Preview" label from Python projects and Linux Function Apps
 
 ### Changed
-
 - Removed setting "azureFunctions.advancedCreation" in favor of a separate "Advanced" command to create Function Apps
 - Renamed default Python virtual environment from ".env" to ".venv"
 - Basic create mode will now prompt for a location when creating a Function App
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.18.0%22+is%3Aclosed)
-
 - Fixed copying non-anonymous function urls for Linux consumption apps
 - Reduced occurrence of error "Failed to detect running Functions host" for C# debugging
 - Fixed creation of Linux Dedicated Function Apps
@@ -405,7 +342,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - View commit in GitHub for an applicable deployment
 
 ### Changed
-
 - Creating a Function App in Azure will only prompt for Function App name. Set `azureFunctions.advancedCreation` to `true` to be prompted for all other values.
 
 ### Fixed
@@ -482,7 +418,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 ## 0.12.1 - 2018-11-26
 
 ### Fixed
-
 - Bumped minimum version of "ps-tree" due to [event-stream#116](https://github.com/dominictarr/event-stream/issues/116)
 
 ## 0.12.0 - 2018-10-22
@@ -505,28 +440,23 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.12.0%22+label%3Abug+is%3Aclosed)
 
 ### Known Issues
-
 - Local debugging for Python projects may fail with "python.exe -m ptvsd: error: the following arguments are required: --host.". Can be resolved by changing the `"languageWorkers__python__arguments"` setting in the `.vscode/tasks.json` to `"-m ptvsd --host 127.0.0.1 --port 9091"`
 
 ## 0.11.0 - 2018-09-24
 
 ### Added
-
 - Preview support for creating and debugging Python projects. To enable, set `azureFunctions.enablePython` to true. **IMPORTANT**: Python support in Azure is still in private preview.
 - Added several more templates to the "verified" category, including Cosmos DB and Service Bus.
 
 ### Changed
-
 - Newly created Function Apps will default to "Run From Package". See [here](https://docs.microsoft.com/azure/azure-functions/run-functions-from-deployment-package) for more info.
 - Deprecated projectRuntime of "beta" in favor of "~2".
 - "azureFunctions.deploySubpath" setting takes precedence
 
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.11.0%22+label%3Abug+is%3Aclosed)
-
 - "Copy Function Url" for v2 non-anonymous functions will copy an invalid url [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
 
 ### Known Issues
-
 - Functions cannot be listed for Linux Consumption apps [azure-functions-host#3502](https://github.com/Azure/azure-functions-host/issues/3502)
 
 ## 0.10.2 - 2018-09-10
@@ -552,7 +482,6 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.10.1%22+label%3Abug+is%3Aclosed)
 
 ### Known Issues
-
 - "Copy Function Url" for v2 non-anonymous functions will copy an invalid url (that returns a 401 Unauthorized error) due to recent breaking changes in the runtime [#567](https://github.com/Microsoft/vscode-azurefunctions/issues/567)
 
 ## 0.10.0 - 2018-07-24
@@ -601,9 +530,7 @@ We've made some large design changes to the Azure extensions for VS Code. [View 
 - [Bugs fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.9.0%22+label%3Abug+is%3Aclosed)
 
 ## 0.8.1 - 2018-04-13
-
 ### [Fixed](https://github.com/Microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A%220.8.1%22+label%3Abug+is%3Aclosed)
-
 - Deployment fail when deploying to Function App with a custom domain
 
 ## 0.8.0 - 2018-04-05
