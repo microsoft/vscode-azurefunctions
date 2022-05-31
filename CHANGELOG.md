@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.7.3 - 2022-06-01
+
+### Changed
+- Update @vscode/extension-telemetry to 0.5.2 #3206
+
 ## 1.7.2 - 2022-05-27
 
 ### Fixed
