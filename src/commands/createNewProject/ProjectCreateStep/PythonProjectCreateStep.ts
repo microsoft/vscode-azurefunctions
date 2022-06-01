@@ -6,7 +6,7 @@
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
-import { Progress } from 'vscode';
+import { Progress, Uri, window, workspace } from 'vscode';
 import { pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
@@ -80,6 +80,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
 
             if (await confirmOverwriteFile(context, functionAppPath)) {
                 await fse.writeFile(functionAppPath, defaultFunctionAppSource);
+                await window.showTextDocument(await workspace.openTextDocument(Uri.file(functionAppPath)));
             }
         }
     }
