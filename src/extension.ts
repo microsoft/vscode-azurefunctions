@@ -6,7 +6,7 @@
 'use strict';
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
-import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
+import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
@@ -89,6 +89,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi();
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
         ext.rgApi.registerApplicationResourceResolver(extensionId, new FunctionAppResolver());
         ext.rgApi.registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
 

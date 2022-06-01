@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.7.3 - 2022-06-01
+
+### Changed
+- Update @vscode/extension-telemetry to 0.5.2 [#3206](https://github.com/microsoft/vscode-azurefunctions/issues/3206)
+
+## 1.7.2 - 2022-05-27
+
+### Fixed
+- Error when picking Create new local app setting from local.settings.json when creating blob trigger [#3191](https://github.com/microsoft/vscode-azurefunctions/issues/3191)
+
+## 1.7.1 - 2022-05-26
+
+### Added
+- Deploy command is now accessible via the Workspace Deploy menu
+
 ## 1.7.0 - 2022-05-24
 
 We've made some large design changes to the Azure extensions for VS Code. [View App Centric release notes](https://aka.ms/AzCode/AppCentric)
