@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { QuickPickItem, QuickPickOptions } from 'vscode';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { QuickPickOptions } from 'vscode';
 import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
@@ -22,21 +22,24 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // Display all languages, even if we don't have full support for them
-        const languagePicks: QuickPickItem[] = [
-            { label: ProjectLanguage.CSharp },
-            { label: ProjectLanguage.CSharpScript },
-            { label: ProjectLanguage.FSharp },
-            { label: ProjectLanguage.FSharpScript },
-            { label: ProjectLanguage.Java },
-            { label: ProjectLanguage.JavaScript },
-            { label: ProjectLanguage.PowerShell },
-            { label: ProjectLanguage.Python },
-            { label: ProjectLanguage.TypeScript },
-            { label: ProjectLanguage.Custom }
+        const languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [
+            { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
+            { label: ProjectLanguage.CSharpScript, data: { language: ProjectLanguage.CSharpScript } },
+            { label: ProjectLanguage.FSharp, data: { language: ProjectLanguage.FSharp } },
+            { label: ProjectLanguage.FSharpScript, data: { language: ProjectLanguage.FSharpScript } },
+            { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
+            { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
+            { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
+            { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
+            { label: localize('pythonPreview', 'Python (Preview)'), data: { language: ProjectLanguage.Python, model: 2 } },
+            { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
+            { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', "Select your project's language") };
-        context.language = <ProjectLanguage>(await context.ui.showQuickPick(languagePicks, options)).label;
+        const option = await context.ui.showQuickPick(languagePicks, options);
+        context.language = option.data.language;
+        context.languageModel = option.data.model;
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {
