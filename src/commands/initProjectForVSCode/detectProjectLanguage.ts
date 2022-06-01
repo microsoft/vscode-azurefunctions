@@ -6,7 +6,7 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, pomXmlFileName, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
+import { buildGradleFileName, localSettingsFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
@@ -112,7 +112,7 @@ export async function detectProjectLanguageModel(language: ProjectLanguage | und
             const uris = await findFiles(projectPath, pythonFunctionAppFileName);
 
             if (uris.length > 0) {
-                return 2;
+                return previewPythonModel;
             }
 
             break;

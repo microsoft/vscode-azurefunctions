@@ -34,6 +34,8 @@ export enum ProjectLanguage {
     Custom = 'Custom'
 }
 
+export const previewPythonModel: number = 2;
+
 export enum TemplateFilter {
     All = 'All',
     Core = 'Core',
