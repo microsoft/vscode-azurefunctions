@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -5,7 +6,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -181,8 +182,8 @@ function addSuite(tester: FunctionTesterBase): void {
     });
 
     function fixDurableLabel(label: string): string {
-        if (tester.language === ProjectLanguage.PowerShell) {
-            // label += ' (preview)';
+        if (tester.language === ProjectLanguage.PowerShell && tester.source !== TemplateSource.Latest) {
+            label += ' (preview)';
         }
         return label;
     }
