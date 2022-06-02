@@ -182,7 +182,7 @@ function addSuite(tester: FunctionTesterBase): void {
     });
 
     function fixDurableLabel(label: string): string {
-        if (tester.language === ProjectLanguage.PowerShell && tester.source !== TemplateSource.Latest) {
+        if (tester.language === ProjectLanguage.PowerShell && tester.source !== TemplateSource.Staging) {
             label += ' (preview)';
         }
         return label;
