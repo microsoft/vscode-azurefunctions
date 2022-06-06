@@ -42,24 +42,31 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
     protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {
         // NOTE: Types package matches node worker version, not func host version
         // See version matrix here: https://www.npmjs.com/package/@azure/functions
-        let nodeWorkerVersion: string;
+        let funcTypesVersion: string;
+        // For the node types package, we'll use the latest LTS version possible
+        // See version matrix here: https://docs.microsoft.com/azure/azure-functions/functions-versions?pivots=programming-language-javascript#languages
+        let nodeTypesVersion: string;
         switch (context.version) {
             case FuncVersion.v4:
-                nodeWorkerVersion = '3';
+                funcTypesVersion = '3';
+                nodeTypesVersion = '16';
                 break;
             case FuncVersion.v3:
-                nodeWorkerVersion = '2';
+                funcTypesVersion = '2';
+                nodeTypesVersion = '14';
                 break;
             case FuncVersion.v2:
-                nodeWorkerVersion = '1';
+                funcTypesVersion = '1';
+                nodeTypesVersion = '10';
                 break;
             default:
                 throw new Error(localize('typeScriptNoV1', 'TypeScript projects are not supported on Azure Functions v1.'));
         }
 
         return {
-            '@azure/functions': `^${nodeWorkerVersion}.0.0`,
-            typescript: '^4.0.0'
+            '@azure/functions': `^${funcTypesVersion}.0.0`,
+            '@types/node': `${nodeTypesVersion}.x`,
+            typescript: '^4.0.0',
         };
     }
 }
