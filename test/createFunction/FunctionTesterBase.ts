@@ -22,18 +22,18 @@ export abstract class FunctionTesterBase implements Disposable {
     public projectPath: string;
     public readonly version: FuncVersion;
     public abstract language: ProjectLanguage;
+    public source: TemplateSource;
 
     private readonly testedFunctions: string[] = [];
-    private _source: TemplateSource;
 
     public constructor(version: FuncVersion, source: TemplateSource) {
         this.version = version;
-        this._source = source;
+        this.source = source;
         this.projectPath = path.join(testFolderPath, getRandomHexString());
     }
 
     public get suiteName(): string {
-        return `Create Function ${this.language} ${this.version} (${this._source})`;
+        return `Create Function ${this.language} ${this.version} (${this.source})`;
     }
 
     /**
@@ -43,7 +43,7 @@ export abstract class FunctionTesterBase implements Disposable {
 
     public async initAsync(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionInit', async context => {
-            await runForTemplateSource(context, this._source, async (templateProvider) => {
+            await runForTemplateSource(context, this.source, async (templateProvider) => {
                 await this.initializeTestFolder(this.projectPath);
 
                 // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
@@ -54,7 +54,7 @@ export abstract class FunctionTesterBase implements Disposable {
 
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
-            await runForTemplateSource(context, this._source, async (templateProvider) => {
+            await runForTemplateSource(context, this.source, async (templateProvider) => {
                 const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
@@ -88,7 +88,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public async testCreateFunction(templateName: string, ...inputs: string[]): Promise<void> {
         this.testedFunctions.push(templateName);
         await runWithTestActionContext('testCreateFunction', async context => {
-            await runForTemplateSource(context, this._source, async () => {
+            await runForTemplateSource(context, this.source, async () => {
                 await this.testCreateFunctionInternal(context, this.projectPath, templateName, inputs.slice());
             });
         });
