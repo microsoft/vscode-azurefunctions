@@ -384,7 +384,7 @@
                 },
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
-                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp.*azureResourceTypeGroup/i",
+                    "when": "view == azureResourceGroups && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@2"
                 },
                 {
