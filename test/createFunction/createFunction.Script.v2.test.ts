@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../../extension.bundle';
+import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
 import { allTemplateSources, isLongRunningVersion } from '../global.test';
 import { getRotatingAuthLevel } from '../nightly/getRotatingValue';
 import { runWithFuncSetting } from '../runWithSetting';
@@ -181,7 +181,7 @@ function addSuite(tester: FunctionTesterBase): void {
     });
 
     function fixDurableLabel(label: string): string {
-        if (tester.language === ProjectLanguage.PowerShell) {
+        if (tester.language === ProjectLanguage.PowerShell && tester.source !== TemplateSource.Staging) {
             label += ' (preview)';
         }
         return label;
