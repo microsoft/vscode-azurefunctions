@@ -26,7 +26,9 @@ import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
+import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
 import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
+import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
@@ -93,8 +95,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
-            if (context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1) {
-                promptSteps.push(new PythonLocationStep());
+            const isV2PythonModel = context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1;
+
+            if (isV2PythonModel) {
+                promptSteps.push(new PythonLocationStep(), new PythonScriptStep());
             }
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
@@ -110,7 +114,11 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                     executeSteps.push(new TypeScriptFunctionCreateStep());
                     break;
                 default:
-                    executeSteps.push(new ScriptFunctionCreateStep());
+                    if (isV2PythonModel) {
+                        executeSteps.push(new PythonFunctionCreateStep());
+                    } else {
+                        executeSteps.push(new ScriptFunctionCreateStep());
+                    }
                     break;
             }
 
