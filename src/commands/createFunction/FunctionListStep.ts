@@ -26,6 +26,7 @@ import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
+import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
 import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
@@ -91,6 +92,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             }
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
+
+            if (context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1) {
+                promptSteps.push(new PythonLocationStep());
+            }
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
             switch (context.language) {
