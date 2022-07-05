@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.7.4 - 2022-07-05
+
+### Changed
+- Updated minimum version of VS Code to 1.66.0 [#3231](https://github.com/microsoft/vscode-azurefunctions/pull/3231)
+- Updated @vscode/extension-telemetry to 0.6.2 [#3229](https://github.com/microsoft/vscode-azurefunctions/pull/3229)
+
+### Fixed
+- Add node types to TS project template [#3199](https://github.com/microsoft/vscode-azurefunctions/issues/3199)
+- Missing Advanced Create context menu item [#3171](https://github.com/microsoft/vscode-azurefunctions/issues/3171)
+
 ## 1.7.3 - 2022-06-01
 
 ### Changed
