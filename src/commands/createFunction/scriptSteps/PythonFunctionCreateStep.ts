@@ -3,13 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import * as fse from 'fs-extra';
 import * as path from 'path';
-import { functionJsonFileName, ProjectLanguage } from '../../../constants';
-import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
+import { ProjectLanguage } from '../../../constants';
+import { IFunctionBinding } from '../../../funcConfig/function';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
-import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -44,11 +42,11 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             triggerBinding[setting.name] = getBindingSetting(context, setting);
         }
 
-        const functionJson: IFunctionJson = template.functionJson.data;
+        // TODO: Pull out correct content once it's actually in the feed.
+        const content = template.templateFiles['__init__.py'];
 
         if (context.functionLocation === FunctionLocation.Document) {
-            const content = template.templateFiles['__init__.py'];
-            const functionName = context.functionName ?? template.defaultFunctionName;
+            const functionName = nonNullProp(context, 'functionName');
 
             openReadOnlyContent(
                 {
@@ -60,19 +58,11 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
 
             return ''; // TODO: Allow not returning filename.
         } else {
-            const functionPath: string = path.join(context.projectPath, nonNullProp(context, 'functionName'));
-            await fse.ensureDir(functionPath);
-            await Promise.all(Object.keys(template.templateFiles).map(async f => {
-                await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
-            }));
+            const functionScriptPath: string = path.join(context.projectPath, nonNullProp(context, 'functionScript'));
 
+            await fse.appendFile(functionScriptPath, '\r\n' + content);
 
-            const functionJsonPath: string = path.join(functionPath, functionJsonFileName);
-            await fsUtil.writeFormattedJson(functionJsonPath, functionJson);
-
-            const language: ProjectLanguage = nonNullProp(context, 'language');
-            const fileName: string | undefined = getScriptFileNameFromLanguage(language);
-            return fileName ? path.join(functionPath, fileName) : functionJsonPath;
+            return functionScriptPath;
         }
     }
 }
