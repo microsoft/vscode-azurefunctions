@@ -7,6 +7,7 @@ import { BlobServiceClient } from '@azure/storage-blob';
 import { AzureWizard, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
+import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWebJobsStorageExecuteStep";
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
@@ -15,6 +16,7 @@ import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIs
 import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
+import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
@@ -24,6 +26,10 @@ import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
     shouldContinue: boolean;
+}
+
+function isPythonV2Plus(projectLanguage: string | undefined, projectLanguageModel: number | undefined): boolean {
+    return projectLanguage === 'Python' && projectLanguageModel !== undefined && projectLanguageModel > 1;
 }
 
 export async function preDebugValidate(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
@@ -42,12 +48,16 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
             if (projectPath) {
                 const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
+
                 context.telemetry.properties.projectLanguage = projectLanguage;
+                context.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
+
+                context.telemetry.properties.lastValidateStep = 'functionVersion';
+                shouldContinue = await validateFunctionVersion(context, projectLanguage, projectLanguageModel, workspace.uri.fsPath);
 
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
                 await validateWorkerRuntime(context, projectLanguage, projectPath);
-
-                const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
 
                 context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
                 await validateAzureWebJobsStorage(context, projectLanguage, projectLanguageModel, projectPath);
@@ -99,6 +109,29 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
     }
 
     throw new Error(localize('noDebug', 'Failed to find launch config matching name "{0}", request "{1}", and type "{2}".', debugConfig.name, debugConfig.request, debugConfig.type));
+}
+
+/**
+ * Ensure that that Python V2+ projects have an appropriate version of Functions tools installed.
+ */
+async function validateFunctionVersion(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, workspacePath: string): Promise<boolean> {
+    const validateTools = getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath) !== false;
+
+    if (validateTools && isPythonV2Plus(projectLanguage, projectLanguageModel)) {
+        const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
+
+        // TODO: Update range with official version.
+        const expectedVersionRange = '>=4.0.4515';
+
+        if (version && !semver.satisfies(version, expectedVersionRange)) {
+            const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}")?', version, expectedVersionRange);
+            const debugAnyway: vscode.MessageItem = { title: localize('debugWithInvalidFunctionVersionAnyway', 'Debug anyway') };
+            const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'failedWithInvalidFunctionVersion' }, debugAnyway);
+            return result === debugAnyway;
+        }
+    }
+
+    return true;
 }
 
 /**
