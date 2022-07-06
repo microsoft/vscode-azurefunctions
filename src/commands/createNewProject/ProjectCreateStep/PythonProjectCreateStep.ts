@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
+import { IHostJsonV2 } from '../../../funcConfig/host';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -51,10 +53,8 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        const isModelV2Plus = this.model && this.model > 1;
-
-        // The new (i.e. > 1) Python model requires enabling worker indexing...
-        if (isModelV2Plus) {
+        // The Python V2+ model requires enabling worker indexing...
+        if (this.isModelV2Plus) {
             this.localSettingsJson.Values![azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
         }
 
@@ -73,8 +73,8 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
             await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
         }
 
-        // THe new (i.e. > 1) Python model has a single, project-level source file.
-        if (isModelV2Plus)
+        // The Python V2+ model has a single, project-level source file.
+        if (this.isModelV2Plus)
         {
             const functionAppPath: string = path.join(context.projectPath, pythonFunctionAppFileName);
 
@@ -83,6 +83,21 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
                 await window.showTextDocument(await workspace.openTextDocument(Uri.file(functionAppPath)));
             }
         }
+    }
+
+    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+        const hostJson: IHostJsonV2 = await super.getHostContent(context);
+
+        // Python V2+ model currently does not work when extension bundles are specified.
+        if (this.isModelV2Plus) {
+            hostJson.extensionBundle = undefined;
+        }
+
+        return hostJson;
+    }
+
+    private get isModelV2Plus(): boolean {
+        return this.model !== undefined && this.model > 1;
     }
 }
 
