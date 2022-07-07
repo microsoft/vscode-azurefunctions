@@ -31,7 +31,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: localize('pythonPreview', 'Python (Preview)'), data: { language: ProjectLanguage.Python, model: previewPythonModel } },
+            { label: localize('pythonPreview', 'Python (New Model Preview)'), data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];

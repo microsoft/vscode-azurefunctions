@@ -38,7 +38,8 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
 
             return ''; // TODO: Allow not returning filename.
         } else {
-            const functionScriptPath: string = path.join(context.projectPath, nonNullProp(context, 'functionScript'));
+            const functionScript = nonNullProp(context, 'functionScript');
+            const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
 
             await fse.appendFile(functionScriptPath, '\r\n' + content);
 
