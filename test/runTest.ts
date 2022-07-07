@@ -13,7 +13,8 @@ async function main(): Promise<void> {
             extensionDevelopmentPath: repoRoot,
             launchArgs: [
                 path.resolve(repoRoot, 'test', 'test.code-workspace'),
-                '--disable-workspace-trust'
+                '--disable-workspace-trust',
+                '--install-extension', 'ms-vscode.azure-account'
             ],
             extensionTestsPath: path.resolve(repoRoot, 'dist', 'test', 'index'),
             extensionTestsEnv: {
