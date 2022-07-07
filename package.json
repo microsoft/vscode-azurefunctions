@@ -1062,6 +1062,7 @@
         "@types/xml2js": "^0.4.5",
         "@types/xregexp": "4.3.0",
         "@typescript-eslint/eslint-plugin": "^4.28.3",
+        "@vscode/test-electron": "^2.1.5",
         "copy-webpack-plugin": "^6.0.3",
         "eslint": "^7.19.0",
         "eslint-plugin-import": "^2.22.1",
@@ -1079,7 +1080,6 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^1.87.0",
-        "vscode-test": "^1.5.2",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
     },
