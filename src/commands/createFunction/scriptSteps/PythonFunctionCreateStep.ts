@@ -28,7 +28,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
         if (context.functionLocation === FunctionLocation.Document) {
             const functionName = nonNullProp(context, 'functionName');
 
-            openReadOnlyContent(
+            await openReadOnlyContent(
                 {
                     label: functionName,
                     fullId: `vscode-azurefunctions/functions/${functionName}`

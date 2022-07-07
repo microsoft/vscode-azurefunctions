@@ -55,7 +55,9 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         // The Python V2+ model requires enabling worker indexing...
         if (this.isModelV2Plus) {
-            this.localSettingsJson.Values![azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
+            this.localSettingsJson.Values = this.localSettingsJson.Values ?? {};
+
+            this.localSettingsJson.Values[azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
         }
 
         await super.executeCore(context, progress);
