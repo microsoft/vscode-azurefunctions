@@ -50,7 +50,7 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         workspaceFolder = projectTi.workspaceFolder;
         workspacePath = projectTi.workspacePath;
         projectPath = projectTi.effectiveProjectPath;
-        language = projectTi.langauge;
+        language = projectTi.language;
         version = projectTi.version;
     }
 

@@ -20,16 +20,13 @@ import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreT
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
+import { isPythonV2Plus } from '../utils/pythonUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 
 export interface IPreDebugValidateResult {
     workspace: vscode.WorkspaceFolder;
     shouldContinue: boolean;
-}
-
-function isPythonV2Plus(projectLanguage: string | undefined, projectLanguageModel: number | undefined): boolean {
-    return projectLanguage === 'Python' && projectLanguageModel !== undefined && projectLanguageModel > 1;
 }
 
 export async function preDebugValidate(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
@@ -124,7 +121,7 @@ async function validateFunctionVersion(context: IActionContext, projectLanguage:
         const expectedVersionRange = '>=4.0.4515';
 
         if (version && !semver.satisfies(version, expectedVersionRange)) {
-            const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}")?', version, expectedVersionRange);
+            const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}").', version, expectedVersionRange);
             const debugAnyway: vscode.MessageItem = { title: localize('debugWithInvalidFunctionVersionAnyway', 'Debug anyway') };
             const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'failedWithInvalidFunctionVersion' }, debugAnyway);
             return result === debugAnyway;
@@ -156,9 +153,7 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
             }));
 
             // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.
-            const isPythonV2Plus = projectLanguage === 'Python' && projectLanguageModel && projectLanguageModel > 1;
-
-            if (functions.some(f => !f.isHttpTrigger) || isPythonV2Plus) {
+            if (functions.some(f => !f.isHttpTrigger) || isPythonV2Plus(projectLanguage, projectLanguageModel)) {
                 const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
                 const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
                     promptSteps: [new AzureWebJobsStoragePromptStep(true /* suppressSkipForNow */)],

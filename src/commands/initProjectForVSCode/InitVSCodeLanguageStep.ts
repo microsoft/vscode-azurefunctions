@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage } from '../../constants';
+import { previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
@@ -31,7 +31,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: localize('pythonPreview', 'Python (New Model Preview)'), data: { language: ProjectLanguage.Python, model: previewPythonModel } },
+            { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];

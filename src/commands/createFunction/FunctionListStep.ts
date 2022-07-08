@@ -13,6 +13,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
+import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
@@ -95,7 +96,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
-            const isV2PythonModel = context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1;
+            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
 
             if (isV2PythonModel) {
                 promptSteps.push(new PythonLocationStep(), new PythonScriptStep());

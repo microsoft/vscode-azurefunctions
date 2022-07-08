@@ -8,10 +8,11 @@ import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as semver from 'semver';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
+import { ProjectLanguage, pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { isPythonV2Plus } from '../../../utils/pythonUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
@@ -99,7 +100,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     private get isModelV2Plus(): boolean {
-        return this.model !== undefined && this.model > 1;
+        return isPythonV2Plus(ProjectLanguage.Python, this.model);
     }
 }
 

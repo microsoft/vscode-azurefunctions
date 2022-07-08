@@ -5,10 +5,11 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage } from '../../constants';
+import { previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
+import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
@@ -41,7 +42,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: localize('pythonPreview', 'Python (New Model Preview)'), data: { language: ProjectLanguage.Python, model: previewPythonModel } },
+            { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.Java, data: { language: ProjectLanguage.Java } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: localize('customHandler', 'Custom Handler'), data: { language: ProjectLanguage.Custom } }
@@ -108,11 +109,9 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         const wizardOptions: IWizardOptions<IProjectWizardContext> = { promptSteps, executeSteps };
 
-        const isPythonV2Plus = context.language === ProjectLanguage.Python && context.languageModel && context.languageModel > 1;
-
         // Languages except Python v2+ and Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (!isPythonV2Plus) {
+        if (!isPythonV2Plus(context.language, context.languageModel)) {
             promptSteps.push(await FunctionListStep.create(context, {
                 isProjectWizard: true,
                 templateId: this._templateId,

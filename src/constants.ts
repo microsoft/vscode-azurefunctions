@@ -101,6 +101,8 @@ export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
+export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (New Model Preview)');
+
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {

@@ -8,11 +8,12 @@ import { AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscod
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
-import { functionJsonFileName, ProjectLanguage } from '../../constants';
+import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
+import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
@@ -34,7 +35,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        const isParentPythonV2Plus = this.parent.langauge === ProjectLanguage.Python && this.parent.languageModel && this.parent.languageModel > 1;
+        const isParentPythonV2Plus = isPythonV2Plus(this.parent.language, this.parent.languageModel);
 
         if (this.parent.isIsolated || isParentPythonV2Plus) {
             return await this.getChildrenForIsolatedProject(context);
