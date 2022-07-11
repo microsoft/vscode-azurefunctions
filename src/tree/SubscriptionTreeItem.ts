@@ -13,6 +13,7 @@ import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../com
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
+import { CreateFunctionAppActivityOptions } from '../CreateFunctionAppActivityDisplayOptions';
 import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -88,8 +89,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             resourceGroupDeferLocationStep: true,
             version,
             language,
-            ...(await createActivityContext())
+            ...(await createActivityContext()),
         });
+
+        wizardContext.displayOptions = new CreateFunctionAppActivityOptions(wizardContext);
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];
