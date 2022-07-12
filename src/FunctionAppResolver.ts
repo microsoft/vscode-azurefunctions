@@ -20,6 +20,6 @@ export class FunctionAppResolver implements AppResourceResolver {
     }
 
     public matchesResource(resource: AppResource): boolean {
-        return resource.type.toLowerCase() === 'microsoft.web/sites' && !!resource.kind?.includes('functionapp');
+        return resource.type.toLowerCase() === 'microsoft.web/sites' && !!resource.kind?.includes('functionapp') && !resource.kind?.includes('workflowapp');
     }
 }
