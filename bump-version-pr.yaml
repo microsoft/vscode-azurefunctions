@@ -1,0 +1,30 @@
+name: Bump version after release
+
+# Run when release is published, or manually triggered
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Bump version
+        id: bump
+        uses: alexweininger/bump-prerelease-version@v0.1.1
+      
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          title: ${{ env.MESSAGE }}
+          body: Automatically created by ${{ env.RUN_LINK }}
+          commit-message: ${{ env.MESSAGE }}
+          branch: bot/bump-${{ steps.bump.outputs.new-version }}
+          base: main
+          author: GitHub <noreply@github.com>
+        env:
+          RUN_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          MESSAGE: Bump version after release

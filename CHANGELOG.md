@@ -1,5 +1,40 @@
 # Change Log
 
+## 1.7.4 - 2022-07-05
+
+### Changed
+- Updated minimum version of VS Code to 1.66.0 [#3231](https://github.com/microsoft/vscode-azurefunctions/pull/3231)
+- Updated @vscode/extension-telemetry to 0.6.2 [#3229](https://github.com/microsoft/vscode-azurefunctions/pull/3229)
+
+### Fixed
+- Add node types to TS project template [#3199](https://github.com/microsoft/vscode-azurefunctions/issues/3199)
+- Missing Advanced Create context menu item [#3171](https://github.com/microsoft/vscode-azurefunctions/issues/3171)
+
+## 1.7.3 - 2022-06-01
+
+### Changed
+- Update @vscode/extension-telemetry to 0.5.2 [#3206](https://github.com/microsoft/vscode-azurefunctions/issues/3206)
+
+## 1.7.2 - 2022-05-27
+
+### Fixed
+- Error when picking Create new local app setting from local.settings.json when creating blob trigger [#3191](https://github.com/microsoft/vscode-azurefunctions/issues/3191)
+
+## 1.7.1 - 2022-05-26
+
+### Added
+- Deploy command is now accessible via the Workspace Deploy menu
+
+## 1.7.0 - 2022-05-24
+
+We've made some large design changes to the Azure extensions for VS Code. [View App Centric release notes](https://aka.ms/AzCode/AppCentric)
+
+### Changed
+- Add Execute Step in createFunction API [#3150](https://github.com/microsoft/vscode-azurefunctions/pull/3150)
+
+### Fixed
+- Fix "Create Project" flow losing options [#3116](https://github.com/microsoft/vscode-azurefunctions/pull/3116)
+
 ## 1.6.2 - 2022-04-13
 ### Fixed
 - Zip deploy fails with ECONNRESET or 400 Bad Request on VS Code versions `>=1.66.0` [#2844](https://github.com/microsoft/vscode-azurefunctions/issues/2844)
