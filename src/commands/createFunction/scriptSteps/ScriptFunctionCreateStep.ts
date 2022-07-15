@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import * as fsUtil from '../../../utils/fs';
-import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';

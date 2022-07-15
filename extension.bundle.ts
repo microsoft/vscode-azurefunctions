@@ -15,7 +15,7 @@
 // The tests should import '../extension.bundle'. At design-time they live in tests/ and so will pick up this file (extension.bundle.ts).
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
 export { createAzureClient, createGenericClient } from '@microsoft/vscode-azext-azureutils';
-export { AzExtTreeDataProvider, DialogResponses, IActionContext, nonNullValue, parseError, registerOnActionStartHandler } from '@microsoft/vscode-azext-utils';
+export { AzExtTreeDataProvider, DialogResponses, IActionContext, nonNullValue, parseError, registerOnActionStartHandler, nonNullProp } from '@microsoft/vscode-azext-utils';
 export * from './src/commands/addBinding/addBinding';
 export * from './src/commands/copyFunctionUrl';
 export * from './src/commands/createFunction/createFunction';
@@ -43,7 +43,6 @@ export * from './src/utils/cpUtils';
 export * from './src/utils/delay';
 export * from './src/utils/envUtils';
 export * from './src/utils/fs';
-export * from './src/utils/nonNull';
 export * from './src/utils/nugetUtils';
 export * from './src/utils/parseJson';
 export * from './src/utils/requestUtils';

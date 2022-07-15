@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ProjectLanguage } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IBindingTemplate } from '../../templates/IBindingTemplate';
-import { nonNullProp } from '../../utils/nonNull';
 import { IBindingWizardContext } from './IBindingWizardContext';
 import { addBindingSettingSteps } from './settingSteps/addBindingSettingSteps';
 

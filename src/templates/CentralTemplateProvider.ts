@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { IActionContext, nonNullValue, parseError } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, Disposable, workspace } from 'vscode';
 import { ProjectLanguage, projectTemplateKeySetting, TemplateFilter } from '../constants';
 import { ext, TemplateSource } from '../extensionVariables';
 import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
-import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';

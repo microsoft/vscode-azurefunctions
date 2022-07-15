@@ -5,11 +5,10 @@
 
 import { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { IBaseResourceWithName, promptForResource } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';
 
 export class EventHubAuthRuleListStep extends AzureWizardPromptStep<IEventHubWizardContext> {

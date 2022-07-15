@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
 import { setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
 import { IBindingSetting } from '../../../templates/IBindingTemplate';
-import { nonNullProp } from '../../../utils/nonNull';
+
 import { setBindingSetting } from '../../createFunction/IFunctionWizardContext';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 

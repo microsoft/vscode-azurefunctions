@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { SiteClient } from '@microsoft/vscode-azext-azureappservice';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { IActionContext, nonNullValue, parseError } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
@@ -13,7 +13,6 @@ import { localize } from '../localize';
 import { FunctionTreeItemBase } from '../tree/FunctionTreeItemBase';
 import { FuncHostRequest } from '../tree/IProjectTreeItem';
 import { RemoteFunctionTreeItem } from '../tree/remoteProject/RemoteFunctionTreeItem';
-import { nonNullValue } from '../utils/nonNull';
 import { requestUtils } from '../utils/requestUtils';
 
 export async function executeFunction(context: IActionContext, node?: FunctionTreeItemBase): Promise<void> {

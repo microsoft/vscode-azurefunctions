@@ -5,11 +5,10 @@
 
 import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { getResourceGroupFromId, IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { IActionContext, IAzureQuickPickItem, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
 import { localize } from '../localize';
 import { createStorageClient } from './azureClients';
-import { nonNullProp, nonNullValue } from './nonNull';
 
 export interface IBaseResourceWithName {
     name?: string;

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { BindingSettingValue } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
-import { nonNullProp } from '../../../utils/nonNull';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { BindingSettingStepBase } from './BindingSettingStepBase';
 

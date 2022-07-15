@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { InputBoxOptions } from "vscode";
 import { localize } from "../../../localize";
-import { nonNullProp } from "../../../utils/nonNull";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 export class JavaAppNameStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, DialogResponses, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProgressLocation, Uri, window } from "vscode";
 import { ProjectLanguage } from "../../../constants";
@@ -11,7 +11,6 @@ import { ext } from "../../../extensionVariables";
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
 import { confirmEditJsonFile } from '../../../utils/fs';
-import { nonNullProp } from '../../../utils/nonNull';
 import { openUrl } from '../../../utils/openUrl';
 import { IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { IDotnetFunctionWizardContext } from '../dotnetSteps/IDotnetFunctionWizardContext';

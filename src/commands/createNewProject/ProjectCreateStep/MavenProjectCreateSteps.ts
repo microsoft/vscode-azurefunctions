@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
@@ -10,7 +11,6 @@ import { JavaBuildTool } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import * as fsUtil from '../../../utils/fs';
 import { mavenUtils } from '../../../utils/mavenUtils';
-import { nonNullProp } from '../../../utils/nonNull';
 import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, GenericTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
@@ -12,7 +12,6 @@ import { functionJsonFileName } from '../../constants';
 import { ParsedFunctionJson } from '../../funcConfig/function';
 import { runningFuncTaskMap } from '../../funcCoreTools/funcHostTask';
 import { localize } from '../../localize';
-import { nonNullProp } from '../../utils/nonNull';
 import { requestUtils } from '../../utils/requestUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';

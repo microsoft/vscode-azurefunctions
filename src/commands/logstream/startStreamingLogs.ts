@@ -7,7 +7,7 @@ import { ApplicationInsightsManagementClient, ApplicationInsightsManagementModel
 import { SiteLogsConfig, StringDictionary } from '@azure/arm-appservice';
 import * as appservice from '@microsoft/vscode-azext-azureappservice';
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtTreeItem, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, DialogResponses, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -15,7 +15,6 @@ import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionT
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
-import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { enableFileLogging } from './enableFileLogging';
 

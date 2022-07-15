@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { nonNullProp } from './nonNull';
+import { IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { parseJson } from './parseJson';
 import { requestUtils } from './requestUtils';
 

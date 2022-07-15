@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Progress } from 'vscode';
@@ -11,7 +11,6 @@ import { requirementsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
-import { nonNullProp } from '../../../utils/nonNull';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IPythonVenvWizardContext } from './IPythonVenvWizardContext';
 import { getPythonVersion } from './pythonVersion';

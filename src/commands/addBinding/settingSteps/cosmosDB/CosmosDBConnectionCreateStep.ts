@@ -5,8 +5,8 @@
 
 import { CosmosDBManagementClient, DatabaseAccountGetResults, DatabaseAccountListKeysResult } from '@azure/arm-cosmosdb';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { createCosmosDBClient } from '../../../../utils/azureClients';
-import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
 import { ICosmosDBWizardContext } from './ICosmosDBWizardContext';

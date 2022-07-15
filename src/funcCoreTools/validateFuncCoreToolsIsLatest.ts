@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
-import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { PackageManager } from '../constants';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
-import { nonNullProp } from '../utils/nonNull';
 import { openUrl } from '../utils/openUrl';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting, updateGlobalSetting } from '../vsCodeConfig/settings';

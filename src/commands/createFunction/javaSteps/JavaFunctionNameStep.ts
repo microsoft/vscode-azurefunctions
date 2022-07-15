@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import { localize } from "../../../localize";
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
-import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaClassName, getJavaFunctionFilePath, getJavaPackagePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IFunctionWizardContext } from '../IFunctionWizardContext';

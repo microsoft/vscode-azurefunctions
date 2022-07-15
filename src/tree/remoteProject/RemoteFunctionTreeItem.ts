@@ -5,12 +5,11 @@
 
 import { FunctionEnvelope, HostKeys } from '@azure/arm-appservice';
 import { IFunctionKeys } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, IActionContext, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import { ProgressLocation, window } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { HttpAuthLevel, ParsedFunctionJson } from '../../funcConfig/function';
 import { localize } from '../../localize';
-import { nonNullProp } from '../../utils/nonNull';
 import { FunctionTreeItemBase } from '../FunctionTreeItemBase';
 import { RemoteFunctionsTreeItem } from './RemoteFunctionsTreeItem';
 

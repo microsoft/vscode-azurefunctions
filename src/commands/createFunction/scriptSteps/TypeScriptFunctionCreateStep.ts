@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { IFunctionJson } from '../../../funcConfig/function';
-import { nonNullProp } from '../../../utils/nonNull';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { ScriptFunctionCreateStep } from './ScriptFunctionCreateStep';
 

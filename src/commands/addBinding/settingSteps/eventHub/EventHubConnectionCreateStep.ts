@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from '../AzureConnectionCreateStepBase';
 import { IEventHubWizardContext } from './IEventHubWizardContext';

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
@@ -12,7 +12,6 @@ import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmEditJsonFile, isPathEqual, isSubpath } from '../../../utils/fs';
-import { nonNullProp } from '../../../utils/nonNull';
 import { isMultiRootWorkspace } from '../../../utils/workspace';
 import { IExtensionsJson } from '../../../vsCodeConfig/extensions';
 import { getDebugConfigs, getLaunchVersion, ILaunchJson, isDebugConfigEqual, launchVersion, updateDebugConfigs, updateLaunchVersion } from '../../../vsCodeConfig/launch';

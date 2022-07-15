@@ -6,7 +6,7 @@
 import { NameValuePair, Site, SiteConfig, WebSiteManagementClient } from '@azure/arm-appservice';
 import { CustomLocation, IAppServiceWizardContext, ParsedSite, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
 import { contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
@@ -17,7 +17,6 @@ import { localize } from '../../localize';
 import { getStorageConnectionString } from '../../utils/azure';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
-import { nonNullProp } from '../../utils/nonNull';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';

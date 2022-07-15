@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { localize } from "../../../localize";
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
-import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { getFileExtension, IDotnetFunctionWizardContext } from './IDotnetFunctionWizardContext';
 

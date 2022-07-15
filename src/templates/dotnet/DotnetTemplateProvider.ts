@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
@@ -13,7 +13,6 @@ import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { cliFeedUtils } from '../../utils/cliFeedUtils';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { nonNullValue } from '../../utils/nonNull';
 import { parseJson } from '../../utils/parseJson';
 import { requestUtils } from '../../utils/requestUtils';
 import { IBindingTemplate } from '../IBindingTemplate';

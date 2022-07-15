@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, IActionContext, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
 import { ProjectLanguage, projectTemplateKeySetting } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -11,7 +11,6 @@ import { FuncVersion } from "../../FuncVersion";
 import { localize } from "../../localize";
 import { LocalFunctionTreeItem } from "../../tree/localProject/LocalFunctionTreeItem";
 import { LocalProjectTreeItem } from "../../tree/localProject/LocalProjectTreeItem";
-import { nonNullValue } from "../../utils/nonNull";
 import { getContainingWorkspace } from "../../utils/workspace";
 import { getWorkspaceSetting } from "../../vsCodeConfig/settings";
 import { verifyInitForVSCode } from "../../vsCodeConfig/verifyInitForVSCode";

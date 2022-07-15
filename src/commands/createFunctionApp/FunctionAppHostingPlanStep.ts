@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppServicePlanListStep, IAppServiceWizardContext, setLocationsTask } from '@microsoft/vscode-azext-azureappservice';
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../localize';
 import { getRandomHexString } from '../../utils/fs';
-import { nonNullProp } from '../../utils/nonNull';
 
 export class FunctionAppHostingPlanStep extends AzureWizardPromptStep<IAppServiceWizardContext> {
     public async prompt(context: IAppServiceWizardContext): Promise<void> {
