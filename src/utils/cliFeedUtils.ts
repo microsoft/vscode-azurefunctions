@@ -11,7 +11,7 @@ import { localize } from '../localize';
 import { feedUtils } from './feedUtils';
 
 export namespace cliFeedUtils {
-    const funcCliFeedV4Url: string = 'https://aka.ms/AAbbk68';
+    const funcCliFeedV4Url: string = 'https://raw.githubusercontent.com/Azure/azure-functions-tooling-feed/2c07ce9fd6f0187b8e55297c4ecc2b622eccbfbe/cli-feed-v4.json';
 
     interface ICliFeed {
         tags: {
