@@ -3,20 +3,22 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 import * as cp from 'child_process';
 import * as path from 'path';
-import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
 
 async function main(): Promise<void> {
     try {
-        const vscodeExecutablePath = await downloadAndUnzipVSCode('1.66.0');
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('1.69.0');
         const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 
         cp.spawnSync(
             cli,
             [
                 ...args,
-                '--install-extension', 'ms-vscode.azure-account',
+                // '--install-extension', 'ms-vscode.azure-account@0.10.1',
+                '--install-extension', 'ms-vscode.azure-account', '--force',
+                // '--install-extension', '/Users/alex/dev/vscode-azure-account/azure-account-0.11.1-alpha.0.vsix',
                 '--install-extension', 'ms-azuretools.vscode-azureresourcegroups',
                 '--install-extension', 'ms-python.python',
             ],
@@ -27,6 +29,7 @@ async function main(): Promise<void> {
 
         const repoRoot: string = path.resolve(__dirname, '..', '..');
         await runTests({
+            vscodeExecutablePath,
             extensionDevelopmentPath: repoRoot,
             launchArgs: [
                 path.resolve(repoRoot, 'test', 'test.code-workspace'),
