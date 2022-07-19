@@ -4,34 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
-import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
 import { localize } from '../localize';
 import { createStorageClient } from './azureClients';
 import { nonNullProp, nonNullValue } from './nonNull';
-
-function parseResourceId(id: string): RegExpMatchArray {
-    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/);
-
-    if (matches === null || matches.length < 3) {
-        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
-    }
-
-    return matches;
-}
-
-export function getResourceGroupFromId(id: string): string {
-    return parseResourceId(id)[2];
-}
-
-export function getSubscriptionFromId(id: string): string {
-    return parseResourceId(id)[1];
-}
-
-export function getNameFromId(id: string): string {
-    return parseResourceId(id)[4];
-}
 
 export interface IBaseResourceWithName {
     name?: string;
