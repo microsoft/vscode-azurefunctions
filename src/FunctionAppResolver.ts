@@ -1,7 +1,7 @@
+import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource";
-import { getResourceGroupFromId } from "./utils/azure";
 import { createWebSiteClient } from "./utils/azureClients";
 
 export class FunctionAppResolver implements AppResourceResolver {
@@ -20,6 +20,8 @@ export class FunctionAppResolver implements AppResourceResolver {
     }
 
     public matchesResource(resource: AppResource): boolean {
-        return resource.type.toLowerCase() === 'microsoft.web/sites' && !!resource.kind?.includes('functionapp');
+        return resource.type.toLowerCase() === 'microsoft.web/sites'
+            && !!resource.kind?.includes('functionapp')
+            && !resource.kind?.includes('workflowapp'); // exclude logic apps
     }
 }

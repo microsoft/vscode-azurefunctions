@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
-import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
+import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
 import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
@@ -116,6 +116,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps.push(new ResourceGroupCreateStep());
             executeSteps.push(new AppServicePlanCreateStep());
             executeSteps.push(new StorageAccountCreateStep(storageAccountCreateOptions));
+            executeSteps.push(new LogAnalyticsCreateStep());
             executeSteps.push(new AppInsightsCreateStep());
         } else {
             promptSteps.push(new ResourceGroupListStep());
