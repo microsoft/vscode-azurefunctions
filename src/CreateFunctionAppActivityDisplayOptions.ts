@@ -3,13 +3,13 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityOptionsFactoryBase, AzExtParentTreeItem, ExecuteActivityContext, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { ActivityTreeItemOptionsBase, AzExtParentTreeItem, ExecuteActivityContext, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ActivityTreeItemOptions, AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { ThemeIcon } from "vscode";
 import { localize } from "./localize";
 
 // Class takes care of customizing how an activity is displayed as a tree item
-export class CreateFunctionAppActivityOptions extends ActivityOptionsFactoryBase<ExecuteActivityContext> {
+export class CreateFunctionAppActivityOptions extends ActivityTreeItemOptionsBase<ExecuteActivityContext> {
 
     constructor(protected readonly context: ExecuteActivityContext) {
         super(context);
