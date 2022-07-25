@@ -13,7 +13,7 @@ import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../com
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
 import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
-import { CreateFunctionAppActivityOptions } from '../CreateFunctionAppActivityDisplayOptions';
+import { CreateFunctionAppActivity } from '../CreateFunctionAppActivity';
 import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -92,7 +92,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ...(await createActivityContext()),
         });
 
-        wizardContext.displayOptions = new CreateFunctionAppActivityOptions(wizardContext);
+        wizardContext.wizardActivity = CreateFunctionAppActivity;
 
         const promptSteps: AzureWizardPromptStep<IAppServiceWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [];

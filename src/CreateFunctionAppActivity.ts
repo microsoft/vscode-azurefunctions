@@ -3,21 +3,17 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityTreeItemOptionsBase, AzExtParentTreeItem, ExecuteActivityContext, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, ExecuteActivity, ExecuteActivityContext, GenericTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ActivityTreeItemOptions, AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { ThemeIcon } from "vscode";
 import { localize } from "./localize";
 
 // Class takes care of customizing how an activity is displayed as a tree item
-export class CreateFunctionAppActivityOptions extends ActivityTreeItemOptionsBase<ExecuteActivityContext> {
-
-    constructor(protected readonly context: ExecuteActivityContext) {
-        super(context);
-    }
+export class CreateFunctionAppActivity extends ExecuteActivity<ExecuteActivityContext> {
 
     // make it so I don't have to copy the Click to view resource code?
-    protected override successState(): ActivityTreeItemOptions {
-        const activityResult = this.context.activityResult;
+    public override successState(): ActivityTreeItemOptions {
+        const activityResult = this.data.context.activityResult;
         return {
             label: this.label,
             getChildren: activityResult ? ((parent: AzExtParentTreeItem) => {
