@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createTestActionContext } from '@microsoft/vscode-azext-dev';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString, ProjectLanguage, verifyVersionAndLanguage } from '../extension.bundle';
 import { assertThrowsAsync } from './assertThrowsAsync';
@@ -17,13 +17,13 @@ suite('verifyVersionAndLanguage', () => {
     suiteSetup(async () => {
         net3Path = path.join(testFolderPath, getRandomHexString());
         const net3ProjPath = path.join(net3Path, 'test.csproj');
-        await fse.ensureFile(net3ProjPath);
-        await fse.writeFile(net3ProjPath, net3Proj);
+        await AzExtFsExtra.ensureFile(net3ProjPath);
+        await AzExtFsExtra.writeFile(net3ProjPath, net3Proj);
 
         net5Path = path.join(testFolderPath, getRandomHexString());
         const net5ProjPath = path.join(net5Path, 'test.csproj');
-        await fse.ensureFile(net5ProjPath);
-        await fse.writeFile(net5ProjPath, net5Proj);
+        await AzExtFsExtra.ensureFile(net5ProjPath);
+        await AzExtFsExtra.writeFile(net5ProjPath, net5Proj);
     });
 
 

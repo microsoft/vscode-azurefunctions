@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { RelativePattern, workspace } from 'vscode';
 import { ProjectLanguage } from '../../constants';
@@ -52,7 +51,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
         const projectFilePath: string = getDotnetProjectTemplatePath(context, this.version, projKey);
         const itemFilePath: string = getDotnetItemTemplatePath(context, this.version, projKey);
-        if (!await fse.pathExists(projectFilePath) || !await fse.pathExists(itemFilePath)) {
+        if (!await AzExtFsExtra.pathExists(projectFilePath) || !await AzExtFsExtra.pathExists(itemFilePath)) {
             return undefined;
         }
 
@@ -135,7 +134,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
         const files: string[] = [getDotnetProjectTemplatePath(context, this.version, projKey), getDotnetItemTemplatePath(context, this.version, projKey)];
         for (const file of files) {
-            await fse.copy(this.convertToBackupFilePath(projKey, file), file);
+            await AzExtFsExtra.copy(this.convertToBackupFilePath(projKey, file), file)
         }
         return await this.parseTemplates(context, projKey);
     }
@@ -144,7 +143,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
         const files: string[] = [getDotnetProjectTemplatePath(context, this.version, projKey), getDotnetItemTemplatePath(context, this.version, projKey)];
         for (const file of files) {
-            await fse.copy(file, this.convertToBackupFilePath(projKey, file));
+            await AzExtFsExtra.copy(file, this.convertToBackupFilePath(projKey, file));
         }
     }
 
@@ -161,7 +160,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
     public async clearCachedTemplates(context: IActionContext): Promise<void> {
         const projKey = await this.getProjKey(context);
         await this.deleteCachedValue(projKey);
-        await fse.remove(getDotnetTemplateDir(context, this.version, projKey));
+        await AzExtFsExtra.deleteResource(getDotnetTemplateDir(context, this.version, projKey), { recursive: true });
     }
 
     private async parseTemplates(context: IActionContext, projKey: string): Promise<ITemplates> {

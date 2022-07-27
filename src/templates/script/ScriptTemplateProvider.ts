@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
@@ -62,8 +61,8 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
 
             return await this.parseTemplates(templatesPath);
         } finally {
-            if (await fse.pathExists(templatesPath)) {
-                await fse.remove(templatesPath);
+            if (await AzExtFsExtra.pathExists(templatesPath)) {
+                await AzExtFsExtra.deleteResource(templatesPath);
             }
         }
     }
@@ -76,8 +75,8 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
         const paths: ITemplatePaths = this.getTemplatePaths(this.getBackupPath());
         const fileData: [string, object][] = [[paths.resources, this._rawResources], [paths.templates, this._rawTemplates], [paths.bindings, this._rawBindings]];
         for (const [file, data] of fileData) {
-            await fse.ensureFile(file);
-            await fse.writeJSON(file, data);
+            await AzExtFsExtra.ensureFile(file);
+            await AzExtFsExtra.writeJSON(file, data);
         }
     }
 
@@ -101,9 +100,9 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
 
     protected async parseTemplates(rootPath: string): Promise<ITemplates> {
         const paths: ITemplatePaths = this.getTemplatePaths(rootPath);
-        this._rawResources = <object>await fse.readJSON(paths.resources);
-        this._rawTemplates = <object[]>await fse.readJSON(paths.templates);
-        this._rawBindings = <object>await fse.readJSON(paths.bindings);
+        this._rawResources = await AzExtFsExtra.readJSON<object>(paths.resources);
+        this._rawTemplates = await AzExtFsExtra.readJSON<object[]>(paths.templates);
+        this._rawBindings = await AzExtFsExtra.readJSON<object>(paths.bindings);
         return parseScriptTemplates(this._rawResources, this._rawTemplates, this._rawBindings);
     }
 

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { createNewProjectInternal, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace } from '../global.test';
@@ -12,7 +12,7 @@ import { cleanTestWorkspace } from '../global.test';
 export namespace javaUtils {
     export async function addJavaProjectToWorkspace(testWorkspacePath: string): Promise<void> {
         // Java templates require you to have a project open, so create one here
-        if (!await fse.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // no need if the project is already created
+        if (!await AzExtFsExtra.pathExists(path.join(testWorkspacePath, 'pom.xml'))) { // no need if the project is already created
             const inputs: (string | TestInput | RegExp)[] = [testWorkspacePath, ProjectLanguage.Java, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue];
             await cleanTestWorkspace();
             await runWithTestActionContext('createNewProject', async context => {

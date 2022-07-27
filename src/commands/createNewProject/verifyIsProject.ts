@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, DialogResponses, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { MessageItem, WorkspaceFolder } from 'vscode';
 import { hostFileName, projectSubpathSetting } from '../../constants';
@@ -17,7 +16,7 @@ import { createNewProjectInternal } from './createNewProject';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(folderPath, hostFileName));
+    return await AzExtFsExtra.pathExists(path.join(folderPath, hostFileName));
 }
 
 /**
@@ -38,7 +37,7 @@ export async function tryGetFunctionProjectRoot(context: IActionContext, workspa
             const subpath: string | undefined = getWorkspaceSetting(projectSubpathSetting, workspaceFolder);
             if (subpath) {
                 return path.join(folderPath, subpath);
-            } else if (await fse.pathExists(folderPath)) {
+            } else if (await AzExtFsExtra.pathExists(folderPath)) {
                 if (await isFunctionProject(folderPath)) {
                     return folderPath;
                 } else {

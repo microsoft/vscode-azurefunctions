@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { pythonVenvSetting } from "../constants";
@@ -43,11 +43,10 @@ export namespace venvUtils {
 
     export async function venvExists(venvName: string, rootFolder: string): Promise<boolean> {
         const venvPath: string = path.join(rootFolder, venvName);
-        if (await fse.pathExists(venvPath)) {
-            const stat: fse.Stats = await fse.stat(venvPath);
-            if (stat.isDirectory()) {
+        if (await AzExtFsExtra.pathExists(venvPath)) {
+            if (await AzExtFsExtra.isDirectory(venvPath)) {
                 const venvActivatePath: string = getVenvPath(venvName, 'activate', process.platform, path.join);
-                if (await fse.pathExists(path.join(rootFolder, venvActivatePath))) {
+                if (await AzExtFsExtra.pathExists(path.join(rootFolder, venvActivatePath))) {
                     return true;
                 }
             }

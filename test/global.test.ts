@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createTestActionContext, runWithTestActionContext, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -42,7 +42,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
 
-    await fse.ensureDir(testFolderPath);
+    await AzExtFsExtra.ensureDir(testFolderPath);
     testWorkspaceFolders = await initTestWorkspaceFolders();
 
     const funcExtension = vscode.extensions.getExtension('ms-azuretools.vscode-azurefunctions');
@@ -72,7 +72,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     this.timeout(90 * 1000);
     try {
-        await fse.remove(testFolderPath);
+        await AzExtFsExtra.deleteResource(testFolderPath);
         await cleanTestWorkspace();
     } catch (error) {
         // Build machines fail pretty often with an EPERM error on Windows, but removing the temp test folder isn't worth failing the build
@@ -156,7 +156,7 @@ export async function cleanTestWorkspace(): Promise<void> {
             await updateGlobalSetting(setting, undefined);
         }
 
-        await fse.emptyDir(folder);
+        await AzExtFsExtra.emptyDir(folder);
     }
     workspaceFolderIndex = 0;
 }
@@ -171,8 +171,8 @@ async function initTestWorkspaceFolders(): Promise<string[]> {
             const workspacePath: string = workspaceFolders[i].uri.fsPath;
             const folderName = path.basename(workspacePath);
             assert.equal(folderName, String(i), `Unexpected workspace folder name "${folderName}".`);
-            await fse.ensureDir(workspacePath);
-            await fse.emptyDir(workspacePath);
+            await AzExtFsExtra.ensureDir(workspacePath);
+            await AzExtFsExtra.emptyDir(workspacePath);
             folders.push(workspacePath);
         }
         return folders;

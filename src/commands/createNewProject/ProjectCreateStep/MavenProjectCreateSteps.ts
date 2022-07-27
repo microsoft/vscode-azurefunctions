@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { JavaBuildTool } from '../../../constants';
@@ -26,7 +26,7 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
         const javaVersion: string = nonNullProp(context, 'javaVersion');
         const artifactId: string = nonNullProp(context, 'javaArtifactId');
         const tempFolder: string = path.join(os.tmpdir(), fsUtil.getRandomHexString());
-        await fse.ensureDir(tempFolder);
+        await AzExtFsExtra.ensureDir(tempFolder);
         try {
             // Use maven command to init Java function project.
             ext.outputChannel.show();
@@ -47,7 +47,7 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
             );
             await fsUtil.copyFolder(context, path.join(tempFolder, artifactId), context.projectPath);
         } finally {
-            await fse.remove(tempFolder);
+            await AzExtFsExtra.emptyDir(tempFolder);
         }
     }
 }

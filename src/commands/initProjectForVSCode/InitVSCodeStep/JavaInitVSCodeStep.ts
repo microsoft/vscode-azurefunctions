@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
 import { buildGradleFileName, func, hostStartCommand, javaBuildTool, JavaBuildTool, pomXmlFileName, ProjectLanguage } from '../../../constants';
@@ -78,7 +78,7 @@ export async function getFunctionAppName(projectPath: string, buildTool: JavaBui
             return mavenUtils.getFunctionAppNameInPom(pomXmlPath);
         case JavaBuildTool.gradle:
             const buildGradlePath: string = path.join(projectPath, buildGradleFileName);
-            const buildGradle: string = (await fse.readFile(buildGradlePath)).toString();
+            const buildGradle: string = (await AzExtFsExtra.readFile(buildGradlePath)).toString();
             const match: RegExpExecArray | null = /appName\s*?=\s*?['|"](.+?)['|"]/g.exec(buildGradle);
             return match ? match[1] : undefined;
         default:

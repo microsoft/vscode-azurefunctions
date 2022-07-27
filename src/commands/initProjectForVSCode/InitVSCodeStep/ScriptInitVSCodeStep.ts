@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
 import { TaskDefinition } from 'vscode';
@@ -35,7 +35,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         try {
             const extensionsCsprojPath: string = path.join(context.projectPath, extensionsCsprojFileName);
-            if (await fse.pathExists(extensionsCsprojPath)) {
+            if (await AzExtFsExtra.pathExists(extensionsCsprojPath)) {
                 this.useFuncExtensionsInstall = true;
                 context.telemetry.properties.hasExtensionsCsproj = 'true';
             } else if (context.version === FuncVersion.v2) { // no need to check v1 or v3+

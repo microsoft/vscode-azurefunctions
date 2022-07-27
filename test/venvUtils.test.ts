@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { cpUtils, delay, ext, getGlobalSetting, getRandomHexString, pythonVenvSetting, updateGlobalSetting, venvUtils } from '../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from './global.test';
@@ -22,7 +22,7 @@ suite('venvUtils', () => {
 
         if (longRunningTestsEnabled) {
             this.timeout(60 * 1000);
-            await fse.ensureDir(testFolder);
+            await AzExtFsExtra.ensureDir(testFolder);
             const pyAlias: string = process.platform === 'win32' ? 'py' : 'python3';
             await cpUtils.executeCommand(ext.outputChannel, testFolder, pyAlias, '-m', 'venv', venvName);
         }
@@ -44,11 +44,11 @@ suite('venvUtils', () => {
         assert.equal(await venvUtils.venvExists('nonExistentPath', testFolder), false);
 
         const fileName: string = 'notAVenvFile';
-        await fse.ensureFile(path.join(testFolder, fileName));
+        await AzExtFsExtra.ensureFile(path.join(testFolder, fileName));
         assert.equal(await venvUtils.venvExists(fileName, testFolder), false);
 
         const folderName: string = 'notAVenvFolder';
-        await fse.ensureDir(path.join(testFolder, folderName));
+        await AzExtFsExtra.ensureDir(path.join(testFolder, folderName));
         assert.equal(await venvUtils.venvExists(folderName, testFolder), false);
     });
 
@@ -119,7 +119,7 @@ suite('venvUtils', () => {
 });
 
 async function runWithWindowsTerminal(terminalPath: string, callback: () => void): Promise<void> {
-    if (!(await fse.pathExists(terminalPath))) {
+    if (!(await AzExtFsExtra.pathExists(terminalPath))) {
         throw new Error(`Terminal path cannot be set because it does not exist: ${terminalPath}`)
     }
 

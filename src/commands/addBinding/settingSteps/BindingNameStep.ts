@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { ParsedFunctionJson } from '../../../funcConfig/function';
 import { localize } from '../../../localize';
 import { IBindingWizardContext } from '../IBindingWizardContext';
@@ -45,7 +45,7 @@ export class BindingNameStep extends StringPromptStep {
     private async bindingExists(context: IBindingWizardContext, val: string): Promise<boolean> {
         try {
             if (!this._functionJson) {
-                this._functionJson = new ParsedFunctionJson(await fse.readJSON(context.functionJsonPath));
+                this._functionJson = new ParsedFunctionJson(await AzExtFsExtra.readJSON(context.functionJsonPath));
             }
 
             return !!this._functionJson.bindings.find(b => b.name === val);

@@ -5,8 +5,8 @@
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createTestActionContext, runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { copyFunctionUrl, createGenericClient, createNewProjectInternal, deployProductionSlot, FuncVersion, getRandomHexString, nonNullProp } from '../../extension.bundle';
@@ -91,13 +91,13 @@ async function testCreateProjectAndDeploy(options: ICreateProjectAndDeployOption
 
 async function addRoutePrefixToProject(testWorkspacePath: string, routePrefix: string): Promise<void> {
     const hostPath: string = path.join(testWorkspacePath, 'host.json');
-    const hostJson: any = await fse.readJSON(hostPath);
+    const hostJson = await AzExtFsExtra.readJSON<any>(hostPath);
     hostJson.extensions = {
         http: {
             routePrefix
         }
     };
-    await fse.writeJSON(hostPath, hostJson);
+    await AzExtFsExtra.writeJSON(hostPath, hostJson);
 }
 
 async function validateFunctionUrl(appName: string, functionName: string, routePrefix: string): Promise<void> {
