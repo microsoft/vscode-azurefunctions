@@ -3,36 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
-import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
-import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
-import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
-import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
-import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
-import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
-import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
-import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
-import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
-import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
-import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
-import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
-import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
-import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
-import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
-import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
-import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -73,86 +54,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const template: IFunctionTemplate | undefined = context.functionTemplate;
-        if (template) {
-            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
-                    break;
-                default:
-                    promptSteps.push(new ScriptFunctionNameStep());
-                    break;
-            }
-
-            // Add settings to context that were programmatically passed in
-            for (const key of Object.keys(this._functionSettings)) {
-                context[key.toLowerCase()] = this._functionSettings[key];
-            }
-
-            addBindingSettingSteps(template.userPromptedSettings, promptSteps);
-
-            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
-
-            if (isV2PythonModel) {
-                promptSteps.push(new PythonLocationStep(), new PythonScriptStep());
-            }
-
-            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    executeSteps.push(new JavaFunctionCreateStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
-                    break;
-                case ProjectLanguage.TypeScript:
-                    executeSteps.push(new TypeScriptFunctionCreateStep());
-                    break;
-                default:
-                    if (isV2PythonModel) {
-                        executeSteps.push(new PythonFunctionCreateStep());
-                    } else {
-                        executeSteps.push(new ScriptFunctionCreateStep());
-                    }
-                    break;
-            }
-
-            if ((!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context, context.projectPath)) {
-                promptSteps.push(new AzureWebJobsStoragePromptStep());
-                executeSteps.push(new AzureWebJobsStorageExecuteStep());
-            }
-
-            const title: string = localize('createFunction', 'Create new {0}', template.name);
-            return { promptSteps, executeSteps, title };
-        } else if (context.generateFromOpenAPI) {
-            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    promptSteps.push(new JavaPackageNameStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                    promptSteps.push(new DotnetNamespaceStep());
-                    break;
-                default:
-                    break;
-            }
-
-            promptSteps.push(new OpenAPIGetSpecificationFileStep());
-            executeSteps.push(await OpenAPICreateStep.createStep(context));
-
-            const title: string = localize('createFunction', 'Create new {0}', 'HTTP Triggers from OpenAPI (v2/v3) Specification File');
-            return { promptSteps, executeSteps, title };
-        } else {
-            return undefined;
-        }
+        return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {
