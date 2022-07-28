@@ -62,7 +62,7 @@ export class ScriptTemplateProvider extends TemplateProviderBase {
             return await this.parseTemplates(templatesPath);
         } finally {
             if (await AzExtFsExtra.pathExists(templatesPath)) {
-                await AzExtFsExtra.deleteResource(templatesPath);
+                await AzExtFsExtra.deleteResource(templatesPath, { recursive: true });
             }
         }
     }

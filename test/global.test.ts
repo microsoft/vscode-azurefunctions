@@ -72,7 +72,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     this.timeout(90 * 1000);
     try {
-        await AzExtFsExtra.deleteResource(testFolderPath);
+        await AzExtFsExtra.deleteResource(testFolderPath, { recursive: true });
         await cleanTestWorkspace();
     } catch (error) {
         // Build machines fail pretty often with an EPERM error on Windows, but removing the temp test folder isn't worth failing the build
