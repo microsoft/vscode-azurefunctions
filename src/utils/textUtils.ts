@@ -21,13 +21,7 @@ class StaticContentProvider implements vscode.TextDocumentContentProvider {
     private readonly contentMap = new Map<string, string>();
 
     provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken): vscode.ProviderResult<string> {
-        const content = this.contentMap.get(uri.toString());
-
-        if (content === undefined) {
-            throw new Error('Unable to find the requested content.');
-        }
-
-        return content;
+        return this.contentMap.get(uri.toString());
     }
 
     registerTextDocumentContent(content: string, filename: string = 'text.txt'): vscode.Uri {

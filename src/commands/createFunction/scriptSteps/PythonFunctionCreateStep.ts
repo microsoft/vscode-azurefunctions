@@ -33,7 +33,10 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
         const content = template.templateFiles['__init__.py'];
 
         if (context.functionLocation === FunctionLocation.Document) {
-            await showMarkdownPreviewContent(createMarkdown(nonNullProp(template, 'name'), content));
+            const name = nonNullProp(template, 'name');
+            const filename = `${name}.md`;
+
+            await showMarkdownPreviewContent(createMarkdown(name, content), filename);
 
             return ''; // TODO: Allow not returning filename.
         } else {
