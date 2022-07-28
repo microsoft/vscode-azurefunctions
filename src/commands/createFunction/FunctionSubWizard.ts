@@ -23,7 +23,6 @@ import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
 import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
-import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
 import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
@@ -59,7 +58,7 @@ export class FunctionSubWizard {
             const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
 
             if (isV2PythonModel) {
-                promptSteps.push(new PythonLocationStep(), new PythonScriptStep());
+                promptSteps.push(new PythonScriptStep());
             }
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];

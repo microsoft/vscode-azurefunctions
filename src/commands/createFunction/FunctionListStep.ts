@@ -11,9 +11,11 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
+import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
+import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -54,7 +56,16 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
+
+        if (isV2PythonModel) {
+            return {
+                // TODO: Title?
+                promptSteps: [ new PythonLocationStep(this._functionSettings) ]
+            };
+        } else {
+            return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+        }
     }
 
     public async prompt(context: IFunctionWizardContext): Promise<void> {

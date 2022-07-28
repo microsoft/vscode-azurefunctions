@@ -26,7 +26,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
         const content = template.templateFiles['__init__.py'];
 
         if (context.functionLocation === FunctionLocation.Document) {
-            const functionName = nonNullProp(context, 'functionName');
+            const functionName = nonNullProp(template, 'defaultFunctionName');
 
             await openReadOnlyContent(
                 {
