@@ -39,10 +39,8 @@ suite('Add Binding', () => {
         this.timeout(30 * 1000);
 
         const userInputs: string[] = [functionName];
-        // https://github.com/microsoft/vscode-azurefunctions/issues/1586
-        if (!await ext.azureAccountTreeItem.getIsLoggedIn()) {
-            userInputs.unshift('Local Project');
-        }
+        userInputs.unshift('Local Project');
+
         await validateAddBinding(undefined, userInputs);
     });
 
@@ -51,7 +49,7 @@ suite('Add Binding', () => {
     });
 
     test('Tree', async () => {
-        const treeItem: AzExtTreeItem | undefined = await ext.rgApi.tree.findTreeItem(`/localProject0/functions/${functionName}`, await createTestActionContext());
+        const treeItem: AzExtTreeItem | undefined = await ext.rgApi.workspaceResourceTree.findTreeItem(`/localProject0/functions/${functionName}`, await createTestActionContext());
         assert.ok(treeItem, 'Failed to find tree item');
         await validateAddBinding(treeItem, []);
     });
