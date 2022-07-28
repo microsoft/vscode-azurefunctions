@@ -29,7 +29,7 @@ let downloadLink;
 async function getFuncLink() {
     const client = new msRest.ServiceClient();
     const cliFeed = (await client.sendRequest({ method: 'GET', url: 'https://aka.ms/V00v5v' })).parsedBody;
-    const version = cliFeed.tags['v3-prerelease'].release;
+    const version = cliFeed.tags['v4-prerelease'].release;
     console.log(`Func cli feed version: ${version}`);
     const cliRelease = cliFeed.releases[version].standaloneCli.find((rel) => {
         return rel.Architecture === 'x64' && (
