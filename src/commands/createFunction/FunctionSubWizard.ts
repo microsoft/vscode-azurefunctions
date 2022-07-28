@@ -35,6 +35,13 @@ export class FunctionSubWizard {
         const template: IFunctionTemplate | undefined = context.functionTemplate;
         if (template) {
             const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
+
+            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
+
+            if (isV2PythonModel) {
+                promptSteps.push(new PythonScriptStep());
+            }
+
             switch (context.language) {
                 case ProjectLanguage.Java:
                     promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
@@ -54,12 +61,6 @@ export class FunctionSubWizard {
             }
 
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
-
-            const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
-
-            if (isV2PythonModel) {
-                promptSteps.push(new PythonScriptStep());
-            }
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
             switch (context.language) {
