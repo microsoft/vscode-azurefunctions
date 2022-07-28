@@ -11,7 +11,7 @@ import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
 import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
-import { openReadOnlyContent } from '@microsoft/vscode-azext-utils';
+import { showMarkdownPreviewContent } from '../../../utils/textUtils';
 
 export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunctionWizardContext> {
     public async executeCore(context: IPythonFunctionWizardContext): Promise<string> {
@@ -26,15 +26,9 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
         const content = template.templateFiles['__init__.py'];
 
         if (context.functionLocation === FunctionLocation.Document) {
-            const functionName = nonNullProp(template, 'defaultFunctionName');
+//            const functionName = nonNullProp(template, 'defaultFunctionName');
 
-            await openReadOnlyContent(
-                {
-                    label: functionName,
-                    fullId: `vscode-azurefunctions/functions/${functionName}`
-                },
-                content,
-                '.py');
+            await showMarkdownPreviewContent(content);
 
             return ''; // TODO: Allow not returning filename.
         } else {
