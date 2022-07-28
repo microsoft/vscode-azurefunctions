@@ -13,6 +13,13 @@ import { getBindingSetting } from '../IFunctionWizardContext';
 import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
 import { showMarkdownPreviewContent } from '../../../utils/textUtils';
 
+function createMarkdown(name: string, content: string): string {
+    return `# ${name}
+\`\`\` python
+${content}
+\`\`\``;
+}
+
 export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunctionWizardContext> {
     public async executeCore(context: IPythonFunctionWizardContext): Promise<string> {
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
@@ -26,9 +33,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
         const content = template.templateFiles['__init__.py'];
 
         if (context.functionLocation === FunctionLocation.Document) {
-//            const functionName = nonNullProp(template, 'defaultFunctionName');
-
-            await showMarkdownPreviewContent(content);
+            await showMarkdownPreviewContent(createMarkdown(nonNullProp(template, 'name'), content));
 
             return ''; // TODO: Allow not returning filename.
         } else {

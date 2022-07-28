@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 
@@ -25,9 +30,9 @@ class StaticContentProvider implements vscode.TextDocumentContentProvider {
         return content;
     }
 
-    registerTextDocumentContent(content: string, extension: string = '.txt'): vscode.Uri {
+    registerTextDocumentContent(content: string, filename: string = 'text.txt'): vscode.Uri {
         const hash = getPseudononymousStringHash(content);
-        const uri = vscode.Uri.parse(`${contentScheme}://${hash}/file${extension}`)
+        const uri = vscode.Uri.parse(`${contentScheme}://${hash}/${filename}`)
 
         this.contentMap.set(uri.toString(), content);
 
@@ -47,12 +52,12 @@ function getContentProvider(): StaticContentProvider {
     return contentProvider;
 }
 
-export function registerStaticContent(content: string, extension?: string): vscode.Uri {
-    return getContentProvider().registerTextDocumentContent(content, extension);
+export function registerStaticContent(content: string, filename?: string): vscode.Uri {
+    return getContentProvider().registerTextDocumentContent(content, filename);
 }
 
-export async function showMarkdownPreviewContent(content: string): Promise<void> {
-    const uri = registerStaticContent(content, '.md');
+export async function showMarkdownPreviewContent(content: string, filename: string = 'markdown.md'): Promise<void> {
+    const uri = registerStaticContent(content, filename);
 
     await vscode.commands.executeCommand('markdown.showPreview', uri);
 }
