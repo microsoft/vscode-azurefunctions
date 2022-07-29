@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as crypto from 'crypto';
+import { URLSearchParams } from 'url';
 import * as vscode from 'vscode';
 
 import { ext } from '../extensionVariables';
@@ -18,17 +19,27 @@ function getPseudononymousStringHash(s: string, encoding: crypto.BinaryToTextEnc
 }
 
 class StaticContentProvider implements vscode.TextDocumentContentProvider {
-    private readonly contentMap = new Map<string, string>();
-
     provideTextDocumentContent(uri: vscode.Uri, _token: vscode.CancellationToken): vscode.ProviderResult<string> {
-        return this.contentMap.get(uri.toString());
+        const searchParams = new URLSearchParams(uri.query);
+
+        return searchParams.get('content') ?? undefined;
     }
 
     registerTextDocumentContent(content: string, filename: string = 'text.txt'): vscode.Uri {
-        const hash = getPseudononymousStringHash(content);
-        const uri = vscode.Uri.parse(`${contentScheme}://${hash}/${filename}`)
+        const searchParams = new URLSearchParams();
 
-        this.contentMap.set(uri.toString(), content);
+        searchParams.append('content', content);
+
+        const query = searchParams.toString();
+
+        // TODO: Do we need the hash now?
+        const hash = getPseudononymousStringHash(content);
+        const uri = vscode.Uri.from(
+            {
+                scheme: contentScheme,
+                path: `${hash}/${filename}`,
+                query
+            });
 
         return uri;
     }
@@ -36,7 +47,7 @@ class StaticContentProvider implements vscode.TextDocumentContentProvider {
 
 let contentProvider: StaticContentProvider | undefined;
 
-function getContentProvider(): StaticContentProvider {
+export function registerContentProvider(): StaticContentProvider {
     if (!contentProvider) {
         contentProvider = new StaticContentProvider();
 
@@ -47,7 +58,7 @@ function getContentProvider(): StaticContentProvider {
 }
 
 export function registerStaticContent(content: string, filename?: string): vscode.Uri {
-    return getContentProvider().registerTextDocumentContent(content, filename);
+    return registerContentProvider().registerTextDocumentContent(content, filename);
 }
 
 export async function showMarkdownPreviewContent(content: string, filename: string = 'markdown.md'): Promise<void> {
