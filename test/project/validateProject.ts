@@ -10,7 +10,7 @@ import * as globby from 'globby';
 import * as path from 'path';
 import { extensionId, FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 
-export const defaultTestFuncVersion: FuncVersion = FuncVersion.v3;
+export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
