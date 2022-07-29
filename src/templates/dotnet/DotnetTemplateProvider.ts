@@ -134,7 +134,7 @@ export class DotnetTemplateProvider extends TemplateProviderBase {
         const projKey = await this.getProjKey(context);
         const files: string[] = [getDotnetProjectTemplatePath(context, this.version, projKey), getDotnetItemTemplatePath(context, this.version, projKey)];
         for (const file of files) {
-            await AzExtFsExtra.copy(this.convertToBackupFilePath(projKey, file), file)
+            await AzExtFsExtra.copy(this.convertToBackupFilePath(projKey, file), file, { overwrite: true })
         }
         return await this.parseTemplates(context, projKey);
     }
