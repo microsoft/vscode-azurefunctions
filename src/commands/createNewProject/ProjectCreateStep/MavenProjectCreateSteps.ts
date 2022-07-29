@@ -47,7 +47,7 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
             );
             await fsUtil.copyFolder(context, path.join(tempFolder, artifactId), context.projectPath);
         } finally {
-            await AzExtFsExtra.emptyDir(tempFolder);
+            await AzExtFsExtra.deleteResource(tempFolder, { recursive: true });
         }
     }
 }
