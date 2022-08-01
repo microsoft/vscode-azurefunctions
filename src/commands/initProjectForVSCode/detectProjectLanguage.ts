@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { buildGradleFileName, localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
@@ -43,11 +42,11 @@ async function isJavaProject(projectPath: string): Promise<boolean> {
 }
 
 export async function isMavenProject(projectPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(projectPath, pomXmlFileName));
+    return await AzExtFsExtra.pathExists(path.join(projectPath, pomXmlFileName));
 }
 
 export async function isGradleProject(projectPath: string): Promise<boolean> {
-    return await fse.pathExists(path.join(projectPath, buildGradleFileName));
+    return await AzExtFsExtra.pathExists(path.join(projectPath, buildGradleFileName));
 }
 
 async function isCSharpProject(context: IActionContext, projectPath: string): Promise<boolean> {

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { JavaBuildTool, javaBuildTool, pomXmlFileName } from '../../constants';
 import { localize } from '../../localize';
@@ -36,7 +35,7 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
     public async getLatestTemplateVersion(): Promise<string> {
         this.validateGradleProject();
         const pomPath: string = path.join(this.getProjectPath(), pomXmlFileName);
-        const pomContents: string = (await fse.readFile(pomPath)).toString();
+        const pomContents: string = (await AzExtFsExtra.readFile(pomPath)).toString();
         const match: RegExpMatchArray | null = pomContents.match(/<azure.functions.maven.plugin.version>(.*)<\/azure.functions.maven.plugin.version>/i);
         if (!match) {
             throw new Error(localize('failedToDetectPluginVersion', 'Failed to detect Azure Functions maven plugin version.'));

@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
-import * as fsUtil from '../../../utils/fs';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -37,9 +36,9 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
         const functionPath: string = path.join(context.projectPath, nonNullProp(context, 'functionName'));
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
-        await fse.ensureDir(functionPath);
+        await AzExtFsExtra.ensureDir(functionPath);
         await Promise.all(Object.keys(template.templateFiles).map(async f => {
-            await fse.writeFile(path.join(functionPath, f), template.templateFiles[f]);
+            await AzExtFsExtra.writeFile(path.join(functionPath, f), template.templateFiles[f]);
         }));
 
         const triggerBinding: IFunctionBinding = nonNullProp(template.functionJson, 'triggerBinding');
@@ -53,7 +52,7 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         }
 
         const functionJsonPath: string = path.join(functionPath, functionJsonFileName);
-        await fsUtil.writeFormattedJson(functionJsonPath, functionJson);
+        await AzExtFsExtra.writeJSON(functionJsonPath, functionJson);
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);

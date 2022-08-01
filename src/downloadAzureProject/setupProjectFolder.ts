@@ -6,7 +6,7 @@
 import { HostKeys } from '@azure/arm-appservice';
 import { RequestPrepareOptions } from '@azure/ms-rest-js';
 import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
@@ -74,8 +74,8 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
     } finally {
-        await vscode.workspace.fs.delete(
-            vscode.Uri.file(toBeDeletedFolderPathUri.fsPath),
+        await AzExtFsExtra.deleteResource(
+            toBeDeletedFolderPathUri.fsPath,
             {
                 recursive: true,
                 useTrash: true

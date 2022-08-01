@@ -3,28 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as crypto from "crypto";
-import * as fse from 'fs-extra';
 import * as path from 'path';
-import { MessageItem } from "vscode";
+import { FileType, MessageItem } from "vscode";
 import { localize } from "../localize";
 
-export async function writeFormattedJson(fsPath: string, data: object): Promise<void> {
-    await fse.writeJson(fsPath, data, { spaces: 2 });
-}
-
 export async function copyFolder(context: IActionContext, fromPath: string, toPath: string): Promise<void> {
-    const files: string[] = await fse.readdir(fromPath);
+    const files = await AzExtFsExtra.readDirectory(fromPath);
     for (const file of files) {
-        const originPath: string = path.join(fromPath, file);
-        const stat: fse.Stats = await fse.stat(originPath);
-        const targetPath: string = path.join(toPath, file);
-        if (stat.isFile()) {
+        const originPath: string = path.join(fromPath, file.name);
+        const targetPath: string = path.join(toPath, file.name);
+        if (file.type === FileType.File) {
             if (await confirmOverwriteFile(context, targetPath)) {
-                await fse.copy(originPath, targetPath, { overwrite: true });
+                await AzExtFsExtra.copy(originPath, targetPath, { overwrite: true });
             }
-        } else if (stat.isDirectory()) {
+        } else if (file.type === FileType.Directory) {
             await copyFolder(context, originPath, targetPath);
         }
     }
@@ -32,9 +26,9 @@ export async function copyFolder(context: IActionContext, fromPath: string, toPa
 
 export async function confirmEditJsonFile(context: IActionContext, fsPath: string, editJson: (existingData: {}) => {} | Promise<{}>): Promise<void> {
     let newData: {};
-    if (await fse.pathExists(fsPath)) {
+    if (await AzExtFsExtra.pathExists(fsPath)) {
         try {
-            newData = await editJson(<{}>await fse.readJson(fsPath));
+            newData = await editJson(await AzExtFsExtra.readJSON<{}>(fsPath));
         } catch (error) {
             if (parseError(error).isUserCancelledError) {
                 throw error;
@@ -49,11 +43,11 @@ export async function confirmEditJsonFile(context: IActionContext, fsPath: strin
         newData = await editJson({});
     }
 
-    await writeFormattedJson(fsPath, newData);
+    await AzExtFsExtra.writeJSON(fsPath, newData);
 }
 
 export async function confirmOverwriteFile(context: IActionContext, fsPath: string): Promise<boolean> {
-    if (await fse.pathExists(fsPath)) {
+    if (await AzExtFsExtra.pathExists(fsPath)) {
         const result: MessageItem | undefined = await context.ui.showWarningMessage(localize('fileAlreadyExists', 'File "{0}" already exists. Overwrite?', fsPath), { modal: true, stepName: 'overwriteFile' }, DialogResponses.yes, DialogResponses.no);
         if (result === DialogResponses.yes) {
             return true;

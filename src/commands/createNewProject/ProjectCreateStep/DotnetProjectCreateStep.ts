@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
@@ -51,7 +50,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const filesToCheck: string[] = [projName, gitignoreFileName, localSettingsFileName, hostFileName];
         const existingFiles: string[] = [];
         for (const fileName of filesToCheck) {
-            if (await fse.pathExists(path.join(context.projectPath, fileName))) {
+            if (await AzExtFsExtra.pathExists(path.join(context.projectPath, fileName))) {
                 existingFiles.push(fileName);
             }
         }

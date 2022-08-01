@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Uri } from 'vscode';
 import { addBinding, createNewProjectInternal, ext, getRandomHexString, IFunctionBinding, IFunctionJson, ProjectLanguage } from '../extension.bundle';
@@ -26,7 +25,7 @@ suite('Add Binding', () => {
             });
         })
         functionJsonPath = path.join(testWorkspacePath, functionName, 'function.json');
-        assert.ok(await fse.pathExists(functionJsonPath), 'Failed to create project');
+        assert.ok(await AzExtFsExtra.pathExists(functionJsonPath), 'Failed to create project');
         initialBindingsCount = await getBindingsCount();
     });
 
@@ -61,7 +60,7 @@ suite('Add Binding', () => {
     });
 
     async function getBindingsCount(): Promise<number> {
-        const data: IFunctionJson = <IFunctionJson>await fse.readJSON(functionJsonPath);
+        const data: IFunctionJson = await AzExtFsExtra.readJSON<IFunctionJson>(functionJsonPath);
         return (data.bindings || []).length;
     }
 
@@ -75,7 +74,7 @@ suite('Add Binding', () => {
             });
         });
 
-        const data: IFunctionJson = <IFunctionJson>await fse.readJSON(functionJsonPath);
+        const data: IFunctionJson = await AzExtFsExtra.readJSON<IFunctionJson>(functionJsonPath);
         const binding: IFunctionBinding | undefined = data.bindings && data.bindings.find(b => b.name === bindingName);
         if (!binding) {
             assert.fail(`Failed to find binding "${bindingName}".`);

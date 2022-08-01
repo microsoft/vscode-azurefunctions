@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
 import { localize } from '../../../localize';
 import { gitUtils } from '../../../utils/gitUtils';
@@ -21,7 +20,7 @@ export abstract class ProjectCreateStepBase extends AzureWizardExecuteStep<IProj
         context.telemetry.properties.openBehavior = context.openBehavior;
 
         progress.report({ message: localize('creating', 'Creating new project...') });
-        await fse.ensureDir(context.projectPath);
+        await AzExtFsExtra.ensureDir(context.projectPath);
 
         await this.executeCore(context, progress);
 

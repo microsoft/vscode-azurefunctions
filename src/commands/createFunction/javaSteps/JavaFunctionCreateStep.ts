@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getJavaFunctionFilePath, IJavaProjectWizardContext } from '../../createNewProject/javaSteps/IJavaProjectWizardContext';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
@@ -30,8 +30,8 @@ export class JavaFunctionCreateStep extends FunctionCreateStepBase<IFunctionWiza
         args.set("className", functionName.replace('-', '_'));
         const content: string = substituteParametersInTemplate(template, args);
         const path: string = getJavaFunctionFilePath(context.projectPath, packageName, functionName);
-        await fse.ensureFile(path);
-        await fse.writeFile(path, content);
+        await AzExtFsExtra.ensureFile(path);
+        await AzExtFsExtra.writeFile(path, content);
         return getJavaFunctionFilePath(context.projectPath, packageName, functionName);
     }
 }

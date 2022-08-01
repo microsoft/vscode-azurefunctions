@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
@@ -100,9 +100,9 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
 export async function ensureGitIgnoreContents(projectPath: string, lines: string[]): Promise<void> {
     // .gitignore is created by `func init`
     const gitignorePath: string = path.join(projectPath, gitignoreFileName);
-    if (await fse.pathExists(gitignorePath)) {
+    if (await AzExtFsExtra.pathExists(gitignorePath)) {
         let writeFile: boolean = false;
-        let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
+        let gitignoreContents: string = (await AzExtFsExtra.readFile(gitignorePath)).toString();
 
         for (const line of lines) {
             if (!gitignoreContents.includes(line)) {
@@ -112,7 +112,7 @@ export async function ensureGitIgnoreContents(projectPath: string, lines: string
         }
 
         if (writeFile) {
-            await fse.writeFile(gitignorePath, gitignoreContents);
+            await AzExtFsExtra.writeFile(gitignorePath, gitignoreContents);
         }
     }
 }
@@ -120,8 +120,8 @@ export async function ensureGitIgnoreContents(projectPath: string, lines: string
 async function ensureVenvInFuncIgnore(projectPath: string, venvName: string): Promise<void> {
     const funcIgnorePath: string = path.join(projectPath, '.funcignore');
     let funcIgnoreContents: string | undefined;
-    if (await fse.pathExists(funcIgnorePath)) {
-        funcIgnoreContents = (await fse.readFile(funcIgnorePath)).toString();
+    if (await AzExtFsExtra.pathExists(funcIgnorePath)) {
+        funcIgnoreContents = (await AzExtFsExtra.readFile(funcIgnorePath)).toString();
         if (funcIgnoreContents && !funcIgnoreContents.includes(venvName)) {
             funcIgnoreContents = funcIgnoreContents.concat(`${os.EOL}${venvName}`);
         }
@@ -131,5 +131,5 @@ async function ensureVenvInFuncIgnore(projectPath: string, venvName: string): Pr
         funcIgnoreContents = venvName;
     }
 
-    await fse.writeFile(funcIgnorePath, funcIgnoreContents);
+    await AzExtFsExtra.writeFile(funcIgnorePath, funcIgnoreContents);
 }
