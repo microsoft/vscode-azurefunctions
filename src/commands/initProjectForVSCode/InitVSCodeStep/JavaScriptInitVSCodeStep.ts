@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
 import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from "../../../constants";
@@ -22,7 +22,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
 
-        this.hasPackageJson = await fse.pathExists(path.join(context.projectPath, 'package.json'));
+        this.hasPackageJson = await AzExtFsExtra.pathExists(path.join(context.projectPath, 'package.json'));
         if (this.hasPackageJson) {
             this.preDeployTask = npmPruneTaskLabel;
             this.settings.push({ key: 'postDeployTask', value: npmInstallTaskLabel });

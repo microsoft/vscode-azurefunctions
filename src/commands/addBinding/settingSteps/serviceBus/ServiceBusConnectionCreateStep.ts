@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AccessKeys, SBAuthorizationRule, SBNamespace, ServiceBusManagementClient } from '@azure/arm-servicebus';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { localize } from '../../../../localize';
-import { getResourceGroupFromId } from '../../../../utils/azure';
 import { createServiceBusClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';

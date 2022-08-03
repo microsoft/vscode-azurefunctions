@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
@@ -39,7 +38,7 @@ export abstract class FunctionNameStepBase<T extends IFunctionWizardContext> ext
 
         while (count < maxCount) {
             const fileName: string = defaultValue + count.toString();
-            if (!(await fse.pathExists(path.join(folderPath, fileExtension ? fileName + fileExtension : fileName)))) {
+            if (!(await AzExtFsExtra.pathExists(path.join(folderPath, fileExtension ? fileName + fileExtension : fileName)))) {
                 return fileName;
             }
             count += 1;

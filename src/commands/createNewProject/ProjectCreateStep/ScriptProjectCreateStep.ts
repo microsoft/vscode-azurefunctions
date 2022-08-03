@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
@@ -13,7 +12,7 @@ import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { FuncVersion } from '../../../FuncVersion';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
-import { confirmOverwriteFile, writeFormattedJson } from "../../../utils/fs";
+import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
@@ -34,7 +33,7 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
         if (await confirmOverwriteFile(context, hostJsonPath)) {
             const hostJson: IHostJsonV2 | IHostJsonV1 = version === FuncVersion.v1 ? {} : await this.getHostContent(context);
-            await writeFormattedJson(hostJsonPath, hostJson);
+            await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
         }
 
         const localSettingsJsonPath: string = path.join(context.projectPath, localSettingsFileName);
@@ -45,12 +44,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
-            await writeFormattedJson(localSettingsJsonPath, this.localSettingsJson);
+            await AzExtFsExtra.writeJSON(localSettingsJsonPath, this.localSettingsJson);
         }
 
         const gitignorePath: string = path.join(context.projectPath, gitignoreFileName);
         if (await confirmOverwriteFile(context, gitignorePath)) {
-            await fse.writeFile(gitignorePath, this.gitignore.concat(`
+            await AzExtFsExtra.writeFile(gitignorePath, this.gitignore.concat(`
 # Azure Functions artifacts
 bin
 obj
@@ -65,7 +64,7 @@ __azurite_db*__.json`));
 
         const funcIgnorePath: string = path.join(context.projectPath, '.funcignore');
         if (await confirmOverwriteFile(context, funcIgnorePath)) {
-            await fse.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
+            await AzExtFsExtra.writeFile(funcIgnorePath, this.funcignore.sort().join(os.EOL));
         }
     }
 

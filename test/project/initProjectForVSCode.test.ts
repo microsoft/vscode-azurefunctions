@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestInput } from '@microsoft/vscode-azext-dev';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString, initProjectForVSCode, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 import { cleanTestWorkspace, testFolderPath } from '../global.test';
@@ -353,12 +353,12 @@ async function initAndValidateProject(options: IInitProjectTestOptions): Promise
 
         const subPaths: string[] = typeof mockFile.fsPath === 'string' ? [mockFile.fsPath] : mockFile.fsPath;
         const fullPath: string = path.join(projectPath, ...subPaths);
-        mockFile.isDir ? await fse.ensureDir(fullPath) : await fse.ensureFile(fullPath);
+        mockFile.isDir ? await AzExtFsExtra.ensureDir(fullPath) : await AzExtFsExtra.ensureFile(fullPath);
 
         if (typeof mockFile.contents === 'object') {
-            await fse.writeJSON(fullPath, mockFile.contents);
+            await AzExtFsExtra.writeJSON(fullPath, mockFile.contents);
         } else if (mockFile.contents) {
-            await fse.writeFile(fullPath, mockFile.contents);
+            await AzExtFsExtra.writeFile(fullPath, mockFile.contents);
         }
     }));
 

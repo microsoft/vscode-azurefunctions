@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CosmosDBManagementClient, DatabaseAccountGetResults, DatabaseAccountListKeysResult } from '@azure/arm-cosmosdb';
-import { getResourceGroupFromId } from '../../../../utils/azure';
+import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { createCosmosDBClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IBindingWizardContext } from '../../IBindingWizardContext';

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { requirementsFileName } from '../../../constants';
@@ -33,7 +32,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStep<IPythonVenvWiza
         await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, '-m', 'venv', context.venvName);
 
         const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
-        if (await fse.pathExists(requirementsPath)) {
+        if (await AzExtFsExtra.pathExists(requirementsPath)) {
             try {
                 // Attempt to install packages so that users get Intellisense right away
                 await venvUtils.runCommandInVenv(`pip install -r ${requirementsFileName}`, context.venvName, context.projectPath);

@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HttpOperationResponse } from '@azure/ms-rest-js';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { workerRuntimeVersionKey } from '../../../constants';
@@ -76,7 +75,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
 
         const profileps1Path: string = path.join(context.projectPath, profileps1FileName);
         if (await confirmOverwriteFile(context, profileps1Path)) {
-            await fse.writeFile(profileps1Path, profileps1);
+            await AzExtFsExtra.writeFile(profileps1Path, profileps1);
         }
 
         const majorVersion: number | undefined = await this.tryGetLatestAzModuleMajorVersion(context, progress);
@@ -93,9 +92,9 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         const requirementspsd1Path: string = path.join(context.projectPath, requirementspsd1FileName);
         if (await confirmOverwriteFile(context, requirementspsd1Path)) {
             if (majorVersion !== undefined) {
-                await fse.writeFile(requirementspsd1Path, requirementspsd1Online(majorVersion));
+                await AzExtFsExtra.writeFile(requirementspsd1Path, requirementspsd1Online(majorVersion));
             } else {
-                await fse.writeFile(requirementspsd1Path, requirementspsd1Offine);
+                await AzExtFsExtra.writeFile(requirementspsd1Path, requirementspsd1Offine);
             }
         }
     }

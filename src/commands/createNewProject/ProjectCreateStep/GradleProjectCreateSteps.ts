@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { buildGradleFileName, JavaBuildTool, settingsGradleFileName } from '../../../constants';
@@ -27,13 +27,13 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
 
         const settingsGradlePath: string = path.join(context.projectPath, settingsGradleFileName);
         if (await confirmOverwriteFile(context, settingsGradlePath)) {
-            await fse.writeFile(settingsGradlePath, this.getSettingsGradleContent(context));
+            await AzExtFsExtra.writeFile(settingsGradlePath, this.getSettingsGradleContent(context));
         }
 
         const buildGradlePath: string = path.join(context.projectPath, buildGradleFileName);
         const buildGradleContent: string = await this.getBuildGradleContent(context);
         if (await confirmOverwriteFile(context, buildGradlePath)) {
-            await fse.writeFile(buildGradlePath, buildGradleContent);
+            await AzExtFsExtra.writeFile(buildGradlePath, buildGradleContent);
         }
     }
 

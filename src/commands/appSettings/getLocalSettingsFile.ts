@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { workspace, WorkspaceFolder } from "vscode";
 import { localSettingsFileName } from "../../constants";
@@ -21,7 +20,7 @@ export async function getLocalSettingsFile(context: IActionContext, message: str
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder);
         if (projectPath) {
             const localSettingsFile: string = path.join(projectPath, localSettingsFileName);
-            if (await fse.pathExists(localSettingsFile)) {
+            if (await AzExtFsExtra.pathExists(localSettingsFile)) {
                 return localSettingsFile;
             }
         }

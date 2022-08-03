@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep, AzureWizardPromptStep } from "@microsoft/vscode-azext-utils";
 import { venvUtils } from '../../../utils/venvUtils';
 import { getWorkspaceSetting } from "../../../vsCodeConfig/settings";
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
@@ -24,11 +23,11 @@ export async function addPythonInitVSCodeSteps(
 
     context.telemetry.properties.createPythonVenv = String(createPythonVenv);
 
-    if (await fse.pathExists(context.projectPath)) {
-        const fsPaths: string[] = await fse.readdir(context.projectPath);
-        await Promise.all(fsPaths.map(async venvName => {
-            if (await venvUtils.venvExists(venvName, context.projectPath)) {
-                venvs.push(venvName);
+    if (await AzExtFsExtra.pathExists(context.projectPath)) {
+        const fsPaths = await AzExtFsExtra.readDirectory(context.projectPath);
+        await Promise.all(fsPaths.map(async venvFile => {
+            if (await venvUtils.venvExists(venvFile.name, context.projectPath)) {
+                venvs.push(venvFile.name);
             }
         }));
     }

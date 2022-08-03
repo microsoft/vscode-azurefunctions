@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
@@ -76,7 +75,7 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
         context.telemetry.suppressIfSuccessful = true;
 
         if (getContainingWorkspace(func.projectPath)) {
-            if (await fse.pathExists(func.newFilePath)) {
+            if (await AzExtFsExtra.pathExists(func.newFilePath)) {
                 await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
             }
         }

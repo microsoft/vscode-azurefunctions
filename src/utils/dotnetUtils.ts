@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../constants';
 import { FuncVersion } from '../FuncVersion';
@@ -28,7 +27,7 @@ export namespace dotnetUtils {
 
         public async getContents(): Promise<string> {
             if (this._cachedContents === undefined) {
-                this._cachedContents = (await fse.readFile(this.fullPath)).toString();
+                this._cachedContents = (await AzExtFsExtra.readFile(this.fullPath));
             }
             return this._cachedContents;
         }
@@ -105,7 +104,7 @@ export namespace dotnetUtils {
                 break;
         }
 
-        if (projectPath && await fse.pathExists(projectPath)) {
+        if (projectPath && await AzExtFsExtra.pathExists(projectPath)) {
             const projFiles = await getProjFiles(context, language, projectPath);
             if (projFiles.length === 1) {
                 targetFramework = await getTargetFramework(projFiles[0]);

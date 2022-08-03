@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
-import { getResourceGroupFromId, promptForResource } from '../../../../utils/azure';
+import { promptForResource } from '../../../../utils/azure';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { nonNullProp } from '../../../../utils/nonNull';
 import { IEventHubWizardContext } from './IEventHubWizardContext';

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, env } from 'vscode';
 import { ProjectLanguage } from '../constants';
@@ -99,13 +98,13 @@ export abstract class TemplateProviderBase implements Disposable {
     }
 
     public async getBackupTemplateVersion(): Promise<string> {
-        return (await fse.readFile(await this.getBackupVersionPath())).toString().trim();
+        return (await AzExtFsExtra.readFile(await this.getBackupVersionPath())).toString().trim();
     }
 
     public async updateBackupTemplateVersion(version: string): Promise<void> {
         const filePath: string = await this.getBackupVersionPath();
-        await fse.ensureFile(filePath);
-        await fse.writeFile(filePath, version);
+        await AzExtFsExtra.ensureFile(filePath);
+        await AzExtFsExtra.writeFile(filePath, version);
     }
 
     protected getBackupPath(): string {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from "../../../localize";
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
@@ -18,7 +18,7 @@ export class ScriptFunctionNameStep extends FunctionNameStepBase<IScriptFunction
     }
 
     protected async validateFunctionNameCore(context: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
-        if (await fse.pathExists(path.join(context.projectPath, name))) {
+        if (await AzExtFsExtra.pathExists(path.join(context.projectPath, name))) {
             return localize('existingFolderError', 'A folder with the name "{0}" already exists.', name);
         } else {
             return undefined;

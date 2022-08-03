@@ -5,7 +5,7 @@
 
 import { HttpOperationResponse, RequestPrepareOptions, ServiceClient, WebResource } from "@azure/ms-rest-js";
 import { AzExtRequestPrepareOptions, createGenericClient, sendRequestWithTimeout } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as fse from 'fs-extra';
 import * as path from 'path';
 import { ext } from '../extensionVariables';
@@ -43,7 +43,7 @@ export namespace requestUtils {
     }
 
     export async function downloadFile(context: IActionContext, requestOptionsOrUrl: string | RequestPrepareOptions, filePath: string): Promise<void> {
-        await fse.ensureDir(path.dirname(filePath));
+        await AzExtFsExtra.ensureDir(path.dirname(filePath));
         const request: WebResource = new WebResource();
         request.prepare(typeof requestOptionsOrUrl === 'string' ? { method: 'GET', url: requestOptionsOrUrl } : requestOptionsOrUrl);
         request.streamResponseBody = true;

@@ -5,7 +5,8 @@
 
 import { HostKeys } from '@azure/arm-appservice';
 import { RequestPrepareOptions } from '@azure/ms-rest-js';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
+import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as extract from 'extract-zip';
 import * as querystring from 'querystring';
 import * as vscode from 'vscode';
@@ -14,7 +15,6 @@ import { ProjectLanguage } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { SlotTreeItem } from "../tree/SlotTreeItem";
-import { getNameFromId } from '../utils/azure';
 import { requestUtils } from '../utils/requestUtils';
 import { getRequiredQueryParameter } from './handleUri';
 
@@ -27,7 +27,7 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     const toBeDeletedFolderPathUri: vscode.Uri = vscode.Uri.joinPath(vsCodeFilePathUri, 'temp');
 
     try {
-        const functionAppName: string = getNameFromId(resourceId);
+        const functionAppName: string = parseAzureResourceId(resourceId).resourceName;
         const downloadFilePath: string = vscode.Uri.joinPath(toBeDeletedFolderPathUri, `${functionAppName}.zip`).fsPath;
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: localize('settingUpFunctionAppLocalProjInfoMessage', `Setting up project for function app '${functionAppName}' with language '${language}'.`) }, async () => {
@@ -74,8 +74,8 @@ export async function setupProjectFolder(uri: vscode.Uri, vsCodeFilePathUri: vsc
     } catch (err) {
         throw new Error(localize('failedLocalProjSetupErrorMessage', 'Failed to set up your local project: "{0}".', parseError(err).message));
     } finally {
-        await vscode.workspace.fs.delete(
-            vscode.Uri.file(toBeDeletedFolderPathUri.fsPath),
+        await AzExtFsExtra.deleteResource(
+            toBeDeletedFolderPathUri.fsPath,
             {
                 recursive: true,
                 useTrash: true

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
 import { Progress } from 'vscode';
@@ -46,7 +46,7 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
                 isOldFuncCli = false;
             }
 
-            await fse.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
+            await AzExtFsExtra.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
         }
     }
 }

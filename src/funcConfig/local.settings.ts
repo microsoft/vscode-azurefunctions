@@ -3,13 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { localSettingsFileName } from '../constants';
 import { localize } from '../localize';
-import * as fsUtil from '../utils/fs';
 import { parseJson } from '../utils/parseJson';
 
 export interface ILocalSettingsJson {
@@ -67,12 +65,12 @@ export async function setLocalAppSetting(context: IActionContext, functionAppPat
     }
 
     settings.Values[key] = value;
-    await fsUtil.writeFormattedJson(localSettingsPath, settings);
+    await AzExtFsExtra.writeJSON(localSettingsPath, settings);
 }
 
 export async function getLocalSettingsJson(context: IActionContext, localSettingsPath: string, allowOverwrite: boolean = false): Promise<ILocalSettingsJson> {
-    if (await fse.pathExists(localSettingsPath)) {
-        const data: string = (await fse.readFile(localSettingsPath)).toString();
+    if (await AzExtFsExtra.pathExists(localSettingsPath)) {
+        const data: string = (await AzExtFsExtra.readFile(localSettingsPath)).toString();
         if (/[^\s]/.test(data)) {
             try {
                 return parseJson(data);
