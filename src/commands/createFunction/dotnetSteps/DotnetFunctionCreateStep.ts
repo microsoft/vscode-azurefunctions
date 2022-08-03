@@ -45,6 +45,9 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             }
         }
 
+        args.push('--arg:framework');
+        args.push(cpUtils.wrapArgInQuotes('net7.0'));
+
         const version: FuncVersion = nonNullProp(context, 'version');
         let projectTemplateKey = context.projectTemplateKey;
         if (!projectTemplateKey) {
