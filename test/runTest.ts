@@ -16,9 +16,7 @@ async function main(): Promise<void> {
             cli,
             [
                 ...args,
-                // '--install-extension', 'ms-vscode.azure-account@0.10.1',
-                '--install-extension', 'ms-vscode.azure-account', '--force',
-                // '--install-extension', '/Users/alex/dev/vscode-azure-account/azure-account-0.11.1-alpha.0.vsix',
+                '--install-extension', 'ms-vscode.azure-account',
                 '--install-extension', 'ms-azuretools.vscode-azureresourcegroups',
                 '--install-extension', 'ms-python.python',
             ],
