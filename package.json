@@ -1113,11 +1113,5 @@
     "extensionDependencies": [
         "ms-vscode.azure-account",
         "ms-azuretools.vscode-azureresourcegroups"
-    ],
-    "__metadata": {
-        "id": "2ed5adbe-c4e1-4227-8e41-31e2095b30e3",
-        "publisherDisplayName": "Microsoft",
-        "publisherId": "52b787f2-79a9-4f32-99b4-393afe3005d3",
-        "isPreReleaseVersion": false
-    }
+    ]
 }
