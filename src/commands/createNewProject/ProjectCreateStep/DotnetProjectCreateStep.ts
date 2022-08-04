@@ -42,9 +42,8 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const functionsVersion: string = 'v' + majorVersion;
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
         const args = ['--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion];
-        if (/net7.[0-9]/.test(projTemplateKey)) {
-            args.push('--arg:Framework', cpUtils.wrapArgInQuotes('net7.0'));
-        }
+        // defaults to net6.0 if there is no targetFramework
+        args.push('--arg:Framework', cpUtils.wrapArgInQuotes(context.workerRuntime?.targetFramework));
 
         await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
 
