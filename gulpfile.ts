@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as msRest from '@azure/ms-rest-js';
-import { gulp_installAzureAccount, gulp_installResourceGroups, gulp_installVSCodeExtension, gulp_webpack } from '@microsoft/vscode-azext-dev';
+import { gulp_webpack } from '@microsoft/vscode-azext-dev';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as chmod from 'gulp-chmod';
@@ -71,10 +71,6 @@ function installFuncCli() {
         .pipe(gulp.dest(funcDir));
 }
 
-async function gulp_installPythonExtension() {
-    return gulp_installVSCodeExtension('ms-python', 'python');
-}
-
 async function cleanReadme() {
     const readmePath: string = path.join(__dirname, 'README.md');
     let data: string = (await fse.readFile(readmePath)).toString();
@@ -84,5 +80,5 @@ async function cleanReadme() {
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp.series(gulp_installAzureAccount, gulp_installResourceGroups, gulp_installPythonExtension, getFuncLink, installFuncCli);
+exports.preTest = gulp.series(getFuncLink, installFuncCli);
 exports.cleanReadme = cleanReadme;
