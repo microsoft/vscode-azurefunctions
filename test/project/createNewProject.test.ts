@@ -39,7 +39,7 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
 
     testCases.push({
         ...getPythonValidateOptions('.venv', version),
-        inputs: ['python']
+        inputs: [TestInput.UseDefaultValue]
     });
 
     const appName: string = 'javaApp';

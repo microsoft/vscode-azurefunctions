@@ -41,7 +41,11 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         }
         const functionsVersion: string = 'v' + majorVersion;
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
-        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        const args = ['--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion];
+        // defaults to net6.0 if there is no targetFramework
+        args.push('--arg:Framework', cpUtils.wrapArgInQuotes(context.workerRuntime?.targetFramework));
+
+        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
 
         await setLocalAppSetting(context, context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }
