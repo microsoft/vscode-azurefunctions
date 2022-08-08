@@ -5,21 +5,15 @@ import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource"
 import { createWebSiteClient } from "./utils/azureClients";
 
 export class FunctionAppResolver implements AppResourceResolver {
-    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | null> {
+    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
-            try {
-                const client = await createWebSiteClient({ ...context, ...subContext });
-                const rg = getResourceGroupFromId(nonNullProp(resource, 'id'));
-                const name = nonNullProp(resource, 'name');
-                const site = await client.webApps.get(rg, name);
-                site.siteConfig = await client.webApps.getConfiguration(rg, name)
-                return new ResolvedFunctionAppResource(subContext, site);
-
-            } catch (e) {
-                console.error({ ...context, ...subContext });
-                throw e;
-            }
-        }) ?? null;
+            const client = await createWebSiteClient({ ...context, ...subContext });
+            const rg = getResourceGroupFromId(nonNullProp(resource, 'id'));
+            const name = nonNullProp(resource, 'name');
+            const site = await client.webApps.get(rg, name);
+            site.siteConfig = await client.webApps.getConfiguration(rg, name)
+            return new ResolvedFunctionAppResource(subContext, site);
+        });
     }
 
     public matchesResource(resource: AppResource): boolean {
