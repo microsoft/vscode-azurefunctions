@@ -77,6 +77,12 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
         }
     }
 
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site);
+        void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
+        return resource;
+    }
+
     public get name(): string {
         return this.label;
     }
