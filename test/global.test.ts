@@ -117,7 +117,7 @@ async function preLoadTemplates(): Promise<void> {
  * Not worth testing older versions for every build
  */
 export function isLongRunningVersion(version: FuncVersion): boolean {
-    return version === FuncVersion.v1 || version === FuncVersion.v2;
+    return version === FuncVersion.v1 || version === FuncVersion.v2 || version === FuncVersion.v3;
 }
 
 export function shouldSkipVersion(version: FuncVersion): boolean {
