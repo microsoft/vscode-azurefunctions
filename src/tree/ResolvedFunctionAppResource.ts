@@ -26,6 +26,8 @@ export function isResolvedFunctionApp(ti: unknown): ti is ResolvedAppResourceBas
 
 export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public site: ParsedSite;
+    public data: Site;
+
     private _subscription: ISubscriptionContext;
     public logStreamPath: string = '';
     public appSettingsTreeItem: AppSettingsTreeItem;
@@ -57,6 +59,7 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
 
     public constructor(subscription: ISubscriptionContext, site: Site) {
         this.site = new ParsedSite(site, subscription);
+        this.data = this.site.rawSite;
         this._subscription = subscription;
         this.contextValuesToAdd = [this.site.isSlot ? ResolvedFunctionAppResource.slotContextValue : ResolvedFunctionAppResource.productionContextValue];
 
@@ -72,6 +75,12 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
                 this.maskedValuesToAdd.push(v);
             }
         }
+    }
+
+    public static createResolvedFunctionAppResource(context: IActionContext, subscription: ISubscriptionContext, site: Site): ResolvedFunctionAppResource {
+        const resource = new ResolvedFunctionAppResource(subscription, site);
+        void resource.site.createClient(context).then(async (client) => resource.data.siteConfig = await client.getSiteConfig())
+        return resource;
     }
 
     public get name(): string {
