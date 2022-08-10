@@ -105,7 +105,7 @@ async function preLoadTemplates(): Promise<void> {
                 }
 
                 for (const language of [ProjectLanguage.JavaScript, ProjectLanguage.CSharp]) {
-                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, version, TemplateFilter.Verified, undefined));
+                    tasks.push(provider.getFunctionTemplates(context, testWorkspaceFolders[0], language, undefined, version, TemplateFilter.Verified, undefined));
                 }
             }
         });

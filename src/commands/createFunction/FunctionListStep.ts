@@ -34,7 +34,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templateProvider = ext.templateProvider.get(context);
-            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All, context.projectTemplateKey);
+            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
                 if (options.templateId) {
                     const actualId: string = t.id.toLowerCase();
@@ -96,7 +96,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.generateFromOpenAPI = true;
                 break;
             } else if (result === 'reloadTemplates') {
-                await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), nonNullProp(context, 'version'));
+                await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), context.languageModel, nonNullProp(context, 'version'));
                 context.telemetry.properties.reloaded = 'true';
             } else {
                 context.functionTemplate = result;
@@ -114,7 +114,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
-        const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, version, templateFilter, context.projectTemplateKey);
+        const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
             .sort((a, b) => sortTemplates(a, b, templateFilter))

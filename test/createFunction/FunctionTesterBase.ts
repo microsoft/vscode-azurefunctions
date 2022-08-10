@@ -47,7 +47,7 @@ export abstract class FunctionTesterBase implements Disposable {
                 await this.initializeTestFolder(this.projectPath);
 
                 // This will initialize and cache the templatesTask for this project. Better to do it here than during the first test
-                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
+                await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
             });
         });
     }
@@ -55,7 +55,7 @@ export abstract class FunctionTesterBase implements Disposable {
     public async dispose(): Promise<void> {
         await runWithTestActionContext('testCreateFunctionDispose', async context => {
             await runForTemplateSource(context, this.source, async (templateProvider) => {
-                const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, this.version, TemplateFilter.Verified, undefined);
+                const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, this.projectPath, this.language, undefined, this.version, TemplateFilter.Verified, undefined);
                 assert.deepEqual(this.testedFunctions.sort(), templates.map(t => t.name).sort(), 'Not all "Verified" templates were tested');
             });
         });

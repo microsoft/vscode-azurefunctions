@@ -49,7 +49,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         let projectTemplateKey = context.projectTemplateKey;
         if (!projectTemplateKey) {
             const templateProvider = ext.templateProvider.get(context);
-            projectTemplateKey = await templateProvider.getProjectTemplateKey(context, context.projectPath, nonNullProp(context, 'language'), context.version, undefined);
+            projectTemplateKey = await templateProvider.getProjectTemplateKey(context, context.projectPath, nonNullProp(context, 'language'), undefined, context.version, undefined);
         }
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
