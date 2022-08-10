@@ -288,12 +288,18 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
             ...(await createActivityContext())
         });
 
-        const confirmationMessage = localize('deleteConfirmation', 'Are you sure you want to delete function app "{0}"?', this.site.fullName);
+        const confirmationMessage: string = this.site.isSlot ?
+            localize('confirmDeleteSlot', 'Are you sure you want to delete slot "{0}"?', this.site.fullName) :
+            localize('confirmDeleteFunctionApp', 'Are you sure you want to delete function app "{0}"?', this.site.fullName);
+
+        const title: string = this.site.isSlot ?
+            localize('deleteSlot', 'Delete Slot "{0}"', this.site.fullName) :
+            localize('deleteFunctionApp', 'Delete Function App "{0}"', this.site.fullName);
 
         const wizard = new AzureWizard(wizardContext, {
-            title: localize('deleteSwa', 'Delete Function App "{0}"', this.label),
             promptSteps: [new DeleteConfirmationStep(confirmationMessage), new DeleteLastServicePlanStep()],
-            executeSteps: [new DeleteSiteStep()]
+            executeSteps: [new DeleteSiteStep()],
+            title
         });
 
         await wizard.prompt();
