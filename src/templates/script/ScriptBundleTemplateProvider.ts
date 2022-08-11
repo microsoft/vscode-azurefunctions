@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { hostFileName } from '../../constants';
 import { IBundleMetadata, parseHostJson } from '../../funcConfig/host';
@@ -65,9 +64,9 @@ export class ScriptBundleTemplateProvider extends ScriptTemplateProvider {
         let data: unknown;
         if (this.projectPath) {
             const hostJsonPath: string = path.join(this.projectPath, hostFileName);
-            if (await fse.pathExists(hostJsonPath)) {
+            if (await AzExtFsExtra.pathExists(hostJsonPath)) {
                 try {
-                    data = await fse.readJSON(hostJsonPath);
+                    data = await AzExtFsExtra.readJSON(hostJsonPath);
                 } catch (error) {
                     throw new Error(localize('failedToParseHostJson', 'Failed to parse host.json: "{0}"', parseError(error).message));
                 }

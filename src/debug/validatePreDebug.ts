@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzureWizard, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizard, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
@@ -149,7 +148,7 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
             const functionFolders: string[] = await getFunctionFolders(context, projectPath);
             const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
                 const functionJsonPath: string = path.join(projectPath, ff, functionJsonFileName);
-                return new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
+                return new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
             }));
 
             // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.

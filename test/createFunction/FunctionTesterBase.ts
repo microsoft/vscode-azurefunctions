@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext, TestActionContext } from '@microsoft/vscode-azext-dev';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { Disposable } from 'vscode';
 import { createFunctionInternal, FuncVersion, getRandomHexString, IFunctionTemplate, ProjectLanguage, TemplateFilter, TemplateSource } from '../../extension.bundle';
@@ -98,24 +98,24 @@ export abstract class FunctionTesterBase implements Disposable {
         const expectedPaths: string[] = this.getExpectedPaths(funcName);
         for (const expectedPath of expectedPaths) {
             const filePath: string = path.join(testFolder, expectedPath);
-            assert.ok(await fse.pathExists(filePath), `Failed to find expected path "${expectedPath}"`);
+            assert.ok(await AzExtFsExtra.pathExists(filePath), `Failed to find expected path "${expectedPath}"`);
         }
 
         const mainFileName: string = expectedPaths[0];
         const mainFilePath: string = path.join(testFolder, mainFileName);
-        const contents: string = (await fse.readFile(mainFilePath)).toString();
+        const contents: string = (await AzExtFsExtra.readFile(mainFilePath)).toString();
         for (const expectedContent of expectedContents) {
             assert.ok(contents.includes(expectedContent) || contents.includes(expectedContent.toLowerCase()), `Failed to find expected content "${expectedContent}" in "${mainFileName}"`);
         }
     }
 
     protected async initializeTestFolder(testFolder: string): Promise<void> {
-        await fse.ensureDir(path.join(testFolder, '.vscode'));
+        await AzExtFsExtra.ensureDir(path.join(testFolder, '.vscode'));
         // Pretend to create the parent function project
         await Promise.all([
-            fse.writeFile(path.join(testFolder, 'host.json'), '{}'),
-            fse.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
-            fse.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
+            AzExtFsExtra.writeFile(path.join(testFolder, 'host.json'), '{}'),
+            AzExtFsExtra.writeFile(path.join(testFolder, 'local.settings.json'), '{ "Values": { "AzureWebJobsStorage": "test" } }'),
+            AzExtFsExtra.writeFile(path.join(testFolder, '.vscode', 'launch.json'), '')
         ]);
     }
 

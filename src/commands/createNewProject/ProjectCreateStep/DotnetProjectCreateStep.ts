@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
 import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
@@ -42,7 +41,11 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         }
         const functionsVersion: string = 'v' + majorVersion;
         const projTemplateKey = nonNullProp(context, 'projectTemplateKey');
-        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', '--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion);
+        const args = ['--identity', identity, '--arg:name', cpUtils.wrapArgInQuotes(projectName), '--arg:AzureFunctionsVersion', functionsVersion];
+        // defaults to net6.0 if there is no targetFramework
+        args.push('--arg:Framework', cpUtils.wrapArgInQuotes(context.workerRuntime?.targetFramework));
+
+        await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
 
         await setLocalAppSetting(context, context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
     }
@@ -51,7 +54,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
         const filesToCheck: string[] = [projName, gitignoreFileName, localSettingsFileName, hostFileName];
         const existingFiles: string[] = [];
         for (const fileName of filesToCheck) {
-            if (await fse.pathExists(path.join(context.projectPath, fileName))) {
+            if (await AzExtFsExtra.pathExists(path.join(context.projectPath, fileName))) {
                 existingFiles.push(fileName);
             }
         }

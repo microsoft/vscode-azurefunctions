@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizard, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { IPythonVenvWizardContext } from '../commands/createNewProject/pythonSteps/IPythonVenvWizardContext';
@@ -21,7 +20,7 @@ export async function verifyPythonVenv(projectPath: string, context: IActionCont
     if (getWorkspaceSetting<boolean>(settingKey)) {
 
         const venvName: string | undefined = getWorkspaceSetting(pythonVenvSetting, projectPath);
-        if (venvName && !await fse.pathExists(path.join(projectPath, venvName))) {
+        if (venvName && !await AzExtFsExtra.pathExists(path.join(projectPath, venvName))) {
             context.telemetry.properties.verifyConfigPrompt = 'createVenv';
 
             const createVenv: vscode.MessageItem = { title: localize('createVenv', 'Create virtual environment') };

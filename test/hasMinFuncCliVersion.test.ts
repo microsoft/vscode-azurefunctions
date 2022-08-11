@@ -24,7 +24,7 @@ suite('hasMinFuncCliVersion', () => {
     });
 
     test('Same major version, doesn\'t meet minimum', async () => {
-        const result: boolean = await hasMinFuncCliVersion(await createTestActionContext(), '3.9999.0', FuncVersion.v3);
+        const result: boolean = await hasMinFuncCliVersion(await createTestActionContext(), '4.9999.0', FuncVersion.v4);
         assert.strictEqual(result, false);
     });
 });

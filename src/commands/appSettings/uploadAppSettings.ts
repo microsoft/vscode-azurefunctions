@@ -5,8 +5,7 @@
 
 import { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -37,11 +36,11 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
     const localSettingsPath: string = await getLocalSettingsFile(context, message, workspaceFolder);
     const localSettingsUri: vscode.Uri = vscode.Uri.file(localSettingsPath);
 
-    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
+    let localSettings: ILocalSettingsJson = <ILocalSettingsJson>await AzExtFsExtra.readJSON(localSettingsPath);
     if (localSettings.IsEncrypted) {
         await decryptLocalSettings(context, localSettingsUri);
         try {
-            localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
+            localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
         } finally {
             await encryptLocalSettings(context, localSettingsUri);
         }

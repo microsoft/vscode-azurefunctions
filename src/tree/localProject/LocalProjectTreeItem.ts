@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Disposable, Task, tasks, TaskScope, WorkspaceFolder } from 'vscode';
 import { onDotnetFuncTaskReady } from '../../commands/pickFuncProcess';
@@ -119,7 +118,7 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     public async getHostJson(): Promise<IParsedHostJson> {
         const version: FuncVersion = await this.getVersion();
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-        const data: any = await fse.readJSON(path.join(this.effectiveProjectPath, hostFileName));
+        const data = await AzExtFsExtra.readJSON<any>(path.join(this.effectiveProjectPath, hostFileName));
         return parseHostJson(data, version);
     }
 

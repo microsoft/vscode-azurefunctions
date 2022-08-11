@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
 import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
@@ -38,7 +37,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         context.telemetry.properties.isProjectInSubDir = String(isSubpath(context.workspacePath, context.projectPath));
 
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
-        await fse.ensureDir(vscodePath);
+        await AzExtFsExtra.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath, language);
         await this.writeLaunchJson(context, context.workspaceFolder, vscodePath, version);
         await this.writeSettingsJson(context, vscodePath, language, context.languageModel, version);
@@ -46,10 +45,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
         // Remove '.vscode' from gitignore if applicable
         const gitignorePath: string = path.join(context.workspacePath, gitignoreFileName);
-        if (await fse.pathExists(gitignorePath)) {
-            let gitignoreContents: string = (await fse.readFile(gitignorePath)).toString();
+        if (await AzExtFsExtra.pathExists(gitignorePath)) {
+            let gitignoreContents: string = (await AzExtFsExtra.readFile(gitignorePath)).toString();
             gitignoreContents = gitignoreContents.replace(/^\.vscode(\/|\\)?\s*$/gm, '');
-            await fse.writeFile(gitignorePath, gitignoreContents);
+            await AzExtFsExtra.writeFile(gitignorePath, gitignoreContents);
         }
     }
 

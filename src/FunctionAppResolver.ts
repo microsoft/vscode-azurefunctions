@@ -5,18 +5,15 @@ import { ResolvedFunctionAppResource } from "./tree/ResolvedFunctionAppResource"
 import { createWebSiteClient } from "./utils/azureClients";
 
 export class FunctionAppResolver implements AppResourceResolver {
-    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | null> {
+    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedFunctionAppResource | undefined> {
         return await callWithTelemetryAndErrorHandling('resolveResource', async (context: IActionContext) => {
-            try {
-                const client = await createWebSiteClient({ ...context, ...subContext });
-                const site = await client.webApps.get(getResourceGroupFromId(nonNullProp(resource, 'id')), nonNullProp(resource, 'name'));
-                return new ResolvedFunctionAppResource(subContext, site);
+            const client = await createWebSiteClient({ ...context, ...subContext });
+            const rg = getResourceGroupFromId(nonNullProp(resource, 'id'));
+            const name = nonNullProp(resource, 'name');
 
-            } catch (e) {
-                console.error({ ...context, ...subContext });
-                throw e;
-            }
-        }) ?? null;
+            const site = await client.webApps.get(rg, name);
+            return ResolvedFunctionAppResource.createResolvedFunctionAppResource(context, subContext, site);
+        });
     }
 
     public matchesResource(resource: AppResource): boolean {

@@ -34,6 +34,7 @@ suite('Backup templates', () => {
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net5.0-isolated', versions: [FuncVersion.v3, FuncVersion.v4] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0', versions: [FuncVersion.v4] },
             { language: ProjectLanguage.CSharp, projectTemplateKey: 'net6.0-isolated', versions: [FuncVersion.v4] },
+            { language: ProjectLanguage.CSharp, projectTemplateKey: 'net7.0-isolated', versions: [FuncVersion.v4] },
             { language: ProjectLanguage.Java, versions: [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4] }
         ];
 

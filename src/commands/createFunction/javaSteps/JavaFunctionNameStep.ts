@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { localize } from "../../../localize";
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../../utils/nonNull';
@@ -20,7 +20,7 @@ export class JavaFunctionNameStep extends FunctionNameStepBase<IFunctionWizardCo
 
     protected async validateFunctionNameCore(context: IFunctionWizardContext & IJavaProjectWizardContext, name: string): Promise<string | undefined> {
         const packageName: string = nonNullProp(context, 'javaPackageName');
-        if (await fse.pathExists(getJavaFunctionFilePath(context.projectPath, packageName, name))) {
+        if (await AzExtFsExtra.pathExists(getJavaFunctionFilePath(context.projectPath, packageName, name))) {
             return localize('existingError', 'A function with name "{0}" already exists in package "{1}".', getJavaClassName(name), packageName);
         } else {
             return undefined;

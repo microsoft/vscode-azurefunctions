@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FuncVersion, funcVersionSetting, ProjectLanguage, projectLanguageSetting, TemplateSource } from '../../extension.bundle';
@@ -29,7 +29,7 @@ class CSharpFunctionTester extends FunctionTesterBase {
 
     protected async initializeTestFolder(testFolder: string): Promise<void> {
         await super.initializeTestFolder(testFolder);
-        await fse.writeFile(path.join(testFolder, 'test.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
+        await AzExtFsExtra.writeFile(path.join(testFolder, 'test.csproj'), `<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>${this._targetFramework}</TargetFramework>
     </PropertyGroup>
@@ -47,6 +47,7 @@ for (const source of allTemplateSources) {
     addSuite(FuncVersion.v4, 'net5.0', source, true);
     addSuite(FuncVersion.v4, 'net6.0', source, true);
     addSuite(FuncVersion.v4, 'net6.0', source, false);
+    addSuite(FuncVersion.v4, 'net7.0', source, true);
 }
 
 function addSuite(version: FuncVersion, targetFramework: string, source: TemplateSource, isIsolated?: boolean): void {

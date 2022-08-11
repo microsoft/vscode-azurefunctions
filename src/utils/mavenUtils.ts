@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DialogResponses, IActionContext, IAzExtOutputChannel, TelemetryProperties } from "@microsoft/vscode-azext-utils";
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, DialogResponses, IActionContext, IAzExtOutputChannel, TelemetryProperties } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import * as xml2js from 'xml2js';
 import { localize } from '../localize';
@@ -34,7 +33,7 @@ export namespace mavenUtils {
     }
 
     export async function getFunctionAppNameInPom(pomLocation: string): Promise<string | undefined> {
-        const pomString: string = await fse.readFile(pomLocation, 'utf-8');
+        const pomString: string = await AzExtFsExtra.readFile(pomLocation);
         return await new Promise((resolve: (ret: string | undefined) => void): void => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(pomString, { explicitArray: false }, (err: any, result: any): void => {

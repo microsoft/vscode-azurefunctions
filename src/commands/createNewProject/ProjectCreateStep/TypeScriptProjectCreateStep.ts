@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
-import { confirmOverwriteFile, writeFormattedJson } from '../../../utils/fs';
+import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
@@ -26,7 +27,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
 
         const tsconfigPath: string = path.join(context.projectPath, tsConfigFileName);
         if (await confirmOverwriteFile(context, tsconfigPath)) {
-            await writeFormattedJson(tsconfigPath, {
+            await AzExtFsExtra.writeJSON(tsconfigPath, {
                 compilerOptions: {
                     module: 'commonjs',
                     target: 'es6',

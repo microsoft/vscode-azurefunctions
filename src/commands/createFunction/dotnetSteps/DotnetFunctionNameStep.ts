@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { localize } from "../../../localize";
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
@@ -18,7 +18,7 @@ export class DotnetFunctionNameStep extends FunctionNameStepBase<IDotnetFunction
     }
 
     protected async validateFunctionNameCore(context: IDotnetFunctionWizardContext, name: string): Promise<string | undefined> {
-        if (await fse.pathExists(path.join(context.projectPath, name + getFileExtension(context)))) {
+        if (await AzExtFsExtra.pathExists(path.join(context.projectPath, name + getFileExtension(context)))) {
             return localize('existingFile', 'A file with the name "{0}" already exists.', name);
         } else {
             return undefined;

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { IFunctionJson } from '../../../funcConfig/function';
@@ -16,8 +16,8 @@ export class TypeScriptFunctionCreateStep extends ScriptFunctionCreateStep {
         let outDir: string = tsDefaultOutDir;
         try {
             const tsconfigPath: string = path.join(context.projectPath, tsConfigFileName);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            outDir = (await fse.readJSON(tsconfigPath)).compilerOptions.outDir;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+            outDir = (await AzExtFsExtra.readJSON<any>(tsconfigPath)).compilerOptions.outDir;
         } catch {
             // ignore and use default outDir
         }

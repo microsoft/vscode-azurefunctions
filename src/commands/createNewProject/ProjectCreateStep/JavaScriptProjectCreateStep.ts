@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { confirmOverwriteFile, writeFormattedJson } from '../../../utils/fs';
+import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
@@ -26,7 +27,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
         const packagePath: string = path.join(context.projectPath, 'package.json');
         if (await confirmOverwriteFile(context, packagePath)) {
-            await writeFormattedJson(packagePath, {
+            await AzExtFsExtra.writeJSON(packagePath, {
                 name: convertToValidPackageName(path.basename(context.projectPath)),
                 version: '1.0.0',
                 description: '',

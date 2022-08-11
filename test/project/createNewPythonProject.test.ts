@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { FuncVersion, getRandomHexString } from '../../extension.bundle';
 import { longRunningTestsEnabled, testFolderPath } from '../global.test';
@@ -61,8 +61,8 @@ suite('Create New Python Project', () => {
 
 async function createTestVenv(projectPath: string, venvName: string): Promise<void> {
     if (process.platform === 'win32') {
-        await fse.ensureFile(path.join(projectPath, venvName, 'Scripts', 'activate'));
+        await AzExtFsExtra.ensureFile(path.join(projectPath, venvName, 'Scripts', 'activate'));
     } else {
-        await fse.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
+        await AzExtFsExtra.ensureFile(path.join(projectPath, venvName, 'bin', 'activate'));
     }
 }

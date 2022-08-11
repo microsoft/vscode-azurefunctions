@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { IBindingWizardContext } from '../commands/addBinding/IBindingWizardContext';
 import { IFunctionWizardContext } from '../commands/createFunction/IFunctionWizardContext';
@@ -16,7 +15,6 @@ import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
-import { writeFormattedJson } from './fs';
 
 export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<void> {
     // v1 doesn't support bundles
@@ -34,12 +32,12 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         context.telemetry.properties.bundleResult = 'hasExtensionsConfig';
     } else {
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
-        if (!(await fse.pathExists(hostFilePath))) {
+        if (!(await AzExtFsExtra.pathExists(hostFilePath))) {
             context.telemetry.properties.bundleResult = 'missingHostJson';
         } else {
             let hostJson: IHostJsonV2;
             try {
-                hostJson = <IHostJsonV2>await fse.readJSON(hostFilePath);
+                hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
             } catch (error) {
                 context.telemetry.properties.bundleResult = 'failedToParseHostJson';
                 // ignore error - no need to block create process just to verify bundle
@@ -49,7 +47,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
             if (!hostJson.extensionBundle) {
                 context.telemetry.properties.bundleResult = 'addedBundle';
                 await bundleFeedUtils.addDefaultBundle(context, hostJson);
-                await writeFormattedJson(hostFilePath, hostJson);
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             } else {
                 context.telemetry.properties.bundleResult = 'alreadyHasBundle';
             }
@@ -70,8 +68,8 @@ async function hasExtensionsVSCodeConfig(context: IActionContext, workspacePath:
         const filesToCheck: string[] = [tasksFileName, settingsFileName];
         for (const file of filesToCheck) {
             const filePath: string = path.join(workspacePath, vscodeFolderName, file);
-            if (await fse.pathExists(filePath)) {
-                const contents: string = (await fse.readFile(filePath)).toString();
+            if (await AzExtFsExtra.pathExists(filePath)) {
+                const contents: string = (await AzExtFsExtra.readFile(filePath)).toString();
                 if (contents.includes(extInstallCommand)) {
                     result = true;
                     break;
@@ -89,7 +87,7 @@ async function hasExtensionsVSCodeConfig(context: IActionContext, workspacePath:
 async function hasExtensionsCsproj(context: IActionContext, projectPath: string): Promise<boolean> {
     let result: boolean = false;
     try {
-        result = await fse.pathExists(path.join(projectPath, extensionsCsprojFileName));
+        result = await AzExtFsExtra.pathExists(path.join(projectPath, extensionsCsprojFileName));
     } catch {
         // ignore and use default
     }

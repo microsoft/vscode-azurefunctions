@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FunctionEnvelope } from '@azure/arm-appservice';
-import { AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
 import { functionJsonFileName } from '../../constants';
@@ -46,7 +45,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
                 'azFuncInvalidLocalFunction',
                 async func => {
                     const functionJsonPath: string = path.join(this.parent.effectiveProjectPath, func, functionJsonFileName);
-                    const config: ParsedFunctionJson = new ParsedFunctionJson(await fse.readJSON(functionJsonPath));
+                    const config: ParsedFunctionJson = new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
                     return LocalFunctionTreeItem.create(context, this, func, config, functionJsonPath, undefined);
                 },
                 (func: string) => func

@@ -5,8 +5,7 @@
 
 import { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName, viewOutput } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -41,7 +40,7 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
     const isEncrypted: boolean | undefined = localSettings.IsEncrypted;
     if (localSettings.IsEncrypted) {
         await decryptLocalSettings(context, localSettingsUri);
-        localSettings = <ILocalSettingsJson>await fse.readJson(localSettingsPath);
+        localSettings = await AzExtFsExtra.readJSON<ILocalSettingsJson>(localSettingsPath);
     }
 
     try {
@@ -56,8 +55,8 @@ export async function downloadAppSettingsInternal(context: IActionContext, clien
             await confirmOverwriteSettings(context, remoteSettings.properties, localSettings.Values, localSettingsFileName);
         }
 
-        await fse.ensureFile(localSettingsPath);
-        await fse.writeJson(localSettingsPath, localSettings, { spaces: 2 });
+        await AzExtFsExtra.ensureFile(localSettingsPath);
+        await AzExtFsExtra.writeJSON(localSettingsPath, localSettings);
 
     } finally {
         if (isEncrypted) {

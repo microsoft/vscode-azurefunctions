@@ -3,13 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as assert from 'assert';
 import * as fse from 'fs-extra';
 import * as globby from 'globby';
 import * as path from 'path';
 import { extensionId, FuncVersion, getContainingWorkspace, IExtensionsJson, ILaunchJson, ITasksJson, JavaBuildTool, ProjectLanguage } from '../../extension.bundle';
 
-export const defaultTestFuncVersion: FuncVersion = FuncVersion.v3;
+export const defaultTestFuncVersion: FuncVersion = FuncVersion.v4;
 
 export function getJavaScriptValidateOptions(hasPackageJson: boolean = false, version: FuncVersion = defaultTestFuncVersion, projectSubpath?: string, workspaceFolder?: string): IValidateProjectOptions {
     const expectedSettings: { [key: string]: string } = {
@@ -330,7 +331,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
             const matches = await globby(p.globPattern, { cwd: rootPath })
             assert.equal(matches.length, p.numMatches, `Path "${p.globPattern}" does not have expected matches.`);
         } else {
-            assert.ok(await fse.pathExists(path.join(rootPath, p)), `Path "${p}" does not exist.`);
+            assert.ok(await AzExtFsExtra.pathExists(path.join(rootPath, p)), `Path "${p}" does not exist.`);
         }
     }));
 
@@ -338,7 +339,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate extensions.json
     //
     const recs: string[] = options.expectedExtensionRecs.concat(extensionId);
-    const extensionsJson: IExtensionsJson = <IExtensionsJson>await fse.readJSON(path.join(rootPath, '.vscode', 'extensions.json'));
+    const extensionsJson: IExtensionsJson = await AzExtFsExtra.readJSON<IExtensionsJson>(path.join(rootPath, '.vscode', 'extensions.json'));
     extensionsJson.recommendations = extensionsJson.recommendations || [];
     assert.equal(extensionsJson.recommendations.length, recs.length, "extensions.json doesn't have the expected number of recommendations.");
     for (const rec of recs) {
@@ -348,7 +349,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate settings.json
     //
-    const settings: { [key: string]: string | boolean } = <{ [key: string]: string }>await fse.readJSON(path.join(rootPath, '.vscode', 'settings.json'));
+    const settings: { [key: string]: string | boolean } = await AzExtFsExtra.readJSON<{ [key: string]: string }>(path.join(rootPath, '.vscode', 'settings.json'));
     const keys: string[] = Object.keys(options.expectedSettings);
     for (const key of keys) {
         const expectedValue: RegExp | string | boolean | object | undefined = options.expectedSettings[key];
@@ -367,7 +368,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     // Validate launch.json
     //
     if (expectedPaths.find(p => typeof p === 'string' && p.includes('launch.json'))) {
-        const launchJson: ILaunchJson = <ILaunchJson>await fse.readJSON(path.join(rootPath, '.vscode', 'launch.json'));
+        const launchJson: ILaunchJson = await AzExtFsExtra.readJSON<ILaunchJson>(path.join(rootPath, '.vscode', 'launch.json'));
         launchJson.configurations = launchJson.configurations || [];
         assert.equal(launchJson.configurations.length, options.expectedDebugConfigs.length, "launch.json doesn't have the expected number of configs.");
         for (const configName of options.expectedDebugConfigs) {
@@ -378,7 +379,7 @@ export async function validateProject(projectPath: string, options: IValidatePro
     //
     // Validate tasks.json
     //
-    const tasksJson: ITasksJson = <ITasksJson>await fse.readJSON(path.join(rootPath, '.vscode', 'tasks.json'));
+    const tasksJson: ITasksJson = await AzExtFsExtra.readJSON<ITasksJson>(path.join(rootPath, '.vscode', 'tasks.json'));
     tasksJson.tasks = tasksJson.tasks || [];
     assert.equal(tasksJson.tasks.length, options.expectedTasks.length, "tasks.json doesn't have the expected number of tasks.");
     for (const task of options.expectedTasks) {
