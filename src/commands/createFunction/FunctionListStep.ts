@@ -112,6 +112,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
+        const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
         const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
@@ -135,7 +136,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || language === ProjectLanguage.Python || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
