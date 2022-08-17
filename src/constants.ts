@@ -35,7 +35,7 @@ export enum ProjectLanguage {
 }
 
 /**
- * The "original" (i.e. first) Python model is 1.
+ * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
  * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
  * Any significantly changed new model should use an incremented number.
  */
