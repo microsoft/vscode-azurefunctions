@@ -34,6 +34,11 @@ export enum ProjectLanguage {
     Custom = 'Custom'
 }
 
+/**
+ * The "original" (i.e. first) Python model is 1.
+ * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
+ * Any significantly changed new model should use an incremented number.
+ */
 export const previewPythonModel: number = 2;
 
 export enum TemplateFilter {
