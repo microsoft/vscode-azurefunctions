@@ -19,6 +19,7 @@ import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreate
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
+import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
@@ -89,7 +90,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 executeSteps.push(await DotnetProjectCreateStep.createStep(context));
                 break;
             case ProjectLanguage.Python:
-                executeSteps.push(new PythonProjectCreateStep(context.languageModel));
+                executeSteps.push(
+                    isPythonV2Plus(context.language, context.languageModel)
+                        ? new PysteinProjectCreateStep()
+                        : new PythonProjectCreateStep());
                 break;
             case ProjectLanguage.PowerShell:
                 executeSteps.push(new PowerShellProjectCreateStep());

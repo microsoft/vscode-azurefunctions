@@ -12,7 +12,7 @@ import { IFunctionTemplate } from '../IFunctionTemplate';
 import { ITemplates } from '../ITemplates';
 import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
-import { parseScriptTemplates } from './parseScriptTemplates';
+import { IScriptFunctionTemplate, parseScriptTemplates } from './parseScriptTemplates';
 
 export class PysteinTemplateProvider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
@@ -37,6 +37,16 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
 
     public async getBackupTemplates(): Promise<ITemplates> {
         return await this.parseTemplates(this.getBackupPath());
+    }
+
+    public async getProjectTemplate(): Promise<IScriptFunctionTemplate | undefined> {
+        const templates = await this.getBackupTemplates();
+
+        // Find the first Python Preview project root template...
+        return templates.functionTemplates.find(template =>
+            template.language === ProjectLanguage.Python
+            && template.id.endsWith('-Python-Preview')
+            && template.categoryStyle === 'projectroot') as IScriptFunctionTemplate;
     }
 
     public async updateBackupTemplates(): Promise<void> {

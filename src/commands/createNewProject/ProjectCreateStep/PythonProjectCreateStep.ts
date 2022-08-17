@@ -3,15 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
-import { Progress, Uri, window, workspace } from 'vscode';
-import { ProjectLanguage, pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
-import { IHostJsonV2 } from '../../../funcConfig/host';
+import { Progress } from 'vscode';
+import { requirementsFileName } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { confirmOverwriteFile } from '../../../utils/fs';
-import { isPythonV2Plus } from '../../../utils/pythonUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
@@ -32,34 +30,10 @@ const defaultRequirements: string = `# DO NOT include azure-functions-worker in 
 azure-functions
 `;
 
-const azureWebJobsFeatureFlagsKey = 'AzureWebJobsFeatureFlags';
-
-const defaultFunctionAppSource = `import azure.functions as func
-
-app = func.FunctionApp(auth_level=func.AuthLevel.ANONYMOUS)
-
-# Uncomment to create an HTTP trigger-based function.
-# @app.function_name(name="HttpTrigger1")
-# @app.route(route="hello")
-# def test_function(req: func.HttpRequest) -> func.HttpResponse:
-#    return func.HttpResponse("HttpTrigger1 function processed a request!!!")
-`;
-
 export class PythonProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
 
-    constructor(private readonly model?: number) {
-        super();
-    }
-
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
-        // The Python V2+ model requires enabling worker indexing...
-        if (this.isModelV2Plus) {
-            this.localSettingsJson.Values = this.localSettingsJson.Values ?? {};
-
-            this.localSettingsJson.Values[azureWebJobsFeatureFlagsKey] = 'EnableWorkerIndexing';
-        }
-
         await super.executeCore(context, progress);
 
         const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
@@ -74,32 +48,6 @@ export class PythonProjectCreateStep extends ScriptProjectCreateStep {
 
             await AzExtFsExtra.writeFile(requirementsPath, isOldFuncCli ? oldRequirements : defaultRequirements);
         }
-
-        // The Python V2+ model has a single, project-level source file.
-        if (this.isModelV2Plus)
-        {
-            const functionAppPath: string = path.join(context.projectPath, pythonFunctionAppFileName);
-
-            if (await confirmOverwriteFile(context, functionAppPath)) {
-                await AzExtFsExtra.writeFile(functionAppPath, defaultFunctionAppSource);
-                await window.showTextDocument(await workspace.openTextDocument(Uri.file(functionAppPath)));
-            }
-        }
-    }
-
-    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
-        const hostJson: IHostJsonV2 = await super.getHostContent(context);
-
-        // Python V2+ model currently does not work when extension bundles are specified.
-        if (this.isModelV2Plus) {
-            hostJson.extensionBundle = undefined;
-        }
-
-        return hostJson;
-    }
-
-    private get isModelV2Plus(): boolean {
-        return isPythonV2Plus(ProjectLanguage.Python, this.model);
     }
 }
 
