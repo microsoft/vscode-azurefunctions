@@ -74,7 +74,8 @@ function runPostFunctionCreateSteps(func: ICachedFunction): void {
     void callWithTelemetryAndErrorHandling('postFunctionCreate', async (context: IActionContext) => {
         context.telemetry.suppressIfSuccessful = true;
 
-        if (getContainingWorkspace(func.projectPath)) {
+        // If function creation created a new file, open it in an editor...
+        if (func.newFilePath && getContainingWorkspace(func.projectPath)) {
             if (await AzExtFsExtra.pathExists(func.newFilePath)) {
                 await window.showTextDocument(await workspace.openTextDocument(Uri.file(func.newFilePath)));
             }

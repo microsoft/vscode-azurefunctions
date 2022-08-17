@@ -27,9 +27,17 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             const name = nonNullProp(template, 'name');
             const filename = `${name}.md`;
 
-            await showMarkdownPreviewContent(createMarkdown(name, content), filename);
+            const markdownFilename = Object.values(template.templateFiles).find(filename => filename.toLowerCase().endsWith('.md'));
 
-            return ''; // TODO: Allow not returning filename.
+            const markdownContent =
+                markdownFilename
+                    ? template.templateFiles[markdownFilename]
+                    : createMarkdown(name, content);
+
+            await showMarkdownPreviewContent(markdownContent, filename);
+
+            // NOTE: No "real" file being generated...
+            return '';
         } else {
             const functionScript = nonNullProp(context, 'functionScript');
             const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
