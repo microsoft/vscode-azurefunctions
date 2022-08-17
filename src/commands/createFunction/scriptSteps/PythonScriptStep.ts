@@ -3,36 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions } from '@microsoft/vscode-azext-utils';
 import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
 import { localize } from '../../../localize';
 
-type FileInfo = { path: string, stat: fse.Stats };
-
-async function getFileInfo(path: string): Promise<FileInfo> {
-    const stat = await fse.stat(path);
-
-    return {
-        path,
-        stat
-    };
-}
-
-async function getDirectoryInfo(directory: string): Promise<FileInfo[]> {
-    const files = await fse.readdir(directory);
-
-    return Promise.all(
-        files.map(file => getFileInfo(path.join(directory, file))));
-}
-
 export class PythonScriptStep extends AzureWizardPromptStep<IPythonFunctionWizardContext> {
     public async prompt(wizardContext: IPythonFunctionWizardContext): Promise<void> {
-        const files = await getDirectoryInfo(wizardContext.projectPath);
-        const scripts = files.filter(file => file.stat.isFile() && path.extname(file.path) === '.py');
+        const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(wizardContext.projectPath));
+        const scripts =
+            entries
+                .filter(entry => entry[1] === vscode.FileType.File && path.extname(entry[0]) === '.py')
+                .map(entry => entry[0]);
 
-        const filePicks: IAzureQuickPickItem<string>[] = scripts.map(file => ({ label: path.basename(file.path), data: file.path }));
+        const filePicks: IAzureQuickPickItem<string>[] = scripts.map(file => ({ label: path.basename(file), data: file }));
 
         const fileOptions: IAzureQuickPickOptions = { placeHolder: localize('selectScript', 'Select a script in which to append the function') };
 

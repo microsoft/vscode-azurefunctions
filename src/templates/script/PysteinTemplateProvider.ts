@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import * as fse from 'fs-extra';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ProjectLanguage } from '../../constants';
 import { IBindingTemplate } from '../IBindingTemplate';
@@ -71,7 +70,7 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
 
     protected async parseTemplates(rootPath: string): Promise<ITemplates> {
         const paths: ITemplatePaths = this.getTemplatePaths(rootPath);
-        this._rawTemplates = <object[]>await fse.readJSON(paths.templates);
+        this._rawTemplates = <object[]>await AzExtFsExtra.readJSON(paths.templates);
         return parseScriptTemplates({}, this._rawTemplates, {});
     }
 

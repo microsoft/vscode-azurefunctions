@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fse from 'fs-extra';
 import * as path from 'path';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { FunctionLocation, IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
 import { showMarkdownPreviewContent } from '../../../utils/textUtils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 
 function createMarkdown(name: string, content: string): string {
     return `# ${name}
@@ -42,7 +42,10 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             const functionScript = nonNullProp(context, 'functionScript');
             const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
 
-            await fse.appendFile(functionScriptPath, '\r\n\r\n' + content);
+            // NOTE: AzExtFsExtra doesn't have fs-extra's handy appendFile() function.
+            // NOTE: We add two (end-of-)lines to ensure an empty line between functions definitions.
+            const existingContent = await AzExtFsExtra.readFile(functionScriptPath);
+            await AzExtFsExtra.writeFile(functionScriptPath, existingContent + '\r\n\r\n' + content);
 
             return functionScriptPath;
         }
