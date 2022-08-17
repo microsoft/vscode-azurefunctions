@@ -51,7 +51,10 @@ export class FunctionSubWizard {
                     promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
                     break;
                 default:
-                    promptSteps.push(new ScriptFunctionNameStep());
+                    // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
+                    if (!isV2PythonModel) {
+                        promptSteps.push(new ScriptFunctionNameStep());
+                    }
                     break;
             }
 
