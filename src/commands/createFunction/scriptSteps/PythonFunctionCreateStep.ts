@@ -42,7 +42,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             const functionScript = nonNullProp(context, 'functionScript');
             const functionScriptPath: string = path.isAbsolute(functionScript) ? functionScript : path.join(context.projectPath, functionScript);
 
-            await fse.appendFile(functionScriptPath, '\r\n' + content);
+            await fse.appendFile(functionScriptPath, '\r\n\r\n' + content);
 
             return functionScriptPath;
         }

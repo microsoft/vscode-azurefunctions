@@ -117,7 +117,7 @@ async function validateFunctionVersion(context: IActionContext, projectLanguage:
         const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
 
         // TODO: Update range with official version.
-        const expectedVersionRange = '>=4.0.4515';
+        const expectedVersionRange = '>=4.0.4737';
 
         if (version && !semver.satisfies(version, expectedVersionRange)) {
             const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}").', version, expectedVersionRange);
