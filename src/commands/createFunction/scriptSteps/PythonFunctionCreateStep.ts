@@ -27,7 +27,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
             const name = nonNullProp(template, 'name');
             const filename = `${name}.md`;
 
-            const markdownFilename = Object.values(template.templateFiles).find(filename => filename.toLowerCase().endsWith('.md'));
+            const markdownFilename = Object.keys(template.templateFiles).find(filename => filename.toLowerCase().endsWith('.md'));
 
             const markdownContent =
                 markdownFilename
