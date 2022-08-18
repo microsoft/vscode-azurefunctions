@@ -64,5 +64,9 @@ export function registerStaticContent(content: string, filename?: string): vscod
 export async function showMarkdownPreviewContent(content: string, filename: string = 'markdown.md'): Promise<void> {
     const uri = registerStaticContent(content, filename);
 
+    await showMarkdownPreviewFile(uri);
+}
+
+export async function showMarkdownPreviewFile(uri: vscode.Uri): Promise<void> {
     await vscode.commands.executeCommand('markdown.showPreview', uri);
 }

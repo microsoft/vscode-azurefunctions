@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { ProjectLanguage, pythonFunctionAppFileName } from '../../../constants';
+import { hostFileName, localSettingsFileName, ProjectLanguage, pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { PysteinTemplateProvider } from '../../../templates/script/PysteinTemplateProvider';
@@ -15,6 +15,9 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 import { localize } from "../../../localize";
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
+import { showMarkdownPreviewFile } from '../../../utils/textUtils';
+
+const gettingStartedFileName = 'getting_started.md';
 
 export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
@@ -22,7 +25,7 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const projectTemplate = await PysteinProjectCreateStep.getProjectTemplate(context);
 
-        const localSettingsContent = projectTemplate.templateFiles['local.settings.json'];
+        const localSettingsContent = projectTemplate.templateFiles[localSettingsFileName];
 
         if (localSettingsContent) {
             this.localSettingsJson = JSON.parse(localSettingsContent) as ILocalSettingsJson;
@@ -36,8 +39,8 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
         const files = [
             pythonFunctionAppFileName,
-            'getting_started.md',
-            'requirements.txt'
+            gettingStartedFileName,
+            requirementsFileName
         ];
 
         for (const file of files) {
@@ -56,13 +59,16 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
         const functionAppPath: string = path.join(context.projectPath, pythonFunctionAppFileName);
 
-        // TODO: Show only the source, or the MD instead (or as well)?
         await window.showTextDocument(await workspace.openTextDocument(Uri.file(functionAppPath)));
+
+        const gettingStartedPath = path.join(context.projectPath, gettingStartedFileName);
+
+        await showMarkdownPreviewFile(Uri.file(gettingStartedPath));
     }
 
     protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
         const projectTemplate = await PysteinProjectCreateStep.getProjectTemplate(context);
-        const hostContent = projectTemplate.templateFiles['host.json'];
+        const hostContent = projectTemplate.templateFiles[hostFileName];
 
         let hostJson: IHostJsonV2;
 
