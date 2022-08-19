@@ -5,8 +5,9 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { hostFileName, localSettingsFileName, ProjectLanguage, pythonFunctionAppFileName, requirementsFileName } from '../../../constants';
+import { hostFileName, localSettingsFileName, ProjectLanguage, pythonFunctionAppFileName } from '../../../constants';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { PysteinTemplateProvider } from '../../../templates/script/PysteinTemplateProvider';
@@ -18,6 +19,16 @@ import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { showMarkdownPreviewFile } from '../../../utils/textUtils';
 
 const gettingStartedFileName = 'getting_started.md';
+
+async function fileExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+        const result = await vscode.workspace.fs.stat(uri);
+
+        return result.type === vscode.FileType.File;
+    } catch {
+        return false;
+    }
+}
 
 export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = pythonGitignore;
@@ -37,13 +48,18 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
         await super.executeCore(context, progress);
 
-        const files = [
-            pythonFunctionAppFileName,
-            gettingStartedFileName,
-            requirementsFileName
+        const explicitlyHandledFiles = [
+            localSettingsFileName,
+            hostFileName
         ];
 
-        for (const file of files) {
+        // NOTE: We want to add all files in the templates *except* those we've explicitly handled (above and below).
+        const filesToAdd =
+            Object
+                .keys(projectTemplate.templateFiles)
+                .filter(file => !explicitlyHandledFiles.includes(file));
+
+        for (const file of filesToAdd) {
             const fileContent = projectTemplate.templateFiles[file];
 
             if (!fileContent) {
@@ -57,13 +73,17 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
             }
         }
 
-        const functionAppPath: string = path.join(context.projectPath, pythonFunctionAppFileName);
+        const functionAppPath = Uri.file(path.join(context.projectPath, pythonFunctionAppFileName));
 
-        await window.showTextDocument(await workspace.openTextDocument(Uri.file(functionAppPath)));
+        if (await fileExists(functionAppPath)) {
+            await window.showTextDocument(await workspace.openTextDocument(functionAppPath));
+        }
 
-        const gettingStartedPath = path.join(context.projectPath, gettingStartedFileName);
+        const gettingStartedPath = Uri.file(path.join(context.projectPath, gettingStartedFileName));
 
-        await showMarkdownPreviewFile(Uri.file(gettingStartedPath), /* openToSide: */ true);
+        if (await fileExists(gettingStartedPath)) {
+            await showMarkdownPreviewFile(gettingStartedPath, /* openToSide: */ true);
+        }
     }
 
     protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
