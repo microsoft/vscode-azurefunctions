@@ -116,8 +116,11 @@ async function validateFunctionVersion(context: IActionContext, projectLanguage:
     if (validateTools && isPythonV2Plus(projectLanguage, projectLanguageModel)) {
         const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
 
-        // TODO: Update range with official version.
-        const expectedVersionRange = '>=4.0.4737';
+        // NOTE: This is the latest version available as of this commit,
+        //       but not necessarily the final "preview release" version.
+        //       The Functions team is ok with using this version as the
+        //       minimum bar.
+        const expectedVersionRange = '>=4.0.4742';
 
         if (version && !semver.satisfies(version, expectedVersionRange)) {
             const message: string = localize('invalidFunctionVersion', 'The version of installed Functions tools "{0}" is not sufficient for this project type ("{1}").', version, expectedVersionRange);
