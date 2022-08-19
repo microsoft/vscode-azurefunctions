@@ -37,7 +37,7 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
         const isParentPythonV2Plus = isPythonV2Plus(this.parent.language, this.parent.languageModel);
 
         if (this.parent.isIsolated || isParentPythonV2Plus) {
-            return await this.getChildrenForIsolatedProject(context);
+            return await this.getChildrenForHostedProjects(context);
         } else {
             const functions: string[] = await getFunctionFolders(context, this.parent.effectiveProjectPath);
             const children: AzExtTreeItem[] = await this.createTreeItemsWithErrorHandling(
@@ -78,9 +78,9 @@ export class LocalFunctionsTreeItem extends FunctionsTreeItemBase {
     }
 
     /**
-     * .NET Isolated projects don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
+     * Some projects (e.g. .NET Isolated and PyStein (i.e. Python model >=2)) don't have typical "function.json" files, so we'll have to ping localhost to get functions (only available if the project is running)
      */
-    private async getChildrenForIsolatedProject(context: IActionContext): Promise<AzExtTreeItem[]> {
+    private async getChildrenForHostedProjects(context: IActionContext): Promise<AzExtTreeItem[]> {
         if (runningFuncTaskMap.has(this.parent.workspaceFolder)) {
             const hostRequest = await this.parent.getHostRequest(context);
             const functions = await requestUtils.sendRequestWithExtTimeout(context, {

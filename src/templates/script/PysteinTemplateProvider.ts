@@ -49,16 +49,17 @@ export class PysteinTemplateProvider extends TemplateProviderBase {
     }
 
     public async updateBackupTemplates(): Promise<void> {
+        // NOTE: No-op as the templates are only bundled with this extension.
         await Promise.resolve();
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
     public async cacheTemplates(): Promise<void> {
+        // NOTE: No-op as the templates are only bundled with this extension.
         await Promise.resolve();
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
     public async clearCachedTemplates(): Promise<void> {
+        // NOTE: No-op as the templates are only bundled with this extension.
         await Promise.resolve();
     }
 
