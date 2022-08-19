@@ -1,5 +1,35 @@
 # Change Log
 
+## 1.8.0 - 2022-08-19
+
+### Added
+
+- Support for new Python language model [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
+
+### Changed
+
+- Add net7 tests [#3277](https://github.com/microsoft/vscode-azurefunctions/pull/3277)
+- Just use the 1st value for creating python projects [#3276](https://github.com/microsoft/vscode-azurefunctions/pull/3276)
+- Push Framework argument for .net70 [#3273](https://github.com/microsoft/vscode-azurefunctions/pull/3273)
+- Switch to latest VS Code test package [#3275](https://github.com/microsoft/vscode-azurefunctions/pull/3275)
+- Replace fse with AzExtFsUtils where possible [#3268](https://github.com/microsoft/vscode-azurefunctions/pull/3268)
+- Update net7 template [#3262](https://github.com/microsoft/vscode-azurefunctions/pull/3262)
+- Update backup templates [#3260](https://github.com/microsoft/vscode-azurefunctions/pull/3260)
+- Move workflow from root to workflows folder [#3259](https://github.com/microsoft/vscode-azurefunctions/pull/3259)
+- Rename info-needed-closer [#3257](https://github.com/microsoft/vscode-azurefunctions/pull/3257)
+- Bump terser from 5.9.0 to 5.14.2 [#3253](https://github.com/microsoft/vscode-azurefunctions/pull/3253)
+- Use shared azure id parsing utils [#3246](https://github.com/microsoft/vscode-azurefunctions/pull/3246)
+- Add post release version bumper [#3244](https://github.com/microsoft/vscode-azurefunctions/pull/3244/files)
+- Update AppInsights key [#3239](https://github.com/microsoft/vscode-azurefunctions/pull/3239)
+
+### Fixed
+
+- [Suggestion] It would be better to change log to "Delete Slot 'xxx' Succeeded" in the ACTIVITYLOG window after deleting a slot [#3148](https://github.com/microsoft/vscode-azurefunctions/issues/3148)
+- View properties doesn't display site config [#3264](https://github.com/microsoft/vscode-azurefunctions/issues/3264)
+- Fix tests to use v4 Core Tools [#3267](https://github.com/microsoft/vscode-azurefunctions/pull/3267)
+- App Insights APM 2.1 Enablement and Representation [#2835](https://github.com/microsoft/vscode-azurefunctions/issues/2835)
+- [Suggestion] Don't show Logic Apps in Functions Extension [#3165](https://github.com/microsoft/vscode-azurefunctions/issues/3165)
+
 ## 1.7.4 - 2022-07-05
 
 ### Changed
