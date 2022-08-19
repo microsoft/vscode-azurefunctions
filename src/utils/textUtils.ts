@@ -61,12 +61,16 @@ export function registerStaticContent(content: string, filename?: string): vscod
     return registerContentProvider().registerTextDocumentContent(content, filename);
 }
 
-export async function showMarkdownPreviewContent(content: string, filename: string = 'markdown.md'): Promise<void> {
+export async function showMarkdownPreviewContent(content: string, filename: string, openToSide?: boolean): Promise<void> {
     const uri = registerStaticContent(content, filename);
 
-    await showMarkdownPreviewFile(uri);
+    await showMarkdownPreviewFile(uri, openToSide);
 }
 
-export async function showMarkdownPreviewFile(uri: vscode.Uri): Promise<void> {
-    await vscode.commands.executeCommand('markdown.showPreview', uri);
+export async function showMarkdownPreviewFile(uri: vscode.Uri, openToSide: boolean = false): Promise<void> {
+    await vscode.commands.executeCommand(
+        openToSide
+            ? 'markdown.showPreviewToSide'
+            : 'markdown.showPreview',
+        uri);
 }

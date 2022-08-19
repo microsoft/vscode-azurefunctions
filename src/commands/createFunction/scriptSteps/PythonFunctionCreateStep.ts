@@ -34,7 +34,7 @@ export class PythonFunctionCreateStep extends FunctionCreateStepBase<IPythonFunc
                     ? template.templateFiles[markdownFilename]
                     : createMarkdown(name, content);
 
-            await showMarkdownPreviewContent(markdownContent, filename);
+            await showMarkdownPreviewContent(markdownContent, filename, /* openToSide: */ true);
 
             // NOTE: No "real" file being generated...
             return '';

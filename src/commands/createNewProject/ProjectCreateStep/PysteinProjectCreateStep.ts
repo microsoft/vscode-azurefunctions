@@ -63,7 +63,7 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
         const gettingStartedPath = path.join(context.projectPath, gettingStartedFileName);
 
-        await showMarkdownPreviewFile(Uri.file(gettingStartedPath));
+        await showMarkdownPreviewFile(Uri.file(gettingStartedPath), /* openToSide: */ true);
     }
 
     protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
