@@ -42,7 +42,7 @@ export class BindingListStep extends AzureWizardPromptStep<IBindingWizardContext
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
-        const templates: IBindingTemplate[] = await templateProvider.getBindingTemplates(context, context.projectPath, language, version);
+        const templates: IBindingTemplate[] = await templateProvider.getBindingTemplates(context, context.projectPath, language, undefined, version);
         return templates
             .filter(b => b.direction.toLowerCase() === direction.toLowerCase())
             .sort((a, b) => a.displayName.localeCompare(b.displayName))

@@ -3,32 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import * as escape from 'escape-string-regexp';
 import { JavaBuildTool, ProjectLanguage, TemplateFilter, templateFilterSetting } from '../../constants';
-import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { ext } from '../../extensionVariables';
-import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
+import { isPythonV2Plus } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
-import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
-import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
-import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
-import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
-import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
-import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
-import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
-import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
-import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
-import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
-import { ScriptFunctionNameStep } from './scriptSteps/ScriptFunctionNameStep';
-import { TypeScriptFunctionCreateStep } from './scriptSteps/TypeScriptFunctionCreateStep';
+import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
 
 export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardContext> {
     public hideStepCount: boolean = true;
@@ -47,7 +34,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
             const language: ProjectLanguage = nonNullProp(context, 'language');
             const version: FuncVersion = nonNullProp(context, 'version');
             const templateProvider = ext.templateProvider.get(context);
-            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, version, TemplateFilter.All, context.projectTemplateKey);
+            const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, TemplateFilter.All, context.projectTemplateKey);
             const foundTemplate: IFunctionTemplate | undefined = templates.find((t: IFunctionTemplate) => {
                 if (options.templateId) {
                     const actualId: string = t.id.toLowerCase();
@@ -69,75 +56,15 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const template: IFunctionTemplate | undefined = context.functionTemplate;
-        if (template) {
-            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    promptSteps.push(new JavaPackageNameStep(), new JavaFunctionNameStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
-                    break;
-                default:
-                    promptSteps.push(new ScriptFunctionNameStep());
-                    break;
-            }
+        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
 
-            // Add settings to context that were programmatically passed in
-            for (const key of Object.keys(this._functionSettings)) {
-                context[key.toLowerCase()] = this._functionSettings[key];
-            }
-
-            addBindingSettingSteps(template.userPromptedSettings, promptSteps);
-
-            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    executeSteps.push(new JavaFunctionCreateStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
-                    break;
-                case ProjectLanguage.TypeScript:
-                    executeSteps.push(new TypeScriptFunctionCreateStep());
-                    break;
-                default:
-                    executeSteps.push(new ScriptFunctionCreateStep());
-                    break;
-            }
-
-            if ((!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context, context.projectPath)) {
-                promptSteps.push(new AzureWebJobsStoragePromptStep());
-                executeSteps.push(new AzureWebJobsStorageExecuteStep());
-            }
-
-            const title: string = localize('createFunction', 'Create new {0}', template.name);
-            return { promptSteps, executeSteps, title };
-        } else if (context.generateFromOpenAPI) {
-            const promptSteps: AzureWizardPromptStep<IFunctionWizardContext>[] = [];
-            const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    promptSteps.push(new JavaPackageNameStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                    promptSteps.push(new DotnetNamespaceStep());
-                    break;
-                default:
-                    break;
-            }
-
-            promptSteps.push(new OpenAPIGetSpecificationFileStep());
-            executeSteps.push(await OpenAPICreateStep.createStep(context));
-
-            const title: string = localize('createFunction', 'Create new {0}', 'HTTP Triggers from OpenAPI (v2/v3) Specification File');
-            return { promptSteps, executeSteps, title };
+        if (isV2PythonModel) {
+            return {
+                // TODO: Title?
+                promptSteps: [ new PythonLocationStep(this._functionSettings) ]
+            };
         } else {
-            return undefined;
+            return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
         }
     }
 
@@ -169,7 +96,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 context.generateFromOpenAPI = true;
                 break;
             } else if (result === 'reloadTemplates') {
-                await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), nonNullProp(context, 'version'));
+                await templateProvider.clearTemplateCache(context, context.projectPath, nonNullProp(context, 'language'), context.languageModel, nonNullProp(context, 'version'));
                 context.telemetry.properties.reloaded = 'true';
             } else {
                 context.functionTemplate = result;
@@ -185,9 +112,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     private async getPicks(context: IFunctionWizardContext, templateFilter: TemplateFilter): Promise<IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[]> {
         const language: ProjectLanguage = nonNullProp(context, 'language');
+        const languageModel = context.languageModel;
         const version: FuncVersion = nonNullProp(context, 'version');
         const templateProvider = ext.templateProvider.get(context);
-        const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, version, templateFilter, context.projectTemplateKey);
+        const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
             .sort((a, b) => sortTemplates(a, b, templateFilter))
@@ -208,7 +136,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || language === ProjectLanguage.Python || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),

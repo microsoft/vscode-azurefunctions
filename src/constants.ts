@@ -7,6 +7,7 @@ import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
+export const projectLanguageModelSetting: string = 'projectLanguageModel';
 export const funcVersionSetting: string = 'projectRuntime'; // Using this name for the sake of backwards compatability even though it's not the most accurate
 export const projectSubpathSetting: string = 'projectSubpath';
 export const templateFilterSetting: string = 'templateFilter';
@@ -33,6 +34,13 @@ export enum ProjectLanguage {
     Custom = 'Custom'
 }
 
+/**
+ * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
+ * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
+ * Any significantly changed new model should use an incremented number.
+ */
+export const previewPythonModel: number = 2;
+
 export enum TemplateFilter {
     All = 'All',
     Core = 'Core',
@@ -48,6 +56,7 @@ export const settingsFileName: string = 'settings.json';
 export const vscodeFolderName: string = '.vscode';
 export const gitignoreFileName: string = '.gitignore';
 export const requirementsFileName: string = 'requirements.txt';
+export const pythonFunctionAppFileName: string = 'function_app.py';
 export const extensionsCsprojFileName: string = 'extensions.csproj';
 export const pomXmlFileName: string = 'pom.xml';
 export const buildGradleFileName: string = 'build.gradle';
@@ -97,6 +106,8 @@ export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
+export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (New Model Preview)');
+
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {

@@ -8,7 +8,7 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from "vscode";
 import { tryGetFunctionProjectRoot } from "./commands/createNewProject/verifyIsProject";
 import { getFunctionAppName, getJavaDebugSubpath } from "./commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep";
-import { funcVersionSetting, JavaBuildTool, javaBuildTool, ProjectLanguage, projectLanguageSetting } from "./constants";
+import { funcVersionSetting, JavaBuildTool, javaBuildTool, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from "./constants";
 import { FuncVersion, tryParseFuncVersion } from "./FuncVersion";
 import { localize } from "./localize";
 import { InitLocalProjectTreeItem } from "./tree/localProject/InitLocalProjectTreeItem";
@@ -35,6 +35,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
                 if (projectPath) {
                     try {
                         const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                        const languageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
                         const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                         if (language === undefined || version === undefined) {
                             children.push(new InitLocalProjectTreeItem(parent, projectPath, folder));
@@ -52,7 +53,7 @@ export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider
                             }
 
 
-                            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated });
+                            const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(parent, { effectiveProjectPath, folder, language, languageModel, version, preCompiledProjectPath, isIsolated });
                             this._projectDisposables.push(treeItem);
                             children.push(treeItem);
                         }

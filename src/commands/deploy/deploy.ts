@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -43,9 +42,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         expectedChildContextValue: expectedContextValue
     }));
 
-    const [language, version]: [ProjectLanguage, FuncVersion] = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
+    const { language, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
+
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
+    // TODO: telemetry for language model.
 
     if (language === ProjectLanguage.Python && !node.site.isLinux) {
         context.errorHandling.suppressReportIssue = true;

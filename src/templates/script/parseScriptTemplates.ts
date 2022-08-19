@@ -23,6 +23,7 @@ export interface IRawTemplate {
         language: ProjectLanguage;
         userPrompt?: string[];
         category?: TemplateCategory[];
+        categoryStyle?: string;
     };
     files?: { [filename: string]: string };
 }
@@ -228,7 +229,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         language,
         userPromptedSettings,
         templateFiles: rawTemplate.files || {},
-        categories: rawTemplate.metadata.category || []
+        categories: rawTemplate.metadata.category || [],
+        categoryStyle: rawTemplate.metadata.categoryStyle
     };
 }
 

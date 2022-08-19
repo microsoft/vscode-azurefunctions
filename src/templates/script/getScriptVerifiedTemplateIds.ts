@@ -37,6 +37,7 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
         ]);
 
         // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
-        return verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript|TypeScript|Python|PowerShell|Custom)$`, 'i'));
+        // NOTE: The Python Preview IDs are only temporary.
+        return verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript|TypeScript|Python|PowerShell|Custom|Python-Preview|Python-Preview-Append)$`, 'i'));
     }
 }

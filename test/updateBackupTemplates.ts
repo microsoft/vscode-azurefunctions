@@ -44,7 +44,7 @@ suite('Backup templates', () => {
                     continue;
                 }
 
-                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, version, worker.projectTemplateKey);
+                const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(testWorkspacePath, worker.language, undefined, version, worker.projectTemplateKey);
 
                 const context = await createTestActionContext();
                 for (const provider of providers) {

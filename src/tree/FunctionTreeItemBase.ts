@@ -23,12 +23,15 @@ export abstract class FunctionTreeItemBase extends AzExtTreeItem {
     private _disabled: boolean;
     private _func: FunctionEnvelope | undefined;
 
-    protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: FunctionEnvelope | undefined) {
+    protected constructor(parent: FunctionsTreeItemBase, config: ParsedFunctionJson, name: string, func: FunctionEnvelope | undefined, enableProperties: boolean = true) {
         super(parent);
         this._config = config;
         this.name = name;
         this._func = func;
-        this.commandId = 'azureFunctions.viewProperties';
+
+        if (enableProperties) {
+            this.commandId = 'azureFunctions.viewProperties';
+        }
     }
 
     public get id(): string {

@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.7.5-alpha.0",
+    "version": "1.8.0-alpha.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -77,6 +77,7 @@
         "onCommand:azureFunctions.viewDeploymentLogs",
         "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
+        "onFileSystem:vscode-azurefunctions-static-content",
         "onUri",
         "onView:azureWorkspace",
         "workspaceContains:**/host.json"
@@ -832,6 +833,12 @@
                             "",
                             ""
                         ]
+                    },
+                    "azureFunctions.projectLanguageModel": {
+                        "scope": "resource",
+                        "type": "number",
+                        "description": "%azureFunctions.projectLanguageModel%",
+                        "minimum": 1
                     },
                     "azureFunctions.projectTemplateKey": {
                         "scope": "resource",
