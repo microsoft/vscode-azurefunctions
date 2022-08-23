@@ -117,6 +117,11 @@ export function isKnownWorkerRuntime(runtime: string | undefined): boolean {
     return !!runtime && ['node', 'dotnet', 'dotnet-isolated', 'java', 'python', 'powershell', 'custom'].includes(runtime.toLowerCase());
 }
 
+export function promptToUpdateDotnetRuntime(azureRuntime: string | undefined, localRuntime: string | undefined): boolean {
+    return azureRuntime === 'dotnet' && localRuntime === 'dotnet-isolated' ||
+        azureRuntime === 'dotnet-isolated' && localRuntime === 'dotnet'
+}
+
 export function getFuncWatchProblemMatcher(language: string | undefined): string {
     const runtime: string | undefined = getRootFunctionsWorkerRuntime(language);
     return runtime && runtime !== 'custom' ? `$func-${runtime}-watch` : '$func-watch';
