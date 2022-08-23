@@ -100,7 +100,24 @@
                     "type": "microsoft.web/sites",
                     "detail": "%azureFunctions.createFunctionAppDetail%"
                 }
-            ]
+            ],
+            "actionGroups": [
+                {
+                    "id": "functions",
+                    "title": "Functions",
+                    "icon": "resources/azFuncProductionSlot.svg"
+                }
+            ],
+            "actions": {
+                "functions": [
+                    {
+                        "command": "azureFunctions.createFunction"
+                    },
+                    {
+                        "command": "azureFunctions.deploy"
+                    }
+                ]
+            }
         },
         "commands": [
             {
