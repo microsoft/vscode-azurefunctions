@@ -94,7 +94,7 @@ export class CentralTemplateProvider implements Disposable {
             await provider.clearCachedTemplates(context);
             provider.projKeyMayHaveChanged();
         }
-        const cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
+        const cachedProviders = this.tryGetCachedProviders(projectPath, language, languageModel, version);
         if (cachedProviders) {
             delete cachedProviders.templatesTask;
         }
@@ -123,12 +123,13 @@ export class CentralTemplateProvider implements Disposable {
         return await provider.getProjKey(context);
     }
 
-    private getCachedProvidersKey(language: ProjectLanguage, version: FuncVersion): string {
-        return language + version;
+    private getCachedProvidersKey(language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): string {
+        // NOTE: VS Code treats lack of a language model project setting as a 0, so treat undefined === 0.
+        return `${language}:${languageModel !== undefined ? languageModel : 0}:${version}`;
     }
 
-    private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): CachedProviders | undefined {
-        const key: string = this.getCachedProvidersKey(language, version);
+    private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): CachedProviders | undefined {
+        const key: string = this.getCachedProvidersKey(language, languageModel, version);
         if (this._providersMap.has(key)) {
             return this._providersMap.get(key);
         } else if (projectPath) {
@@ -138,8 +139,8 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private setCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, cachedProviders: CachedProviders): void {
-        let key: string = this.getCachedProvidersKey(language, version);
+    private setCachedProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, cachedProviders: CachedProviders): void {
+        let key: string = this.getCachedProvidersKey(language, languageModel, version);
         if (cachedProviders.providers.some(p => p.supportsProjKey())) {
             key += projectPath;
         }
@@ -147,10 +148,10 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     private async getCachedProviders(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
-        let cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
+        let cachedProviders = this.tryGetCachedProviders(projectPath, language, languageModel, version);
         if (!cachedProviders) {
             cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, projectTemplateKey) };
-            this.setCachedProviders(projectPath, language, version, cachedProviders);
+            this.setCachedProviders(projectPath, language, languageModel, version, cachedProviders);
         } else {
             await Promise.all(cachedProviders.providers.map(async p => {
                 if (await p.updateProjKeyIfChanged(context, projectTemplateKey)) {
