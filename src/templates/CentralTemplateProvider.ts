@@ -124,8 +124,8 @@ export class CentralTemplateProvider implements Disposable {
     }
 
     private getCachedProvidersKey(language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): string {
-        // NOTE: VS Code treats lack of a language model project setting as a 0, so treat undefined === 0.
-        return `${language}:${languageModel !== undefined ? languageModel : 0}:${version}`;
+        // NOTE: VS Code treats lack of a language model project setting as a 0, so treat undefined === null === 0.
+        return `${language}:${languageModel ?? 0}:${version}`;
     }
 
     private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): CachedProviders | undefined {
