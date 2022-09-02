@@ -15,17 +15,14 @@ import { IBindingTemplate } from '../templates/IBindingTemplate';
 import { IFunctionTemplate } from '../templates/IFunctionTemplate';
 import { promptToReinitializeProject } from '../vsCodeConfig/promptToReinitializeProject';
 import { bundleFeedUtils } from './bundleFeedUtils';
-import { isPythonV2Plus } from './pythonUtils';
 
 export async function verifyExtensionBundle(context: IFunctionWizardContext | IBindingWizardContext, template: IFunctionTemplate | IBindingTemplate): Promise<void> {
     // v1 doesn't support bundles
     // http and timer triggers don't need a bundle
     // F# and C# specify extensions as dependencies in their proj file instead of using a bundle
-    // PyStein (i.e. Python model >=2 does not currently support bundles)
     if (context.version === FuncVersion.v1 ||
         !bundleFeedUtils.isBundleTemplate(template) ||
-        context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp ||
-        isPythonV2Plus(context.language, context.languageModel)) {
+        context.language === ProjectLanguage.CSharp || context.language === ProjectLanguage.FSharp) {
         context.telemetry.properties.bundleResult = 'n/a';
         return;
     }
