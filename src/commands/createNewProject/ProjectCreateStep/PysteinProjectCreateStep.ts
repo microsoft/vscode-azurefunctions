@@ -98,9 +98,6 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
             hostJson = await super.getHostContent(context);
         }
 
-        // Python V2+ model currently does not work when extension bundles are specified.
-        hostJson.extensionBundle = undefined;
-
         return hostJson;
     }
 
