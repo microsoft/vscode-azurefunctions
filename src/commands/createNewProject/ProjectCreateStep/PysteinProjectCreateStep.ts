@@ -75,14 +75,18 @@ export class PysteinProjectCreateStep extends ScriptProjectCreateStep {
 
         const functionAppPath = Uri.file(path.join(context.projectPath, pythonFunctionAppFileName));
 
-        if (await fileExists(functionAppPath)) {
-            await window.showTextDocument(await workspace.openTextDocument(functionAppPath));
-        }
+        // Only open the documents if they're part of the existing/new workspace.
+        // NOTE: We don't currently have a way to open specific documents in the new (or reloaded) window.
+        if (context.openBehavior === 'AddToWorkspace' || context.openBehavior === 'AlreadyOpen') {
+            if (await fileExists(functionAppPath)) {
+                await window.showTextDocument(await workspace.openTextDocument(functionAppPath));
+            }
 
-        const gettingStartedPath = Uri.file(path.join(context.projectPath, gettingStartedFileName));
+            const gettingStartedPath = Uri.file(path.join(context.projectPath, gettingStartedFileName));
 
-        if (await fileExists(gettingStartedPath)) {
-            await showMarkdownPreviewFile(gettingStartedPath, /* openToSide: */ true);
+            if (await fileExists(gettingStartedPath)) {
+                await showMarkdownPreviewFile(gettingStartedPath, /* openToSide: */ true);
+            }
         }
     }
 
