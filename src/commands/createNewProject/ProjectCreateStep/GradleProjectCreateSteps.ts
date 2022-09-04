@@ -7,12 +7,12 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { buildGradleFileName, JavaBuildTool, settingsGradleFileName } from '../../../constants';
-import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { gradleUtils } from '../../../utils/gradleUtils';
 import { javaUtils } from '../../../utils/javaUtils';
+import { nonNullProp } from '../../../utils/nonNull';
 import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContext';
-import { java11, java8 } from '../javaSteps/JavaVersionStep';
+import { java8 } from '../javaSteps/JavaVersionStep';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 const backupGradlePluginVersion = "1.8.2";
@@ -54,14 +54,9 @@ export class GradleProjectCreateStep extends ScriptProjectCreateStep {
         return `rootProject.name = "${context.javaArtifactId}"`;
     }
 
-    getCompatibilityVersion(javaVersion: string | undefined): string {
-        if (javaVersion === java8) {
-            return "1.8";
-        } else if (javaVersion === java11) {
-            return "11";
-        } else {
-            throw new Error(localize('invalidJavaVersion', 'Invalid Java version "{0}".', javaVersion));
-        }
+    getCompatibilityVersion(context: IJavaProjectWizardContext): string {
+        const javaVersion: string = nonNullProp(context, 'javaVersion');
+        return javaVersion === java8 ? "1.8" : javaVersion;
     }
 
     async getBuildGradleContent(context: IJavaProjectWizardContext): Promise<string> {
@@ -80,8 +75,8 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:3.3.3'
 }
 
-sourceCompatibility = '${this.getCompatibilityVersion(context.javaVersion)}'
-targetCompatibility = '${this.getCompatibilityVersion(context.javaVersion)}'
+sourceCompatibility = '${this.getCompatibilityVersion(context)}'
+targetCompatibility = '${this.getCompatibilityVersion(context)}'
 
 compileJava.options.encoding = 'UTF-8'
 
