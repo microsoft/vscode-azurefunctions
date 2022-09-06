@@ -1,6 +1,6 @@
 # Change Log
 
-## 1.8.0 - 2022-08-19
+## 1.8.0 - 2022-09-06
 
 ### Added
 
@@ -8,6 +8,9 @@
 
 ### Changed
 
+- Use appropriate version of extension bundle in Python V2 projects [#3304](https://github.com/microsoft/vscode-azurefunctions/issues/3304)
+- Update Python V2 naming [#3305](https://github.com/microsoft/vscode-azurefunctions/issues/3305)
+- update FUNCTIONS-WORKER-RUNTIME setting with remote function app [#3288](https://github.com/microsoft/vscode-azurefunctions/issues/3288)
 - Add net7 tests [#3277](https://github.com/microsoft/vscode-azurefunctions/pull/3277)
 - Just use the 1st value for creating python projects [#3276](https://github.com/microsoft/vscode-azurefunctions/pull/3276)
 - Push Framework argument for .net70 [#3273](https://github.com/microsoft/vscode-azurefunctions/pull/3273)
@@ -24,6 +27,9 @@
 
 ### Fixed
 
+- An error occurs for the setting "azureFunctions.projectLanguageModel" with the default value "0" [#3315](https://github.com/microsoft/vscode-azurefunctions/issues/3315)
+- Do not open new documents if opened in new window [#3307](https://github.com/microsoft/vscode-azurefunctions/issues/3307)
+- An error occurs if a Java/Python (New Model Preview) project opens in VS Code previously when creating a new Python project [#3300](https://github.com/microsoft/vscode-azurefunctions/issues/3300)
 - [Suggestion] It would be better to change log to "Delete Slot 'xxx' Succeeded" in the ACTIVITYLOG window after deleting a slot [#3148](https://github.com/microsoft/vscode-azurefunctions/issues/3148)
 - View properties doesn't display site config [#3264](https://github.com/microsoft/vscode-azurefunctions/issues/3264)
 - Fix tests to use v4 Core Tools [#3267](https://github.com/microsoft/vscode-azurefunctions/pull/3267)
