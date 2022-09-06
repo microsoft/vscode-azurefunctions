@@ -838,7 +838,7 @@
                         "scope": "resource",
                         "type": "number",
                         "description": "%azureFunctions.projectLanguageModel%",
-                        "minimum": 1
+                        "minimum": 0
                     },
                     "azureFunctions.projectTemplateKey": {
                         "scope": "resource",
