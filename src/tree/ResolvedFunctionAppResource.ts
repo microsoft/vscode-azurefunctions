@@ -53,6 +53,8 @@ export class ResolvedFunctionAppResource implements ResolvedAppResourceBase {
     public static productionContextValue: string = 'azFuncProductionSlot';
     public static slotContextValue: string = 'azFuncSlot';
 
+    public readonly childTypeLabel: string = localize('functionOption', 'a function option');
+
     commandId?: string | undefined;
     tooltip?: string | undefined;
     commandArgs?: unknown[] | undefined;

@@ -25,6 +25,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
     public site: ParsedSite;
 
     public readonly contextValue: string;
+    public readonly childTypeLabel: string;
 
     public resolved: ResolvedFunctionAppResource;
 
@@ -37,6 +38,7 @@ export class SlotTreeItem extends AzExtParentTreeItem implements IProjectTreeIte
         this.contextValue = Array.from(new Set(contextValues)).sort().join(';');
         this.site = this.resolved.site;
         this.iconPath = treeUtils.getIconPath(slotContextValue);
+        this.childTypeLabel = this.resolved.childTypeLabel;
     }
 
     public get label(): string {

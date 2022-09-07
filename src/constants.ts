@@ -115,3 +115,5 @@ export const functionFilter = {
     kind: 'functionapp',
 };
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
+
+export const connectToGithubContextValue: string = 'ConnectToGithub';
