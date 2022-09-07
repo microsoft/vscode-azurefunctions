@@ -37,6 +37,7 @@ export class MavenProjectCreateStep extends ProjectCreateStepBase {
                 'archetype:generate',
                 mavenUtils.formatMavenArg('DarchetypeGroupId', 'com.microsoft.azure'),
                 mavenUtils.formatMavenArg('DarchetypeArtifactId', 'azure-functions-archetype'),
+                mavenUtils.formatMavenArg('DarchetypeVersion', 'LATEST'),
                 mavenUtils.formatMavenArg('DjavaVersion', javaVersion),
                 mavenUtils.formatMavenArg('DgroupId', nonNullProp(context, 'javaGroupId')),
                 mavenUtils.formatMavenArg('DartifactId', artifactId),
