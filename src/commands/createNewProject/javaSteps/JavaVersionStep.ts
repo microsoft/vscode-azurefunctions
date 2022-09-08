@@ -8,15 +8,23 @@ import { previewDescription } from "../../../constants";
 import { hasMinFuncCliVersion } from "../../../funcCoreTools/hasMinFuncCliVersion";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
+import { getJavaVersion } from "./JavaVersions";
 
 export const java8: string = '8';
 export const java11: string = '11';
 export const java17: string = '17';
 
-const versionInfo: [string, string, string, string?][] = [
-    [java8, 'Java 8', '1.0.0'],
-    [java11, 'Java 11', '3.0.2630'],
-    [java17, 'Java 17', '4.0.0', previewDescription]
+type javaVersionInfo = {
+    label: string,
+    data: string,
+    description?: string,
+    miniFunc: string
+}
+
+const versionInfo: javaVersionInfo[] = [
+    { label: 'Java 8', data: java8, miniFunc: '1.0.0' },
+    { label: 'Java 11', data: java11, miniFunc: '3.0.2630' },
+    { label: 'Java 17', data: java17, miniFunc: '4.0.0', description: previewDescription }
 ];
 
 export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
@@ -33,12 +41,12 @@ export class JavaVersionStep extends AzureWizardPromptStep<IJavaProjectWizardCon
         context.javaVersion = (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
-    // todo: get runtime from Get Function App Stacks API and validate local java version
     async getPicks(context: IJavaProjectWizardContext): Promise<IAzureQuickPickItem<string>[]> {
+        const javaVersion: number = await getJavaVersion();
         const result: IAzureQuickPickItem<string>[] = [];
-        for (const [javaVersion, displayName, miniFunc, description] of versionInfo) {
-            if (await hasMinFuncCliVersion(context, miniFunc, context.version)) {
-                result.push({ label: displayName, data: javaVersion, description: description });
+        for (const version of versionInfo) {
+            if (await hasMinFuncCliVersion(context, version.miniFunc, context.version) && javaVersion >= Number(version.data)) {
+                result.push(version);
             }
         }
         return result;
