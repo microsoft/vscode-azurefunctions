@@ -7,7 +7,7 @@
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
 import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -16,7 +16,7 @@ import { revealTreeItem } from './commands/api/revealTreeItem';
 import { uploadAppSettingsFromApi } from './commands/api/uploadAppSettingsFromApi';
 import { runPostFunctionCreateStepsFromCache } from './commands/createFunction/FunctionCreateStepBase';
 import { registerCommands } from './commands/registerCommands';
-import { extensionId, func } from './constants';
+import { func } from './constants';
 import { FuncTaskProvider } from './debug/FuncTaskProvider';
 import { JavaDebugProvider } from './debug/JavaDebugProvider';
 import { NodeDebugProvider } from './debug/NodeDebugProvider';
@@ -95,7 +95,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
-        ext.rgApi.registerApplicationResourceResolver(extensionId, new FunctionAppResolver());
+        ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
         ext.rgApi.registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
 
     });
