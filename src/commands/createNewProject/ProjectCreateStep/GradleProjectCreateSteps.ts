@@ -15,7 +15,7 @@ import { IJavaProjectWizardContext } from '../javaSteps/IJavaProjectWizardContex
 import { java8 } from '../javaSteps/JavaVersionStep';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
-const backupGradlePluginVersion = "1.8.2";
+const backupGradlePluginVersion = "1.11.0";
 const metaDataUrl = "https://plugins.gradle.org/m2/com/microsoft/azure/azure-functions-gradle-plugin/maven-metadata.xml";
 
 export class GradleProjectCreateStep extends ScriptProjectCreateStep {
@@ -70,7 +70,7 @@ group '${context.javaGroupId}'
 version '${context.javaProjectVersion}'
 
 dependencies {
-    implementation 'com.microsoft.azure.functions:azure-functions-java-library:1.4.2'
+    implementation 'com.microsoft.azure.functions:azure-functions-java-library:2.0.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.6.2'
     testImplementation 'org.mockito:mockito-core:3.3.3'
 }
