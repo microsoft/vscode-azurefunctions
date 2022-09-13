@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fse from 'fs-extra';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../localize';
 import { cpUtils } from "../../../utils/cpUtils";
 
-import path = require("path");
+import * as path from 'path';
 
 export async function getJavaVersion(): Promise<number> {
     const javaHome: string | undefined = process.env['JAVA_HOME'];
@@ -15,8 +15,8 @@ export async function getJavaVersion(): Promise<number> {
         javaVersion = await checkVersionByCLI(javaHome ? path.join(javaHome, 'bin', 'java') : 'java');
     }
     if (!javaVersion) {
-        const message: string = localize('javaNotFound', 'Failed to get java version, please ensure that java is installed and JAVA_HOME is set correctly.');
-        throw Error(message);
+        const message: string = localize('javaNotFound', 'Failed to get Java version. Please ensure that Java is installed and JAVA_HOME environment variable is set.');
+        throw new Error(message);
     }
     return javaVersion;
 }
@@ -26,12 +26,12 @@ async function checkVersionInReleaseFile(javaHome: string): Promise<number | und
         return undefined;
     }
     const releaseFile = path.join(javaHome, "release");
-    if (!fse.existsSync(releaseFile)) {
+    if (!await AzExtFsExtra.pathExists(releaseFile)) {
         return undefined;
     }
 
     try {
-        const content = fse.readFileSync(releaseFile);
+        const content = await AzExtFsExtra.readFile(releaseFile);
         const regexp = /^JAVA_VERSION="(.*)"/gm;
         const match = regexp.exec(content.toString());
         return match ? flattenMajorVersion(match[1]) : undefined;
