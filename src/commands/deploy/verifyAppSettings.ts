@@ -27,7 +27,7 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
         // update the settings if the remote runtime was changed
-        let updateAppSettings: boolean = appSettings[workerRuntimeKey] !== remoteRuntime;
+        let updateAppSettings: boolean = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
         if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
             updateAppSettings ||= remoteBuildSettingsChanged;
@@ -38,7 +38,7 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
-            await node.appSettingsTreeItem.refresh(context);
+            await node.appSettingsTreeItem?.refresh(context);
         }
     }
 }
