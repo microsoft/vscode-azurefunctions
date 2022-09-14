@@ -387,12 +387,12 @@
             "view/item/context": [
                 {
                     "command": "azureFunctions.createFunctionApp",
-                    "when": "view == azureResourceGroupsV2 && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureFunctions.createFunctionAppAdvanced",
-                    "when": "view == azureResourceGroupsV2 && viewItem =~ /microsoft.web/functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /functionapp/i && viewItem =~ /azureResourceTypeGroup/i",
                     "group": "1@2"
                 },
                 {
