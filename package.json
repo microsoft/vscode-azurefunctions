@@ -1032,6 +1032,12 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "%azureFunctions.funcCliPath%"
+                    },
+                    "azureFunctions.showPysteinModel": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "default": false,
+                        "description": "%azureFuctions.showPysteinModel%"
                     }
                 }
             }
