@@ -1037,7 +1037,7 @@
                         "scope": "resource",
                         "type": "boolean",
                         "default": false,
-                        "description": "%azureFuctions.showPysteinModel%"
+                        "description": "%azureFunctions.showPysteinModel%"
                     }
                 }
             }
