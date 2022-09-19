@@ -5,19 +5,20 @@
 
 import { Site, WebSiteManagementClient } from '@azure/arm-appservice';
 import { AppInsightsCreateStep, AppInsightsListStep, AppKind, AppServicePlanCreateStep, CustomLocationListStep, IAppServiceWizardContext, LogAnalyticsCreateStep, SiteNameStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { INewStorageAccountDefaults, LocationListStep, ResourceGroupCreateStep, ResourceGroupListStep, StorageAccountCreateStep, StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, parseError } from '@microsoft/vscode-azext-utils';
 import { WorkspaceFolder } from 'vscode';
 import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionAppCreateStep';
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
-import { funcVersionSetting, projectLanguageSetting, webProvider } from '../constants';
+import { funcVersionSetting, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
 import { createActivityContext } from '../utils/activityUtils';
+import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { nonNullProp } from '../utils/nonNull';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
@@ -83,6 +84,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
 
+        // Ensure all the providers are registered before
+        await registerProviders(context, subscription);
+
         const wizardContext: IFunctionAppWizardContext = Object.assign(context, subscription.subscription, {
             newSiteKind: AppKind.functionapp,
             resourceGroupDeferLocationStep: true,
@@ -139,7 +143,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const storageProvider = 'Microsoft.Storage';
         LocationListStep.addProviderForFiltering(wizardContext, storageProvider, 'storageAccounts');
-        executeSteps.push(new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights']));
         executeSteps.push(new FunctionAppCreateStep());
 
         const title: string = localize('functionAppCreatingTitle', 'Create new Function App in Azure');
