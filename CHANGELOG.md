@@ -1,10 +1,10 @@
 # Change Log
 
-## 1.8.0 - 2022-09-06
+## 1.8.0 - 2022-09-20
 
 ### Added
 
-- Support for new Python language model [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
+- Support for new Python language model (set feature flag `azureFunctions.showPystienModel` to enable) [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
 
 ### Changed
 
