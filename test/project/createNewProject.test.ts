@@ -45,7 +45,7 @@ for (const version of [FuncVersion.v2, FuncVersion.v3, FuncVersion.v4]) {
     const appName: string = 'javaApp';
     const javaBaseInputs: (TestInput | string | RegExp)[] = [TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, TestInput.UseDefaultValue, appName];
     if (version !== FuncVersion.v2) { // v2 doesn't support picking a java version
-        javaBaseInputs.unshift(/11/);
+        javaBaseInputs.unshift(/8/);
     }
 
     testCases.push({
