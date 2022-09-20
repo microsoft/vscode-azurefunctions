@@ -5,7 +5,7 @@
 ### Added
 
 - Support for new Python language model (set feature flag `azureFunctions.showPystienModel` to enable) [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
-- Support for Java 17 (Preview)
+- Support for Java 17 (Preview) [#3245](https://github.com/microsoft/vscode-azurefunctions/issues/3245)
 
 ### Changed
 
