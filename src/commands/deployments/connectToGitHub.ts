@@ -7,32 +7,24 @@ import { DeploymentsTreeItem, editScmType } from "@microsoft/vscode-azext-azurea
 import { GenericTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { functionFilter, ScmType } from "../../constants";
 import { ext } from "../../extensionVariables";
-import { ResolvedFunctionAppResource } from "../../tree/ResolvedFunctionAppResource";
-import { isSlotTreeItem, SlotTreeItem } from "../../tree/SlotTreeItem";
+import { isSlotTreeItem } from "../../tree/SlotTreeItem";
 
 export async function connectToGitHub(context: IActionContext, target?: GenericTreeItem): Promise<void> {
-    let node: SlotTreeItem | DeploymentsTreeItem;
+    let deployments: DeploymentsTreeItem;
 
     if (!target) {
-        node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
+        deployments = await ext.rgApi.pickAppResource<DeploymentsTreeItem>(context, {
             filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            expectedChildContextValue: new RegExp(DeploymentsTreeItem.contextValueUnconnected)
         });
     } else {
-        node = <DeploymentsTreeItem>target.parent;
+        deployments = <DeploymentsTreeItem>target.parent;
     }
 
-    if (node.parent && isSlotTreeItem(node.parent)) {
-        await editScmType(context, node.site, node.subscription, ScmType.GitHub);
+    if (deployments.parent && isSlotTreeItem(deployments.parent)) {
+        await editScmType(context, deployments.site, deployments.subscription, ScmType.GitHub);
+        await deployments.refresh(context);
     } else {
         throw Error('Internal error: Action not supported.');
-    }
-
-    if (isSlotTreeItem(node)) {
-        if (node.deploymentsNode) {
-            await node.deploymentsNode.refresh(context);
-        }
-    } else {
-        await node.parent?.refresh(context);
     }
 }
