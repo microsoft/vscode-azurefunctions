@@ -30,6 +30,7 @@ import { FunctionAppResolver } from './FunctionAppResolver';
 import { getResourceGroupsApi } from './getExtensionApi';
 import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
+import { registerContentProvider } from './utils/textUtils';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
 
@@ -86,6 +87,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.window.registerUriHandler({
             handleUri
         }));
+
+        registerContentProvider();
 
         ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi();

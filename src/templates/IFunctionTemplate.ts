@@ -22,4 +22,5 @@ export interface IFunctionTemplate {
     isSqlBindingTemplate: boolean;
     userPromptedSettings: IBindingSetting[];
     categories: TemplateCategory[];
+    categoryStyle?: string;
 }

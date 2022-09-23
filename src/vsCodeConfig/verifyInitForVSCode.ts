@@ -5,17 +5,24 @@
 
 import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import { initProjectForVSCode } from '../commands/initProjectForVSCode/initProjectForVSCode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting } from '../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting } from '../constants';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { nonNullOrEmptyValue } from '../utils/nonNull';
 import { getWorkspaceSetting } from './settings';
 
+export interface VerifiedInit {
+    language: ProjectLanguage,
+    languageModel: number | undefined,
+    version: FuncVersion
+}
+
 /**
  * Simpler function than `verifyVSCodeConfigOnActivate` to be used right before an operation that requires the project to be initialized for VS Code
  */
-export async function verifyInitForVSCode(context: IActionContext, fsPath: string, language?: string, version?: string): Promise<[ProjectLanguage, FuncVersion]> {
+export async function verifyInitForVSCode(context: IActionContext, fsPath: string, language?: string, languageModel?: number, version?: string): Promise<VerifiedInit> {
     language = language || getWorkspaceSetting(projectLanguageSetting, fsPath);
+    languageModel = languageModel || getWorkspaceSetting(projectLanguageModelSetting, fsPath);
     version = tryParseFuncVersion(version || getWorkspaceSetting(funcVersionSetting, fsPath));
 
     if (!language || !version) {
@@ -24,8 +31,13 @@ export async function verifyInitForVSCode(context: IActionContext, fsPath: strin
         await context.ui.showWarningMessage(message, { modal: true, stepName: 'initProject' }, DialogResponses.yes);
         await initProjectForVSCode(context, fsPath);
         language = nonNullOrEmptyValue(getWorkspaceSetting(projectLanguageSetting, fsPath), projectLanguageSetting);
+        languageModel = getWorkspaceSetting(projectLanguageModelSetting, fsPath);
         version = nonNullOrEmptyValue(tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, fsPath)), funcVersionSetting);
     }
 
-    return [<ProjectLanguage>language, <FuncVersion>version];
+    return {
+        language: <ProjectLanguage>language,
+        languageModel,
+        version: <FuncVersion>version
+    };
 }

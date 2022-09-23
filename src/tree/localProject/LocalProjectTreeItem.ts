@@ -24,6 +24,7 @@ export type LocalProjectOptions = {
     folder: WorkspaceFolder;
     version: FuncVersion;
     language: ProjectLanguage;
+    languageModel?: number;
     preCompiledProjectPath?: string
     isIsolated?: boolean;
 }
@@ -37,7 +38,8 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
     public readonly workspacePath: string;
     public readonly workspaceFolder: WorkspaceFolder;
     public readonly version: FuncVersion;
-    public readonly langauge: ProjectLanguage;
+    public readonly language: ProjectLanguage;
+    public readonly languageModel: number | undefined;
     public readonly isIsolated: boolean;
 
     private readonly _disposables: Disposable[] = [];
@@ -50,7 +52,8 @@ export class LocalProjectTreeItem extends LocalProjectTreeItemBase implements Di
         this.workspaceFolder = options.folder;
         this.preCompiledProjectPath = options.preCompiledProjectPath;
         this.version = options.version;
-        this.langauge = options.language;
+        this.language = options.language;
+        this.languageModel = options.languageModel;
         this.isIsolated = !!options.isIsolated;
 
         this._disposables.push(createRefreshFileWatcher(this, path.join(this.effectiveProjectPath, '*', functionJsonFileName)));

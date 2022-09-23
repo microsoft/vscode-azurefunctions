@@ -2,7 +2,7 @@
     "name": "vscode-azurefunctions",
     "displayName": "Azure Functions",
     "description": "%azureFunctions.description%",
-    "version": "1.7.5-alpha.0",
+    "version": "1.8.1-alpha.0",
     "publisher": "ms-azuretools",
     "icon": "resources/azure-functions.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -77,6 +77,7 @@
         "onCommand:azureFunctions.viewDeploymentLogs",
         "onCommand:azureFunctions.viewProperties",
         "onDebugInitialConfigurations",
+        "onFileSystem:vscode-azurefunctions-static-content",
         "onUri",
         "onView:azureWorkspace",
         "workspaceContains:**/host.json"
@@ -833,6 +834,12 @@
                             ""
                         ]
                     },
+                    "azureFunctions.projectLanguageModel": {
+                        "scope": "resource",
+                        "type": "number",
+                        "description": "%azureFunctions.projectLanguageModel%",
+                        "minimum": 0
+                    },
                     "azureFunctions.projectTemplateKey": {
                         "scope": "resource",
                         "type": "string",
@@ -1025,6 +1032,12 @@
                         "scope": "resource",
                         "type": "string",
                         "description": "%azureFunctions.funcCliPath%"
+                    },
+                    "azureFunctions.showPysteinModel": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "default": false,
+                        "description": "%azureFunctions.showPysteinModel%"
                     }
                 }
             }
@@ -1071,7 +1084,7 @@
         "gulp-decompress": "^2.0.3",
         "gulp-filter": "^5.1.0",
         "husky": "^7.0.2",
-        "mocha": "^8.3.2",
+        "mocha": "^10.0.0",
         "mocha-junit-reporter": "^2.0.0",
         "mocha-multi-reporters": "^1.5.1",
         "request": "^2.88.2",
@@ -1079,7 +1092,7 @@
         "typescript": "^4.3.5",
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
-        "vsce": "^1.87.0",
+        "vsce": "^2.11.0",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
     },
@@ -1092,7 +1105,7 @@
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^0.7.2",
+        "@microsoft/vscode-azext-azureappservice": "^0.7.4",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
         "@microsoft/vscode-azext-utils": "^0.3.12",
         "escape-string-regexp": "^4.0.0",

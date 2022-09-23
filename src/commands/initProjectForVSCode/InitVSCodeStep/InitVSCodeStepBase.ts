@@ -6,7 +6,7 @@
 import { AzExtFsExtra, AzureWizardExecuteStep, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, MessageItem, TaskDefinition, WorkspaceFolder } from 'vscode';
-import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
+import { deploySubpathSetting, extensionId, func, funcVersionSetting, gitignoreFileName, launchFileName, preDeployTaskSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting, settingsFileName, tasksFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -40,7 +40,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         await AzExtFsExtra.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath, language);
         await this.writeLaunchJson(context, context.workspaceFolder, vscodePath, version);
-        await this.writeSettingsJson(context, vscodePath, language, version);
+        await this.writeSettingsJson(context, vscodePath, language, context.languageModel, version);
         await this.writeExtensionsJson(context, vscodePath, language);
 
         // Remove '.vscode' from gitignore if applicable
@@ -204,13 +204,17 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         return existingConfigs;
     }
 
-    private async writeSettingsJson(context: IProjectWizardContext, vscodePath: string, language: string, version: FuncVersion): Promise<void> {
+    private async writeSettingsJson(context: IProjectWizardContext, vscodePath: string, language: string, languageModel: number | undefined, version: FuncVersion): Promise<void> {
         const settings: ISettingToAdd[] = this.settings.concat(
             { key: projectLanguageSetting, value: language },
             { key: funcVersionSetting, value: version },
             // We want the terminal to be open after F5, not the debug console (Since http triggers are printed in the terminal)
             { prefix: 'debug', key: 'internalConsoleOptions', value: 'neverOpen' }
         );
+
+        if (languageModel) {
+            settings.push({ key: projectLanguageModelSetting, value: languageModel });
+        }
 
         // Add "projectSubpath" setting if project is far enough down that we won't auto-detect it
         if (path.posix.relative(context.projectPath, context.workspacePath).startsWith('../..')) {

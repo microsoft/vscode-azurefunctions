@@ -12,7 +12,7 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
-import { isKnownWorkerRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
+import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
@@ -23,20 +23,22 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
+        const remoteRuntime: string | undefined = appSettings.properties[workerRuntimeKey];
         await verifyVersionAndLanguage(context, projectPath, node.site.fullName, version, language, appSettings.properties);
 
-        let updateAppSettings: boolean = false;
+        // update the settings if the remote runtime was changed
+        let updateAppSettings: boolean = appSettings.properties[workerRuntimeKey] !== remoteRuntime;
         if (node.site.isLinux) {
             const remoteBuildSettingsChanged = verifyLinuxRemoteBuildSettings(context, appSettings.properties, bools);
-            updateAppSettings = updateAppSettings || remoteBuildSettingsChanged;
+            updateAppSettings ||= remoteBuildSettingsChanged;
         } else {
-            updateAppSettings = verifyRunFromPackage(context, node.site, appSettings.properties);
+            updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
-            await node.appSettingsTreeItem.refresh(context);
+            await node.appSettingsTreeItem?.refresh(context);
         }
     }
 }
@@ -51,8 +53,19 @@ export async function verifyVersionAndLanguage(context: IActionContext, projectP
     context.telemetry.properties.remoteRuntimeV2 = isKnownWorkerRuntime(azureWorkerRuntime) ? azureWorkerRuntime : 'Unknown';
 
     const localWorkerRuntime: string | undefined = await tryGetFunctionsWorkerRuntimeForProject(context, localLanguage, projectPath);
+
     if (localVersion !== FuncVersion.v1 && isKnownWorkerRuntime(azureWorkerRuntime) && isKnownWorkerRuntime(localWorkerRuntime) && azureWorkerRuntime !== localWorkerRuntime) {
-        throw new Error(localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime));
+        const incompatibleRuntime: string = localize('incompatibleRuntime', 'The remote runtime "{0}" for function app "{1}" does not match your local runtime "{2}".', azureWorkerRuntime, siteName, localWorkerRuntime);
+        if (promptToUpdateDotnetRuntime(azureWorkerRuntime, localWorkerRuntime)) {
+            const updateAndDeploy = { title: localize('updateAndDeploy', 'Update and Deploy') };
+            await context.ui.showWarningMessage(
+                `${incompatibleRuntime} The remote runtime version needs to be updated in order for this project to deploy successfully.`,
+                { modal: true, stepName: 'incompatibleDotnetRuntime' }, updateAndDeploy);
+
+            remoteProperties[workerRuntimeKey] = localWorkerRuntime as string;
+        } else {
+            throw new Error(incompatibleRuntime);
+        }
     }
 
     if (!!rawAzureVersion && azureVersion !== localVersion) {

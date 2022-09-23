@@ -63,9 +63,10 @@ export async function createFunctionInternal(context: IActionContext, options: a
         return;
     }
 
-    const [language, version] = await verifyInitForVSCode(context, projectPath, options.language, options.version);
+    const { language, languageModel, version } = await verifyInitForVSCode(context, projectPath, options.language, /* TODO: languageModel: */ undefined, options.version);
+
     const projectTemplateKey: string | undefined = getWorkspaceSetting(projectTemplateKeySetting, projectPath);
-    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, projectTemplateKey });
+    const wizardContext: IFunctionWizardContext = Object.assign(context, options, { projectPath, workspacePath, workspaceFolder, version, language, languageModel, projectTemplateKey });
     const wizard: AzureWizard<IFunctionWizardContext> = new AzureWizard(wizardContext, {
         promptSteps: [await FunctionListStep.create(wizardContext, { templateId: options.templateId, functionSettings: options.functionSettings, isProjectWizard: false })]
     });

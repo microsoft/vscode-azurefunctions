@@ -4,10 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
-import { getResourceGroupFromId, IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
+import { getResourceGroupFromId, IStorageAccountWizardContext, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
+import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
+import { webProvider } from '../constants';
 import { localize } from '../localize';
+import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 import { createStorageClient } from './azureClients';
 import { nonNullProp, nonNullValue } from './nonNull';
 
@@ -60,4 +64,16 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
         name,
         connectionString: `DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key};EndpointSuffix=${endpointSuffix}`
     };
+}
+
+export async function registerProviders(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<void> {
+    const providerContext: IAppServiceWizardContext = Object.assign(context, subscription.subscription, {
+        newSiteKind: AppKind.functionapp,
+    });
+
+    const storageProvider = 'Microsoft.Storage';
+    const providerExecuteSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights'])];
+    const providerWizard: AzureWizard<IFunctionAppWizardContext> = new AzureWizard(providerContext, { executeSteps: providerExecuteSteps });
+
+    await providerWizard.execute();
 }

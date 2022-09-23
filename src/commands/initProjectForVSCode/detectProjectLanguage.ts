@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { buildGradleFileName, localSettingsFileName, pomXmlFileName, ProjectLanguage, workerRuntimeKey } from '../../constants';
+import { buildGradleFileName, localSettingsFileName, pomXmlFileName, previewPythonModel, ProjectLanguage, pythonFunctionAppFileName, workerRuntimeKey } from '../../constants';
 import { getLocalSettingsJson, ILocalSettingsJson } from '../../funcConfig/local.settings';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { telemetryUtils } from '../../utils/telemetryUtils';
@@ -103,4 +103,22 @@ async function detectScriptLanguages(context: IActionContext, projectPath: strin
 
         return detectedLangs;
     });
+}
+
+export async function detectProjectLanguageModel(language: ProjectLanguage | undefined, projectPath: string): Promise<number | undefined> {
+    switch (language) {
+        case ProjectLanguage.Python:
+            const uris = await findFiles(projectPath, pythonFunctionAppFileName);
+
+            if (uris.length > 0) {
+                return previewPythonModel;
+            }
+
+            break;
+
+        default:
+            break;
+    }
+
+    return undefined;
 }

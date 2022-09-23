@@ -5,7 +5,7 @@
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { window, workspace, WorkspaceFolder } from 'vscode';
-import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectTemplateKeySetting } from '../../constants';
+import { funcVersionSetting, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectTemplateKeySetting } from '../../constants';
 import { NoWorkspaceError } from '../../errors';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion } from '../../FuncVersion';
@@ -14,7 +14,7 @@ import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
-import { detectProjectLanguage } from './detectProjectLanguage';
+import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 
 export async function initProjectForVSCode(context: IActionContext, fsPath?: string, language?: ProjectLanguage): Promise<void> {
@@ -43,10 +43,11 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
     }
 
     language = language || getGlobalSetting(projectLanguageSetting) || await detectProjectLanguage(context, projectPath);
+    const languageModel: number | undefined = getGlobalSetting(projectLanguageModelSetting) || await detectProjectLanguageModel(language, projectPath);
     const version: FuncVersion = getGlobalSetting(funcVersionSetting) || await tryGetLocalFuncVersion(context, workspacePath) || latestGAVersion;
     const projectTemplateKey: string | undefined = getGlobalSetting(projectTemplateKeySetting);
 
-    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, version, workspaceFolder, projectTemplateKey });
+    const wizardContext: IProjectWizardContext = Object.assign(context, { projectPath, workspacePath, language, languageModel, version, workspaceFolder, projectTemplateKey });
     const wizard: AzureWizard<IProjectWizardContext> = new AzureWizard(wizardContext, { promptSteps: [new InitVSCodeLanguageStep()] });
     await wizard.prompt();
     await wizard.execute();

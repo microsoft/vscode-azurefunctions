@@ -9,7 +9,7 @@ import * as path from 'path';
 import { Disposable, workspace, WorkspaceFolder } from 'vscode';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { getFunctionAppName, getJavaDebugSubpath } from '../commands/initProjectForVSCode/InitVSCodeStep/JavaInitVSCodeStep';
-import { funcVersionSetting, hostFileName, javaBuildTool, JavaBuildTool, ProjectLanguage, projectLanguageSetting, projectSubpathSetting } from '../constants';
+import { funcVersionSetting, hostFileName, javaBuildTool, JavaBuildTool, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, projectSubpathSetting } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
@@ -72,6 +72,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                     hasLocalProject = true;
 
                     const language: ProjectLanguage | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
+                    const languageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
                     const version: FuncVersion | undefined = tryParseFuncVersion(getWorkspaceSetting(funcVersionSetting, projectPath));
                     if (language === undefined || version === undefined) {
                         children.push(new InitLocalProjectTreeItem(this, projectPath, folder));
@@ -89,7 +90,7 @@ export class AzureAccountTreeItemWithProjects extends AzureAccountTreeItemBase {
                         }
 
 
-                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, version, preCompiledProjectPath, isIsolated });
+                        const treeItem: LocalProjectTreeItem = new LocalProjectTreeItem(this, { effectiveProjectPath, folder, language, languageModel, version, preCompiledProjectPath, isIsolated });
                         this._projectDisposables.push(treeItem);
                         children.push(treeItem);
                     }

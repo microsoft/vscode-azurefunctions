@@ -14,7 +14,7 @@ export class LocalFunctionTreeItem extends FunctionTreeItemBase {
     public readonly functionJsonPath: string | undefined;
 
     private constructor(parent: LocalFunctionsTreeItem, name: string, config: ParsedFunctionJson, functionJsonPath: string | undefined, func: FunctionEnvelope | undefined) {
-        super(parent, config, name, func);
+        super(parent, config, name, func, /* enableProperties: */ functionJsonPath !== undefined);
         this.functionJsonPath = functionJsonPath;
     }
 

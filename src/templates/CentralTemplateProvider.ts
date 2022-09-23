@@ -11,6 +11,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
+import { isPythonV2Plus } from '../utils/pythonUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -22,6 +23,7 @@ import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
 import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
+import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
 import { ScriptTemplateProvider } from './script/ScriptTemplateProvider';
 import { TemplateProviderBase } from './TemplateProviderBase';
@@ -47,7 +49,7 @@ export class CentralTemplateProvider implements Disposable {
         this._providersMap.clear();
     }
 
-    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): TemplateProviderBase[] {
+    public static getProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): TemplateProviderBase[] {
         const providers: TemplateProviderBase[] = [];
         switch (language) {
             case ProjectLanguage.CSharp:
@@ -58,17 +60,21 @@ export class CentralTemplateProvider implements Disposable {
                 providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             default:
-                providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
-                if (version !== FuncVersion.v1) {
-                    providers.push(new ScriptBundleTemplateProvider(version, projectPath, language, projectTemplateKey));
+                if (isPythonV2Plus(language, languageModel)) {
+                    providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
+                } else {
+                    providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
+                    if (version !== FuncVersion.v1) {
+                        providers.push(new ScriptBundleTemplateProvider(version, projectPath, language, projectTemplateKey));
+                    }
                 }
                 break;
         }
         return providers;
     }
 
-    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version, projectTemplateKey);
+    public async getFunctionTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, templateFilter: TemplateFilter, projectTemplateKey: string | undefined): Promise<IFunctionTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, projectTemplateKey);
         switch (templateFilter) {
             case TemplateFilter.All:
                 return templates.functionTemplates;
@@ -81,27 +87,27 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    public async clearTemplateCache(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<void> {
-        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, version, undefined);
+    public async clearTemplateCache(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): Promise<void> {
+        const providers: TemplateProviderBase[] = CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, undefined);
         for (const provider of providers) {
             await provider.clearCachedTemplateMetadata();
             await provider.clearCachedTemplates(context);
             provider.projKeyMayHaveChanged();
         }
-        const cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
+        const cachedProviders = this.tryGetCachedProviders(projectPath, language, languageModel, version);
         if (cachedProviders) {
             delete cachedProviders.templatesTask;
         }
     }
 
-    public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): Promise<IBindingTemplate[]> {
-        const templates: ITemplates = await this.getTemplates(context, projectPath, language, version, undefined);
+    public async getBindingTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): Promise<IBindingTemplate[]> {
+        const templates: ITemplates = await this.getTemplates(context, projectPath, language, languageModel, version, undefined);
         return templates.bindingTemplates;
     }
 
     public async tryGetSampleData(context: IActionContext, version: FuncVersion, triggerBindingType: string): Promise<string | undefined> {
         try {
-            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, version, TemplateFilter.All, undefined);
+            const templates: IScriptFunctionTemplate[] = <IScriptFunctionTemplate[]>await this.getFunctionTemplates(context, undefined, ProjectLanguage.JavaScript, undefined, version, TemplateFilter.All, undefined);
             const template: IScriptFunctionTemplate | undefined = templates.find(t => t.functionJson.triggerBinding?.type?.toLowerCase() === triggerBindingType.toLowerCase());
             return template?.templateFiles['sample.dat'];
         } catch {
@@ -109,20 +115,21 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    public async getProjectTemplateKey(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<string> {
-        const cachedProviders = await this.getCachedProviders(context, projectPath, language, version, projectTemplateKey);
+    public async getProjectTemplateKey(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<string> {
+        const cachedProviders = await this.getCachedProviders(context, projectPath, language, languageModel, version, projectTemplateKey);
         // .NET is the only language that supports project template keys and they only have one provider
         // We probably need to do something better here once multi-provider languages support project template keys
         const provider = nonNullValue(cachedProviders.providers[0], 'firstProvider');
         return await provider.getProjKey(context);
     }
 
-    private getCachedProvidersKey(language: ProjectLanguage, version: FuncVersion): string {
-        return language + version;
+    private getCachedProvidersKey(language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): string {
+        // NOTE: VS Code treats lack of a language model project setting as a 0, so treat undefined === null === 0.
+        return `${language}:${languageModel ?? 0}:${version}`;
     }
 
-    private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion): CachedProviders | undefined {
-        const key: string = this.getCachedProvidersKey(language, version);
+    private tryGetCachedProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion): CachedProviders | undefined {
+        const key: string = this.getCachedProvidersKey(language, languageModel, version);
         if (this._providersMap.has(key)) {
             return this._providersMap.get(key);
         } else if (projectPath) {
@@ -132,19 +139,19 @@ export class CentralTemplateProvider implements Disposable {
         }
     }
 
-    private setCachedProviders(projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, cachedProviders: CachedProviders): void {
-        let key: string = this.getCachedProvidersKey(language, version);
+    private setCachedProviders(projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, cachedProviders: CachedProviders): void {
+        let key: string = this.getCachedProvidersKey(language, languageModel, version);
         if (cachedProviders.providers.some(p => p.supportsProjKey())) {
             key += projectPath;
         }
         this._providersMap.set(key, cachedProviders);
     }
 
-    private async getCachedProviders(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
-        let cachedProviders = this.tryGetCachedProviders(projectPath, language, version);
+    private async getCachedProviders(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<CachedProviders> {
+        let cachedProviders = this.tryGetCachedProviders(projectPath, language, languageModel, version);
         if (!cachedProviders) {
-            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, version, projectTemplateKey) };
-            this.setCachedProviders(projectPath, language, version, cachedProviders);
+            cachedProviders = { providers: CentralTemplateProvider.getProviders(projectPath, language, languageModel, version, projectTemplateKey) };
+            this.setCachedProviders(projectPath, language, languageModel, version, cachedProviders);
         } else {
             await Promise.all(cachedProviders.providers.map(async p => {
                 if (await p.updateProjKeyIfChanged(context, projectTemplateKey)) {
@@ -158,11 +165,11 @@ export class CentralTemplateProvider implements Disposable {
     /**
      * Ensures we only have one task going at a time for refreshing templates
      */
-    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, version: FuncVersion, projectTemplateKey: string | undefined): Promise<ITemplates> {
+    private async getTemplates(context: IActionContext, projectPath: string | undefined, language: ProjectLanguage, languageModel: number | undefined, version: FuncVersion, projectTemplateKey: string | undefined): Promise<ITemplates> {
         context.telemetry.properties.projectRuntime = version;
         context.telemetry.properties.projectLanguage = language;
 
-        const cachedProviders = await this.getCachedProviders(context, projectPath, language, version, projectTemplateKey);
+        const cachedProviders = await this.getCachedProviders(context, projectPath, language, languageModel, version, projectTemplateKey);
         let templatesTask: Promise<ITemplates> | undefined = cachedProviders.templatesTask;
         if (templatesTask) {
             return await templatesTask;
