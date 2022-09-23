@@ -13,7 +13,7 @@ export async function disconnectRepo(context: IActionContext, node?: Deployments
     if (!node) {
         node = await ext.rgApi.pickAppResource<DeploymentsTreeItem>(context, {
             filter: functionFilter,
-            expectedChildContextValue: DeploymentsTreeItem.contextValueConnected
+            expectedChildContextValue: new RegExp(DeploymentsTreeItem.contextValueConnected)
         });
     }
 
