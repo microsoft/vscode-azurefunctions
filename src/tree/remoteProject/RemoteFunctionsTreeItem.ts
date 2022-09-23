@@ -41,6 +41,11 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             this._nextLink = undefined;
         }
 
+        /*
+            Related to issue: https://github.com/microsoft/vscode-azurefunctions/issues/3179
+            Sometimes receive a 'BadGateway' error on initial fetch, but consecutive re-fetching usually fixes the issue.
+            Under these circumstances, we will attempt to do the call 3 times during warmup before throwing the error.
+        */
         const retries = 3;
         const client = await this.parent.site.createClient(context);
 
