@@ -53,17 +53,18 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             async (attempt: number) => {
                 // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
                 const response = await client.listFunctions();
+                const failedToList = localize('failedToList', 'Failed to list functions.');
 
                 // https://github.com/Azure/azure-functions-host/issues/3502
                 if (!Array.isArray(response)) {
-                    throw new Error(localize('failedToList', 'Failed to list functions.'));
+                    throw new Error(failedToList);
                 }
 
                 // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
                 if (!(response.length === 1 && isWarmupFunction(response[0]))) {
                     context.telemetry.measurements.listFunctionsAttempt = attempt;
                 } else {
-                    throw new Error(localize('warmUpFunction', 'Server response was a WarmUp function.'));
+                    throw new Error(failedToList);
                 }
 
                 return response;
