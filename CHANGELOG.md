@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.8.1 - 2022-09-26
+
+### Fixed
+
+- Log Analytic workspace resource provider not being registered blocked creation
+
 ## 1.8.0 - 2022-09-20
 
 ### Added
