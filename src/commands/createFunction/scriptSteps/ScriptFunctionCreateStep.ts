@@ -8,6 +8,7 @@ import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { nodeUtils } from '../../../utils/nodeUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -56,7 +57,25 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
+
+        this.installDependencies(context, language);
         return fileName ? path.join(functionPath, fileName) : functionJsonPath;
+    }
+
+    private async installDependencies(context: IScriptFunctionWizardContext, language: string): Promise<void> {
+        switch (language) {
+            case ProjectLanguage.CSharpScript:
+            case ProjectLanguage.FSharpScript:
+            case ProjectLanguage.JavaScript:
+                await nodeUtils.installDependencies(context.projectPath);
+                break;
+            case ProjectLanguage.PowerShell:
+            case ProjectLanguage.Python:
+            case ProjectLanguage.TypeScript:
+                await nodeUtils.installDependencies(context.projectPath);
+                break;
+            default:
+        }
     }
 
     protected editFunctionJson?(context: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;

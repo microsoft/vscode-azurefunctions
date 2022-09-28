@@ -7,6 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { nodeUtils } from '../../../utils/nodeUtils';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
@@ -36,6 +37,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
                 devDependencies: this.getPackageJsonDevDeps(context)
             });
         }
+        await nodeUtils.installDependencies(context.projectPath);
     }
 
     protected getPackageJsonDevDeps(_context: IProjectWizardContext): { [key: string]: string } {
