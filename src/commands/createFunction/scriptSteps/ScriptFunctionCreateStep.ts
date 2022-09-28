@@ -58,7 +58,7 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
 
-        this.installDependencies(language, context.projectPath);
+        await this.installDependencies(language, context.projectPath);
         return fileName ? path.join(functionPath, fileName) : functionJsonPath;
     }
 
