@@ -58,22 +58,20 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
 
-        await this.installDependencies(language, context.projectPath);
+        await this.installDependenciesIfNeeded(language, context.projectPath);
         return fileName ? path.join(functionPath, fileName) : functionJsonPath;
     }
 
-    private async installDependencies(language: string, projectPath: string): Promise<void> {
+    private async installDependenciesIfNeeded(language: string, projectPath: string): Promise<void> {
         switch (language) {
-            case ProjectLanguage.CSharpScript:
-            case ProjectLanguage.FSharpScript:
             case ProjectLanguage.JavaScript:
-                await nodeUtils.installDependencies(projectPath);
-                break;
-            case ProjectLanguage.PowerShell:
-            case ProjectLanguage.Python:
             case ProjectLanguage.TypeScript:
                 await nodeUtils.installDependencies(projectPath);
                 break;
+            case ProjectLanguage.CSharpScript:
+            case ProjectLanguage.FSharpScript:
+            case ProjectLanguage.PowerShell:
+            case ProjectLanguage.Python:
             default:
         }
     }
