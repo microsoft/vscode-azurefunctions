@@ -80,6 +80,7 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
 export function canValidateAzureWebJobStorageOnDebug(projectLanguage: string | undefined): boolean {
     switch (projectLanguage) {
+        case ProjectLanguage.CSharp:
         case ProjectLanguage.FSharp:
         case ProjectLanguage.Java:
             // We know if we need `AzureWebJobStorage` based on the function.json files, but those files don't exist until after a build for languages that need to be compiled

@@ -45,7 +45,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.azureWebJobsStorageType;
+        return !context.azureWebJobsStorageType && context.storageAccount === undefined;
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
