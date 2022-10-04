@@ -9,5 +9,6 @@ import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-ut
 export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
     storageAccount?: StorageAccount;
+    newStorageAccountName?: string;
     azureWebJobsStorageType?: 'emulator' | 'azure';
 }
