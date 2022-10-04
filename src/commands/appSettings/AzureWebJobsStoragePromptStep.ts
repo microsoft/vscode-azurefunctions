@@ -45,7 +45,9 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.azureWebJobsStorageType && context.storageAccount === undefined && context.newStorageAccountName === undefined;
+        //Only want to prompt if no storage account it selected
+        context.azureWebJobsStorageType = (context.storageAccount !== undefined || context.newStorageAccountName !== undefined) ? 'azure' : undefined;
+        return !context.azureWebJobsStorageType;
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
