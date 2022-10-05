@@ -45,7 +45,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public shouldPrompt(context: T): boolean {
-        //Only want to prompt if no storage account it selected
+        // Only should prompt if no storage account was selected
         context.azureWebJobsStorageType = (context.storageAccount !== undefined || context.newStorageAccountName !== undefined) ? 'azure' : undefined;
         return !context.azureWebJobsStorageType;
     }
