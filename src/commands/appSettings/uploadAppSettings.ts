@@ -53,6 +53,7 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         }
 
         const excludedAppSettings: string[] = [];
+        // Don't want AzureWebJobsStorage to be overwritten in this case as it should point at a live resource: https://github.com/microsoft/vscode-azurefunctions/issues/3298
         if (localSettings.Values["AzureWebJobsStorage"] === 'UseDevelopmentStorage=true') {
             delete localSettings.Values?.["AzureWebJobsStorage"];
             excludedAppSettings.push("AzureWebJobsStorage");
