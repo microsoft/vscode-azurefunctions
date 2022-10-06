@@ -5,13 +5,16 @@
 
 import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { Progress, Uri, window, workspace } from 'vscode';
+import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
+import path = require('path');
 
 interface ICachedFunction {
     projectPath: string;
@@ -53,6 +56,15 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
+        if (context.functionTemplate?.defaultFunctionName === 'ServiceBusQueueTrigger' || context.functionTemplate?.defaultFunctionName === 'BlobTrigger' || context.functionTemplate?.defaultFunctionName === 'QueueTrigger') {
+            const hostFilePath: string = path.join(context.projectPath, hostFileName);
+            const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+            hostJson.concurrency = {
+                dynamicConcurrencyEnabled: true,
+                snapshotPersistenceEnabled: true
+            }
+            await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+        }
 
         if (context.openBehavior) {
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation

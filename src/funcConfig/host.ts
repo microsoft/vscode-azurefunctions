@@ -26,6 +26,10 @@ export interface IHostJsonV2 {
             routePrefix?: string;
         };
     };
+    concurrency?: {
+        dynamicConcurrencyEnabled: boolean;
+        snapshotPersistenceEnabled: boolean;
+    };
 }
 
 export interface IBundleMetadata {
