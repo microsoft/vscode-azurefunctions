@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -14,7 +15,6 @@ import { nonNullProp } from '../../utils/nonNull';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
-import path = require('path');
 
 interface ICachedFunction {
     projectPath: string;
