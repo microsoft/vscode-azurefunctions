@@ -230,7 +230,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         userPromptedSettings,
         templateFiles: rawTemplate.files || {},
         categories: rawTemplate.metadata.category || [],
-        categoryStyle: rawTemplate.metadata.categoryStyle
+        categoryStyle: rawTemplate.metadata.categoryStyle,
+        isDynamicConcurrent: (rawTemplate.id.includes('ServiceBusQueueTrigger') || rawTemplate.id.includes('BlobTrigger') || rawTemplate.id.includes('QueueTrigger')) ? true : false
     };
 }
 

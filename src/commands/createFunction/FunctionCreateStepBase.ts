@@ -56,14 +56,16 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
-        if (context.functionTemplate?.defaultFunctionName === 'ServiceBusQueueTrigger' || context.functionTemplate?.defaultFunctionName === 'BlobTrigger' || context.functionTemplate?.defaultFunctionName === 'QueueTrigger') {
-            const hostFilePath: string = path.join(context.projectPath, hostFileName);
-            const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
-            hostJson.concurrency = {
-                dynamicConcurrencyEnabled: true,
-                snapshotPersistenceEnabled: true
+        const hostFilePath: string = path.join(context.projectPath, hostFileName);
+        if (await AzExtFsExtra.pathExists(hostFilePath)) {
+            if (context.functionTemplate?.isDynamicConcurrent) {
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.concurrency = {
+                    dynamicConcurrencyEnabled: true,
+                    snapshotPersistenceEnabled: true
+                }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
             }
-            await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
         }
 
         if (context.openBehavior) {
