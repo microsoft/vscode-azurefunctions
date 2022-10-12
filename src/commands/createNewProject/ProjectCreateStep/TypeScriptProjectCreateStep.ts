@@ -13,15 +13,14 @@ import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
+export const typeScriptPackageJsonScripts: { [key: string]: string } = {
+    build: 'tsc',
+    watch: 'tsc -w',
+    prestart: 'npm run build',
+    start: 'func start',
+    test: 'echo \"No tests yet...\"'
+};
 export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
-    protected packageJsonScripts: { [key: string]: string } = {
-        build: 'tsc',
-        watch: 'tsc -w',
-        prestart: 'npm run build',
-        start: 'func start',
-        test: 'echo \"No tests yet...\"'
-    };
-
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
 
@@ -38,6 +37,10 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                 }
             });
         }
+    }
+
+    protected getPackageJsonScripts(_context: IProjectWizardContext): { [key: string]: string } {
+        return typeScriptPackageJsonScripts;
     }
 
     protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {

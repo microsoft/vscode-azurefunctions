@@ -5,13 +5,15 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { nodejsNewModelPreview, previewNodejsModel, previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
+import { isNodeV4Plus } from '../../utils/pythonUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
+import { NodeProgrammingModelInitVSCodeStep } from './InitVSCodeStep/NodeProgrammingModelInitVSCodeStep';
 import { PowerShellInitVSCodeStep } from './InitVSCodeStep/PowerShellInitVSCodeStep';
 import { ScriptInitVSCodeStep } from './InitVSCodeStep/ScriptInitVSCodeStep';
 import { TypeScriptInitVSCodeStep } from './InitVSCodeStep/TypeScriptInitVSCodeStep';
@@ -34,6 +36,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
             { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
+            { label: nodejsNewModelPreview, data: { language: ProjectLanguage.TypeScript, model: previewNodejsModel } },
             { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];
 
@@ -68,10 +71,14 @@ export async function addInitVSCodeSteps(
 
     switch (context.language) {
         case ProjectLanguage.JavaScript:
-            executeSteps.push(new JavaScriptInitVSCodeStep());
+            isNodeV4Plus(context.language, context.languageModel) ?
+                executeSteps.push(new NodeProgrammingModelInitVSCodeStep()) :
+                executeSteps.push(new JavaScriptInitVSCodeStep());
             break;
         case ProjectLanguage.TypeScript:
-            executeSteps.push(new TypeScriptInitVSCodeStep());
+            isNodeV4Plus(context.language, context.languageModel) ?
+                executeSteps.push(new NodeProgrammingModelInitVSCodeStep()) :
+                executeSteps.push(new TypeScriptInitVSCodeStep());
             break;
         case ProjectLanguage.CSharp:
         case ProjectLanguage.FSharp:

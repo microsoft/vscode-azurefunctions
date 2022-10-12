@@ -12,10 +12,7 @@ import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = nodeGitignore;
-    protected packageJsonScripts: { [key: string]: string } = {
-        start: 'func start',
-        test: 'echo \"No tests yet...\"'
-    };
+    protected isNodeProgrammingModel: boolean = false;
 
     constructor() {
         super();
@@ -27,15 +24,30 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
         const packagePath: string = path.join(context.projectPath, 'package.json');
         if (await confirmOverwriteFile(context, packagePath)) {
-            await AzExtFsExtra.writeJSON(packagePath, {
-                name: convertToValidPackageName(path.basename(context.projectPath)),
-                version: '1.0.0',
-                description: '',
-                scripts: this.packageJsonScripts,
-                dependencies: {},
-                devDependencies: this.getPackageJsonDevDeps(context)
-            });
+            await AzExtFsExtra.writeJSON(packagePath, this.getPackageJson(context));
         }
+    }
+
+    protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
+        return {
+            name: convertToValidPackageName(path.basename(context.projectPath)),
+            version: '1.0.0',
+            description: '',
+            scripts: this.getPackageJsonScripts(context),
+            dependencies: this.getPackageJsonDeps(context),
+            devDependencies: this.getPackageJsonDevDeps(context)
+        }
+    }
+
+    protected getPackageJsonScripts(_context: IProjectWizardContext): { [key: string]: string } {
+        return {
+            start: 'func start',
+            test: 'echo \"No tests yet...\"'
+        }
+    }
+
+    protected getPackageJsonDeps(_context: IProjectWizardContext): { [key: string]: string } {
+        return {};
     }
 
     protected getPackageJsonDevDeps(_context: IProjectWizardContext): { [key: string]: string } {

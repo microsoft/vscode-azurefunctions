@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { previewNodejsModel, previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -16,14 +16,13 @@ import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageSt
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { NewProjectModelStep } from './NewProjectModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
-import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
 import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
-import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -86,10 +85,10 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
-                executeSteps.push(new JavaScriptProjectCreateStep());
+                promptSteps.push(new NewProjectModelStep([previewNodejsModel]))
                 break;
             case ProjectLanguage.TypeScript:
-                executeSteps.push(new TypeScriptProjectCreateStep());
+                promptSteps.push(new NewProjectModelStep([previewNodejsModel]))
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:

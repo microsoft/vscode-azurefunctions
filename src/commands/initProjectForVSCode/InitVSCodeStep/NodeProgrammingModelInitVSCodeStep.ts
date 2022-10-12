@@ -11,13 +11,13 @@ import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
-import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
+import { JavaScriptInitVSCodeStep } from './JavaScriptInitVSCodeStep';
 
 const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
+const npmStartTaskLabel: string = convertToFunctionsTaskLabel('npm run start');
 
-export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
-    protected hasPackageJson: boolean;
+export class NodeProgrammingModelInitVSCodeStep extends JavaScriptInitVSCodeStep {
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);
@@ -30,7 +30,9 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     }
 
     protected getDebugConfiguration(): DebugConfiguration {
-        return nodeDebugConfig;
+        const debugConfig = { ...nodeDebugConfig };
+        debugConfig.preLaunchTask = npmStartTaskLabel;
+        return debugConfig;
     }
 
     protected getTasks(language: ProjectLanguage): TaskDefinition[] {

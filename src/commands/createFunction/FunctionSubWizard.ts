@@ -9,7 +9,7 @@ import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDeb
 import { getAzureWebJobsStorage } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/pythonUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
@@ -22,6 +22,8 @@ import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
 import { OpenAPICreateStep } from './openAPISteps/OpenAPICreateStep';
 import { OpenAPIGetSpecificationFileStep } from './openAPISteps/OpenAPIGetSpecificationFileStep';
+import { NodeProgrammingModelFunctionCreateStep } from './scriptSteps/NodeProgrammingModelFunctionCreateStep';
+import { NodeProgrammingModelFunctionNameStep } from './scriptSteps/NodeProgrammingModelFunctionNameStep';
 import { PythonFunctionCreateStep } from './scriptSteps/PythonFunctionCreateStep';
 import { PythonScriptStep } from './scriptSteps/PythonScriptStep';
 import { ScriptFunctionCreateStep } from './scriptSteps/ScriptFunctionCreateStep';
@@ -51,8 +53,10 @@ export class FunctionSubWizard {
                     promptSteps.push(new DotnetFunctionNameStep(), new DotnetNamespaceStep());
                     break;
                 default:
-                    // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
-                    if (!isV2PythonModel) {
+                    if (isNodeV4Plus(context.language, context.languageModel)) {
+                        promptSteps.push(new NodeProgrammingModelFunctionNameStep())
+                    } else if (!isV2PythonModel) {
+                        // NOTE: The V2 Python model has attributed bindings and we don't (yet) update them from the template.
                         promptSteps.push(new ScriptFunctionNameStep());
                     }
                     break;
@@ -74,8 +78,14 @@ export class FunctionSubWizard {
                 case ProjectLanguage.FSharp:
                     executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
                     break;
+                case ProjectLanguage.JavaScript:
                 case ProjectLanguage.TypeScript:
-                    executeSteps.push(new TypeScriptFunctionCreateStep());
+                    if (isNodeV4Plus(context.language, context.languageModel)) {
+                        executeSteps.push(new NodeProgrammingModelFunctionCreateStep());
+                    } else if (context.language === ProjectLanguage.TypeScript) {
+                        executeSteps.push(new TypeScriptFunctionCreateStep());
+                    }
+
                     break;
                 default:
                     if (isV2PythonModel) {

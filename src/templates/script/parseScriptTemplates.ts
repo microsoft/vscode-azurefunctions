@@ -24,6 +24,7 @@ export interface IRawTemplate {
         userPrompt?: string[];
         category?: TemplateCategory[];
         categoryStyle?: string;
+        triggerType?: string;
     };
     files?: { [filename: string]: string };
 }
@@ -214,6 +215,15 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
                         userPromptedSettings.push(setting);
                     }
                 }
+            } else if (rawTemplate.id.endsWith('-4.x')) {
+                // bindings are now in the function file rather than having a binding.json file so retrieve it from the ~4 JavaScript binding.jsons
+                const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type.toLowerCase() === rawTemplate.metadata?.triggerType?.toLowerCase());
+                if (bindingTemplate) {
+                    const setting: IBindingSetting | undefined = bindingTemplate.settings.find((bs: IBindingSetting) => bs.name === settingName);
+                    if (setting) {
+                        userPromptedSettings.push(setting);
+                    }
+                }
             }
         }
     }
@@ -260,3 +270,4 @@ export function parseScriptTemplates(rawResources: object, rawTemplates: object[
 
     return { functionTemplates, bindingTemplates };
 }
+

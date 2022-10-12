@@ -21,6 +21,7 @@ export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const pysteinModelSetting: string = "showPysteinModel";
+export const functionSubpathSetting: string = 'functionSubpath';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -41,6 +42,7 @@ export enum ProjectLanguage {
  * Any significantly changed new model should use an incremented number.
  */
 export const previewPythonModel: number = 2;
+export const previewNodejsModel: number = 4;
 
 export enum TemplateFilter {
     All = 'All',
@@ -108,6 +110,7 @@ export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
+export const nodejsNewModelPreview: string = localize('nodejsNewModelPreview', 'Node.js (Programming Model V4)')
 
 
 export const webProvider: string = 'Microsoft.Web';

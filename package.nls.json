@@ -101,5 +101,6 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.showPysteinModel": "Enable Python (New Model Preview)"
+    "azureFunctions.showPysteinModel": "Enable Python (New Model Preview)",
+    "azureFunctions.functionSubpath": "The default subpath to create new functions."
 }
