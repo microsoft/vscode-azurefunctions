@@ -23,4 +23,5 @@ export interface IFunctionTemplate {
     userPromptedSettings: IBindingSetting[];
     categories: TemplateCategory[];
     categoryStyle?: string;
+    isDynamicConcurrent: boolean;
 }

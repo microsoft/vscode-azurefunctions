@@ -4,8 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
+import { hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { IHostJsonV2 } from '../../funcConfig/host';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
@@ -53,6 +56,17 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
+        const hostFilePath: string = path.join(context.projectPath, hostFileName);
+        if (await AzExtFsExtra.pathExists(hostFilePath)) {
+            if (context.functionTemplate?.isDynamicConcurrent) {
+                const hostJson = await AzExtFsExtra.readJSON<IHostJsonV2>(hostFilePath);
+                hostJson.concurrency = {
+                    dynamicConcurrencyEnabled: true,
+                    snapshotPersistenceEnabled: true
+                }
+                await AzExtFsExtra.writeJSON(hostFilePath, hostJson);
+            }
+        }
 
         if (context.openBehavior) {
             // OpenFolderStep sometimes restarts the extension host, so we will cache this to run on the next extension activation
