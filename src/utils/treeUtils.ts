@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { ext } from '../extensionVariables';
 
@@ -21,5 +21,9 @@ export namespace treeUtils {
 
     function getResourcesPath(): string {
         return ext.context.asAbsolutePath('resources');
+    }
+
+    export function isAzExtTreeItem(ti: unknown): ti is AzExtTreeItem {
+        return !!ti && (ti as AzExtTreeItem).fullId !== undefined && (ti as AzExtTreeItem).fullId !== null;
     }
 }
