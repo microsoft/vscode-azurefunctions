@@ -23,6 +23,7 @@ export namespace treeUtils {
         return ext.context.asAbsolutePath('resources');
     }
 
+    // replace with azext-utils when it's released
     export function isAzExtTreeItem(ti: unknown): ti is AzExtTreeItem {
         return !!ti && (ti as AzExtTreeItem).fullId !== undefined && (ti as AzExtTreeItem).fullId !== null;
     }
