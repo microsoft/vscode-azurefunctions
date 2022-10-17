@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Log Analytic workspace resource provider not being registered blocked creation
+- Deployment failures initialized from "Deploy..." button on Workspace ribbon [#3369](https://github.com/microsoft/vscode-azurefunctions/issues/3369)
 
 ## 1.8.1 - 2022-09-26
 
