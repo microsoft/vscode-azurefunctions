@@ -161,8 +161,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.execute();
 
         const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
-
-        // TODO: refresh tree so that the new Function App shows up
         ext.resolver.refresh();
 
         this
