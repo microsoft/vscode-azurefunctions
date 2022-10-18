@@ -161,7 +161,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.execute();
 
         const resolved = new ResolvedFunctionAppResource(subscription.subscription, nonNullProp(wizardContext, 'site'));
-        await ext.rgApi.tree.refresh(context);
+
+        // TODO: refresh tree so that the new Function App shows up
+        ext.resolver.refresh();
+
+        this
         return new SlotTreeItem(subscription, resolved);
     }
 

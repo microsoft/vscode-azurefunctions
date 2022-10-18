@@ -85,9 +85,23 @@
     "main": "./main.js",
     "contributes": {
         "x-azResourcesV2": {
-            "activation": {
-                "onFetch": [
-                    "FunctionApp"
+            "application": {
+                "branches": [
+                    {
+                        "type": "FunctionApp"
+                    }
+                ]
+            },
+            "workspace": {
+                "branches": [
+                    {
+                        "type": "func"
+                    }
+                ],
+                "resources": [
+                    {
+                        "type": "func"
+                    }
                 ]
             }
         },

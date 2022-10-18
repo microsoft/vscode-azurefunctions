@@ -6,8 +6,8 @@
 'use strict';
 
 import { registerAppServiceExtensionVariables } from '@microsoft/vscode-azext-azureappservice';
-import { AzureAccountTreeItemBase, registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtResourceType, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
+import { AzExtResourceType, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, createExperimentationService, getResourceGroupsApi, IActionContext, registerErrorHandler, registerEvent, registerReportIssueCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { createFunctionFromApi } from './commands/api/createFunctionFromApi';
@@ -27,12 +27,11 @@ import { ext } from './extensionVariables';
 import { registerFuncHostTaskEvents } from './funcCoreTools/funcHostTask';
 import { validateFuncCoreToolsIsLatest } from './funcCoreTools/validateFuncCoreToolsIsLatest';
 import { FunctionAppResolver } from './FunctionAppResolver';
-import { getResourceGroupsApi } from './getExtensionApi';
-import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
+import { FunctionsWorkspaceResourceProvider } from './WorkspaceResourceProvider';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -91,13 +90,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerContentProvider();
 
         ext.experimentationService = await createExperimentationService(context);
-        ext.rgApi = await getResourceGroupsApi();
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        ext.azureAccountTreeItem = ext.rgApi.appResourceTree._rootTreeItem as AzureAccountTreeItemBase;
-        ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
-        ext.rgApi.registerLocalResourceProvider('func', new FunctionsLocalResourceProvider());
-
+        ext.rgApi = await getResourceGroupsApi('0.0.1');
+        ext.v2rgApi = await getResourceGroupsApi('2.0.0');
+        ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, ext.resolver = new FunctionAppResolver());
+        ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsWorkspaceResourceProvider());
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{

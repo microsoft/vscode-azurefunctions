@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommandWithTreeNodeUnwrapping } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -66,26 +66,26 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.configureDeploymentSource', configureDeploymentSource);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.connectToGitHub', connectToGitHub);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.copyFunctionUrl', copyFunctionUrl);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunction', createFunctionFromCommand);
+    registerCommand('azureFunctions.createFunction', createFunctionFromCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionApp', createFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createFunctionAppAdvanced', createFunctionAppAdvanced);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.createNewProject', createNewProjectFromCommand);
+    registerCommand('azureFunctions.createNewProject', createNewProjectFromCommand);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.createSlot', createSlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunction', deleteFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteFunctionApp', deleteFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.deleteSlot', async (context: IActionContext, node?: AzExtTreeItem) => await deleteNode(context, ResolvedFunctionAppResource.pickSlotContextValue, node));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disableFunction', disableFunction);
-    registerSiteCommand('azureFunctions.deploy', deployProductionSlot);
-    registerSiteCommand('azureFunctions.deploySlot', deploySlot);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploy', deployProductionSlot);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.deploySlot', deploySlot);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.disconnectRepo', disconnectRepo);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.enableFunction', enableFunction);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.executeFunction', executeFunction);
-    registerCommandWithTreeNodeUnwrapping('azureFunctions.initProjectForVSCode', initProjectForVSCode);
+    registerCommand('azureFunctions.initProjectForVSCode', initProjectForVSCode);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.installOrUpdateFuncCoreTools', installOrUpdateFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openFile', openFile);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.openInPortal', openDeploymentInPortal);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.pickProcess', pickFuncProcess);
-    registerSiteCommand('azureFunctions.redeploy', redeployDeployment);
+    registerCommandWithTreeNodeUnwrapping('azureFunctions.redeploy', redeployDeployment);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.restartFunctionApp', restartFunctionApp);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.setAzureWebJobsStorage', setAzureWebJobsStorage);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.startFunctionApp', startFunctionApp);

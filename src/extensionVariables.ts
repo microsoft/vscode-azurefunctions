@@ -5,8 +5,10 @@
 
 import { IActionContext, IAzExtOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzureHostExtensionApi } from "@microsoft/vscode-azext-utils/hostapi";
+import { V2AzureResourcesApi } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ExtensionContext } from "vscode";
 import { func } from "./constants";
+import { FunctionAppResolver } from "./FunctionAppResolver";
 import { CentralTemplateProvider } from "./templates/CentralTemplateProvider";
 import { AzureAccountTreeItemWithProjects } from "./tree/AzureAccountTreeItemWithProjects";
 
@@ -54,6 +56,8 @@ export namespace ext {
     export let experimentationService: IExperimentationServiceAdapter;
     export const templateProvider = new ActionVariable<CentralTemplateProvider>('_centralTemplateProvider');
     export let rgApi: AzureHostExtensionApi;
+    export let v2rgApi: V2AzureResourcesApi;
+    export let resolver: FunctionAppResolver;
 }
 
 export enum TemplateSource {

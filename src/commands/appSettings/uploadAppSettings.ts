@@ -16,7 +16,7 @@ import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
 import { getLocalSettingsFile } from "./getLocalSettingsFile";
 
-export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
+export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, _nodes?: [], workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
     if (!node) {
         node = await ext.rgApi.pickAppResource<AppSettingsTreeItem>(context, {

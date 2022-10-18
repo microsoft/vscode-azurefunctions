@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureWizard, contextValueExperience, IActionContext } from "@microsoft/vscode-azext-utils";
 import { Uri, WorkspaceFolder } from "vscode";
 import { ProjectLanguage, projectTemplateKeySetting } from "../../constants";
 import { ext } from "../../extensionVariables";
@@ -37,8 +37,12 @@ export async function addBinding(context: IActionContext, data: Uri | LocalFunct
         version = verifiedInit.version;
     } else {
         if (!data) {
-            const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
-            data = await ext.rgApi.workspaceResourceTree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
+            // const noItemFoundErrorMessage: string = localize('noLocalProject', 'No matching functions found. C# and Java projects do not support this operation.');
+            data = await contextValueExperience<LocalFunctionTreeItem>(context, ext.v2rgApi.workspaceResourceTreeDataProvider, {
+                include: [/azFunc/, /Local/, /ReadWrite/, /Function/],
+                exclude: [/azFuncLocalProject/, /Functions/]
+            });
+            // data = await ext.rgApi.workspaceResourceTree.showTreeItemPicker<LocalFunctionTreeItem>(/Local;ReadWrite;Function;/i, { ...context, noItemFoundErrorMessage });
         }
 
         if (!data.functionJsonPath) {
