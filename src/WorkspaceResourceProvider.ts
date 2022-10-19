@@ -17,7 +17,7 @@ import { LocalProjectTreeItem } from "./tree/localProject/LocalProjectTreeItem";
 import { dotnetUtils } from "./utils/dotnetUtils";
 import { getWorkspaceSetting } from "./vsCodeConfig/settings";
 
-export class FunctionsWorkspaceResourceProvider implements WorkspaceResourceProvider {
+export class FunctionsLocalResourceProvider implements WorkspaceResourceProvider {
 
     public disposables: Disposable[] = [];
 

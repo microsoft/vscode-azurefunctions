@@ -31,7 +31,7 @@ import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { FunctionsWorkspaceResourceProvider } from './WorkspaceResourceProvider';
+import { FunctionsLocalResourceProvider } from './WorkspaceResourceProvider';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -92,7 +92,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi('0.0.1');
         ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
-        ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsWorkspaceResourceProvider());
+        ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsLocalResourceProvider());
     });
 
     return createApiProvider([<AzureFunctionsExtensionApi>{
