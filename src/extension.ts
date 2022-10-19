@@ -31,7 +31,7 @@ import { CentralTemplateProvider } from './templates/CentralTemplateProvider';
 import { registerContentProvider } from './utils/textUtils';
 import { AzureFunctionsExtensionApi } from './vscode-azurefunctions.api';
 import { verifyVSCodeConfigOnActivate } from './vsCodeConfig/verifyVSCodeConfigOnActivate';
-import { FunctionsLocalResourceProvider } from './WorkspaceResourceProvider';
+import { FunctionsLocalResourceProvider } from './LocalResourceProvider';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
