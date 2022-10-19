@@ -91,7 +91,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         ext.experimentationService = await createExperimentationService(context);
         ext.rgApi = await getResourceGroupsApi('0.0.1');
-        ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, ext.resolver = new FunctionAppResolver());
+        ext.rgApi.registerApplicationResourceResolver(AzExtResourceType.FunctionApp, new FunctionAppResolver());
         ext.rgApi.registerWorkspaceResourceProvider('func', new FunctionsWorkspaceResourceProvider());
     });
 
