@@ -197,4 +197,3 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
         }
     }
 }
-
