@@ -6,6 +6,9 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { ext } from '../../../extensionVariables';
+import { localize } from '../../../localize';
+import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
@@ -35,6 +38,15 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
                 dependencies: {},
                 devDependencies: this.getPackageJsonDevDeps(context)
             });
+        }
+        await this._installDependencies(context.projectPath);
+    }
+
+    private async _installDependencies(projectPath: string): Promise<void> {
+        try {
+            await cpUtils.executeCommand(ext.outputChannel, projectPath, 'npm', 'install');
+        } catch {
+            ext.outputChannel.appendLog(localize('npmInstallFailure', 'WARNING: Failed to install packages in your workspace. Run "npm install" manually instead.'));
         }
     }
 

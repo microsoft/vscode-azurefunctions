@@ -1,10 +1,17 @@
 # Change Log
 
-## 1.8.0 - 2022-09-06
+## 1.8.1 - 2022-09-26
+
+### Fixed
+
+- Log Analytic workspace resource provider not being registered blocked creation
+
+## 1.8.0 - 2022-09-20
 
 ### Added
 
-- Support for new Python language model [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
+- Support for new Python language model (set feature flag `azureFunctions.showPystienModel` to enable) [#3235](https://github.com/microsoft/vscode-azurefunctions/pull/3235)
+- Support for Java 17 (Preview) [#3245](https://github.com/microsoft/vscode-azurefunctions/issues/3245)
 
 ### Changed
 
@@ -24,6 +31,7 @@
 - Use shared azure id parsing utils [#3246](https://github.com/microsoft/vscode-azurefunctions/pull/3246)
 - Add post release version bumper [#3244](https://github.com/microsoft/vscode-azurefunctions/pull/3244/files)
 - Update AppInsights key [#3239](https://github.com/microsoft/vscode-azurefunctions/pull/3239)
+- Update `FUNCTIONS-WORKER-RUNTIME` setting when deploying `dotnet-isolated` projects to `dotnet` remote [#3288](https://github.com/microsoft/vscode-azurefunctions/issues/3288)
 
 ### Fixed
 
@@ -35,6 +43,7 @@
 - Fix tests to use v4 Core Tools [#3267](https://github.com/microsoft/vscode-azurefunctions/pull/3267)
 - App Insights APM 2.1 Enablement and Representation [#2835](https://github.com/microsoft/vscode-azurefunctions/issues/2835)
 - [Suggestion] Don't show Logic Apps in Functions Extension [#3165](https://github.com/microsoft/vscode-azurefunctions/issues/3165)
+- Fix `ServiceUnavailable` error that occurs in Files and Logs node [#3188](https://github.com/microsoft/vscode-azurefunctions/issues/3188)
 
 ## 1.7.4 - 2022-07-05
 

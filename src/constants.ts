@@ -20,6 +20,7 @@ export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
+export const pysteinModelSetting: string = "showPysteinModel";
 
 export enum ProjectLanguage {
     CSharp = 'C#',
