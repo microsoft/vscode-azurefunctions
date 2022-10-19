@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, compatibilitySubscriptionExperience, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
@@ -19,18 +19,7 @@ export async function createFunctionApp(context: IActionContext & Partial<ICreat
             throw new Error(localize('noMatchingSubscription', 'Failed to find a subscription matching id "{0}".', subscription));
         }
     } else if (!subscription) {
-        const subscriptionContext = await compatibilitySubscriptionExperience(context, ext.v2rgApi.applicationResourceTreeDataProvider);
-
-        node = (<Partial<AzExtParentTreeItem>>{
-            treeDataProvider: {} as AzExtTreeDataProvider,
-            valuesToMask: [],
-            id: '',
-            label: '',
-            subscription: subscriptionContext,
-            parent: undefined,
-        }) as unknown as AzExtParentTreeItem;
-
-        // node = await ext.rgApi.tree.showTreeItemPicker<AzExtParentTreeItem>(SubscriptionTreeItem.contextValue, context);
+        node = await ext.rgApi.appResourceTree.showTreeItemPicker<AzExtParentTreeItem>(SubscriptionTreeItem.contextValue, context);
     } else {
         node = subscription;
     }
