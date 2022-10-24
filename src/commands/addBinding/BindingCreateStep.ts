@@ -27,7 +27,9 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
         binding.direction = bindingTemplate.direction;
 
         for (const b of bindingTemplate.settings) {
-            binding[b.name] = getBindingSetting(context, b);
+            if (getBindingSetting(context, b) !== "undefined") {
+                binding[b.name] = getBindingSetting(context, b);
+            }
         }
 
         await confirmEditJsonFile(context, context.functionJsonPath, (functionJson: IFunctionJson) => {
