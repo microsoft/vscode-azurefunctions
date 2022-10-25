@@ -27,8 +27,9 @@ export class BindingCreateStep extends AzureWizardExecuteStep<IBindingWizardCont
         binding.direction = bindingTemplate.direction;
 
         for (const b of bindingTemplate.settings) {
-            if (getBindingSetting(context, b) !== "undefined") {
-                binding[b.name] = getBindingSetting(context, b);
+            const bindingSetting = getBindingSetting(context, b);
+            if (bindingSetting !== "undefined" && bindingSetting !== "null") {
+                binding[b.name] = bindingSetting;
             }
         }
 
