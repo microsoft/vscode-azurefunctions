@@ -10,6 +10,7 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { pythonUtils } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -57,6 +58,11 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
+
+        const needsStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
+        if (needsStorageSetup) {
+            context.newDurableStorageType = await durableUtils.promptForStorageType(context);
+        }
 
         if (isV2PythonModel) {
             return {
@@ -118,6 +124,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
+            .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
 
@@ -181,6 +188,25 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
 
     const options: IAzureQuickPickOptions = { suppressPersistence: true, placeHolder: localize('selectFilter', 'Select a template filter') };
     return (await context.ui.showQuickPick(picks, options)).data;
+}
+
+// Identify and filter out Durable Function templates requiring a pre-existing storage setup
+function doesTemplateRequireExistingStorageSetup(templateId: string, language?: string): boolean {
+    // Todo: Remove when Powershell and Java implementation is added
+    if (language === ProjectLanguage.PowerShell || language === ProjectLanguage.Java) {
+        return false;
+    }
+
+    const durableFunctions = /DurableFunctions/i;
+    const entity = /DurableFunctionsEntity/i;
+    const orchestrator = /Orchestrat/i;
+    const entityTrigger = /DurableFunctionsEntityHttpStart/i;  // filter out directly due to overlap with the base entity template pattern
+
+    if (entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId))) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 /**
