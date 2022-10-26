@@ -5,14 +5,12 @@
 
 import { Site } from '@azure/arm-appservice';
 import { tryGetWebApp } from '@microsoft/vscode-azext-azureappservice';
-import { runWithInputs, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import { runWithTestActionContext } from '@microsoft/vscode-azext-dev';
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import { createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString, ProjectLanguage, registerOnActionStartHandler } from '../../extension.bundle';
+import { createFunctionAppAdvanced, deleteFunctionApp, DialogResponses, getRandomHexString } from '../../extension.bundle';
 import { cleanTestWorkspace, longRunningTestsEnabled } from '../global.test';
-import { runWithFuncSetting } from '../runWithSetting';
-import { getRotatingLocation, getRotatingNodeVersion } from './getRotatingValue';
-import { resourceGroupsToDelete, testAccount, testClient } from './global.nightly.test';
+import { getRotatingLocation } from './getRotatingValue';
+import { resourceGroupsToDelete, testClient } from './global.nightly.test';
 
 suite('Function App Operations', function (this: Mocha.Suite): void {
     this.timeout(7 * 60 * 1000);
@@ -61,24 +59,6 @@ suite('Function App Operations', function (this: Mocha.Suite): void {
         });
         const createdApp: Site | undefined = await tryGetWebApp(testClient, rgName, app2Name);
         assert.ok(createdApp);
-    });
-
-    // https://github.com/Microsoft/vscode-azurefunctions/blob/main/docs/api.md#create-function-app
-    test('Create - API (deprecated)', async () => {
-        const apiRgName: string = getRandomHexString();
-        resourceGroupsToDelete.push(apiRgName);
-        const apiAppName: string = getRandomHexString();
-        const inputs = [apiAppName, getRotatingNodeVersion(), getRotatingLocation()];
-        const commandId = 'azureFunctions.createFunctionApp';
-
-        await runWithFuncSetting('projectLanguage', ProjectLanguage.JavaScript, async () => {
-            await runWithInputs(commandId, inputs, registerOnActionStartHandler, async () => {
-                const actualFuncAppId: string = <string>await vscode.commands.executeCommand(commandId, testAccount.getSubscriptionContext().subscriptionId, apiRgName);
-                const site: Site | undefined = await tryGetWebApp(testClient, apiRgName, apiAppName);
-                assert.ok(site);
-                assert.equal(actualFuncAppId, site.id);
-            });
-        });
     });
 
     test('Delete', async () => {
