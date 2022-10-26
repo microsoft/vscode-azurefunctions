@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import * as path from 'path';
+import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
-import { requirementsFileName } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from "../../../localize";
 import { cpUtils } from "../../../utils/cpUtils";
@@ -30,16 +28,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStep<IPythonVenvWiza
         void getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
 
         await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, '-m', 'venv', context.venvName);
-
-        const requirementsPath: string = path.join(context.projectPath, requirementsFileName);
-        if (await AzExtFsExtra.pathExists(requirementsPath)) {
-            try {
-                // Attempt to install packages so that users get Intellisense right away
-                await venvUtils.runCommandInVenv(`pip install -r ${requirementsFileName}`, context.venvName, context.projectPath);
-            } catch {
-                ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
-            }
-        }
+        venvUtils.runPipInstallCommandIfPossible(context.venvName, context.projectPath);
     }
 
     public shouldExecute(context: IPythonVenvWizardContext): boolean {

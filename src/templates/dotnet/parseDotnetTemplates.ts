@@ -80,7 +80,8 @@ function parseDotnetTemplate(rawTemplate: IRawTemplate): IFunctionTemplate {
         defaultFunctionName: rawTemplate.DefaultName,
         language: /FSharp/i.test(rawTemplate.Identity) ? ProjectLanguage.FSharp : ProjectLanguage.CSharp,
         userPromptedSettings: userPromptedSettings,
-        categories: [TemplateCategory.Core] // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
+        categories: [TemplateCategory.Core], // Dotnet templates do not have category information, so display all templates as if they are in the 'core' category
+        isDynamicConcurrent: (rawTemplate.Identity.includes('ServiceBusQueueTrigger') || rawTemplate.Identity.includes('BlobTrigger') || rawTemplate.Identity.includes('QueueTrigger')) ? true : false
     };
 }
 

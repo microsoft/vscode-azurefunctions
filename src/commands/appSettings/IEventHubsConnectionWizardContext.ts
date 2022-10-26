@@ -3,16 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageAccount } from "@azure/arm-storage";
+import { EHNamespace } from "@azure/arm-eventhub";
+import { ResourceGroup } from "@azure/arm-resources/esm/models";
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ConnectionTypeValues } from "../../constants";
 
-export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
+export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
 
-    storageAccount?: StorageAccount;
-    newStorageAccountName?: string;
+    resourceGroup?: ResourceGroup;
 
+    // Connection Types
     azureWebJobsStorageType?: ConnectionTypeValues;
-    azureWebJobsConnectionForDeploy?: string;
+    eventHubConnectionType?: ConnectionTypeValues;
+
+    // Netherite
+    newEventHubsNamespaceName?: string;
+    eventHubsNamespace?: EHNamespace;
+    newEventHubName?: string;
+
+    eventHubConnectionForDeploy?: string;
 }

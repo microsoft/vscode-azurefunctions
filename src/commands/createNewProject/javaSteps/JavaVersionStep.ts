@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { previewDescription } from "../../../constants";
 import { hasMinFuncCliVersion } from "../../../funcCoreTools/hasMinFuncCliVersion";
-import { localize } from "../../../localize";
+import { localize, previewDescription } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 import { getJavaVersion } from "./JavaVersions";
 

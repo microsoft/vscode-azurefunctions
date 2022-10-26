@@ -6,16 +6,42 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { pythonVenvSetting } from "../constants";
+import { pythonVenvSetting, requirementsFileName } from "../constants";
 import { ext } from '../extensionVariables';
+import { emptyWorkspace, localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
+import { getWorkspaceRootPath } from './workspace';
 
 export namespace venvUtils {
     enum Terminal {
         bash,
         cmd,
         powerShell
+    }
+
+    export async function runPipInstallCommandIfPossible(venvName?: string, projectPath?: string): Promise<void> {
+        venvName ??= getWorkspaceSetting(pythonVenvSetting) || '.venv';
+
+        projectPath ??= getWorkspaceRootPath();
+        if (!projectPath) {
+            throw new Error(emptyWorkspace);
+        }
+
+        const venvPath: string = path.join(projectPath, <string>venvName);
+        if (!AzExtFsExtra.pathExists(venvPath)) {
+            return;
+        }
+
+        const requirementsPath: string = path.join(projectPath, requirementsFileName);
+        if (await AzExtFsExtra.pathExists(requirementsPath)) {
+            try {
+                // Attempt to install packages so that users get Intellisense right away
+                await runCommandInVenv(`pip install -r ${requirementsFileName}`, <string>venvName, projectPath);
+            } catch {
+                ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
+            }
+        }
     }
 
     export function convertToVenvCommand(command: string, folderPath: string): string {

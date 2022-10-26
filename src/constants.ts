@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from "./localize";
-
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
 export const projectLanguageSetting: string = 'projectLanguage';
 export const projectLanguageModelSetting: string = 'projectLanguageModel';
@@ -80,6 +78,28 @@ export enum ScmType {
     GitHub = 'GitHub'
 }
 
+export enum ConnectionKey {
+    Storage = 'AzureWebJobsStorage',
+    EventHub = 'EventHubsConnection',
+    SQL = 'SQLDB_Connection'
+}
+
+export enum ConnectionType {
+    Azure = "Azure",
+    NonAzure = 'NonAzure',  // includes local emulators
+    None = 'None'
+}
+
+export enum DurableBackend {
+    Storage = 'AzureStorage',
+    Netherite = 'Netherite',
+    SQL = "mssql"
+}
+
+export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
+export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
+export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];
+
 export const func: string = 'func';
 export const extInstallCommand: string = 'extensions install';
 export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;
@@ -96,7 +116,10 @@ export const localhost: string = '127.0.0.1';
 export const tsDefaultOutDir: string = 'dist';
 export const tsConfigFileName: string = 'tsconfig.json';
 
-export const localEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
+export const localEventHubsEmulatorConnectionStringDefault: string = 'MemoryF';
+export const localEventHubsEmulatorConnectionStringAlternate: string = 'Memory';
+export const localStorageEmulatorConnectionString: string = 'UseDevelopmentStorage=true';
+export const localEventHubsEmulatorConnectionRegExp: RegExp = new RegExp(`${localEventHubsEmulatorConnectionStringDefault}|${localEventHubsEmulatorConnectionStringAlternate}`);
 
 export const workerRuntimeKey: string = 'FUNCTIONS_WORKER_RUNTIME';
 export const workerRuntimeVersionKey: string = 'FUNCTIONS_WORKER_RUNTIME_VERSION';
@@ -104,11 +127,6 @@ export const extensionVersionKey: string = 'FUNCTIONS_EXTENSION_VERSION';
 export const runFromPackageKey: string = 'WEBSITE_RUN_FROM_PACKAGE';
 export const contentConnectionStringKey: string = 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING';
 export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
-
-export const viewOutput: string = localize('viewOutput', 'View Output');
-export const previewDescription: string = localize('preview', '(Preview)');
-export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
-
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {

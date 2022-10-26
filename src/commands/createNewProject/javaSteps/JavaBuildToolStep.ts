@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { JavaBuildTool, previewDescription } from "../../../constants";
-import { localize } from "../../../localize";
+import { JavaBuildTool } from "../../../constants";
+import { localize, previewDescription } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
 
