@@ -17,12 +17,6 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public async prompt(context: T): Promise<void> {
-        if (this._options?.preSelectedConnectionType) {
-            context.azureWebJobsStorageType = this._options.preSelectedConnectionType;
-            context.telemetry.properties.azureWebJobsStorageType = this._options.preSelectedConnectionType;
-            return;
-        }
-
         const connectStorageButton: MessageItem = { title: localize('connectStorageAccount', 'Connect Storage Account') };
         const useEmulatorButton: MessageItem = { title: useEmulator };
         const skipForNowButton: MessageItem = { title: skipForNow };
@@ -48,7 +42,9 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public shouldPrompt(context: T & { eventHubConnectionType?: ConnectionTypeValues, sqlDbConnectionType?: ConnectionTypeValues }): boolean {
-        if (!!context.storageAccount || !!context.newStorageAccountName) {
+        if (this._options?.preSelectedConnectionType) {
+            context.azureWebJobsStorageType = this._options.preSelectedConnectionType;
+        } else if (!!context.storageAccount || !!context.newStorageAccountName) {
             context.azureWebJobsStorageType = ConnectionType.Azure;  // Only should prompt if no storage account was selected
         } else if (context.eventHubConnectionType) {
             context.azureWebJobsStorageType = context.eventHubConnectionType;

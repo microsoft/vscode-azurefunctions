@@ -19,12 +19,6 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
     }
 
     public async prompt(context: T): Promise<void> {
-        if (this._options?.preSelectedConnectionType) {
-            context.eventHubConnectionType = this._options.preSelectedConnectionType;
-            context.telemetry.properties.eventHubConnectionType = this._options.preSelectedConnectionType;
-            return;
-        }
-
         const connectEventNamespaceButton: MessageItem = { title: localize('connectEventHubsNamespace', 'Connect Event Hub Namespace') };
         const useEmulatorButton: MessageItem = { title: useEmulator };
         const skipForNowButton: MessageItem = { title: skipForNow };
@@ -50,7 +44,9 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
     }
 
     public shouldPrompt(context: T): boolean {
-        if (context.azureWebJobsStorageType) {
+        if (this._options?.preSelectedConnectionType) {
+            context.eventHubConnectionType = this._options.preSelectedConnectionType;
+        } else if (context.azureWebJobsStorageType) {
             context.eventHubConnectionType = context.azureWebJobsStorageType;
         }
 
