@@ -5,8 +5,8 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
-import { localize } from '../../localize';
+import { previewPythonModel, ProjectLanguage, pysteinModelSetting } from '../../constants';
+import { localize, pythonNewModelPreview } from '../../localize';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';

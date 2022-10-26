@@ -11,7 +11,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { pythonUtils } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -56,12 +56,12 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
+        const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
 
         if (isV2PythonModel) {
             return {
                 // TODO: Title?
-                promptSteps: [ new PythonLocationStep(this._functionSettings) ]
+                promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
             return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
@@ -136,7 +136,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !pythonUtils.isV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
