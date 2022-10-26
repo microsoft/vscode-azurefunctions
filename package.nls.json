@@ -100,6 +100,5 @@
     "azureFunctions.validateFuncCoreTools": "Validate the Azure Functions Core Tools is installed before debugging.",
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
-    "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.showPysteinModel": "Enable Python (New Model Preview)"
+    "azureFunctions.viewProperties": "View Properties"
 }
