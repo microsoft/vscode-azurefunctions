@@ -6,7 +6,6 @@
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { IAzureQuickPickItem, parseError } from '@microsoft/vscode-azext-utils';
-import { QuickInputButton, ThemeIcon } from 'vscode';
 import { hiddenStacksSetting } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -62,30 +61,10 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                         break;
                 }
 
-                const buttons: QuickInputButton[] = []
-                const endofLifeDate = minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
-                const sixMonthsFromNow = new Date();
-                sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-                const compareDates = (eolDate: string, sixMonthsDate: Date) => {
-                    const endOfLife = new Date(eolDate).getTime();
-                    const sixMonths = new Date(sixMonthsDate).getTime();
-                    return endOfLife >= sixMonths;
-                }
-                if (endofLifeDate) {
-                    if (!compareDates(endofLifeDate, sixMonthsFromNow)) {
-                        const eolButton: QuickInputButton = {
-                            iconPath: new ThemeIcon('extensions-warning-message'),
-                            tooltip: localize('endOfLife', 'After the deadline, function apps can be created and deployed, and existing apps continue to run. However, your apps wont be eligible for new features, security patches, performance optimizations, and support until you upgrade them.')
-                        };
-                        buttons.push(eolButton);
-                    }
-                }
-
                 picks.push({
                     label: minorVersion.displayText,
                     description,
                     group: stack.displayText,
-                    buttons,
                     data: { stack, majorVersion, minorVersion }
                 });
             }

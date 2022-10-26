@@ -1038,6 +1038,11 @@
                         "type": "boolean",
                         "default": false,
                         "description": "%azureFunctions.showPysteinModel%"
+                    },
+                    "azureFunctions.endOfLifeWarning": {
+                        "type": "boolean",
+                        "description": "%azureFunctions.endOfLifeWarning%",
+                        "default": true
                     }
                 }
             }
