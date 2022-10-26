@@ -12,14 +12,14 @@ import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWeb
 import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
 import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { functionJsonFileName, localEmulatorConnectionString, localSettingsFileName, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
+import { ConnectionKey, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { azureWebJobsStorageKey, getAzureWebJobsStorage, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
+import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
-import { isPythonV2Plus } from '../utils/pythonUtils';
+import { pythonUtils } from '../utils/pythonUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 
@@ -113,7 +113,7 @@ function getMatchingWorkspace(debugConfig: vscode.DebugConfiguration): vscode.Wo
 async function validateFunctionVersion(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, workspacePath: string): Promise<boolean> {
     const validateTools = getWorkspaceSetting<boolean>('validateFuncCoreTools', workspacePath) !== false;
 
-    if (validateTools && isPythonV2Plus(projectLanguage, projectLanguageModel)) {
+    if (validateTools && pythonUtils.isV2Plus(projectLanguage, projectLanguageModel)) {
         const version = await getLocalFuncCoreToolsVersion(context, workspacePath);
 
         // NOTE: This is the latest version available as of this commit,
@@ -146,7 +146,7 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
 
 async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string): Promise<void> {
     if (canValidateAzureWebJobStorageOnDebug(projectLanguage)) {
-        const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(context, projectPath);
+        const azureWebJobsStorage: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
         if (!azureWebJobsStorage) {
             const functionFolders: string[] = await getFunctionFolders(context, projectPath);
             const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
@@ -155,10 +155,10 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
             }));
 
             // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.
-            if (functions.some(f => !f.isHttpTrigger) || isPythonV2Plus(projectLanguage, projectLanguageModel)) {
+            if (functions.some(f => !f.isHttpTrigger) || pythonUtils.isV2Plus(projectLanguage, projectLanguageModel)) {
                 const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
                 const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-                    promptSteps: [new AzureWebJobsStoragePromptStep(true /* suppressSkipForNow */)],
+                    promptSteps: [new AzureWebJobsStoragePromptStep({ suppressSkipForNow: true })],
                     executeSteps: [new AzureWebJobsStorageExecuteStep()]
                 });
                 await wizard.prompt();
@@ -172,8 +172,8 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
  * If AzureWebJobsStorage is set, pings the emulator to make sure it's actually running
  */
 async function validateEmulatorIsRunning(context: IActionContext, projectPath: string): Promise<boolean> {
-    const azureWebJobsStorage: string | undefined = await getAzureWebJobsStorage(context, projectPath);
-    if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localEmulatorConnectionString.toLowerCase()) {
+    const azureWebJobsStorage: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
+    if (azureWebJobsStorage && azureWebJobsStorage.toLowerCase() === localStorageEmulatorConnectionString.toLowerCase()) {
         try {
             const client = BlobServiceClient.fromConnectionString(azureWebJobsStorage, { retryOptions: { maxTries: 1 } });
             await client.getProperties();
