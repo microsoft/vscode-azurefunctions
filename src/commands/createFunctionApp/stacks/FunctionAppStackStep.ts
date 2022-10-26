@@ -35,7 +35,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                     if (endofLifeDate) {
                         if (!compareDates(endofLifeDate, sixMonthsFromNow)) {
                             const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. After the deadline, function apps can be created and deployed, and existing apps continue to run. However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them");
-                            const result: MessageItem = await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+                            const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                             if (result === DialogResponses.learnMore) {
                                 await openUrl('https://learn.microsoft.com/en-us/azure/azure-functions/functions-versions?tabs=azure-cli%2Cwindows%2Cin-process%2Cv4&pivots=programming-language-csharp');
                             }
