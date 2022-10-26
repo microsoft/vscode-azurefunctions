@@ -7,10 +7,10 @@ import { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { functionFilter, localSettingsFileName, viewOutput } from "../../constants";
+import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
-import { localize } from "../../localize";
+import { localize, viewOutput } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";
@@ -53,6 +53,17 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
         }
 
         const excludedAppSettings: string[] = [];
+
+        // Local emulator connections should not be uploaded to the cloud - exclude them (https://github.com/microsoft/vscode-azurefunctions/issues/3298)
+        if (localSettings.Values[ConnectionKey.Storage] === localStorageEmulatorConnectionString) {
+            delete localSettings.Values?.[ConnectionKey.Storage];
+            excludedAppSettings.push(ConnectionKey.Storage);
+        }
+        if (localEventHubsEmulatorConnectionRegExp.test(localSettings.Values[ConnectionKey.EventHub])) {
+            delete localSettings.Values?.[ConnectionKey.EventHub];
+            excludedAppSettings.push(ConnectionKey.EventHub);
+        }
+
         if (exclude) {
             Object.keys(localSettings.Values).forEach((settingName) => {
                 if (exclude.some((exclusion) => typeof exclusion === 'string' ? settingName.toLowerCase() === exclusion.toLowerCase() : settingName.match(new RegExp(exclusion, 'i')))) {
