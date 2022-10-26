@@ -56,29 +56,30 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
-        await this._installDependenciesIfNeeded(context);
+        await this._installDurableDependenciesIfNeeded(context);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }
 
-    private async _installDependenciesIfNeeded(context: IDotnetFunctionWizardContext): Promise<void> {
-        try {
-            // Install Durable Functions dependency
-            if (context.newDurableStorageType) {
-                switch (context.newDurableStorageType) {
-                    case DurableBackend.Netherite:
-                        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfNetheritePackage);
-                        break;
-                    case DurableBackend.SQL:
-                        await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfSqlPackage);
-                        break;
-                    case DurableBackend.Storage:
-                    default:
-                }
+    private async _installDurableDependenciesIfNeeded(context: IDotnetFunctionWizardContext): Promise<void> {
+        if (!context.newDurableStorageType) {
+            return;
+        }
 
-                // Seems that the package arrives out-dated and needs to be updated
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfBasePackage);
+        try {
+            switch (context.newDurableStorageType) {
+                case DurableBackend.Netherite:
+                    await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfNetheritePackage);
+                    break;
+                case DurableBackend.SQL:
+                    await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfSqlPackage);
+                    break;
+                case DurableBackend.Storage:
+                default:
             }
+
+            // Seems that the package arrives out-dated and needs to be updated
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfBasePackage);
         } catch {
             ext.outputChannel.appendLog(localize('funcInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the .csproj project file. You may need to configure them manually or start from a clean project.'))
         }
