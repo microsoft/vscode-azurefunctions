@@ -6,11 +6,13 @@
 import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
-import { hostFileName } from '../../constants';
+import { DurableBackend, hostFileName } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
-import { localize } from '../../localize';
+import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
+import { hostJsonConfigFailed, localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { durableUtils, netheriteUtils, sqlUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { verifyExtensionBundle } from '../../utils/verifyExtensionBundle';
 import { getContainingWorkspace } from '../../utils/workspace';
@@ -53,6 +55,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         progress.report({ message: localize('creatingFunction', 'Creating new {0}...', template.name) });
 
         const newFilePath: string = await this.executeCore(context);
+        await this._configureForDurableStorageIfNeeded(context);
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
@@ -80,6 +83,37 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
+    }
+
+    private async _configureForDurableStorageIfNeeded(context: T): Promise<void> {
+        if (!context.newDurableStorageType) {
+            return;
+        }
+
+        try {
+            const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+            const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+            hostJson.extensions ??= {};
+
+            switch (context.newDurableStorageType) {
+                case DurableBackend.Storage:
+                    hostJson.extensions.durableTask = durableUtils.getDefaultStorageTaskConfig();
+                    break;
+                case DurableBackend.Netherite:
+                    hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
+                    setLocalAppSetting(context, context.projectPath, 'EventHubsConnection', '', MismatchBehavior.Overwrite);
+                    break;
+                case DurableBackend.SQL:
+                    hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();
+                    setLocalAppSetting(context, context.projectPath, 'SQLDB_Connection', '', MismatchBehavior.Overwrite);
+                    break;
+                default:
+            }
+
+            await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
+        } catch {
+            ext.outputChannel.appendLog(hostJsonConfigFailed);
+        }
     }
 }
 
