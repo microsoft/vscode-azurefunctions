@@ -19,7 +19,6 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
         const rgName: string = nonNullValue(context.resourceGroup?.name);
         const newNamespaceName: string = nonNullValue(context.newEventHubsNamespaceName);
         const creating: string = localize('creatingEventHubsNamespace', 'Creating new event hubs namespace "{0}"...', newNamespaceName);
-        const created: string = localize('createdEventHubsNamespace', 'Created new event hubs namespace "{0}"...', newNamespaceName);
         ext.outputChannel.appendLog(creating);
         progress.report({ message: creating });
 
@@ -32,7 +31,6 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
             },
         };
         context.eventHubsNamespace = await client.namespaces.beginCreateOrUpdateAndWait(rgName, newNamespaceName, defaultParams);
-        ext.outputChannel.appendLog(created);
     }
 
     public shouldExecute(context: T): boolean {
