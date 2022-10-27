@@ -22,10 +22,10 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseConnectionWizardContext
         const rgName: string = parseAzureResourceId(nonNullValue(context.sqlServer?.id)).resourceGroup;
         const newDatabaseName: string = nonNullValue(context.newSqlDatabaseName);
 
-        const creating: string = localize('creatingSqlServer', 'Creating new SQL database "{0}"...', newDatabaseName);
-        const created: string = localize('createdSqlServer', 'Created new SQL database "{0}"...', newDatabaseName);
-        ext.outputChannel.appendLog(creating);
+        const creating: string = localize('creatingSqlDatabase', 'Creating new SQL database "{0}"...', newDatabaseName);
+        const configuring: string = localize('configuringFirewallRules', 'Configuring SQL server firewall to allow all Azure IP\'s...');
         progress.report({ message: creating });
+        ext.outputChannel.appendLog(creating);
 
         const dbParams: Database = {
             sku: {
@@ -38,8 +38,10 @@ export class SqlDatabaseCreateStep<T extends ISqlDatabaseConnectionWizardContext
         };
 
         context.sqlDatabase = await client.databases.beginCreateOrUpdateAndWait(rgName, serverName, newDatabaseName, dbParams);
-        client.firewallRules.createOrUpdate(rgName, serverName, 'AllowAllAzureIps', { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' });
-        ext.outputChannel.appendLog(created);
+
+        progress.report({ message: configuring });
+        ext.outputChannel.appendLog(configuring);
+        await client.firewallRules.createOrUpdate(rgName, serverName, 'AllowAllAzureIps', { startIpAddress: '0.0.0.0', endIpAddress: '0.0.0.0' });
     }
 
     public shouldExecute(context: T): boolean {

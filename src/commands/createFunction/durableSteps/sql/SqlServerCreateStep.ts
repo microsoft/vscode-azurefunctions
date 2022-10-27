@@ -21,7 +21,6 @@ export class SqlServerCreateStep<T extends ISqlDatabaseConnectionWizardContext> 
         const newServerName: string = nonNullValue(context.newSqlServerName);
 
         const creating: string = localize('creatingSqlServer', 'Creating new SQL server "{0}"...', newServerName);
-        const created: string = localize('createdSqlServer', 'Created new SQL server "{0}"...', newServerName);
         ext.outputChannel.appendLog(creating);
         progress.report({ message: creating });
 
@@ -32,7 +31,6 @@ export class SqlServerCreateStep<T extends ISqlDatabaseConnectionWizardContext> 
         };
 
         context.sqlServer = await client.servers.beginCreateOrUpdateAndWait(rgName, newServerName, serverOptions);
-        ext.outputChannel.appendLog(created);
     }
 
     public shouldExecute(context: T): boolean {
