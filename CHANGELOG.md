@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.8.3 - 2022-10-25
+
+### Changed
+
+- Revert addition of PyStein "feature flag" setting. [#3386](https://github.com/microsoft/vscode-azurefunctions/pull/3386)
+
+## 1.8.2 - 2022-10-18
+
+### Fixed
+
+- Deployment failures initialized from "Deploy..." button on Workspace ribbon [#3369](https://github.com/microsoft/vscode-azurefunctions/issues/3369)
+
 ## 1.8.1 - 2022-09-26
 
 ### Fixed
