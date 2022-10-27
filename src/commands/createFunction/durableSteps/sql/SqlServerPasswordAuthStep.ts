@@ -9,36 +9,16 @@ import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    public constructor(private readonly _suppressPasswordConfirm?: boolean) {
+    public constructor() {
         super();
     }
 
     public async prompt(context: T): Promise<void> {
-        while (true) {
-            const entryOne: string = (await context.ui.showInputBox({
-                prompt: localize('sqlServerPasswordPrompt', 'Enter an admin password for the SQL server.'),
-                password: true,
-                validateInput: (value: string | undefined) => this._validateInput(context, value)
-            })).trim();
-
-            if (this._suppressPasswordConfirm) {
-                context.newSqlAdminPassword = entryOne;
-                break;
-            }
-
-            const entryTwo: string = (await context.ui.showInputBox({
-                prompt: localize('sqlServerPasswordConfirm', 'Enter your admin password again to confirm.'),
-                password: true,
-                validateInput: (value: string | undefined) => this._validateInput(context, value)
-            })).trim();
-
-            if (entryOne === entryTwo) {
-                context.newSqlAdminPassword = entryTwo;
-                break;
-            } else {
-                context.ui.showWarningMessage(localize('confirmationPasswordMismatch', 'The confirmation password you entered did not match your original entry.'));
-            }
-        }
+        context.newSqlAdminPassword = (await context.ui.showInputBox({
+            prompt: localize('sqlServerPasswordPrompt', 'Enter an admin password for the SQL server.'),
+            password: true,
+            validateInput: (value: string | undefined) => this._validateInput(context, value)
+        })).trim();
 
         context.valuesToMask.push(nonNullProp(context, 'newSqlAdminPassword'));
     }

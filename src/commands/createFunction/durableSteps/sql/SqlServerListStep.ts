@@ -9,6 +9,7 @@ import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAz
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { InputRevalidationStep } from './InputRevalidationStep';
 import { SqlServerCreateStep } from './SqlServerCreateStep';
 import { SqlServerNameStep } from './SqlServerNameStep';
 import { SqlServerPasswordAuthStep } from './SqlServerPasswordAuthStep';
@@ -32,7 +33,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         if (context.sqlServer) {
             context.valuesToMask.push(nonNullProp(context.sqlServer, 'name'));
         } else {
-            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep());
+            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword' /* key */, true /* isPassword */));
             executeSteps.push(new SqlServerCreateStep());
         }
 

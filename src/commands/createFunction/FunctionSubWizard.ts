@@ -15,12 +15,15 @@ import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStora
 import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
 import { EventHubsConnectionExecuteStep } from '../appSettings/EventHubsConnectionExecuteStep';
 import { EventHubsConnectionPromptStep } from '../appSettings/EventHubsConnectionPromptStep';
+import { SqlDatabaseConnectionExecuteStep } from '../appSettings/SqlDatabaseConnectionExecuteStep';
+import { SqlDatabaseConnectionPromptStep } from '../appSettings/SqlDatabaseConnectionPromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
 import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
 import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
+import { SqlDatabaseListStep } from './durableSteps/sql/SqlDatabaseListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -96,9 +99,8 @@ export class FunctionSubWizard {
                     executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
                     break;
                 case DurableBackend.SQL:
-                    // Todo: Uncomment out in future PR
-                    // promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
-                    // executeSteps.push(new SqlDatabaseConnectionExecuteStep());
+                    promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
+                    executeSteps.push(new SqlDatabaseConnectionExecuteStep());
                     break;
                 case DurableBackend.Storage:
                 default:
