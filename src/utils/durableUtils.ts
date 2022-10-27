@@ -3,13 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
+import { EventHubsConnectionExecuteStep } from "../commands/appSettings/EventHubsConnectionExecuteStep";
+import { EventHubsConnectionPromptStep } from "../commands/appSettings/EventHubsConnectionPromptStep";
+import { IValidateConnectionOptions } from "../commands/appSettings/IConnectionPrompOptions";
+import { IEventHubsConnectionWizardContext } from "../commands/appSettings/IEventHubsConnectionWizardContext";
+import { ISqlDatabaseConnectionWizardContext } from "../commands/appSettings/ISqlDatabaseConnectionWizardContext";
+import { SqlDatabaseConnectionExecuteStep } from "../commands/appSettings/SqlDatabaseConnectionExecuteStep";
+import { SqlDatabaseConnectionPromptStep } from "../commands/appSettings/SqlDatabaseConnectionPromptStep";
+import { NetheriteConfigureHostStep } from "../commands/createFunction/durableSteps/netherite/NetheriteConfigureHostStep";
+import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
+import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage } from "../constants";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
+import { getLocalConnectionString } from "../funcConfig/local.settings";
 import { emptyWorkspace, localize } from "../localize";
 import { findFiles, getWorkspaceRootPath } from "./workspace";
 
@@ -193,44 +204,43 @@ export namespace netheriteUtils {
         return taskJson?.hubName;
     }
 
-    // Todo: Uncomment out in future PR
-    // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
-    //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
-    //     }
+    export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
+        projectPath ??= getWorkspaceRootPath();
+        if (!projectPath) {
+            throw new Error(emptyWorkspace);
+        }
 
-    //     const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
-    //     const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
+        const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
+        const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
 
-    //     const eventHubName: string | undefined = await getEventHubName(projectPath);
-    //     const hasValidEventHubName: boolean = !!eventHubName && eventHubName !== netheriteUtils.defaultNetheriteHubName;
+        const eventHubName: string | undefined = await getEventHubName(projectPath);
+        const hasValidEventHubName: boolean = !!eventHubName && eventHubName !== netheriteUtils.defaultNetheriteHubName;
 
-    //     const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
-    //     const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
-    //     const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
+        const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
+        const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
+        const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
-    //     if (hasEventHubsConnection && hasValidEventHubName && options?.setConnectionForDeploy) {
-    //         Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
-    //     } else {
-    //         promptSteps.push(new EventHubsConnectionPromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true }));
-    //         executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
-    //     }
+        if (hasEventHubsConnection && hasValidEventHubName && options?.setConnectionForDeploy) {
+            Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
+        } else {
+            promptSteps.push(new EventHubsConnectionPromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true }));
+            executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
+        }
 
-    //     if (!hasValidEventHubName) {
-    //         promptSteps.push(new NetheriteEventHubNameStep());
-    //     }
+        if (!hasValidEventHubName) {
+            promptSteps.push(new NetheriteEventHubNameStep());
+        }
 
-    //     executeSteps.push(new NetheriteConfigureHostStep());
+        executeSteps.push(new NetheriteConfigureHostStep());
 
-    //     const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-    //         promptSteps,
-    //         executeSteps
-    //     });
+        const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
+            promptSteps,
+            executeSteps
+        });
 
-    //     await wizard.prompt();
-    //     await wizard.execute();
-    // }
+        await wizard.prompt();
+        await wizard.execute();
+    }
 
     export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
         return {
@@ -247,31 +257,30 @@ export namespace netheriteUtils {
 }
 
 export namespace sqlUtils {
-    // Todo: Uncomment out in future PR
-    // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
-    //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
-    //     }
+    export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
+        projectPath ??= getWorkspaceRootPath();
+        if (!projectPath) {
+            throw new Error(emptyWorkspace);
+        }
 
-    //     const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
-    //     const hasSqlDbConnection: boolean = !!sqlDbConnection;
+        const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
+        const hasSqlDbConnection: boolean = !!sqlDbConnection;
 
-    //     if (hasSqlDbConnection) {
-    //         if (options?.setConnectionForDeploy) {
-    //             Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
-    //             return;
-    //         }
-    //     }
+        if (hasSqlDbConnection) {
+            if (options?.setConnectionForDeploy) {
+                Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+                return;
+            }
+        }
 
-    //     const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
-    //     const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-    //         promptSteps: [new SqlDatabaseConnectionPromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true }), new SqlDatabaseListStep()],
-    //         executeSteps: [new SqlDatabaseConnectionExecuteStep(options?.setConnectionForDeploy)]
-    //     });
-    //     await wizard.prompt();
-    //     await wizard.execute();
-    // }
+        const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
+        const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
+            promptSteps: [new SqlDatabaseConnectionPromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true }), new SqlDatabaseListStep()],
+            executeSteps: [new SqlDatabaseConnectionExecuteStep(options?.setConnectionForDeploy)]
+        });
+        await wizard.prompt();
+        await wizard.execute();
+    }
 
     export function getDefaultSqlTaskConfig(): ISqlTaskJson {
         return {
