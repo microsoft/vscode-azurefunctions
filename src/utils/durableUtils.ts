@@ -122,7 +122,7 @@ export namespace durableUtils {
 
     async function dotnetProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const csProjPaths: Uri[] = await findFiles(projectPath, '*.csproj');
-        if (!csProjPaths?.[0]?.path) {
+        if (!(csProjPaths?.[0]?.path && AzExtFsExtra.pathExists(csProjPaths[0].path))) {
             return false;
         }
 
