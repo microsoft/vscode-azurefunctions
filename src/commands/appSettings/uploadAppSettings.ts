@@ -8,9 +8,10 @@ import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } fro
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
+import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
-import { localize, viewOutput } from "../../localize";
+import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";

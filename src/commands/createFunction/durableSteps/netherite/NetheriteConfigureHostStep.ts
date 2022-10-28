@@ -7,8 +7,8 @@ import { ext } from '@microsoft/vscode-azext-azureappservice/out/src/extensionVa
 import { AzExtFsExtra, AzureWizardExecuteStep, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { hostFileName } from '../../../../constants';
+import { hostJsonConfigFailed } from '../../../../constants-nls';
 import { IHostJsonV2, INetheriteTaskJson } from '../../../../funcConfig/host';
-import { hostJsonConfigFailed } from '../../../../localize';
 import { netheriteUtils } from '../../../../utils/durableUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
 

@@ -6,7 +6,8 @@
 import { EventHubManagementClient } from '@azure/arm-eventhub';
 import { delay } from '@azure/ms-rest-js';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import { invalidAlphanumericWithHyphens, invalidLength } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';

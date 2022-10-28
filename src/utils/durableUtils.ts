@@ -9,8 +9,9 @@ import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage } from "../constants";
+import { emptyWorkspace } from "../constants-nls";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
-import { emptyWorkspace, localize } from "../localize";
+import { localize } from "../localize";
 import { findFiles, getWorkspaceRootPath } from "./workspace";
 
 export namespace durableUtils {

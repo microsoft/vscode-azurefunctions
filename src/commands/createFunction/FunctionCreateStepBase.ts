@@ -7,10 +7,11 @@ import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { DurableBackend, hostFileName } from '../../constants';
+import { hostJsonConfigFailed } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { hostJsonConfigFailed, localize } from '../../localize';
+import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { durableUtils, netheriteUtils, sqlUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';

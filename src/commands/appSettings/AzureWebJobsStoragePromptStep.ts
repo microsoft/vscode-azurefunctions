@@ -7,8 +7,9 @@ import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, 
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
 import { ConnectionType, ConnectionTypeValues } from '../../constants';
+import { skipForNow, useEmulator } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
-import { localize, skipForNow, useEmulator } from '../../localize';
+import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 import { IConnectionPromptOptions } from './IConnectionPrompOptions';
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {

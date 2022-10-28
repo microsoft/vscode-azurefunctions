@@ -6,8 +6,9 @@
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { ProjectLanguage, requirementsFileName } from "../constants";
+import { emptyWorkspace } from "../constants-nls";
 import { ext } from "../extensionVariables";
-import { emptyWorkspace, localize } from "../localize";
+import { localize } from "../localize";
 import { getWorkspaceRootPath } from "./workspace";
 
 export namespace pythonUtils {

@@ -6,9 +6,10 @@
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
 import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp } from '../../constants';
+import { skipForNow, useEmulator } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { getLocalConnectionString } from '../../funcConfig/local.settings';
-import { localize, skipForNow, useEmulator } from '../../localize';
+import { localize } from '../../localize';
 import { EventHubsNamespaceListStep } from '../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
 import { IConnectionPromptOptions } from './IConnectionPrompOptions';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
