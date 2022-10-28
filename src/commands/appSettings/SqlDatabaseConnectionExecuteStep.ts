@@ -12,7 +12,7 @@ import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWiz
 export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
 
-    public constructor(private _setConnectionForDeploy?: boolean) {
+    public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();
     }
 
