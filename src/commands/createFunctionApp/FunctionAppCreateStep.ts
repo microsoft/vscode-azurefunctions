@@ -9,8 +9,9 @@ import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
 import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
-import { ConnectionKey, contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
+import { ConnectionKey, contentConnectionStringKey, contentShareKey, DurableBackend, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { getLocalConnectionString } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { getStorageConnectionString } from '../../utils/azure';
@@ -95,7 +96,13 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         const newSiteConfig: SiteConfig = stackSettings.siteConfigPropertiesDictionary;
-        const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
+
+        let storageConnectionString: string;
+        if (context.hasAzureStorageConnection) {
+            storageConnectionString = await getLocalConnectionString(context, ConnectionKey.Storage) || '';
+        } else {
+            storageConnectionString = (await getStorageConnectionString(context)).connectionString;
+        }
 
         const appSettings: NameValuePair[] = [
             {
@@ -115,6 +122,22 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             appSettings.push({
                 name: 'AzureWebJobsDashboard',
                 value: storageConnectionString
+            });
+        }
+
+        if (context.hasEventHubsConnection) {
+            const eventHubsConnectionString: string = await getLocalConnectionString(context, ConnectionKey.EventHub) || '';
+            appSettings.push({
+                name: ConnectionKey.EventHub,
+                value: eventHubsConnectionString
+            });
+        }
+
+        if (context.hasSqlDbConnection) {
+            const sqlDbConnectionString: string = await getLocalConnectionString(context, ConnectionKey.SQL) || '';
+            appSettings.push({
+                name: ConnectionKey.SQL,
+                value: sqlDbConnectionString
             });
         }
 
@@ -151,6 +174,10 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         newSiteConfig.appSettings = appSettings;
+
+        if (context.durableStorageType === DurableBackend.Netherite) {
+            newSiteConfig.use32BitWorkerProcess = false;
+        }
 
         return newSiteConfig;
     }
