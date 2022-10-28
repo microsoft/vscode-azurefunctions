@@ -100,7 +100,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const hasSqlDbConnection: boolean = !!sqlDbConnection;
         context.telemetry.properties.projectHasSqlDatabaseConnection = String(hasSqlDbConnection);
 
-
         // Ensure all the providers are registered before
         const registerProvidersTask = registerProviders(context, subscription);
 
