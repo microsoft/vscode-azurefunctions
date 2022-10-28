@@ -12,7 +12,7 @@ import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardC
 export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
 
-    public constructor(private _setConnectionForDeploy?: boolean) {
+    public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();
     }
 

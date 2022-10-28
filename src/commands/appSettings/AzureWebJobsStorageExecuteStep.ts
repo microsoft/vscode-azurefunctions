@@ -13,7 +13,7 @@ import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardC
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 
-    public constructor(private _setConnectionForDeploy?: boolean) {
+    public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();
     }
 
