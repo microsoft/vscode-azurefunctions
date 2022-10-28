@@ -24,7 +24,7 @@ export class InputRevalidationStep<T extends IActionContext> extends AzureWizard
     }
 
     private _validateInput(context: T, value: string | undefined): string | undefined {
-        const valueMismatch: string = localize('valueMismatch', 'The new value does not match the original.');
+        const valueMismatch: string = localize('valueMismatch', 'The entered value does not match the original.');
         return (context[this._key] === value?.trim()) ? undefined : valueMismatch;
     }
 }
