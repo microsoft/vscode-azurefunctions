@@ -11,7 +11,7 @@ import { ext } from '../../extensionVariables';
 import { getLocalConnectionString } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
 import { EventHubsNamespaceListStep } from '../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { IConnectionPromptOptions } from './IConnectionPrompOptions';
+import { IConnectionPromptOptions } from './IConnectionPromptOptions';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {

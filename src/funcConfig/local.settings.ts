@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { AzureWebJobsStorageExecuteStep } from '../commands/appSettings/AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from '../commands/appSettings/AzureWebJobsStoragePromptStep';
 import { IAzureWebJobsStorageWizardContext } from '../commands/appSettings/IAzureWebJobsStorageWizardContext';
-import { IValidateConnectionOptions } from '../commands/appSettings/IConnectionPrompOptions';
+import { IValidateConnectionOptions } from '../commands/appSettings/IConnectionPromptOptions';
 import { ConnectionKey, ConnectionKeyValues, localSettingsFileName, localStorageEmulatorConnectionString } from '../constants';
 import { emptyWorkspace } from '../constants-nls';
 import { localize } from '../localize';
