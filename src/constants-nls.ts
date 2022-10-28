@@ -7,10 +7,10 @@ export const hostJsonConfigFailed: string = localize('durableStorageConfigFailed
 export const emptyWorkspace: string = localize('emptyWorkspace', 'Your workspace folder looks empty, please navigate to the root directory of your project.');
 export const useEmulator: string = localize('useEmulator', 'Use Local Emulator');
 export const skipForNow: string = localize('skipForNow', 'Skip For Now');
-export const recommended: string = localize('recommended', '(Recommended)');
+export const overwriteRemoteConnection = (a: string) => localize('overwriteRemoteConnection', 'We detected a different local connection setting for "{0}" than what was previously used. Would you like to overwrite your remote setting?', a);
+
 export const invalidAlphanumericWithHyphens: string = localize('invalidAlphanumericOrHyphen', `A name must consist of alphanumeric characters or '-', and must start and end with an alphanumeric character.`);
 export const invalidLowerCaseAlphanumericWithHyphens: string = localize('invalidLowerAlphanumericOrHyphen', `A name must consist of lower-case alphanumeric characters or '-', and must start and end with a lower-case alphanumeric character.`);
-export const overwriteRemoteConnection = (a: string) => localize('overwriteRemoteConnection', 'We detected a different local connection setting for "{0}" than what was previously used. Would you like to overwrite your remote setting?', a);
 
 export const invalidLength = (lowerLimitIncl?: string, upperLimitIncl?: string) => {
     if (!lowerLimitIncl && !upperLimitIncl) {

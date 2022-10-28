@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions } from '@microsoft/vscode-azext-utils';
-import { recommended } from './constants-nls';
 import { localize } from './localize';
 import { openUrl } from './utils/openUrl';
 
@@ -19,7 +18,7 @@ export const latestGAVersion: FuncVersion = FuncVersion.v4;
 
 export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     let picks: IAzureQuickPickItem<FuncVersion | undefined>[] = [
-        { label: 'Azure Functions v4', description: recommended, data: FuncVersion.v4 },
+        { label: 'Azure Functions v4', description: localize('recommended', '(Recommended)'), data: FuncVersion.v4 },
         { label: 'Azure Functions v3', data: FuncVersion.v3 },
         { label: 'Azure Functions v2', data: FuncVersion.v2 },
         { label: 'Azure Functions v1', data: FuncVersion.v1 }
