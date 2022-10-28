@@ -3,17 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SiteConfigResource } from '@azure/arm-appservice';
-import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
+import { SiteConfigResource, StringDictionary } from '@azure/arm-appservice';
+import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation, SiteClient } from '@microsoft/vscode-azext-azureappservice';
 import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
+import { ConnectionKey, ConnectionKeyValues, ConnectionType, deploySubpathSetting, DurableBackend, DurableBackendValues, functionFilter, localEventHubsEmulatorConnectionRegExp, localStorageEmulatorConnectionString, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { getLocalConnectionString, validateStorageConnection } from '../../funcConfig/local.settings';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { localize } from '../../localize';
+import { localize, overwriteRemoteConnection } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { dotnetUtils } from '../../utils/dotnetUtils';
+import { durableUtils, netheriteUtils, sqlUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
@@ -57,6 +59,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     context.telemetry.properties.projectRuntime = version;
     // TODO: telemetry for language model.
 
+    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language);
+    context.telemetry.properties.projectDurableStorageType = durableStorageType;
+
     if (language === ProjectLanguage.Python && !node.site.isLinux) {
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
@@ -72,6 +77,8 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
+    const [shouldValidateStorageConnection, shouldValidateNetheriteConnection, shouldValidateSqlDbConnection] = await shouldValidateConnections(context, durableStorageType, client);
+
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
@@ -80,6 +87,26 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
 
     if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
+    }
+
+    // Preliminary local validation done to ensure all required resources have been created for the connection, final deploy choices are made in 'verifyAppSettings'
+    switch (durableStorageType) {
+        case DurableBackend.Netherite:
+            if (shouldValidateNetheriteConnection) {
+                await netheriteUtils.validateConnection(context, { setConnectionForDeploy: true, preSelectedConnectionType: ConnectionType.Azure });
+            }
+            break;
+        case DurableBackend.SQL:
+            if (shouldValidateSqlDbConnection) {
+                await sqlUtils.validateConnection(context, { setConnectionForDeploy: true });
+            }
+            break;
+        case DurableBackend.Storage:
+        default:
+    }
+
+    if (shouldValidateStorageConnection) {
+        await validateStorageConnection(context, { setConnectionForDeploy: true, preSelectedConnectionType: ConnectionType.Azure });
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
@@ -92,13 +119,13 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
-    if (language === ProjectLanguage.CSharp && !node.site.isLinux) {
-        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language);
+    if (language === ProjectLanguage.CSharp && !node.site.isLinux || durableStorageType) {
+        await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
     }
 
     if (isZipDeploy) {
         const projectPath = await tryGetFunctionProjectRoot(context, deployPaths.workspaceFolder);
-        await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption });
+        await verifyAppSettings(context, node, projectPath, version, language, { doRemoteBuild, isConsumption }, durableStorageType);
     }
 
     await node.runWithTemporaryDescription(
@@ -125,7 +152,17 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     await notifyDeployComplete(context, node, context.workspaceFolder);
 }
 
-async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage): Promise<void> {
+async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, siteConfig: SiteConfigResource, node: SlotTreeItem, language: ProjectLanguage, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+    const client = await node.site.createClient(context);
+    const config: SiteConfigResource = {
+        use32BitWorkerProcess: false
+    };
+
+    if (durableStorageType === DurableBackend.Netherite) {
+        await client.updateConfiguration(config);
+        return;
+    }
+
     const functionProject: string | undefined = await tryGetFunctionProjectRoot(context, context.workspaceFolder);
     if (functionProject === undefined) {
         return;
@@ -142,10 +179,6 @@ async function updateWorkerProcessTo64BitIfRequired(context: IDeployContext, sit
         if (dialogResult === deployAnyway) {
             return;
         }
-        const config: SiteConfigResource = {
-            use32BitWorkerProcess: false
-        };
-        const client = await node.site.createClient(context);
         await client.updateConfiguration(config);
     }
 }
@@ -159,5 +192,57 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         context.telemetry.properties.hasOldGlobSettings = 'true';
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
+    }
+}
+
+export async function shouldValidateConnections(context: IActionContext, durableStorageType: DurableBackendValues | undefined, client: SiteClient, projectPath?: string): Promise<[boolean, boolean, boolean]> {
+    const app: StringDictionary = await client.listApplicationSettings();
+    const remoteStorageConnection: string | undefined = app?.properties?.[ConnectionKey.Storage];
+    const remoteEventHubsConnection: string | undefined = app?.properties?.[ConnectionKey.EventHub];
+    const remoteSqlDbConnection: string | undefined = app?.properties?.[ConnectionKey.SQL];
+
+    const localStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
+    const localEventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
+    const localSqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
+
+    const netheriteHubName: string | undefined = await netheriteUtils.getEventHubName(projectPath);
+    const hasValidNetheriteHubName: boolean = !!netheriteHubName && netheriteHubName !== netheriteUtils.defaultNetheriteHubName;
+
+    const shouldValidateStorage: boolean = !remoteStorageConnection ||
+        (!!localStorageConnection &&
+            localStorageConnection !== localStorageEmulatorConnectionString &&
+            remoteStorageConnection !== localStorageConnection &&
+            await promptShouldOverwrite(context, ConnectionKey.Storage));
+
+    const shouldValidateEventHubs: boolean = durableStorageType === DurableBackend.Netherite &&
+        !hasValidNetheriteHubName ||
+        (!remoteEventHubsConnection ||
+            (!!localEventHubsConnection &&
+                !localEventHubsEmulatorConnectionRegExp.test(localEventHubsConnection) &&
+                remoteEventHubsConnection !== localEventHubsConnection &&
+                await promptShouldOverwrite(context, ConnectionKey.EventHub)));
+
+    const shouldValidateSqlDb: boolean = durableStorageType === DurableBackend.SQL &&
+        (!remoteSqlDbConnection ||
+            (!!localSqlDbConnection &&
+                remoteSqlDbConnection !== localSqlDbConnection &&
+                await promptShouldOverwrite(context, ConnectionKey.SQL)));
+
+    return [shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb];
+}
+
+export async function promptShouldOverwrite(context: IActionContext, key: ConnectionKeyValues): Promise<boolean> {
+    const overwriteButton: vscode.MessageItem = { title: localize('overwrite', 'Overwrite') };
+    const skipButton: vscode.MessageItem = { title: localize('skip', 'Skip') };
+    const buttons: vscode.MessageItem[] = [overwriteButton, skipButton];
+
+    const message: string = overwriteRemoteConnection(key);
+
+    const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
+
+    if (result === overwriteButton) {
+        return true;
+    } else {
+        return false;
     }
 }
