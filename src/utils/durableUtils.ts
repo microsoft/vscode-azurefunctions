@@ -264,13 +264,10 @@ export namespace sqlUtils {
         }
 
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
-        const hasSqlDbConnection: boolean = !!sqlDbConnection;
 
-        if (hasSqlDbConnection) {
-            if (options?.setConnectionForDeploy) {
-                Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
-                return;
-            }
+        if (!!sqlDbConnection && options?.setConnectionForDeploy) {
+            Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+            return;
         }
 
         const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
