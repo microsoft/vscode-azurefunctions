@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
+import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
 import { ILocationWizardContext, LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';

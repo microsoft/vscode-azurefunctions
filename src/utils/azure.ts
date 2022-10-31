@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
-import { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
+import type { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
+import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { getResourceGroupFromId, IStorageAccountWizardContext, parseAzureResourceId, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
