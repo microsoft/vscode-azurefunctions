@@ -104,7 +104,11 @@ export class FunctionSubWizard {
                 default:
             }
 
-            if (context.newDurableStorageType || !template.isHttpTrigger && !template.isSqlBindingTemplate && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
+            if (
+                !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath) &&   // If we already have a storage setup, don't re-prompt
+                (context.newDurableStorageType ||   // Always prompt for new durable storage setups unless a storage account has already been linked
+                    (!template.isHttpTrigger && !template.isSqlBindingTemplate && !canValidateAzureWebJobStorageOnDebug(context.language)))
+            ) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
                 executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }

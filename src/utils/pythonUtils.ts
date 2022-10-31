@@ -23,7 +23,7 @@ export namespace pythonUtils {
         }
 
         const requirementsPath: string = path.join(projectPath, requirementsFileName);
-        if (!(await AzExtFsExtra.pathExists(requirementsPath))) {
+        if (!await AzExtFsExtra.pathExists(requirementsPath)) {
             return;
         }
 

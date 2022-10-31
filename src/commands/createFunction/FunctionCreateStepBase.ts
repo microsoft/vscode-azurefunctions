@@ -91,7 +91,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
         }
 
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
-        if (!(await AzExtFsExtra.pathExists(hostJsonPath))) {
+        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
             return;
         }
 
