@@ -66,22 +66,29 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
             return;
         }
 
-        try {
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Netherite:
-                    await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfNetheritePackage);
-                    break;
-                case DurableBackend.SQL:
-                    await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfSqlPackage);
-                    break;
-                case DurableBackend.Storage:
-                default:
-            }
+        const packages: string[] = [];
 
-            // Seems that the package arrives out-dated and needs to be updated
-            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', durableUtils.dotnetDfBasePackage);
+        switch (context.newDurableStorageType) {
+            case DurableBackend.Netherite:
+                packages.push(durableUtils.dotnetDfNetheritePackage);
+                break;
+            case DurableBackend.SQL:
+                packages.push(durableUtils.dotnetDfSqlPackage);
+                break;
+            case DurableBackend.Storage:
+            default:
+        }
+
+        // Seems that the package arrives out-dated and needs to be updated
+        packages.push(durableUtils.dotnetDfBasePackage);
+
+        try {
+            while (packages.length) {
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packages[packages.length - 1]);
+                packages.pop();  // Only pop off the package if we know running it did not cause an error
+            }
         } catch {
-            ext.outputChannel.appendLog(localize('funcInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the .csproj project file. You may need to configure them manually or start from a clean project.'))
+            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the .csproj project file. You may need to install the following packages manually: "{0}".', packages.join('", "')));
         }
     }
 }
