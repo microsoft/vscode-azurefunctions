@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
+import type { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
 import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';

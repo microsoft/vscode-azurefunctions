@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient } from '@azure/arm-eventhub';
+import type { EventHubManagementClient } from '@azure/arm-eventhub';
 import { delay } from '@azure/ms-rest-js';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { invalidAlphanumericWithHyphens, invalidLength } from '../../../../constants-nls';

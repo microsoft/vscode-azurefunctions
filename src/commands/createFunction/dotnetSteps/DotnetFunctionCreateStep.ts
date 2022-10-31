@@ -88,7 +88,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
                 packages.pop();  // Only pop off the package if we know running it did not cause an error
             }
         } catch {
-            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the .csproj project file. You may need to install the following packages manually: "{0}".', packages.join('", "')));
+            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', packages.join('", "')));
         }
     }
 }

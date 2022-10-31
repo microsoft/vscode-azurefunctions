@@ -3,7 +3,6 @@ import { localize } from "./localize";
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
-export const hostJsonConfigFailed: string = localize('durableStorageConfigFailed', 'WARNING: Failed to configure your JSON files for durable storage, you may need to configure them manually or start from a clean project.');
 export const emptyWorkspace: string = localize('emptyWorkspace', 'Your workspace folder looks empty, please navigate to the root directory of your project.');
 export const useEmulator: string = localize('useEmulator', 'Use Local Emulator');
 export const skipForNow: string = localize('skipForNow', 'Skip For Now');

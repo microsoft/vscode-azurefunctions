@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { ext } from '@microsoft/vscode-azext-azureappservice/out/src/extensionVariables';
 import { ILocationWizardContext, LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
+import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
