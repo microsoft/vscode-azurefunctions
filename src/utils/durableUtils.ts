@@ -61,7 +61,7 @@ export namespace durableUtils {
         }
 
         const hostJsonPath = path.join(projectPath, hostFileName);
-        if (!AzExtFsExtra.pathExists(hostJsonPath)) {
+        if (!(await AzExtFsExtra.pathExists(hostJsonPath))) {
             return undefined;
         }
 
@@ -111,7 +111,7 @@ export namespace durableUtils {
 
     async function nodeProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const packagePath: string = path.join(projectPath, 'package.json');
-        if (!AzExtFsExtra.pathExists(packagePath)) {
+        if (!(await AzExtFsExtra.pathExists(packagePath))) {
             return false;
         }
 
@@ -150,7 +150,7 @@ export namespace durableUtils {
 
     async function pythonProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const requirementsPath: string = path.join(projectPath, 'requirements.txt');
-        if (!AzExtFsExtra.pathExists(requirementsPath)) {
+        if (!(await AzExtFsExtra.pathExists(requirementsPath))) {
             return false;
         }
 
@@ -185,7 +185,7 @@ export namespace netheriteUtils {
         }
 
         const hostJsonPath = path.join(projectPath, hostFileName);
-        if (!AzExtFsExtra.pathExists(hostJsonPath)) {
+        if (!(await AzExtFsExtra.pathExists(hostJsonPath))) {
             return undefined;
         }
 

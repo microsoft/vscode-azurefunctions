@@ -30,7 +30,7 @@ export namespace venvUtils {
         }
 
         const venvPath: string = path.join(projectPath, <string>venvName);
-        if (!AzExtFsExtra.pathExists(venvPath)) {
+        if (!(await AzExtFsExtra.pathExists(venvPath))) {
             return;
         }
 

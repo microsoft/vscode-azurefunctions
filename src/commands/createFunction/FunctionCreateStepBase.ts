@@ -7,7 +7,6 @@ import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { DurableBackend, hostFileName } from '../../constants';
-import { hostJsonConfigFailed } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
@@ -91,30 +90,30 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
             return;
         }
 
-        try {
-            const hostJsonPath: string = path.join(context.projectPath, hostFileName);
-            const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
-            hostJson.extensions ??= {};
-
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Storage:
-                    hostJson.extensions.durableTask = durableUtils.getDefaultStorageTaskConfig();
-                    break;
-                case DurableBackend.Netherite:
-                    hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
-                    setLocalAppSetting(context, context.projectPath, 'EventHubsConnection', '', MismatchBehavior.Overwrite);
-                    break;
-                case DurableBackend.SQL:
-                    hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();
-                    setLocalAppSetting(context, context.projectPath, 'SQLDB_Connection', '', MismatchBehavior.Overwrite);
-                    break;
-                default:
-            }
-
-            await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
-        } catch {
-            ext.outputChannel.appendLog(hostJsonConfigFailed);
+        const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+        if (!(await AzExtFsExtra.pathExists(hostJsonPath))) {
+            return;
         }
+
+        const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
+        hostJson.extensions ??= {};
+
+        switch (context.newDurableStorageType) {
+            case DurableBackend.Storage:
+                hostJson.extensions.durableTask = durableUtils.getDefaultStorageTaskConfig();
+                break;
+            case DurableBackend.Netherite:
+                hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
+                setLocalAppSetting(context, context.projectPath, 'EventHubsConnection', '', MismatchBehavior.Overwrite);
+                break;
+            case DurableBackend.SQL:
+                hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();
+                setLocalAppSetting(context, context.projectPath, 'SQLDB_Connection', '', MismatchBehavior.Overwrite);
+                break;
+            default:
+        }
+
+        await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }
 }
 
