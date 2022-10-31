@@ -31,7 +31,7 @@ export async function getLocalConnectionString(context: IActionContext, connecti
 
     projectPath ??= getWorkspaceRootPath();
     if (!projectPath) {
-        return;
+        return undefined;
     }
 
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));

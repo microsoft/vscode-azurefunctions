@@ -65,7 +65,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
             const eventHubConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
             if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
                 context.eventHubConnectionType = ConnectionType.None;
-                return;
+                return undefined;
             }
 
             const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];

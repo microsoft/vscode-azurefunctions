@@ -52,17 +52,17 @@ export namespace durableUtils {
     export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath?: string): Promise<DurableBackendValues | undefined> {
         projectPath ??= getWorkspaceRootPath();
         if (!projectPath) {
-            return;
+            return undefined;
         }
 
         const hasDurableStorage: boolean = await verifyHasDurableStorage(language, projectPath);
         if (!hasDurableStorage) {
-            return;
+            return undefined;
         }
 
         const hostJsonPath = path.join(projectPath, hostFileName);
         if (!AzExtFsExtra.pathExists(hostJsonPath)) {
-            return;
+            return undefined;
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
@@ -186,7 +186,7 @@ export namespace netheriteUtils {
 
         const hostJsonPath = path.join(projectPath, hostFileName);
         if (!AzExtFsExtra.pathExists(hostJsonPath)) {
-            return;
+            return undefined;
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);

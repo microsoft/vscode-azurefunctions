@@ -12,6 +12,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 import { IConnectionPromptOptions } from './IConnectionPromptOptions';
+
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(private readonly _options?: IConnectionPromptOptions) {
         super();

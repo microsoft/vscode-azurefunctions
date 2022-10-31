@@ -19,7 +19,7 @@ export function getWorkspaceRootPath(): string | undefined {
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         return vscode.workspace.workspaceFolders[0].uri.fsPath;
     } else {
-        return;
+        return undefined;
     }
 }
 
