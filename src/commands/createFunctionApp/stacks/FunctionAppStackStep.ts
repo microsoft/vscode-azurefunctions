@@ -10,7 +10,7 @@ import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
-import { getStackPicks } from './getStackPicks';
+import { compareDates, getStackPicks } from './getStackPicks';
 
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
@@ -25,15 +25,10 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
                 const endofLifeDate = result.minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
                 const sixMonthsFromNow = new Date();
                 sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-                const compareDates = (eolDate: string, sixMonthsDate: Date) => {
-                    const endOfLife = new Date(eolDate).getTime();
-                    const sixMonths = new Date(sixMonthsDate).getTime();
-                    return endOfLife >= sixMonths;
-                }
                 const settingKey: string = 'endOfLifeWarning';
                 if (getWorkspaceSetting<boolean>('endOfLifeWarning')) {
                     if (endofLifeDate) {
-                        if (!compareDates(endofLifeDate, sixMonthsFromNow)) {
+                        if (compareDates(endofLifeDate, sixMonthsFromNow)) {
                             const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. After the deadline, function apps can be created and deployed, and existing apps continue to run. However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them");
                             const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
                             if (result === DialogResponses.learnMore) {

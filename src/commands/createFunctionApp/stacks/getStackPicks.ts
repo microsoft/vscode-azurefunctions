@@ -5,7 +5,7 @@
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
-import { IAzureQuickPickItem, parseError } from '@microsoft/vscode-azext-utils';
+import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
 import { hiddenStacksSetting } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
@@ -18,6 +18,7 @@ import { FunctionAppRuntimes, FunctionAppStack } from './models/FunctionAppStack
 export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack>[]> {
     const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
     const picks: IAzureQuickPickItem<FullFunctionAppStack>[] = [];
+    let hasEndOfLife = false;
     for (const stack of stacks) {
         for (const majorVersion of stack.majorVersions) {
             const minorVersions: (AppStackMinorVersion<FunctionAppRuntimes>)[] = majorVersion.minorVersions
@@ -61,6 +62,16 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                         break;
                 }
 
+                const endofLifeDate = minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+                const sixMonthsFromNow = new Date();
+                sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+                if (endofLifeDate) {
+                    if (compareDates(endofLifeDate, sixMonthsFromNow)) {
+                        description = localize('endOfLife', `$(extensions-warning-message)`)
+                        hasEndOfLife = true;
+                    }
+                }
+
                 picks.push({
                     label: minorVersion.displayText,
                     description,
@@ -69,6 +80,16 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                 });
             }
         }
+    }
+
+    if (hasEndOfLife) {
+        picks.push({
+            label: localize('endOfLife', `$(extensions-warning-message) Some stacks have an end of support deadline coming up. Learn more...`),
+            onPicked: async () => {
+                await openUrl('https://learn.microsoft.com/en-us/azure/azure-functions/functions-versions?tabs=azure-cli%2Cwindows%2Cin-process%2Cv4&pivots=programming-language-csharp://aka.ms/func-end-of-life');
+            },
+            data: { stack: stacks[0], majorVersion: stacks[0].majorVersions[0], minorVersion: stacks[0].majorVersions[0].minorVersions[0] },
+        });
     }
 
     return picks.sort((p1, p2) => {
@@ -175,4 +196,10 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
             }
         }
     }
+}
+
+export function compareDates(eolDate: string, sixMonthsDate: Date): boolean {
+    const endOfLife = new Date(eolDate).getTime();
+    const sixMonths = new Date(sixMonthsDate).getTime();
+    return endOfLife <= sixMonths;
 }
