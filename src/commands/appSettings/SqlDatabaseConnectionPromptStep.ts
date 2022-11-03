@@ -49,6 +49,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         if (result === connectAzureDatabase) {
             context.sqlDbConnectionType = ConnectionType.Azure;
         } else if (result === connectNonAzureDatabase) {
+            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
             context.sqlDbConnectionType = ConnectionType.NonAzure;
         } else {
             context.sqlDbConnectionType = ConnectionType.None;
@@ -76,6 +77,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         }
 
         if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
+            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
             return { promptSteps: [new SqlDatabaseConnectionCustomPromptStep()] }
         }
 

@@ -22,6 +22,7 @@ export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWi
         if (context.sqlDbConnectionType === ConnectionType.Azure) {
             value = (await getSqlDatabaseConnectionString(context)).connectionString;
         } else {
+            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
             value = nonNullProp(context, 'nonAzureSqlConnection');
         }
 

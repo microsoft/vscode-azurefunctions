@@ -18,6 +18,7 @@ export class SqlDatabaseConnectionCustomPromptStep<T extends ISqlDatabaseConnect
     }
 
     public shouldPrompt(context: T): boolean {
+        // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
         return !context.nonAzureSqlConnection && context.sqlDbConnectionType === ConnectionType.NonAzure;
     }
 
