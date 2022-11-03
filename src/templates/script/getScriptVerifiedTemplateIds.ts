@@ -26,6 +26,8 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
         verifiedTemplateIds = verifiedTemplateIds.concat([
             'CosmosDBTrigger',
             'DurableFunctionsActivity',
+            'DurableFunctionsEntity',
+            'DurableFunctionsEntityHttpStart',
             'DurableFunctionsHttpStart',
             'DurableFunctionsOrchestrator',
             'EventGridTrigger',
