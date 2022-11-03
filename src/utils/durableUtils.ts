@@ -8,10 +8,11 @@ import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { emptyWorkspace } from "../constants-nls";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
+import { pythonUtils } from "./pythonUtils";
 import { findFiles, getWorkspaceRootPath } from "./workspace";
 
 export namespace durableUtils {
@@ -149,20 +150,8 @@ export namespace durableUtils {
     }
 
     async function pythonProjectHasDurableDependency(projectPath: string): Promise<boolean> {
-        const requirementsPath: string = path.join(projectPath, 'requirements.txt');
-        if (!await AzExtFsExtra.pathExists(requirementsPath)) {
-            return false;
-        }
-
-        const contents: string = await AzExtFsExtra.readFile(requirementsPath);
-        const lines: string[] = contents.split('\n');
-        for (let line of lines) {
-            line = line.trim();
-            if (line === pythonDfPackage) {
-                return true;
-            }
-        }
-        return false;
+        const requirementsPath: string = path.join(projectPath, requirementsFileName);
+        return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
 
     export function getDefaultStorageTaskConfig(): IStorageTaskJson {
