@@ -35,6 +35,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         if (result === connectStorageButton) {
             context.azureWebJobsStorageType = ConnectionType.Azure;
         } else if (result === useEmulatorButton) {
+            // 'NonAzure' will represent 'Emulator' in this flow
             context.azureWebJobsStorageType = ConnectionType.NonAzure;
         } else {
             context.azureWebJobsStorageType = ConnectionType.None;

@@ -36,6 +36,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         if (result === connectEventNamespaceButton) {
             context.eventHubConnectionType = ConnectionType.Azure;
         } else if (result === useEmulatorButton) {
+            // 'NonAzure' will represent 'Emulator' in this flow
             context.eventHubConnectionType = ConnectionType.NonAzure;
         } else {
             context.eventHubConnectionType = ConnectionType.None;
