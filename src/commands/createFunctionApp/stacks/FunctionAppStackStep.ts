@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { setLocationsTask, SiteOSStep, WebsiteOS } from '@microsoft/vscode-azext-azureappservice';
-import { AzureWizardPromptStep, DialogResponses, IAzureQuickPickItem, IWizardOptions, openUrl } from '@microsoft/vscode-azext-utils';
-import { MessageItem } from 'vscode';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { getMajorVersion, promptForFuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
-import { getWorkspaceSetting, updateGlobalSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
+import { FunctionAppEOLWarningStep } from './FunctionAppEOLWarningStep';
 import { getStackPicks, shouldShowEolWarning } from './getStackPicks';
 
 export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWizardContext> {
@@ -22,24 +21,6 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
             if (!result) {
                 context.version = await promptForFuncVersion(context);
             } else {
-                const endOfLifeDate = result.minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
-                const settingKey: string = 'endOfLifeWarning';
-                if (getWorkspaceSetting<boolean>(settingKey)) {
-                    if (endOfLifeDate) {
-                        if (shouldShowEolWarning(endOfLifeDate)) {
-                            const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. " +
-                                "After the deadline, function apps can be created and deployed, and existing apps continue to run. " +
-                                "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them");
-                            const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-                            if (result === DialogResponses.learnMore) {
-                                await openUrl('https://aka.ms/AA1tpij');
-                            }
-                            else if (result === DialogResponses.dontWarnAgain) {
-                                await updateGlobalSetting(settingKey, false);
-                            }
-                        }
-                    }
-                }
                 break;
             }
         }
@@ -59,12 +40,17 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
     }
 
     public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
+        const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
+        if (shouldShowEolWarning(context.newSiteStack?.minorVersion)) {
+            promptSteps.push(new FunctionAppEOLWarningStep());
+        }
         if (context.newSiteOS === undefined) {
-            return { promptSteps: [new SiteOSStep()] };
+            promptSteps.push(new SiteOSStep())
         } else {
             await setLocationsTask(context);
             return undefined;
         }
+        return { promptSteps };
     }
 
     private async getPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack | undefined>[]> {
