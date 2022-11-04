@@ -10,9 +10,7 @@ import { hostFileName, projectSubpathSetting } from '../../constants';
 import { localize } from '../../localize';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { createNewProjectInternal } from './createNewProject';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -83,15 +81,13 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
 /**
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
-export async function verifyOrCreateNewProject(context: IActionContext, workspaceFolder?: WorkspaceFolder | string, options: api.ICreateFunctionOptions = {}): Promise<string | undefined> {
+export async function verifyProjectPath(context: IActionContext, workspaceFolder?: WorkspaceFolder | string): Promise<string | undefined> {
+    let projectPath: string | undefined;
     if (workspaceFolder) {
-        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
+        projectPath = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
         if (projectPath) {
             return projectPath;
         }
     }
-
-    context.telemetry.properties.noWorkspaceResult = 'createNewProject';
-    await createNewProjectInternal(context, options);
     return undefined;
 }

@@ -6,6 +6,7 @@
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { window, workspace, WorkspaceFolder } from 'vscode';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
+import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -14,7 +15,8 @@ import { getContainingWorkspace } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import { verifyOrCreateNewProject } from '../createNewProject/verifyIsProject';
+import { createNewProjectInternal } from '../createNewProject/createNewProject';
+import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
@@ -55,10 +57,20 @@ export async function createFunctionInternal(context: IActionContext, options: a
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
-    const projectPath: string | undefined = await verifyOrCreateNewProject(context, workspaceFolder || workspacePath, options);
+    let projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
-        // This path covers creating a new project workspace which will cause us to lose execution context
-        return;
+        // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
+        context.telemetry.properties.noWorkspaceResult = 'createNewProject';
+        await createNewProjectInternal(context, options);
+
+        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
+            // Theoretically shouldn't trigger if 'Create New Project' was successful...
+            throw new NoWorkspaceError();
+        }
+
+        workspaceFolder = workspace.workspaceFolders[0];
+        workspacePath = workspaceFolder.uri.fsPath;
+        projectPath = workspacePath;
     }
 
     addLocalFuncTelemetry(context, workspacePath);
