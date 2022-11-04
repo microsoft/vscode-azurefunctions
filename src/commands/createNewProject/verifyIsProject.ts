@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { MessageItem, WorkspaceFolder } from 'vscode';
 import { hostFileName, projectSubpathSetting } from '../../constants';
@@ -83,21 +83,15 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
 /**
  * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
  */
-export async function verifyAndPromptToCreateProject(context: IActionContext, workspaceFolder: WorkspaceFolder | string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
-    options = options || {};
-
-    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
-    if (!projectPath) {
-        if (!options.suppressCreateProjectPrompt) {
-            const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
-            // No need to check result - cancel will throw a UserCancelledError
-            await context.ui.showWarningMessage(message, { modal: true, stepName: 'notAProject' }, DialogResponses.yes);
+export async function verifyOrCreateNewProject(context: IActionContext, workspaceFolder?: WorkspaceFolder | string, options: api.ICreateFunctionOptions = {}): Promise<string | undefined> {
+    if (workspaceFolder) {
+        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
+        if (projectPath) {
+            return projectPath;
         }
-
-        options.folderPath ||= typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
-        await createNewProjectInternal(context, options);
-        return undefined;
-    } else {
-        return projectPath;
     }
+
+    context.telemetry.properties.noWorkspaceResult = 'createNewProject';
+    await createNewProjectInternal(context, options);
+    return undefined;
 }

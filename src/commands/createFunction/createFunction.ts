@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { commands, MessageItem, Uri, window, workspace, WorkspaceFolder } from 'vscode';
+import { window, workspace, WorkspaceFolder } from 'vscode';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
-import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -15,8 +14,7 @@ import { getContainingWorkspace } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
-import { createNewProjectInternal } from '../createNewProject/createNewProject';
-import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
+import { verifyOrCreateNewProject } from '../createNewProject/verifyIsProject';
 import { FunctionListStep } from './FunctionListStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 
@@ -49,19 +47,21 @@ export async function createFunctionFromCommand(
 export async function createFunctionInternal(context: IActionContext, options: api.ICreateFunctionOptions): Promise<void> {
     let workspaceFolder: WorkspaceFolder | undefined;
     let workspacePath: string | undefined = options.folderPath;
+
     if (workspacePath === undefined) {
-        workspaceFolder = await getWorkspaceFolder(context, options);
-        workspacePath = workspaceFolder.uri.fsPath;
+        workspaceFolder = await getWorkspaceFolder();
+        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
-    addLocalFuncTelemetry(context, workspacePath);
-
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspaceFolder || workspacePath, options);
+    const projectPath: string | undefined = await verifyOrCreateNewProject(context, workspaceFolder || workspacePath, options);
     if (!projectPath) {
+        // This path covers creating a new project workspace which will cause us to lose execution context
         return;
     }
+
+    addLocalFuncTelemetry(context, workspacePath);
 
     const { language, languageModel, version } = await verifyInitForVSCode(context, projectPath, options.language, /* TODO: languageModel: */ undefined, options.version);
 
@@ -74,33 +74,11 @@ export async function createFunctionInternal(context: IActionContext, options: a
     await wizard.execute();
 }
 
-async function getWorkspaceFolder(context: IActionContext, options: api.ICreateFunctionOptions): Promise<WorkspaceFolder> {
+async function getWorkspaceFolder(): Promise<WorkspaceFolder | undefined> {
     let folder: WorkspaceFolder | undefined;
+
     if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
-        const message: string = localize('noWorkspaceWarning', 'You must have a project open to create a function.');
-        const newProject: MessageItem = { title: localize('createNewProject', 'Create new project') };
-        const openExistingProject: MessageItem = { title: localize('openExistingProject', 'Open existing project') };
-        const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true, stepName: 'mustOpenProject' }, newProject, openExistingProject);
-
-        if (result === newProject) {
-            // don't wait
-            void createNewProjectInternal(context, options);
-            context.telemetry.properties.noWorkspaceResult = 'createNewProject';
-        } else {
-            const uri: Uri[] = await context.ui.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                canSelectMany: false,
-                openLabel: localize('open', 'Open'),
-                stepName: 'mustOpenProject|selectExisting'
-            });
-            // don't wait
-            void commands.executeCommand('vscode.openFolder', uri[0]);
-            context.telemetry.properties.noWorkspaceResult = 'openExistingProject';
-        }
-
-        context.errorHandling.suppressDisplay = true;
-        throw new NoWorkspaceError();
+        folder = undefined;
     } else if (workspace.workspaceFolders.length === 1) {
         folder = workspace.workspaceFolders[0];
     } else {
