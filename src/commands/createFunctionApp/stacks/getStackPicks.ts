@@ -62,11 +62,9 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                         break;
                 }
 
-                const endofLifeDate = minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
-                const sixMonthsFromNow = new Date();
-                sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-                if (endofLifeDate) {
-                    if (compareDates(endofLifeDate, sixMonthsFromNow)) {
+                const endOfLifeDate = minorVersion.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+                if (endOfLifeDate) {
+                    if (shouldShowEolWarning(endOfLifeDate)) {
                         description = localize('endOfLife', `$(extensions-warning-message)`)
                         hasEndOfLife = true;
                     }
@@ -82,17 +80,16 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
         }
     }
 
-    if (hasEndOfLife) {
-        picks.push({
-            label: localize('endOfLife', `$(extensions-warning-message) Some stacks have an end of support deadline coming up. Learn more...`),
-            onPicked: async () => {
-                await openUrl('https://learn.microsoft.com/en-us/azure/azure-functions/functions-versions?tabs=azure-cli%2Cwindows%2Cin-process%2Cv4&pivots=programming-language-csharp://aka.ms/func-end-of-life');
-            },
-            data: { stack: stacks[0], majorVersion: stacks[0].majorVersions[0], minorVersion: stacks[0].majorVersions[0].minorVersions[0] },
-        });
-    }
-
     return picks.sort((p1, p2) => {
+        if (hasEndOfLife) {
+            (picks as IAzureQuickPickItem<FullFunctionAppStack | undefined>[]).push({
+                label: localize('endOfLife', `$(extensions-warning-message) Some stacks have an end of support deadline coming up. Learn more...`),
+                onPicked: async () => {
+                    await openUrl('https://aka.ms/AA1tpij');
+                },
+                data: undefined
+            });
+        }
         return p1.data.stack.value !== p2.data.stack.value ?
             0 : // keep order as-is if they're different stacks (i.e. Node.js vs. .NET)
             getPriority(p1.data.minorVersion.stackSettings) - getPriority(p2.data.minorVersion.stackSettings); // otherwise sort based on priority
@@ -198,8 +195,9 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
     }
 }
 
-export function compareDates(eolDate: string, sixMonthsDate: Date): boolean {
-    const endOfLife = new Date(eolDate).getTime();
-    const sixMonths = new Date(sixMonthsDate).getTime();
-    return endOfLife <= sixMonths;
+export function shouldShowEolWarning(eolDate: string): boolean {
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+    const endOfLife = new Date(eolDate);
+    return endOfLife <= sixMonthsFromNow;
 }
