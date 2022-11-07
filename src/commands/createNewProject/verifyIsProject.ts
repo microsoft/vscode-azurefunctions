@@ -79,7 +79,7 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
 }
 
 /**
- * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
+ * Checks if the path is already a function project, if not return undefined
  */
 export async function verifyProjectPath(context: IActionContext, workspaceFolder?: WorkspaceFolder | string): Promise<string | undefined> {
     if (workspaceFolder) {

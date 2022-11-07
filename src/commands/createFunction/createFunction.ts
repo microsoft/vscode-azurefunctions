@@ -52,7 +52,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
 
     if (workspacePath === undefined) {
         workspaceFolder = await getWorkspaceFolder();
-        workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
+        workspacePath = workspaceFolder?.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
