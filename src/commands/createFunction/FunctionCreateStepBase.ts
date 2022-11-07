@@ -7,6 +7,7 @@ import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling
 import * as path from 'path';
 import { Progress, Uri, window, workspace } from 'vscode';
 import { DurableBackend, hostFileName } from '../../constants';
+import { NotImplementedError } from '../../errors';
 import { ext } from '../../extensionVariables';
 import { IHostJsonV2 } from '../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
@@ -83,6 +84,16 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
     public shouldExecute(context: T): boolean {
         return !!context.functionTemplate;
+    }
+
+    protected async _tryToInstallDependencies(context: T): Promise<void> {
+        if (context.newDurableStorageType) {
+            await this._installDurableDependencies(context);
+        }
+    }
+
+    protected async _installDurableDependencies(_context: T): Promise<void> {
+        throw new NotImplementedError('installDurableDependencies', this);
     }
 
     private async _configureForDurableStorageIfNeeded(context: T): Promise<void> {

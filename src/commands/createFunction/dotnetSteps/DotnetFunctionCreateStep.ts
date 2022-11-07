@@ -56,39 +56,38 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
-        await this._installDurableDependenciesIfNeeded(context);
+        await super._tryToInstallDependencies(context);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }
 
-    private async _installDurableDependenciesIfNeeded(context: IDotnetFunctionWizardContext): Promise<void> {
-        if (!context.newDurableStorageType) {
-            return;
-        }
-
-        const packages: string[] = [];
-
+    protected async _installDurableDependencies(context: IDotnetFunctionWizardContext): Promise<void> {
+        const packageNames: string[] = [];
         switch (context.newDurableStorageType) {
             case DurableBackend.Netherite:
-                packages.push(durableUtils.dotnetDfNetheritePackage);
+                packageNames.push(durableUtils.dotnetDfNetheritePackage);
                 break;
             case DurableBackend.SQL:
-                packages.push(durableUtils.dotnetDfSqlPackage);
+                packageNames.push(durableUtils.dotnetDfSqlPackage);
                 break;
             case DurableBackend.Storage:
             default:
         }
 
         // Seems that the package arrives out-dated and needs to be updated
-        packages.push(durableUtils.dotnetDfBasePackage);
+        packageNames.push(durableUtils.dotnetDfBasePackage);
 
-        try {
-            while (packages.length) {
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packages[packages.length - 1]);
-                packages.pop();  // Only pop off the package if we know running it did not cause an error
+        const failedPackages: string[] = [];
+        for (const packageName of packageNames) {
+            try {
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageNames[packageNames.length - 1]);
+            } catch {
+                failedPackages.push(packageName);
             }
-        } catch {
-            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', packages.join('", "')));
+        }
+
+        if (failedPackages.length) {
+            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', failedPackages.join('", "')));
         }
     }
 }
