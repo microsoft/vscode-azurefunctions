@@ -51,7 +51,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
 
         const isNameAvailable: boolean = !this._eventHubs.some(eh => eh.name === name);
         if (!isNameAvailable) {
-            return localize('eventHubExists', 'The event hub you entered already exists. Please enter a unique name.');
+            return localize('eventHubExists', 'An event hub with the name "{0}" already exists.', name);
         }
 
         return undefined;

@@ -28,7 +28,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
         }
 
         if (this._setConnectionForDeploy) {
-            context.azureWebJobsConnectionForDeploy = value;
+            context.azureWebJobsRemoteConnection = value;
         } else {
             await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, value, MismatchBehavior.Overwrite);
         }

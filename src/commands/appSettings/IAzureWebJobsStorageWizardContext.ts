@@ -14,5 +14,5 @@ export interface IAzureWebJobsStorageWizardContext extends IActionContext, Parti
     newStorageAccountName?: string;
 
     azureWebJobsStorageType?: ConnectionTypeValues;
-    azureWebJobsConnectionForDeploy?: string;
+    azureWebJobsRemoteConnection?: string;
 }

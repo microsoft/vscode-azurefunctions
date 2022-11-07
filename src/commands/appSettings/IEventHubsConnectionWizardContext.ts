@@ -22,5 +22,5 @@ export interface IEventHubsConnectionWizardContext extends IActionContext, Parti
     eventHubsNamespace?: EHNamespace;
     newEventHubName?: string;
 
-    eventHubConnectionForDeploy?: string;
+    eventHubRemoteConnection?: string;
 }

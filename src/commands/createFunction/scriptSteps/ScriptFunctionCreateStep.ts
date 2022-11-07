@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
 import { ext } from '../../../extensionVariables';
@@ -86,7 +86,9 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
                     break;
                 default:
             }
-        } catch {
+        } catch (error) {
+            const pError: IParsedError = parseError(error);
+            ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
     }

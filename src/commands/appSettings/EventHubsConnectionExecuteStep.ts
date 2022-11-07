@@ -31,7 +31,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
         }
 
         if (this._setConnectionForDeploy) {
-            context.eventHubConnectionForDeploy = value;
+            context.eventHubRemoteConnection = value;
         } else {
             await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHub, value, MismatchBehavior.Overwrite);
         }

@@ -11,7 +11,7 @@ import { netheriteUtils } from '../../../../utils/durableUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
 
 export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 250;
+    public priority: number = 245;
 
     public async execute(context: T): Promise<void> {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
