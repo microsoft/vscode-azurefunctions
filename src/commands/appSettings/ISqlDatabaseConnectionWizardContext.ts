@@ -26,5 +26,5 @@ export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Par
     sqlDatabase?: Database;
 
     nonAzureSqlConnection?: string;
-    sqlDbConnectionForDeploy?: string;
+    sqlDbRemoteConnection?: string;
 }

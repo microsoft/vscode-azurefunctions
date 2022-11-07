@@ -37,7 +37,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
 
         if (!this._options?.suppressSkipForNow) {
             buttons.push(skipForNowButton);
-        } else if (this._options?.suppressSkipForNow && !context.sqlDbConnectionForDeploy) {
+        } else if (this._options?.suppressSkipForNow && !context.sqlDbRemoteConnection) {
             // On debug, give user the option to run from an existing local connection string
             const existingConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, context.projectPath);
             if (!!existingConnection) {

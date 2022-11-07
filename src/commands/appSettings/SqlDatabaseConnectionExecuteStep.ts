@@ -27,7 +27,7 @@ export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWi
         }
 
         if (this._setConnectionForDeploy) {
-            context.sqlDbConnectionForDeploy = value;
+            context.sqlDbRemoteConnection = value;
         } else {
             await setLocalAppSetting(context, context.projectPath, ConnectionKey.SQL, value, MismatchBehavior.Overwrite);
         }
