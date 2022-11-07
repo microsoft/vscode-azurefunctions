@@ -3,7 +3,6 @@ import { localize } from "./localize";
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
-export const emptyWorkspace: string = localize('emptyWorkspace', 'Your workspace folder looks empty, please navigate to the root directory of your project.');
 export const useEmulator: string = localize('useEmulator', 'Use Local Emulator');
 export const skipForNow: string = localize('skipForNow', 'Skip For Now');
 export const overwriteRemoteConnection = (a: string) => localize('overwriteRemoteConnection', 'We detected a different local connection setting for "{0}" than what was previously used. Would you like to overwrite your remote setting?', a);

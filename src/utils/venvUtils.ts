@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { pythonVenvSetting, requirementsFileName } from "../constants";
-import { emptyWorkspace } from '../constants-nls';
+import { NoWorkspaceError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
@@ -26,7 +26,7 @@ export namespace venvUtils {
 
         projectPath ??= getWorkspaceRootPath();
         if (!projectPath) {
-            throw new Error(emptyWorkspace);
+            throw new NoWorkspaceError();
         }
 
         const venvPath: string = path.join(projectPath, <string>venvName);

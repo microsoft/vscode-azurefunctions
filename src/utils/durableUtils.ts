@@ -9,7 +9,7 @@ import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
-import { emptyWorkspace } from "../constants-nls";
+import { NoWorkspaceError } from "../errors";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { pythonUtils } from "./pythonUtils";
@@ -170,7 +170,7 @@ export namespace netheriteUtils {
     export async function getEventHubName(projectPath?: string): Promise<string | undefined> {
         projectPath ??= getWorkspaceRootPath();
         if (!projectPath) {
-            throw new Error(emptyWorkspace);
+            throw new NoWorkspaceError();
         }
 
         const hostJsonPath = path.join(projectPath, hostFileName);
@@ -187,7 +187,7 @@ export namespace netheriteUtils {
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
     //     projectPath ??= getWorkspaceRootPath();
     //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
+    //         throw new NoWorkspaceError();
     //     }
 
     //     const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
@@ -241,7 +241,7 @@ export namespace sqlUtils {
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
     //     projectPath ??= getWorkspaceRootPath();
     //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
+    //         throw new NoWorkspaceError();
     //     }
 
     //     const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);

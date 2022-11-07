@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { ProjectLanguage, requirementsFileName } from "../constants";
-import { emptyWorkspace } from "../constants-nls";
+import { NoWorkspaceError } from "../errors";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 import { getWorkspaceRootPath } from "./workspace";
@@ -19,7 +19,7 @@ export namespace pythonUtils {
     export async function addDependencyToRequirements(dependency: string, projectPath?: string): Promise<void> {
         projectPath ??= getWorkspaceRootPath();
         if (!projectPath) {
-            throw new Error(emptyWorkspace);
+            throw new NoWorkspaceError();
         }
 
         const requirementsPath: string = path.join(projectPath, requirementsFileName);

@@ -11,7 +11,7 @@ import { AzureWebJobsStoragePromptStep } from '../commands/appSettings/AzureWebJ
 import { IAzureWebJobsStorageWizardContext } from '../commands/appSettings/IAzureWebJobsStorageWizardContext';
 import { IValidateConnectionOptions } from '../commands/appSettings/IConnectionPromptOptions';
 import { ConnectionKey, ConnectionKeyValues, localSettingsFileName, localStorageEmulatorConnectionString } from '../constants';
-import { emptyWorkspace } from '../constants-nls';
+import { NoWorkspaceError } from '../errors';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getWorkspaceRootPath } from '../utils/workspace';
@@ -41,7 +41,7 @@ export async function getLocalConnectionString(context: IActionContext, connecti
 export async function validateStorageConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
     projectPath ??= getWorkspaceRootPath();
     if (!projectPath) {
-        throw new Error(emptyWorkspace);
+        throw new NoWorkspaceError();
     }
 
     const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
