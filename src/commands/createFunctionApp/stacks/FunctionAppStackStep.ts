@@ -39,7 +39,7 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
         return !context.newSiteStack;
     }
 
-    public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext> | undefined> {
+    public async getSubWizard(context: IFunctionAppWizardContext): Promise<IWizardOptions<IFunctionAppWizardContext>> {
         const promptSteps: AzureWizardPromptStep<IFunctionAppWizardContext>[] = [];
         if (shouldShowEolWarning(context.newSiteStack?.minorVersion)) {
             promptSteps.push(new FunctionAppEOLWarningStep());
@@ -48,7 +48,6 @@ export class FunctionAppStackStep extends AzureWizardPromptStep<IFunctionAppWiza
             promptSteps.push(new SiteOSStep())
         } else {
             await setLocationsTask(context);
-            return undefined;
         }
         return { promptSteps };
     }
