@@ -10,7 +10,7 @@ export const overwriteRemoteConnection = (a: string) => localize('overwriteRemot
 export const invalidAlphanumericWithHyphens: string = localize('invalidAlphanumericOrHyphen', `A name must consist of alphanumeric characters or '-', and must start and end with an alphanumeric character.`);
 export const invalidLowerCaseAlphanumericWithHyphens: string = localize('invalidLowerAlphanumericOrHyphen', `A name must consist of lower-case alphanumeric characters or '-', and must start and end with a lower-case alphanumeric character.`);
 
-export const invalidLength = (lowerLimitIncl?: string, upperLimitIncl?: string) => {
+export const getInvalidLengthMessage = (lowerLimitIncl?: number, upperLimitIncl?: number) => {
     if (!lowerLimitIncl && !upperLimitIncl) {
         return localize('invalidInputLength', 'A value is required to proceed.');
     } else if (lowerLimitIncl && !upperLimitIncl) {

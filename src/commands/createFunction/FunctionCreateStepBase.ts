@@ -57,6 +57,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
 
         const newFilePath: string = await this.executeCore(context);
         await this._configureForDurableStorageIfNeeded(context);
+        await this._tryToInstallDependencies(context);
         await verifyExtensionBundle(context, template);
 
         const cachedFunc: ICachedFunction = { projectPath: context.projectPath, newFilePath, isHttpTrigger: template.isHttpTrigger };
@@ -93,6 +94,7 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
     }
 
     protected async _installDurableDependencies(_context: T): Promise<void> {
+        // Children should overwrite with their own install logic, if applicable
         throw new NotImplementedError('installDurableDependencies', this);
     }
 

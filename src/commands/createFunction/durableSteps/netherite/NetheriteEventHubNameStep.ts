@@ -7,7 +7,7 @@ import type { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
 import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
-import { invalidLength, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
+import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
@@ -43,7 +43,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 1, 256)) {
-            return invalidLength('1', '256');
+            return getInvalidLengthMessage(1, 256);
         }
         if (!validateUtils.isLowerCaseAlphanumericWithHypens(name)) {
             return invalidLowerCaseAlphanumericWithHyphens;

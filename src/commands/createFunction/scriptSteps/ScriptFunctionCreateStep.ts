@@ -80,6 +80,9 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
                 case ProjectLanguage.TypeScript:
                     await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', durableUtils.nodeDfPackage);
                     break;
+                case ProjectLanguage.PowerShell:
+                    // Todo: Revisit when adding PowerShell implementation
+                    break;
                 case ProjectLanguage.Python:
                     await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage);
                     await venvUtils.runPipInstallCommandIfPossible();

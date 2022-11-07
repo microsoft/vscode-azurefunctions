@@ -56,8 +56,6 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         }
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
-        await super._tryToInstallDependencies(context);
-
         return path.join(context.projectPath, functionName + getFileExtension(context));
     }
 

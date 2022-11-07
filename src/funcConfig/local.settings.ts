@@ -3,15 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, DialogResponses, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AzureWebJobsStorageExecuteStep } from '../commands/appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../commands/appSettings/AzureWebJobsStoragePromptStep';
-import { IAzureWebJobsStorageWizardContext } from '../commands/appSettings/IAzureWebJobsStorageWizardContext';
-import { IValidateConnectionOptions } from '../commands/appSettings/IConnectionPromptOptions';
-import { ConnectionKey, ConnectionKeyValues, localSettingsFileName, localStorageEmulatorConnectionString } from '../constants';
-import { NoWorkspaceError } from '../errors';
+import { ConnectionKeyValues, localSettingsFileName } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
 import { getWorkspaceRootPath } from '../utils/workspace';
@@ -38,29 +33,29 @@ export async function getLocalConnectionString(context: IActionContext, connecti
     return settings.Values && settings.Values[connectionKey];
 }
 
-export async function validateStorageConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    projectPath ??= getWorkspaceRootPath();
-    if (!projectPath) {
-        throw new NoWorkspaceError();
-    }
+// export async function validateStorageConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
+//     projectPath ??= getWorkspaceRootPath();
+//     if (!projectPath) {
+//         throw new NoWorkspaceError();
+//     }
 
-    const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
-    const hasStorageConnection: boolean = !!currentStorageConnection && currentStorageConnection !== localStorageEmulatorConnectionString;
-    if (hasStorageConnection) {
-        if (options?.setConnectionForDeploy) {
-            Object.assign(context, { azureWebJobsRemoteConnection: currentStorageConnection });
-        }
-        return;
-    }
+//     const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
+//     const hasStorageConnection: boolean = !!currentStorageConnection && currentStorageConnection !== localStorageEmulatorConnectionString;
+//     if (hasStorageConnection) {
+//         if (options?.setConnectionForDeploy) {
+//             Object.assign(context, { azureWebJobsRemoteConnection: currentStorageConnection });
+//         }
+//         return;
+//     }
 
-    const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
-    const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-        promptSteps: [new AzureWebJobsStoragePromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true })],
-        executeSteps: [new AzureWebJobsStorageExecuteStep(options?.setConnectionForDeploy)]
-    });
-    await wizard.prompt();
-    await wizard.execute();
-}
+//     const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
+//     const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
+//         promptSteps: [new AzureWebJobsStoragePromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true })],
+//         executeSteps: [new AzureWebJobsStorageExecuteStep(options?.setConnectionForDeploy)]
+//     });
+//     await wizard.prompt();
+//     await wizard.execute();
+// }
 
 export enum MismatchBehavior {
     /**

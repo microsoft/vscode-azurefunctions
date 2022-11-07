@@ -6,7 +6,7 @@
 import type { EventHubManagementClient } from '@azure/arm-eventhub';
 import { delay } from '@azure/ms-rest-js';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens, invalidLength } from '../../../../constants-nls';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
@@ -31,7 +31,7 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 6, 50)) {
-            return invalidLength('6', '50');
+            return getInvalidLengthMessage(6, 50);
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
