@@ -55,7 +55,6 @@ export namespace pythonUtils {
         const contents: string = await AzExtFsExtra.readFile(filePath);
         const lines: string[] = await contents.split('\n');
 
-        // Verify we don't already have the dependency added
         for (let line of lines) {
             line = line.trim();
             if (line === dependency) {
