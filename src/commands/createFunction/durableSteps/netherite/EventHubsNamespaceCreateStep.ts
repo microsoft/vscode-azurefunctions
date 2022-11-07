@@ -34,6 +34,6 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.eventHubsNamespace && !!context.resourceGroup && !!context.newEventHubsNamespaceName && LocationListStep.hasLocation(<ILocationWizardContext>context);
+        return !context.eventHubsNamespace;
     }
 }
