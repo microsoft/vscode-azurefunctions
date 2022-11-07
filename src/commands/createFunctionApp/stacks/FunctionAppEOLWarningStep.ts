@@ -18,10 +18,10 @@ export class FunctionAppEOLWarningStep extends AzureWizardPromptStep<IFunctionAp
                 "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them.");
             const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
             let result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
-            do {
+            while (result === DialogResponses.learnMore) {
                 await openUrl(funcVersionLink);
                 result = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
-            } while (result === DialogResponses.learnMore);
+            }
 
             if (result === DialogResponses.dontWarnAgain) {
                 await updateGlobalSetting(settingKey, false);
