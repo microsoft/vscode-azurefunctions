@@ -13,14 +13,17 @@ export class FunctionAppEOLWarningStep extends AzureWizardPromptStep<IFunctionAp
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const settingKey: string = 'endOfLifeWarning';
         if (getWorkspaceSetting<boolean>(settingKey)) {
-            const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up." +
-                "After the deadline, function apps can be created and deployed, and existing apps continue to run." +
-                "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them");
-            const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-            if (result === DialogResponses.learnMore) {
+            const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. " +
+                "After the deadline, function apps can be created and deployed, and existing apps continue to run. " +
+                "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them.");
+            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+            let result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
+            do {
                 await openUrl(funcVersionLink);
-            }
-            else if (result === DialogResponses.dontWarnAgain) {
+                result = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
+            } while (result === DialogResponses.learnMore);
+
+            if (result === DialogResponses.dontWarnAgain) {
                 await updateGlobalSetting(settingKey, false);
             }
         }
