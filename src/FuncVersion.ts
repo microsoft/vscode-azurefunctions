@@ -15,6 +15,7 @@ export enum FuncVersion {
 }
 
 export const latestGAVersion: FuncVersion = FuncVersion.v4;
+export const funcVersionLink: string = 'https://aka.ms/AA1tpij';
 
 export async function promptForFuncVersion(context: IActionContext, message?: string): Promise<FuncVersion> {
     const recommended: string = localize('recommended', '(Recommended)');
@@ -34,7 +35,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
     while (true) {
         const version: FuncVersion | undefined = (await context.ui.showQuickPick(picks, options)).data;
         if (version === undefined) {
-            await openUrl('https://aka.ms/AA1tpij');
+            await openUrl(funcVersionLink);
         } else {
             return version;
         }
