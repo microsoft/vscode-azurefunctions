@@ -13,22 +13,27 @@ export class FunctionAppEOLWarningStep extends AzureWizardPromptStep<IFunctionAp
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const settingKey: string = 'endOfLifeWarning';
         if (getWorkspaceSetting<boolean>(settingKey)) {
-            const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. " +
-                "After the deadline, function apps can be created and deployed, and existing apps continue to run. " +
-                "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them.");
-            const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
-            let result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
-            while (result === DialogResponses.learnMore) {
+            let result: Promise<MessageItem> = this.getWarningMessage(context);
+            while (await result === DialogResponses.learnMore) {
                 await openUrl(funcVersionLink);
-                result = await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain,);
+                result = this.getWarningMessage(context);
             }
 
-            if (result === DialogResponses.dontWarnAgain) {
+            if (await result === DialogResponses.dontWarnAgain) {
                 await updateGlobalSetting(settingKey, false);
             }
         }
     }
+
     public shouldPrompt(context: IFunctionAppWizardContext): boolean {
         return !!context.newSiteStack;
+    }
+
+    private async getWarningMessage(context: IFunctionAppWizardContext): Promise<MessageItem> {
+        const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. " +
+            "After the deadline, function apps can be created and deployed, and existing apps continue to run. " +
+            "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them.");
+        const continueOn: MessageItem = { title: localize('continueOn', 'Continue') };
+        return await context.ui.showWarningMessage(message, { modal: true }, DialogResponses.learnMore, continueOn, DialogResponses.dontWarnAgain);
     }
 }
