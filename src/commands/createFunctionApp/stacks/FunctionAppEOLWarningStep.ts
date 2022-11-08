@@ -2,7 +2,7 @@
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
-import { AzureWizardPromptStep, DialogResponses, openUrl } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, DialogResponses, IActionContext, openUrl } from "@microsoft/vscode-azext-utils";
 import { MessageItem } from "vscode";
 import { funcVersionLink } from "../../../FuncVersion";
 import { localize } from "../../../localize";
@@ -13,13 +13,13 @@ export class FunctionAppEOLWarningStep extends AzureWizardPromptStep<IFunctionAp
     public async prompt(context: IFunctionAppWizardContext): Promise<void> {
         const settingKey: string = 'endOfLifeWarning';
         if (getWorkspaceSetting<boolean>(settingKey)) {
-            let result: Promise<MessageItem> = this.getWarningMessage(context);
-            while (await result === DialogResponses.learnMore) {
+            let result: MessageItem = await this.showEOLWarningMessage(context);
+            while (result === DialogResponses.learnMore) {
                 await openUrl(funcVersionLink);
-                result = this.getWarningMessage(context);
+                result = await this.showEOLWarningMessage(context);
             }
 
-            if (await result === DialogResponses.dontWarnAgain) {
+            if (result === DialogResponses.dontWarnAgain) {
                 await updateGlobalSetting(settingKey, false);
             }
         }
@@ -29,7 +29,7 @@ export class FunctionAppEOLWarningStep extends AzureWizardPromptStep<IFunctionAp
         return !!context.newSiteStack;
     }
 
-    private async getWarningMessage(context: IFunctionAppWizardContext): Promise<MessageItem> {
+    private async showEOLWarningMessage(context: IActionContext): Promise<MessageItem> {
         const message = localize('endOfLife', "The chosen runtime stack has an end of support deadline coming up. " +
             "After the deadline, function apps can be created and deployed, and existing apps continue to run. " +
             "However, your apps won't be eligible for new features, security patches, performance optimizations, and support until you upgrade them.");
