@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from 'vscode';
-import { extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, ProjectLanguage, pythonVenvSetting } from "../../../constants";
+import { extInstallCommand, extInstallTaskName, func, gitignoreFileName, hostStartCommand, hostStartTaskName, ProjectLanguage, pythonVenvSetting } from "../../../constants";
 import { pythonDebugConfig } from '../../../debug/PythonDebugProvider';
 import { ext } from '../../../extensionVariables';
 import { venvUtils } from '../../../utils/venvUtils';
@@ -48,6 +48,7 @@ export class PythonInitVSCodeStep extends ScriptInitVSCodeStep {
         const tasks: TaskDefinition[] = [
             {
                 type: func,
+                label: hostStartTaskName,
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
