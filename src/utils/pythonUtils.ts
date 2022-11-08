@@ -9,7 +9,8 @@ import { ProjectLanguage, requirementsFileName } from "../constants";
 import { NoWorkspaceError } from "../errors";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
-import { getWorkspaceRootPath } from "./workspace";
+import { getRootWorkspacePath } from "./workspace";
+
 
 export namespace pythonUtils {
     export function isV2Plus(language: string | undefined, model: number | undefined): boolean {
@@ -17,7 +18,7 @@ export namespace pythonUtils {
     }
 
     export async function addDependencyToRequirements(dependency: string, projectPath?: string): Promise<void> {
-        projectPath ??= getWorkspaceRootPath();
+        projectPath ??= await getRootWorkspacePath();
         if (!projectPath) {
             throw new NoWorkspaceError();
         }

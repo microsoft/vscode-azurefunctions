@@ -13,7 +13,7 @@ import { NoWorkspaceError } from "../errors";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { localize } from "../localize";
 import { pythonUtils } from "./pythonUtils";
-import { findFiles, getWorkspaceRootPath } from "./workspace";
+import { findFiles, getRootWorkspacePath } from "./workspace";
 
 export namespace durableUtils {
     export const dotnetDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
@@ -35,7 +35,7 @@ export namespace durableUtils {
     }
 
     export async function promptForStorageType(context: IFunctionWizardContext): Promise<DurableBackendValues> {
-        const durableStorageOptions: string[] = [
+        const durableStorageLabels: string[] = [
             'Durable Functions Orchestration using Storage',
             'Durable Functions Orchestration using Netherite',
             'Durable Functions Orchestration using SQL'
@@ -43,15 +43,15 @@ export namespace durableUtils {
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackendValues>[] = [
-            { label: durableStorageOptions[0], data: DurableBackend.Storage },
-            { label: durableStorageOptions[1], data: DurableBackend.Netherite },
-            { label: durableStorageOptions[2], data: DurableBackend.SQL }
+            { label: durableStorageLabels[0], data: DurableBackend.Storage },
+            { label: durableStorageLabels[1], data: DurableBackend.Netherite },
+            { label: durableStorageLabels[2], data: DurableBackend.SQL }
         ];
         return (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath?: string): Promise<DurableBackendValues | undefined> {
-        projectPath ??= getWorkspaceRootPath();
+        projectPath ??= await getRootWorkspacePath();
         if (!projectPath) {
             return undefined;
         }
@@ -83,9 +83,9 @@ export namespace durableUtils {
 
 
     // !------ Verify Durable Storage/Dependencies ------
-    // Use workspace dependencies as an indicator to check whether this project already has durable storage setup
+    // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
     export async function verifyHasDurableStorage(language: string | undefined, projectPath?: string): Promise<boolean> {
-        projectPath ??= getWorkspaceRootPath();
+        projectPath ??= await getRootWorkspacePath();
         if (!projectPath) {
             return false;
         }
@@ -168,7 +168,7 @@ export namespace netheriteUtils {
     export const defaultNetheriteHubName: string = 'HelloNetheriteHub';  // Arbitrary placeholder for running in emulator mode until an Azure connection is setup
 
     export async function getEventHubName(projectPath?: string): Promise<string | undefined> {
-        projectPath ??= getWorkspaceRootPath();
+        projectPath ??= await getRootWorkspacePath();
         if (!projectPath) {
             throw new NoWorkspaceError();
         }
@@ -185,7 +185,7 @@ export namespace netheriteUtils {
 
     // Todo: Uncomment out in future PR
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
+    //     projectPath ??= await getRootWorkspacePath();
     //     if (!projectPath) {
     //         throw new NoWorkspaceError();
     //     }
@@ -239,7 +239,7 @@ export namespace netheriteUtils {
 export namespace sqlUtils {
     // Todo: Uncomment out in future PR
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
+    //     projectPath ??= await getRootWorkspacePath();
     //     if (!projectPath) {
     //         throw new NoWorkspaceError();
     //     }

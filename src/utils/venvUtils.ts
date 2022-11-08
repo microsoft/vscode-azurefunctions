@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { pythonVenvSetting, requirementsFileName } from "../constants";
@@ -12,7 +12,7 @@ import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
-import { getWorkspaceRootPath } from './workspace';
+import { getRootWorkspacePath } from './workspace';
 
 export namespace venvUtils {
     enum Terminal {
@@ -24,7 +24,7 @@ export namespace venvUtils {
     export async function runPipInstallCommandIfPossible(venvName?: string, projectPath?: string): Promise<void> {
         venvName ??= getWorkspaceSetting(pythonVenvSetting) || '.venv';
 
-        projectPath ??= getWorkspaceRootPath();
+        projectPath ??= await getRootWorkspacePath();
         if (!projectPath) {
             throw new NoWorkspaceError();
         }
@@ -39,7 +39,9 @@ export namespace venvUtils {
             try {
                 // Attempt to install packages so that users get Intellisense right away
                 await runCommandInVenv(`pip install -r ${requirementsFileName}`, <string>venvName, projectPath);
-            } catch {
+            } catch (error) {
+                const pError: IParsedError = parseError(error);
+                ext.outputChannel.appendLog(pError.message);
                 ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
             }
         }

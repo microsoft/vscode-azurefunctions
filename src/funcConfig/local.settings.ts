@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { ConnectionKeyValues, localSettingsFileName } from '../constants';
 import { localize } from '../localize';
 import { parseJson } from '../utils/parseJson';
-import { getWorkspaceRootPath } from '../utils/workspace';
+import { getRootWorkspacePath } from '../utils/workspace';
 
 export interface ILocalSettingsJson {
     IsEncrypted?: boolean;
@@ -24,7 +24,7 @@ export async function getLocalConnectionString(context: IActionContext, connecti
         return process.env[connectionKey];
     }
 
-    projectPath ??= getWorkspaceRootPath();
+    projectPath ??= await getRootWorkspacePath();
     if (!projectPath) {
         return undefined;
     }
@@ -34,7 +34,7 @@ export async function getLocalConnectionString(context: IActionContext, connecti
 }
 
 // export async function validateStorageConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-//     projectPath ??= getWorkspaceRootPath();
+//     projectPath ??= await getRootWorkspacePath();
 //     if (!projectPath) {
 //         throw new NoWorkspaceError();
 //     }
