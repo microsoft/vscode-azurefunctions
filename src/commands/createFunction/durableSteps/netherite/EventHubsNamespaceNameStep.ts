@@ -37,7 +37,7 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
             return invalidAlphanumericWithHyphens;
         }
 
-        const isNameAvailable: boolean = await inputBoxDebounce<boolean>('eventHubNamespaceName', this._isNameAvailable.bind(this), name);
+        const isNameAvailable: boolean = await inputBoxDebounce<boolean>(1000, 'eventHubNamespaceName', this._isNameAvailable.bind(this), name);
         if (!isNameAvailable) {
             return localize('eventHubNamespaceExists', 'The event hub namespace you entered already exists. Please enter a unique name.');
         }
