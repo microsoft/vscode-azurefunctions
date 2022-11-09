@@ -4,12 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { EventHubManagementClient } from '@azure/arm-eventhub';
-import { delay } from '@azure/ms-rest-js';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { validateUtils } from '../../../../utils/validateUtils';
+import { debounce } from '../../../../utils/debounce';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
@@ -30,18 +28,19 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
     private async _validateInput(name: string | undefined): Promise<string | undefined> {
         name = name ? name.trim() : '';
 
-        if (!validateUtils.isValidLength(name, 6, 50)) {
-            return getInvalidLengthMessage(6, 50);
-        }
-        if (!validateUtils.isAlphanumericWithHypens(name)) {
-            return invalidAlphanumericWithHyphens;
-        }
-        await delay(500);
-
-        const isNameAvailable: boolean = !!(await this._client.namespaces.checkNameAvailability({ name })).nameAvailable;
-        if (!isNameAvailable) {
+        // if (!validateUtils.isValidLength(name, 6, 50)) {
+        //     return getInvalidLengthMessage(6, 50);
+        // }
+        // if (!validateUtils.isAlphanumericWithHypens(name)) {
+        //     return invalidAlphanumericWithHyphens;
+        // }
+        if (!await debounce<boolean>(500, 'eventHubNamespaceName', this._isNameAvailable.bind(this), name)) {
             return localize('eventHubNamespaceExists', 'The event hub namespace you entered already exists. Please enter a unique name.');
         }
         return undefined;
+    }
+
+    private async _isNameAvailable(name: string): Promise<boolean> {
+        return !!(await this._client.namespaces.checkNameAvailability({ name })).nameAvailable;
     }
 }
