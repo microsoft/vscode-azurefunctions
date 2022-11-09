@@ -6,7 +6,6 @@
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { window, workspace, WorkspaceFolder } from 'vscode';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
-import { NoWorkspaceError } from '../../errors';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
@@ -62,15 +61,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
         // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
         context.telemetry.properties.noWorkspaceResult = 'createNewProject';
         await createNewProjectInternal(context, options);
-
-        if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
-            // Theoretically shouldn't trigger if 'Create New Project' was successful...
-            throw new NoWorkspaceError();
-        }
-
-        workspaceFolder = workspace.workspaceFolders[0];
-        workspacePath = workspaceFolder.uri.fsPath;
-        projectPath = workspacePath;
+        return;
     }
 
     addLocalFuncTelemetry(context, workspacePath);
