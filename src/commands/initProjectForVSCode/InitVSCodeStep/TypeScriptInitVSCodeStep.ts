@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
@@ -20,6 +20,7 @@ export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
         return [
             {
                 type: func,
+                label: hostStartTaskName,
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,

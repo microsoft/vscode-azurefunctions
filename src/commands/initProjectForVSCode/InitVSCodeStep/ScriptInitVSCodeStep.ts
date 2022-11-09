@@ -7,7 +7,7 @@ import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as semver from 'semver';
 import { TaskDefinition } from 'vscode';
-import { extensionsCsprojFileName, extInstallTaskName, func, hostStartCommand, ProjectLanguage } from '../../../constants';
+import { extensionsCsprojFileName, extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
 import { getLocalFuncCoreToolsVersion } from '../../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../../FuncVersion';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
@@ -24,6 +24,7 @@ export class ScriptInitVSCodeStep extends InitVSCodeStepBase {
         return [
             {
                 type: func,
+                label: hostStartTaskName,
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 dependsOn: this.useFuncExtensionsInstall ? extInstallTaskName : undefined,
