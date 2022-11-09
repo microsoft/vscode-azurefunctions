@@ -9,7 +9,12 @@ type DisposableLike = {
 
 const activeDebounces: { [id: string]: DisposableLike } = {};
 
-export async function debounce<T>(delay: number, id: string, callback: (...args: unknown[]) => Promise<T> | T, ...args: unknown[]): Promise<T> {
+/*
+ *  To be used in validating user input through VS Code's showInputBox API
+ *  VS Code's validateInput callback can throw a silent timeout error when the delay is too long and defaults to a return of 'undefined' (causing false returns)
+ *  This function defaults to 1000ms for safety/consistency.
+ */
+export async function inputBoxDebounce<T>(id: string, callback: (...args: unknown[]) => Promise<T> | T, ...args: unknown[]): Promise<T> {
     return new Promise((resolve) => {
         // Remove active debounce if it already exists
         if (activeDebounces[id]) {
@@ -25,11 +30,11 @@ export async function debounce<T>(delay: number, id: string, callback: (...args:
 
             // Fire the callback
             resolve(await callback(...args));
-        }, delay);
+        }, 1000);
 
         // Keep track of the active debounce
         activeDebounces[id] = {
-            dispose: () => clearTimeout(timeout),
+            dispose: () => clearTimeout(timeout)
         };
     })
 }

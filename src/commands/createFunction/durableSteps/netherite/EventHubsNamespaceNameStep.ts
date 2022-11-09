@@ -5,9 +5,11 @@
 
 import type { EventHubManagementClient } from '@azure/arm-eventhub';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { debounce } from '../../../../utils/debounce';
+import { inputBoxDebounce } from '../../../../utils/debounce';
+import { validateUtils } from '../../../../utils/validateUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
@@ -28,13 +30,15 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
     private async _validateInput(name: string | undefined): Promise<string | undefined> {
         name = name ? name.trim() : '';
 
-        // if (!validateUtils.isValidLength(name, 6, 50)) {
-        //     return getInvalidLengthMessage(6, 50);
-        // }
-        // if (!validateUtils.isAlphanumericWithHypens(name)) {
-        //     return invalidAlphanumericWithHyphens;
-        // }
-        if (!await debounce<boolean>(500, 'eventHubNamespaceName', this._isNameAvailable.bind(this), name)) {
+        if (!validateUtils.isValidLength(name, 6, 50)) {
+            return getInvalidLengthMessage(6, 50);
+        }
+        if (!validateUtils.isAlphanumericWithHypens(name)) {
+            return invalidAlphanumericWithHyphens;
+        }
+
+        const isNameAvailable: boolean = await inputBoxDebounce<boolean>('eventHubNamespaceName', this._isNameAvailable.bind(this), name);
+        if (!isNameAvailable) {
             return localize('eventHubNamespaceExists', 'The event hub namespace you entered already exists. Please enter a unique name.');
         }
         return undefined;

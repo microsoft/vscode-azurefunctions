@@ -62,17 +62,13 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
 
         const language: ProjectLanguage = nonNullProp(context, 'language');
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
-        await this._installDurableDependenciesIfNeeded(context, language);
 
         return fileName ? path.join(functionPath, fileName) : functionJsonPath;
     }
 
-    private async _installDurableDependenciesIfNeeded(context: IScriptFunctionWizardContext, language: ProjectLanguage): Promise<void> {
-        if (!context.newDurableStorageType) {
-            return;
-        }
-
+    protected async _installDurableDependencies(context: IScriptFunctionWizardContext): Promise<void> {
         const dfDepInstallFailed: string = localize('failedToAddDurableDependency', 'Failed to add or install durable package dependency. Please inspect and verify if it needs to be added manually.');
+        const language: ProjectLanguage = nonNullProp(context, 'language');
 
         try {
             switch (language) {
