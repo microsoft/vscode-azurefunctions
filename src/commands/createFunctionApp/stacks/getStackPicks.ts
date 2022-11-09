@@ -5,9 +5,9 @@
 
 import { HttpOperationResponse, ServiceClient } from '@azure/ms-rest-js';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
-import { IAzureQuickPickItem, parseError } from '@microsoft/vscode-azext-utils';
+import { IAzureQuickPickItem, openUrl, parseError } from '@microsoft/vscode-azext-utils';
 import { hiddenStacksSetting } from '../../../constants';
-import { FuncVersion } from '../../../FuncVersion';
+import { FuncVersion, funcVersionLink } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from '../IFunctionAppWizardContext';
@@ -18,6 +18,7 @@ import { FunctionAppRuntimes, FunctionAppStack } from './models/FunctionAppStack
 export async function getStackPicks(context: IFunctionAppWizardContext): Promise<IAzureQuickPickItem<FullFunctionAppStack>[]> {
     const stacks: FunctionAppStack[] = (await getStacks(context)).filter(s => !context.stackFilter || context.stackFilter === s.value);
     const picks: IAzureQuickPickItem<FullFunctionAppStack>[] = [];
+    let hasEndOfLife = false;
     for (const stack of stacks) {
         for (const majorVersion of stack.majorVersions) {
             const minorVersions: (AppStackMinorVersion<FunctionAppRuntimes>)[] = majorVersion.minorVersions
@@ -61,6 +62,11 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
                         break;
                 }
 
+                if (shouldShowEolWarning(minorVersion)) {
+                    description = localize('endOfLife', `$(extensions-warning-message)`)
+                    hasEndOfLife = true;
+                }
+
                 picks.push({
                     label: minorVersion.displayText,
                     description,
@@ -71,11 +77,21 @@ export async function getStackPicks(context: IFunctionAppWizardContext): Promise
         }
     }
 
-    return picks.sort((p1, p2) => {
+    picks.sort((p1, p2) => {
         return p1.data.stack.value !== p2.data.stack.value ?
             0 : // keep order as-is if they're different stacks (i.e. Node.js vs. .NET)
             getPriority(p1.data.minorVersion.stackSettings) - getPriority(p2.data.minorVersion.stackSettings); // otherwise sort based on priority
     });
+    if (hasEndOfLife) {
+        (picks as IAzureQuickPickItem<FullFunctionAppStack | undefined>[]).push({
+            label: localize('endOfLife', `$(extensions-warning-message) Some stacks have an end of support deadline coming up. Learn more...`),
+            onPicked: async () => {
+                await openUrl(funcVersionLink);
+            },
+            data: undefined
+        });
+    }
+    return picks;
 }
 
 type FlagOS = 'All' | 'Linux' | 'Windows' | 'None';
@@ -175,4 +191,14 @@ function removeHiddenStacksAndProperties(stacks: FunctionAppStack[]): void {
             }
         }
     }
+}
+
+export function shouldShowEolWarning(minorVersion?: AppStackMinorVersion<FunctionAppRuntimes>): boolean {
+    const endOfLifeDate = minorVersion?.stackSettings.linuxRuntimeSettings?.endOfLifeDate;
+    if (endOfLifeDate) {
+        const endOfLife = new Date(endOfLifeDate);
+        const sixMonthsFromNow = new Date(new Date().setMonth(new Date().getMonth() + 6));
+        return endOfLife <= sixMonthsFromNow;
+    }
+    return false
 }
