@@ -81,7 +81,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
-        if (context.plan?.sku?.family !== undefined) {
+        if (context.plan?.sku?.family) {
             const isNotFree = context.plan.sku.family.toLowerCase() !== 'u';
             const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
             const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
