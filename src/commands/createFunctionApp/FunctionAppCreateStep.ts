@@ -80,6 +80,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             this.addCustomLocationProperties(site, context.customLocation);
         }
 
+        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
         if (context.plan?.sku?.family !== undefined) {
             const isNotFree = context.plan.sku.family.toLowerCase() !== 'u';
             const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
