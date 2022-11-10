@@ -3,15 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
-import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { NoWorkspaceError } from "../errors";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
-import { localize } from "../localize";
 import { pythonUtils } from "./pythonUtils";
 import { findFiles, getRootWorkspacePath } from "./workspace";
 
@@ -32,22 +30,6 @@ export namespace durableUtils {
         const durableOrchestrator: RegExp = /DurableFunctionsOrchestrat/i;  // Sometimes ends with 'or' or 'ion'
 
         return durableOrchestrator.test(templateId) || durableEntity.test(templateId);
-    }
-
-    export async function promptForStorageType(context: IFunctionWizardContext): Promise<DurableBackendValues> {
-        const durableStorageLabels: string[] = [
-            'Durable Functions Orchestration using Storage',
-            'Durable Functions Orchestration using Netherite',
-            'Durable Functions Orchestration using SQL'
-        ];
-
-        const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
-        const picks: IAzureQuickPickItem<DurableBackendValues>[] = [
-            { label: durableStorageLabels[0], data: DurableBackend.Storage },
-            { label: durableStorageLabels[1], data: DurableBackend.Netherite },
-            { label: durableStorageLabels[2], data: DurableBackend.SQL }
-        ];
-        return (await context.ui.showQuickPick(picks, { placeHolder })).data;
     }
 
     export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath?: string): Promise<DurableBackendValues | undefined> {
