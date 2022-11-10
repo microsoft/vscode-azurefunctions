@@ -81,9 +81,9 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         if (context.plan?.sku?.family !== undefined) {
-            const isNotFree = context.plan?.sku?.family?.toLowerCase() !== 'u';
-            const isNotElasticPremium = context.plan?.sku?.family?.toLowerCase() !== 'ep';
-            const isNotConsumption: boolean = context.plan?.sku?.family?.toLowerCase() !== 'y';
+            const isNotFree = context.plan.sku.family.toLowerCase() !== 'u';
+            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
+            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
             if (isNotFree && isNotElasticPremium && isNotConsumption) {
                 nonNullProp(site, 'siteConfig').alwaysOn = true;
             }
