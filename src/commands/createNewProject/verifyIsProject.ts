@@ -82,11 +82,5 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
  * Checks if the path is already a function project, if not return undefined
  */
 export async function verifyProjectPath(context: IActionContext, workspaceFolder?: WorkspaceFolder | string): Promise<string | undefined> {
-    if (workspaceFolder) {
-        const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
-        if (projectPath) {
-            return projectPath;
-        }
-    }
-    return undefined;
+    return workspaceFolder ? await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt') : undefined;
 }

@@ -56,6 +56,8 @@ export async function createFunctionInternal(context: IActionContext, options: a
         workspaceFolder = getContainingWorkspace(workspacePath);
     }
 
+    addLocalFuncTelemetry(context, workspacePath);
+
     let projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
@@ -63,8 +65,6 @@ export async function createFunctionInternal(context: IActionContext, options: a
         await createNewProjectInternal(context, options);
         return;
     }
-
-    addLocalFuncTelemetry(context, workspacePath);
 
     const { language, languageModel, version } = await verifyInitForVSCode(context, projectPath, options.language, /* TODO: languageModel: */ undefined, options.version);
 
