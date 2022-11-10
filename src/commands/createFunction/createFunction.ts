@@ -58,7 +58,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
 
     addLocalFuncTelemetry(context, workspacePath);
 
-    let projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
+    const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         // If we cannot find a valid Functions project, we need to put the user into the 'Create New Project' flow..
         context.telemetry.properties.noWorkspaceResult = 'createNewProject';
