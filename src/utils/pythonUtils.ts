@@ -29,7 +29,7 @@ export namespace pythonUtils {
         }
 
         const contents: string = await AzExtFsExtra.readFile(requirementsPath);
-        const lines: string[] = await contents.split('\n');
+        const lines: string[] = contents.split('\n');
 
         // Trim any empty lines from the end before adding new dependency
         for (let i = lines.length - 1; i >= 0; i--) {
@@ -54,7 +54,7 @@ export namespace pythonUtils {
         }
 
         const contents: string = await AzExtFsExtra.readFile(filePath);
-        const lines: string[] = await contents.split('\n');
+        const lines: string[] = contents.split('\n');
 
         for (let line of lines) {
             line = line.trim();

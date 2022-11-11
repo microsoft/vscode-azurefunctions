@@ -55,7 +55,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         for (const namespace of eventHubNamespaces) {
             picks.push({
                 id: namespace.id,
-                label: namespace.name!,
+                label: nonNullProp(namespace, 'name'),
                 description: '',
                 data: namespace
             });

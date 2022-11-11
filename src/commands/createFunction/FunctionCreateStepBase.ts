@@ -117,11 +117,11 @@ export abstract class FunctionCreateStepBase<T extends IFunctionWizardContext> e
                 break;
             case DurableBackend.Netherite:
                 hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
-                setLocalAppSetting(context, context.projectPath, 'EventHubsConnection', '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, 'EventHubsConnection', '', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();
-                setLocalAppSetting(context, context.projectPath, 'SQLDB_Connection', '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, 'SQLDB_Connection', '', MismatchBehavior.Overwrite);
                 break;
             default:
         }

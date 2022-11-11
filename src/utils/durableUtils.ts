@@ -61,7 +61,7 @@ export namespace durableUtils {
                 // New DF's will use the more specific type 'DurableBackend.Storage', but legacy implementations may return this value as 'undefined'
                 return DurableBackend.Storage;
         }
-    };
+    }
 
     // !------ Verify Durable Storage/Dependencies ------
     // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
@@ -97,27 +97,31 @@ export namespace durableUtils {
             return false;
         }
 
-        const packageJson: Record<string, any> = await AzExtFsExtra.readJSON(packagePath);
-        const dependencies = packageJson.dependencies || {};
+        const packageJson: Record<string, unknown> = await AzExtFsExtra.readJSON(packagePath);
+        const dependencies = packageJson?.dependencies as {} || {};
         return !!dependencies[nodeDfPackage];
     }
 
     async function dotnetProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const csProjPaths: Uri[] = await findFiles(projectPath, '*.csproj');
-        if (!(csProjPaths?.[0]?.path && AzExtFsExtra.pathExists(csProjPaths[0].path))) {
+        if (!(csProjPaths?.[0]?.path && await AzExtFsExtra.pathExists(csProjPaths[0].path))) {
             return false;
         }
 
         const csProjContents: string = await AzExtFsExtra.readFile(csProjPaths[0].path);
 
         return new Promise((resolve) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(csProjContents, { explicitArray: false }, (err: any, result: any): void => {
                 if (result && !err) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
 
                     for (const packageRef of packageReferences) {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         if (packageRef['$'] && packageRef['$']['Include']) {
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                             if (packageRef['$']['Include'] === dotnetDfBasePackage) {
                                 resolve(true);
                                 return;

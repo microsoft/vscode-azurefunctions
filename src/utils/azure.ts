@@ -6,7 +6,7 @@
 import type { AccessKeys, AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { getResourceGroupFromId, IStorageAccountWizardContext, parseAzureResourceId, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
 import { IEventHubsConnectionWizardContext } from '../commands/appSettings/IEventHubsConnectionWizardContext';
@@ -71,10 +71,10 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
 
 export async function getEventHubsConnectionString(context: IEventHubsConnectionWizardContext & ISubscriptionContext): Promise<IResourceResult> {
     const client: EventHubManagementClient = await createEventHubClient(context);
-    const resourceGroupName: string = parseAzureResourceId(nonNullValue(context.eventHubsNamespace?.id)).resourceGroup;
+    const resourceGroupName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
     const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
 
-    const authRulesIterable = await client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName);
+    const authRulesIterable = client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName);
     const authRules: AuthorizationRule[] = await uiUtils.listAllIterator(authRulesIterable);
 
     let authRule: string;

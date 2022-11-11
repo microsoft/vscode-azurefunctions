@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
-import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
 import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
@@ -20,10 +20,10 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
         // Prep to check name availability, else it must be new and we can skip the name availability check
         if (context.eventHubsNamespace) {
             const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
-            const rgName: string = parseAzureResourceId(nonNullValue(context.eventHubsNamespace.id)).resourceGroup;
+            const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace.id));
             const ehNamespaceName: string = nonNullValue(context.eventHubsNamespace.name);
 
-            const eventHubIterator = await client.eventHubs.listByNamespace(rgName, ehNamespaceName);
+            const eventHubIterator = client.eventHubs.listByNamespace(rgName, ehNamespaceName);
             this._eventHubs = await uiUtils.listAllIterator(eventHubIterator);
         }
 

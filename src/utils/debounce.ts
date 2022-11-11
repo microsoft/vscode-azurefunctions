@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 type DisposableLike = {
-    dispose: () => any
+    dispose: () => unknown
 }
 
 const activeDebounces: { [id: string]: DisposableLike } = {};
@@ -23,6 +23,7 @@ export async function inputBoxDebounce<T>(delay: 500 | 750 | 1000, id: string, c
 
     return new Promise((resolve) => {
         // Schedule the callback
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         const timeout = setTimeout(async () => {
             // Clear the callback since we're about to fire it
             activeDebounces[id].dispose();
