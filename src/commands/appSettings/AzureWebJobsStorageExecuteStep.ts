@@ -10,6 +10,7 @@ import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.set
 import { getStorageConnectionString } from '../../utils/azure';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
+// Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 

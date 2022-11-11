@@ -78,6 +78,11 @@ export enum ScmType {
     GitHub = 'GitHub'
 }
 
+export enum CodeAction {
+    Deploy = 'Deploy',
+    Debug = 'Debug'
+}
+
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
     EventHub = 'EventHubsConnection',
@@ -96,6 +101,7 @@ export enum DurableBackend {
     SQL = "mssql"
 }
 
+export type CodeActionValues = typeof CodeAction[keyof typeof CodeAction];
 export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
 export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
 export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];

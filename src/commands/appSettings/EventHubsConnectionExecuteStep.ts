@@ -9,6 +9,7 @@ import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from '
 import { getEventHubsConnectionString } from '../../utils/azure';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
+// Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
 
