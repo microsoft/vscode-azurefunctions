@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ProjectLanguage } from '../../constants';
+import { ConnectionKey, DurableBackend, ProjectLanguage } from '../../constants';
 import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
 import { getLocalConnectionString } from '../../funcConfig/local.settings';
 import { localize } from '../../localize';
@@ -13,10 +13,14 @@ import { pythonUtils } from '../../utils/pythonUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
 import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
+import { EventHubsConnectionExecuteStep } from '../appSettings/EventHubsConnectionExecuteStep';
+import { EventHubsConnectionPromptStep } from '../appSettings/EventHubsConnectionPromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
+import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -86,7 +90,24 @@ export class FunctionSubWizard {
                     break;
             }
 
-            if ((!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
+            // To be removed before merge... for test purposes only...
+            switch (context.newDurableStorageType) {
+                case DurableBackend.Netherite:
+                    promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
+                    executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
+                    break;
+                case DurableBackend.SQL:
+                    // Todo: Uncomment out in future PR
+                    // promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
+                    // executeSteps.push(new SqlDatabaseConnectionExecuteStep());
+                    break;
+                case DurableBackend.Storage:
+                    // FunctionSubWizard already takes care of AzureWebJobs logic...
+                    break;
+                default:
+            }
+
+            if (context.newDurableStorageType || (!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
                 executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }

@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AccessKeys, EventHubManagementClient } from '@azure/arm-eventhub';
+import type { AccessKeys, AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
-import { getResourceGroupFromId, IStorageAccountWizardContext, parseAzureResourceId, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, IStorageAccountWizardContext, parseAzureResourceId, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
 import { IEventHubsConnectionWizardContext } from '../commands/appSettings/IEventHubsConnectionWizardContext';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
+import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 import { createEventHubClient, createStorageClient } from './azureClients';
@@ -72,12 +73,36 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
     const client: EventHubManagementClient = await createEventHubClient(context);
     const resourceGroupName: string = parseAzureResourceId(nonNullValue(context.eventHubsNamespace?.id)).resourceGroup;
     const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
-    const authorizationRuleName: string = 'RootManageSharedAccessKey';
 
-    const accessKeys: AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authorizationRuleName);
+    const authRulesIterable = await client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName);
+    const authRules: AuthorizationRule[] = await uiUtils.listAllIterator(authRulesIterable);
+
+    let authRule: string;
+    if (!authRules.length) {
+        throw new Error(localize('noAuthRules', 'Unable to locate a shared access policy for your event hub namespace.'));
+    } else if (authRules.length === 1) {
+        authRule = nonNullProp(authRules[0], 'name');
+    } else {
+        const rootKeyName: string = 'RootManageSharedAccessKey';
+        const placeHolder: string = localize('chooseSharedAccessPolicy', 'Choose a shared access policy.');
+
+        authRule = (await context.ui.showQuickPick(authRules.map(authRule => {
+            return { label: nonNullProp(authRule, 'name'), description: authRule.name === rootKeyName ? localize('default', '(Default)') : '' };
+        }), { placeHolder })).label;
+    }
+
+    const learnMoreLink: string = 'aka.ms/event-hubs-connection-string';
+    const accessKeys: AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRule);
+
+    if (!accessKeys.primaryConnectionString && !accessKeys.secondaryConnectionString) {
+        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your shared access policy. Locate a valid access policy and add the connection string to "local.settings.json".');
+        void context.ui.showWarningMessage(message, { learnMoreLink, modal: true });
+        ext.outputChannel.appendLog(message);
+    }
+
     return {
         name: namespaceName,
-        connectionString: accessKeys.primaryConnectionString || ""
+        connectionString: accessKeys.primaryConnectionString || accessKeys.secondaryConnectionString || ''
     };
 }
 

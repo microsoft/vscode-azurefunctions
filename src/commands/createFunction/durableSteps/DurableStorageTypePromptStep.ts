@@ -8,7 +8,6 @@ import { DurableBackend, DurableBackendValues } from "../../../constants";
 import { localize } from "../../../localize";
 import { FunctionSubWizard } from "../FunctionSubWizard";
 import { IFunctionWizardContext } from "../IFunctionWizardContext";
-import { DurableSubWizard } from "./DurableSubWizard";
 
 export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> extends AzureWizardPromptStep<T> {
     private readonly _functionSettings: { [key: string]: string | undefined };
@@ -39,18 +38,6 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
-        const durableSubWizard = await DurableSubWizard.createSubWizard(context);
-        const functionSubWizard = await FunctionSubWizard.createSubWizard(context, this._functionSettings);
-
-        if (durableSubWizard || functionSubWizard) {
-            // Return the combined subWizards
-            return {
-                title: functionSubWizard?.title || durableSubWizard?.title,
-                promptSteps: [...(durableSubWizard?.promptSteps ?? []), ...(functionSubWizard?.promptSteps ?? [])],
-                executeSteps: [...(durableSubWizard?.executeSteps ?? []), ...(functionSubWizard?.executeSteps ?? [])]
-            };
-        } else {
-            return undefined;
-        }
+        return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
     }
 }

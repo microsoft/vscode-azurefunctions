@@ -63,7 +63,6 @@ export namespace durableUtils {
         }
     };
 
-
     // !------ Verify Durable Storage/Dependencies ------
     // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
     export async function verifyHasDurableStorage(language: string | undefined, projectPath?: string): Promise<boolean> {
