@@ -356,13 +356,6 @@
             }
         ],
         "menus": {
-            "azureWorkspaceCreate": [
-                {
-                    "command": "azureFunctions.createFunction",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@1"
-                }
-            ],
             "azureWorkspaceDeploy": [
                 {
                     "command": "azureFunctions.deploy",
@@ -371,6 +364,11 @@
                 }
             ],
             "view/title": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
                 {
                     "submenu": "azureWorkspaceDeploy",
                     "when": "view == azureWorkspace",
@@ -1104,7 +1102,7 @@
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "^0.7.4",
+        "@microsoft/vscode-azext-azureappservice": "^0.7.6",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
         "@microsoft/vscode-azext-utils": "^0.3.12",
         "escape-string-regexp": "^4.0.0",
