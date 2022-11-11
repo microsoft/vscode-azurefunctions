@@ -356,13 +356,6 @@
             }
         ],
         "menus": {
-            "azureWorkspaceCreate": [
-                {
-                    "command": "azureFunctions.createFunction",
-                    "when": "view == azureWorkspace",
-                    "group": "navigation@1"
-                }
-            ],
             "azureWorkspaceDeploy": [
                 {
                     "command": "azureFunctions.deploy",
@@ -371,6 +364,11 @@
                 }
             ],
             "view/title": [
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
                 {
                     "submenu": "azureWorkspaceDeploy",
                     "when": "view == azureWorkspace",
