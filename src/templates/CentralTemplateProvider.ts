@@ -21,7 +21,7 @@ import { IFunctionTemplate, TemplateCategory } from './IFunctionTemplate';
 import { ITemplates } from './ITemplates';
 import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
-import { getScriptResourcesLanguage } from './script/getScriptResourcesLanguage';
+import { english, getScriptResourcesLanguage } from './script/getScriptResourcesLanguage';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
 import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
@@ -268,14 +268,16 @@ export class CentralTemplateProvider implements Disposable {
                 return result;
             }
         } catch (error) {
-            // If we failed to get templates for a non-English language, try English
-            const language = provider.resourcesLanguage || getScriptResourcesLanguage();
-            if (language !== 'en-US') {
-                provider.resourcesLanguage = 'en-US';
-                const result = provider.getLatestTemplates(context, latestTemplateVersion);
-                const message: string = localize('languageTemplateWarning', 'The templates for the current language are not supported yet. Defaulting to English templates.');
-                await context.ui.showWarningMessage(message);
-                return result;
+            // If we failed to get Java templates for a non-English language, try English
+            if (provider.language === 'Java') {
+                const language = provider.resourcesLanguage || getScriptResourcesLanguage();
+                if (language !== english) {
+                    provider.resourcesLanguage = english;
+                    const result = provider.getLatestTemplates(context, latestTemplateVersion);
+                    const message: string = localize('languageTemplateWarning', 'The templates for the current language are not supported yet. Defaulting to English templates.');
+                    await context.ui.showWarningMessage(message);
+                    return result;
+                }
             }
         }
 
