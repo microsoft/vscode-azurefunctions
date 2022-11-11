@@ -3,16 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, DialogResponses, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { MessageItem, WorkspaceFolder } from 'vscode';
 import { hostFileName, projectSubpathSetting } from '../../constants';
 import { localize } from '../../localize';
 import { telemetryUtils } from '../../utils/telemetryUtils';
 import { findFiles } from '../../utils/workspace';
-import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
-import { createNewProjectInternal } from './createNewProject';
 
 // Use 'host.json' as an indicator that this is a functions project
 export async function isFunctionProject(folderPath: string): Promise<boolean> {
@@ -81,23 +79,8 @@ async function promptForProjectSubpath(context: IActionContext, workspacePath: s
 }
 
 /**
- * Checks if the path is already a function project. If not, it will prompt to create a new project and return undefined
+ * Checks if the path is already a function project, if not return undefined
  */
-export async function verifyAndPromptToCreateProject(context: IActionContext, workspaceFolder: WorkspaceFolder | string, options?: api.ICreateFunctionOptions): Promise<string | undefined> {
-    options = options || {};
-
-    const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt');
-    if (!projectPath) {
-        if (!options.suppressCreateProjectPrompt) {
-            const message: string = localize('notFunctionApp', 'The selected folder is not a function project. Create new project?');
-            // No need to check result - cancel will throw a UserCancelledError
-            await context.ui.showWarningMessage(message, { modal: true, stepName: 'notAProject' }, DialogResponses.yes);
-        }
-
-        options.folderPath ||= typeof workspaceFolder === 'string' ? workspaceFolder : workspaceFolder.uri.fsPath;
-        await createNewProjectInternal(context, options);
-        return undefined;
-    } else {
-        return projectPath;
-    }
+export async function verifyProjectPath(context: IActionContext, workspaceFolder?: WorkspaceFolder | string): Promise<string | undefined> {
+    return workspaceFolder ? await tryGetFunctionProjectRoot(context, workspaceFolder, 'modalPrompt') : undefined;
 }

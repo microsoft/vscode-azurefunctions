@@ -13,7 +13,7 @@ import { localize } from '../../localize';
 import { getContainingWorkspace } from '../../utils/workspace';
 import { getGlobalSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
-import { verifyAndPromptToCreateProject } from '../createNewProject/verifyIsProject';
+import { verifyProjectPath } from '../createNewProject/verifyIsProject';
 import { detectProjectLanguage, detectProjectLanguageModel } from './detectProjectLanguage';
 import { InitVSCodeLanguageStep } from './InitVSCodeLanguageStep';
 
@@ -37,7 +37,7 @@ export async function initProjectForVSCode(context: IActionContext, fsPath?: str
         workspacePath = workspaceFolder ? workspaceFolder.uri.fsPath : fsPath;
     }
 
-    const projectPath: string | undefined = await verifyAndPromptToCreateProject(context, workspaceFolder || workspacePath);
+    const projectPath: string | undefined = await verifyProjectPath(context, workspaceFolder || workspacePath);
     if (!projectPath) {
         return;
     }
