@@ -91,10 +91,9 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
         }), { placeHolder })).label;
     }
 
-    const learnMoreLink: string = 'aka.ms/event-hubs-connection-string';
     const accessKeys: AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRule);
-
     if (!accessKeys.primaryConnectionString && !accessKeys.secondaryConnectionString) {
+        const learnMoreLink: string = 'aka.ms/event-hubs-connection-string';
         const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your shared access policy. Locate a valid access policy and add the connection string to "local.settings.json".');
         void context.ui.showWarningMessage(message, { learnMoreLink, modal: true });
         ext.outputChannel.appendLog(message);
