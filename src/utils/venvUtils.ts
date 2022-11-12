@@ -7,12 +7,10 @@ import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { pythonVenvSetting, requirementsFileName } from "../constants";
-import { NoWorkspaceError } from '../errors';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
-import { getRootWorkspacePath } from './workspace';
 
 export namespace venvUtils {
     enum Terminal {
@@ -21,13 +19,8 @@ export namespace venvUtils {
         powerShell
     }
 
-    export async function runPipInstallCommandIfPossible(venvName?: string, projectPath?: string): Promise<void> {
+    export async function runPipInstallCommandIfPossible(projectPath: string, venvName?: string): Promise<void> {
         venvName ??= getWorkspaceSetting(pythonVenvSetting) || '.venv';
-
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            throw new NoWorkspaceError();
-        }
 
         const venvPath: string = path.join(projectPath, <string>venvName);
         if (!await AzExtFsExtra.pathExists(venvPath)) {

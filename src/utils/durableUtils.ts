@@ -8,10 +8,9 @@ import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
-import { NoWorkspaceError } from "../errors";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { pythonUtils } from "./pythonUtils";
-import { findFiles, getRootWorkspacePath } from "./workspace";
+import { findFiles } from "./workspace";
 
 export namespace durableUtils {
     export const dotnetDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
@@ -32,12 +31,7 @@ export namespace durableUtils {
         return durableOrchestrator.test(templateId) || durableEntity.test(templateId);
     }
 
-    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath?: string): Promise<DurableBackendValues | undefined> {
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            return undefined;
-        }
-
+    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<DurableBackendValues | undefined> {
         const hasDurableStorage: boolean = await verifyHasDurableStorage(language, projectPath);
         if (!hasDurableStorage) {
             return undefined;
@@ -65,12 +59,7 @@ export namespace durableUtils {
 
     // !------ Verify Durable Storage/Dependencies ------
     // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
-    export async function verifyHasDurableStorage(language: string | undefined, projectPath?: string): Promise<boolean> {
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            return false;
-        }
-
+    export async function verifyHasDurableStorage(language: string | undefined, projectPath: string): Promise<boolean> {
         switch (language) {
             case ProjectLanguage.Java:
                 // ???
@@ -152,12 +141,7 @@ export namespace durableUtils {
 export namespace netheriteUtils {
     export const defaultNetheriteHubName: string = 'HelloNetheriteHub';  // Arbitrary placeholder for running in emulator mode until an Azure connection is setup
 
-    export async function getEventHubName(projectPath?: string): Promise<string | undefined> {
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            throw new NoWorkspaceError();
-        }
-
+    export async function getEventHubName(projectPath: string): Promise<string | undefined> {
         const hostJsonPath = path.join(projectPath, hostFileName);
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
             return undefined;

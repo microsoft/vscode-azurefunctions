@@ -79,8 +79,8 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
                     // Todo: Revisit when adding PowerShell implementation
                     break;
                 case ProjectLanguage.Python:
-                    await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage);
-                    await venvUtils.runPipInstallCommandIfPossible();
+                    await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                    await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
                     break;
                 default:
             }
