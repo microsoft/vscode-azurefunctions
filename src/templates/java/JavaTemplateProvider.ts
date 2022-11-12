@@ -11,6 +11,7 @@ import { mavenUtils } from '../../utils/mavenUtils';
 import { parseJson } from '../../utils/parseJson';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { ITemplates } from '../ITemplates';
+import { english } from '../script/getScriptResourcesLanguage';
 import { parseScriptTemplates } from '../script/parseScriptTemplates';
 import { ScriptTemplateProvider } from '../script/ScriptTemplateProvider';
 import { TemplateType } from '../TemplateProviderBase';
@@ -86,5 +87,10 @@ export class JavaTemplateProvider extends ScriptTemplateProvider {
         } else {
             return this.projectPath;
         }
+    }
+
+    protected getResourcesLanguage(): string {
+        //always return english since Java templates are only available in english
+        return english;
     }
 }
