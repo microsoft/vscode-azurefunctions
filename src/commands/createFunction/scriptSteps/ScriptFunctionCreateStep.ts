@@ -67,7 +67,6 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
     }
 
     protected async _installDurableDependencies(context: IScriptFunctionWizardContext): Promise<void> {
-        const dfDepInstallFailed: string = localize('failedToAddDurableDependency', 'Failed to add or install durable package dependency. Please inspect and verify if it needs to be added manually.');
         const language: ProjectLanguage = nonNullProp(context, 'language');
 
         try {
@@ -87,6 +86,7 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
             }
         } catch (error) {
             const pError: IParsedError = parseError(error);
+            const dfDepInstallFailed: string = localize('failedToAddDurableDependency', 'Failed to add or install durable package dependency. Please inspect and verify if it needs to be added manually.');
             ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }

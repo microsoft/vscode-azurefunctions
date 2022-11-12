@@ -78,7 +78,7 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         const failedPackages: string[] = [];
         for (const packageName of packageNames) {
             try {
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageNames[packageNames.length - 1]);
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
             } catch {
                 failedPackages.push(packageName);
             }
