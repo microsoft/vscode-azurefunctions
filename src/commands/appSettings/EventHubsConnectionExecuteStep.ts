@@ -39,6 +39,6 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.eventHubConnectionType && context.eventHubConnectionType !== ConnectionType.None;
+        return !!context.eventHubConnectionType;
     }
 }

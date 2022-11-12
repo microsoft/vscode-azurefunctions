@@ -6,6 +6,7 @@
 import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
 import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
+import { ConnectionType } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -33,6 +34,6 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.eventHubsNamespace;
+        return !context.eventHubsNamespace && context.eventHubConnectionType === ConnectionType.Azure;
     }
 }

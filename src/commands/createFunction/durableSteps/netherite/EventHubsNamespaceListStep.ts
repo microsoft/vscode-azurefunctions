@@ -6,6 +6,7 @@
 import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
 import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
@@ -41,7 +42,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.eventHubsNamespace;
+        return !context.eventHubsNamespace && context.eventHubConnectionType === ConnectionType.Azure;
     }
 
     private async _getQuickPicks(namespaceTask: Promise<EHNamespace[]>): Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> {

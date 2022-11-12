@@ -92,7 +92,6 @@ export enum ConnectionKey {
 export enum ConnectionType {
     Azure = "Azure",
     NonAzure = 'NonAzure',  // includes local emulators
-    None = 'skipForNow'  // preserving this format for telemetry purposes
 }
 
 export enum DurableBackend {

@@ -5,6 +5,7 @@
 
 import type { EventHubManagementClient } from '@azure/arm-eventhub';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { ConnectionType } from '../../../../constants';
 import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -24,7 +25,7 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.eventHubsNamespace && !context.newEventHubsNamespaceName;
+        return !context.eventHubsNamespace && !context.newEventHubsNamespaceName && context.eventHubConnectionType === ConnectionType.Azure;
     }
 
     private async _validateInput(name: string | undefined): Promise<string | undefined> {
