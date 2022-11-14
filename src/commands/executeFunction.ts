@@ -76,7 +76,7 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         } catch (error) {
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;
-                throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
+                throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AAipdee).'));
             } else {
                 context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
