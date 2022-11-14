@@ -147,6 +147,16 @@ function addSuite(tester: FunctionTesterBase): void {
             skip: tester.language === ProjectLanguage.Custom
         },
         {
+            functionName: 'Durable Functions entity',
+            inputs: [],
+            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java
+        },
+        {
+            functionName: 'Durable Functions Entity HTTP starter',
+            inputs: tester.language === ProjectLanguage.JavaScript ? [] : [getRotatingAuthLevel()],
+            skip: tester.language === ProjectLanguage.PowerShell || tester.language === ProjectLanguage.Java || tester.language === ProjectLanguage.Python
+        },
+        {
             functionName: 'IoT Hub (Event Hub)',
             inputs: [
                 'AzureWebJobsStorage', // Use existing app setting
