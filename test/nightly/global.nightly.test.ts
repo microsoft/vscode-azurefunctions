@@ -28,7 +28,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
-    this.skip();
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
 
