@@ -71,7 +71,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
-    this.skip();
     this.timeout(90 * 1000);
     try {
         await AzExtFsExtra.deleteResource(testFolderPath, { recursive: true });
