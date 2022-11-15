@@ -16,6 +16,7 @@ export const resourceGroupsToDelete: string[] = [];
 
 // Runs before all nightly tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
+    this.skip();
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
 
@@ -27,6 +28,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
+    this.skip();
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
 

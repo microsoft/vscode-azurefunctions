@@ -38,6 +38,7 @@ export function getTestWorkspaceFolder(): string {
 
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
+    this.skip();
     this.timeout(4 * 60 * 1000);
     oldRequestTimeout = getGlobalSetting(requestTimeoutKey);
     await updateGlobalSetting(requestTimeoutKey, 45);
@@ -70,6 +71,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
+    this.skip();
     this.timeout(90 * 1000);
     try {
         await AzExtFsExtra.deleteResource(testFolderPath, { recursive: true });
