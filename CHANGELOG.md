@@ -4,14 +4,14 @@
 
 ### Added
 
-- Create Function button in Workspace view [#3430](https://github.com/microsoft/vscode-azurefunctions/pull/3430)
-- Warning when a stack has an upcoming end of life [#3382](https://github.com/microsoft/vscode-azurefunctions/pull/3382)
-- Updated templates to enable dynamic concurrency [#3365](https://github.com/microsoft/vscode-azurefunctions/pull/3365)
+- Create Function button in Workspace view [#3350](https://github.com/microsoft/vscode-azurefunctions/issues/3350)
+- Warning when a stack has an upcoming end of life [#3353](https://github.com/microsoft/vscode-azurefunctions/issues/3353)
+- Updated host.json template to enable dynamic concurrency [#3248](https://github.com/microsoft/vscode-azurefunctions/issues/3248)
 
 ### Changed
 
-- Always on = on when creating an Azure function on an app service plan [#3422](https://github.com/microsoft/vscode-azurefunctions/pull/3422)
-- Automatically run npm install after initializing a TypeScript or JavaScript Project [#3362](https://github.com/microsoft/vscode-azurefunctions/pull/3362)
+- Always on = on when creating an Azure Function App on an App Service plan [#3037](https://github.com/microsoft/vscode-azurefunctions/issues/3037)
+- Automatically run `npm install` after initializing a TypeScript or JavaScript Project [#3034](https://github.com/microsoft/vscode-azurefunctions/issues/3034)
 
 ### Fixed
 
