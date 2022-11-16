@@ -24,7 +24,6 @@
     "exclude": [
         "node_modules",
         ".vscode-test",
-        "gulpfile.ts",
-        "test"
+        "gulpfile.ts"
     ]
 }

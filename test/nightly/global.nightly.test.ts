@@ -32,7 +32,7 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
         this.timeout(10 * 60 * 1000);
 
         await deleteResourceGroups();
-        ext.azureAccountTreeItem.dispose();
+        // ext.azureAccountTreeItem.dispose();
     }
 });
 
