@@ -1,5 +1,22 @@
 # Change Log
 
+## 1.9.0 - 2022-11-16
+
+### Added
+
+- Create Function button in Workspace view [#3430](https://github.com/microsoft/vscode-azurefunctions/pull/3430)
+- Warning when a stack has an upcoming end of life [#3382](https://github.com/microsoft/vscode-azurefunctions/pull/3382)
+- Updated templates to enable dynamic concurrency [#3365](https://github.com/microsoft/vscode-azurefunctions/pull/3365)
+
+### Changed
+
+- Always on = on when creating an Azure function on an app service plan [#3422](https://github.com/microsoft/vscode-azurefunctions/pull/3422)
+- Automatically run npm install after initializing a TypeScript or JavaScript Project [#3362](https://github.com/microsoft/vscode-azurefunctions/pull/3362)
+
+### Fixed
+
+- [Bugs Fixed](https://github.com/microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A1.9.0+)
+
 ## 1.8.3 - 2022-10-25
 
 ### Changed
