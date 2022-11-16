@@ -11,7 +11,7 @@
 ### Changed
 
 - Always on = on when creating an Azure Function App on an app service plan [#3037](https://github.com/microsoft/vscode-azurefunctions/issues/3037)
-- Automatically run `npm install` after initializing a TypeScript or JavaScript Project [#3064](https://github.com/microsoft/vscode-azurefunctions/issues/3034)
+- Automatically run `npm install` after initializing a TypeScript or JavaScript Project [#3034](https://github.com/microsoft/vscode-azurefunctions/issues/3034)
 
 ### Fixed
 
