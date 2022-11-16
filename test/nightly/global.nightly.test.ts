@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebSiteManagementClient } from '@azure/arm-appservice';
-import { ResourceManagementClient } from '@azure/arm-resources';
 import { createTestActionContext, TestAzureAccount } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
 import { AzureAccountTreeItemWithProjects, createAzureClient, ext } from '../../extension.bundle';
@@ -31,21 +30,21 @@ suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
 
-        await deleteResourceGroups();
+        // await deleteResourceGroups();
         // ext.azureAccountTreeItem.dispose();
     }
 });
 
-async function deleteResourceGroups(): Promise<void> {
-    const rgClient: ResourceManagementClient = createAzureClient([await createTestActionContext(), testAccount.getSubscriptionContext()], ResourceManagementClient);
-    await Promise.all(resourceGroupsToDelete.map(async resourceGroup => {
-        if ((await rgClient.resourceGroups.checkExistence(resourceGroup)).body) {
-            console.log(`Started delete of resource group "${resourceGroup}"...`);
-            await rgClient.resourceGroups.beginDeleteMethod(resourceGroup);
-            console.log(`Successfully started delete of resource group "${resourceGroup}".`);
-        } else {
-            // If the test failed, the resource group might not actually exist
-            console.log(`Ignoring resource group "${resourceGroup}" because it does not exist.`);
-        }
-    }));
-}
+// async function deleteResourceGroups(): Promise<void> {
+//     const rgClient: ResourceManagementClient = createAzureClient([await createTestActionContext(), testAccount.getSubscriptionContext()], ResourceManagementClient);
+//     await Promise.all(resourceGroupsToDelete.map(async resourceGroup => {
+//         if ((await rgClient.resourceGroups.checkExistence(resourceGroup)).body) {
+//             console.log(`Started delete of resource group "${resourceGroup}"...`);
+//             await rgClient.resourceGroups.beginDeleteMethod(resourceGroup);
+//             console.log(`Successfully started delete of resource group "${resourceGroup}".`);
+//         } else {
+//             // If the test failed, the resource group might not actually exist
+//             console.log(`Ignoring resource group "${resourceGroup}" because it does not exist.`);
+//         }
+//     }));
+// }
