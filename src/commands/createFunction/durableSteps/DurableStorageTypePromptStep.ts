@@ -18,10 +18,11 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
     }
 
     public async prompt(context: T): Promise<void> {
+        const getDurableStorageLabel = (storageType: string): string => localize(`durable${storageType}Orchestration`, 'Durable Functions Orchestration using {0}', storageType);
         const durableStorageLabels: string[] = [
-            'Durable Functions Orchestration using Storage',
-            'Durable Functions Orchestration using Netherite',
-            'Durable Functions Orchestration using SQL'
+            getDurableStorageLabel('Storage'),
+            getDurableStorageLabel('Netherite'),
+            getDurableStorageLabel('SQL')
         ];
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');

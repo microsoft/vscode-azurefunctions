@@ -102,7 +102,6 @@ export class FunctionSubWizard {
                     // executeSteps.push(new SqlDatabaseConnectionExecuteStep());
                     break;
                 case DurableBackend.Storage:
-                    // FunctionSubWizard already takes care of AzureWebJobs logic...
                     break;
                 default:
             }
