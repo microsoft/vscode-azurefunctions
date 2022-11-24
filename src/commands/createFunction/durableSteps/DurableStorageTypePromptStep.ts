@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from "@microsoft/vscode-azext-utils";
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, openUrl } from "@microsoft/vscode-azext-utils";
 import { DurableBackend, DurableBackendValues } from "../../../constants";
 import { localize } from "../../../localize";
 import { FunctionSubWizard } from "../FunctionSubWizard";
@@ -24,14 +24,24 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
             getDurableStorageLabel('Netherite'),
             getDurableStorageLabel('SQL')
         ];
+        const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
-        const picks: IAzureQuickPickItem<DurableBackendValues>[] = [
-            { label: durableStorageLabels[0], data: DurableBackend.Storage },
+        const picks: IAzureQuickPickItem<DurableBackendValues | undefined>[] = [
+            { label: durableStorageLabels[0], description: localize('default', '(Default)'), data: DurableBackend.Storage },
             { label: durableStorageLabels[1], data: DurableBackend.Netherite },
-            { label: durableStorageLabels[2], data: DurableBackend.SQL }
+            { label: durableStorageLabels[2], data: DurableBackend.SQL },
+            { label: durableStorageInfo, data: undefined, suppressPersistence: true }
         ];
-        context.newDurableStorageType = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+
+        let pick: DurableBackendValues | undefined;
+        while (!pick) {
+            pick = (await context.ui.showQuickPick(picks, { placeHolder })).data;
+            if (!pick) {
+                await openUrl('https://aka.ms/durable-storage-providers');
+            }
+        }
+        context.newDurableStorageType = pick;
     }
 
     public shouldPrompt(context: T): boolean {
