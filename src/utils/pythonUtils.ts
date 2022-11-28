@@ -21,12 +21,6 @@ export namespace pythonUtils {
             return;
         }
 
-        if (!await AzExtFsExtra.pathExists(requirementsPath)) {
-            const failed: string = localize('failedToAddPythonDependency', 'Failed to add Python dependency "{0}" to "{1}".', dependency, requirementsFileName);
-            ext.outputChannel.appendLog(failed);
-            return;
-        }
-
         const contents: string = await AzExtFsExtra.readFile(requirementsPath);
         const lines: string[] = contents.split('\n');
 
