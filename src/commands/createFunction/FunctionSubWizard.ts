@@ -19,6 +19,7 @@ import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNa
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { ConfigureDurableProjectStep } from './durableSteps/ConfigureDurableProjectStep';
 import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
 import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -90,21 +91,26 @@ export class FunctionSubWizard {
                     break;
             }
 
-            // To be removed in next PR
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Netherite:
-                    promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
-                    executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
-                    break;
-                case DurableBackend.SQL:
-                    // Todo: Uncomment out in future PR
-                    // promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
-                    // executeSteps.push(new SqlDatabaseConnectionExecuteStep());
-                    break;
-                case DurableBackend.Storage:
-                    break;
-                default:
+            if (context.newDurableStorageType) {
+                // To be removed in next PR
+                switch (context.newDurableStorageType) {
+                    case DurableBackend.Netherite:
+                        promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
+                        executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
+                        break;
+                    case DurableBackend.SQL:
+                        // Todo: Uncomment out in future PR
+                        // promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
+                        // executeSteps.push(new SqlDatabaseConnectionExecuteStep());
+                        break;
+                    case DurableBackend.Storage:
+                        break;
+                    default:
+                }
+
+                executeSteps.push(new ConfigureDurableProjectStep());
             }
+
 
             // To be removed in next PR
             if (context.newDurableStorageType || (!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {

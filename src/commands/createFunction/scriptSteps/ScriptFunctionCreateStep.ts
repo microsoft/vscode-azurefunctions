@@ -3,18 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { functionJsonFileName, ProjectLanguage } from '../../../constants';
-import { ext } from '../../../extensionVariables';
 import { IFunctionBinding, IFunctionJson } from '../../../funcConfig/function';
-import { localize } from '../../../localize';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
-import { cpUtils } from '../../../utils/cpUtils';
-import { durableUtils } from '../../../utils/durableUtils';
 import { nonNullProp } from '../../../utils/nonNull';
-import { pythonUtils } from '../../../utils/pythonUtils';
-import { venvUtils } from '../../../utils/venvUtils';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
@@ -64,32 +58,6 @@ export class ScriptFunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         const fileName: string | undefined = getScriptFileNameFromLanguage(language);
 
         return fileName ? path.join(functionPath, fileName) : functionJsonPath;
-    }
-
-    protected async _installDurableDependencies(context: IScriptFunctionWizardContext): Promise<void> {
-        const language: ProjectLanguage = nonNullProp(context, 'language');
-
-        try {
-            switch (language) {
-                case ProjectLanguage.JavaScript:
-                case ProjectLanguage.TypeScript:
-                    await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', durableUtils.nodeDfPackage);
-                    break;
-                case ProjectLanguage.PowerShell:
-                    // Todo: Revisit when adding PowerShell implementation
-                    break;
-                case ProjectLanguage.Python:
-                    await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
-                    await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
-                    break;
-                default:
-            }
-        } catch (error) {
-            const pError: IParsedError = parseError(error);
-            const dfDepInstallFailed: string = localize('failedToAddDurableDependency', 'Failed to add or install durable package dependency. Please inspect and verify if it needs to be added manually.');
-            ext.outputChannel.appendLog(pError.message);
-            ext.outputChannel.appendLog(dfDepInstallFailed);
-        }
     }
 
     protected editFunctionJson?(context: IScriptFunctionWizardContext, functionJson: IFunctionJson): Promise<void>;

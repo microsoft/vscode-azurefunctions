@@ -5,14 +5,11 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { DurableBackend } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { FuncVersion } from '../../../FuncVersion';
-import { localize } from '../../../localize';
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
 import { IFunctionTemplate } from '../../../templates/IFunctionTemplate';
 import { cpUtils } from '../../../utils/cpUtils';
-import { durableUtils } from '../../../utils/durableUtils';
 import { nonNullProp } from '../../../utils/nonNull';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { getBindingSetting } from '../IFunctionWizardContext';
@@ -57,35 +54,5 @@ export class DotnetFunctionCreateStep extends FunctionCreateStepBase<IDotnetFunc
         await executeDotnetTemplateCommand(context, version, projectTemplateKey, context.projectPath, 'create', '--identity', template.id, ...args);
 
         return path.join(context.projectPath, functionName + getFileExtension(context));
-    }
-
-    protected async _installDurableDependencies(context: IDotnetFunctionWizardContext): Promise<void> {
-        const packageNames: string[] = [];
-        switch (context.newDurableStorageType) {
-            case DurableBackend.Netherite:
-                packageNames.push(durableUtils.dotnetDfNetheritePackage);
-                break;
-            case DurableBackend.SQL:
-                packageNames.push(durableUtils.dotnetDfSqlPackage);
-                break;
-            case DurableBackend.Storage:
-            default:
-        }
-
-        // Seems that the package arrives out-dated and needs to be updated
-        packageNames.push(durableUtils.dotnetDfBasePackage);
-
-        const failedPackages: string[] = [];
-        for (const packageName of packageNames) {
-            try {
-                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
-            } catch {
-                failedPackages.push(packageName);
-            }
-        }
-
-        if (failedPackages.length) {
-            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', failedPackages.join('", "')));
-        }
     }
 }
