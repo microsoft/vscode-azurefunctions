@@ -5,10 +5,9 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { nodejsNewModelPreview, previewNodejsModel, previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { nodejsNewModelPreview, previewNodejsModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { isNodeV4Plus } from '../../utils/pythonUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
@@ -25,7 +24,7 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
     public async prompt(context: IProjectWizardContext): Promise<void> {
         // Display all languages, even if we don't have full support for them
-        let languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [
+        const languagePicks: IAzureQuickPickItem<{ language: ProjectLanguage, model?: number }>[] = [
             { label: ProjectLanguage.CSharp, data: { language: ProjectLanguage.CSharp } },
             { label: ProjectLanguage.CSharpScript, data: { language: ProjectLanguage.CSharpScript } },
             { label: ProjectLanguage.FSharp, data: { language: ProjectLanguage.FSharp } },
@@ -39,12 +38,6 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: nodejsNewModelPreview, data: { language: ProjectLanguage.TypeScript, model: previewNodejsModel } },
             { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];
-
-        if (!getWorkspaceSetting(pysteinModelSetting)) {
-            languagePicks = languagePicks.filter(p => {
-                return p.label !== pythonNewModelPreview;
-            })
-        }
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', "Select your project's language") };
         const option = await context.ui.showQuickPick(languagePicks, options);

@@ -5,9 +5,8 @@
 
 import { FunctionEnvelope } from '@azure/arm-appservice';
 import { AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import { isArray } from 'util';
+import * as retry from 'p-retry';
 import { localize } from '../../localize';
-import { delay } from '../../utils/delay';
 import { FunctionsTreeItemBase } from '../FunctionsTreeItemBase';
 import { SlotTreeItem } from '../SlotTreeItem';
 import { getFunctionNameFromId, RemoteFunctionTreeItem } from './RemoteFunctionTreeItem';
@@ -42,28 +41,36 @@ export class RemoteFunctionsTreeItem extends FunctionsTreeItemBase {
             this._nextLink = undefined;
         }
 
+        /*
+            Related to issue: https://github.com/microsoft/vscode-azurefunctions/issues/3179
+            Sometimes receive a 'BadGateway' error on initial fetch, but consecutive re-fetching usually fixes the issue.
+            Under these circumstances, we will attempt to do the call 3 times during warmup before throwing the error.
+        */
+        const retries = 3;
         const client = await this.parent.site.createClient(context);
-        let funcs: FunctionEnvelope[];
-        const maxTime = Date.now() + 2 * 60 * 1000;
-        let attempt = 1;
-        while (true) {
-            // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-            funcs = await client.listFunctions();
 
-            // https://github.com/Azure/azure-functions-host/issues/3502
-            if (!isArray(funcs)) {
-                throw new Error(localize('failedToList', 'Failed to list functions.'));
-            }
+        const funcs = await retry<FunctionEnvelope[]>(
+            async (attempt: number) => {
+                // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+                const response = await client.listFunctions();
+                const failedToList = localize('failedToList', 'Failed to list functions.');
 
-            // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
-            if (Date.now() > maxTime || !(funcs.length === 1 && isWarmupFunction(funcs[0]))) {
-                context.telemetry.measurements.listFunctionsAttempt = attempt;
-                break;
-            } else {
-                attempt += 1;
-                await delay(10 * 1000);
-            }
-        }
+                // https://github.com/Azure/azure-functions-host/issues/3502
+                if (!Array.isArray(response)) {
+                    throw new Error(failedToList);
+                }
+
+                // Retry listing functions if all we see is a "WarmUp" function, an internal function that goes away once the app is ...warmed up
+                if (!(response.length === 1 && isWarmupFunction(response[0]))) {
+                    context.telemetry.measurements.listFunctionsAttempt = attempt;
+                } else {
+                    throw new Error(failedToList);
+                }
+
+                return response;
+            },
+            { retries, minTimeout: 10 * 1000 }
+        );
 
         return await this.createTreeItemsWithErrorHandling(
             funcs,

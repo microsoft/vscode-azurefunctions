@@ -72,7 +72,8 @@ export async function registerProviders(context: ICreateFunctionAppContext, subs
     });
 
     const storageProvider = 'Microsoft.Storage';
-    const providerExecuteSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] = [new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights'])];
+    const providerExecuteSteps: AzureWizardExecuteStep<IAppServiceWizardContext>[] =
+        [new VerifyProvidersStep([webProvider, storageProvider, 'Microsoft.Insights', 'Microsoft.OperationalInsights'])];
     const providerWizard: AzureWizard<IFunctionAppWizardContext> = new AzureWizard(providerContext, { executeSteps: providerExecuteSteps });
 
     await providerWizard.execute();

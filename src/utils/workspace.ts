@@ -27,7 +27,7 @@ export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: 
 }
 
 function escapeCharacters(nonPattern: string): string {
-    return nonPattern.replace(/[$^*+?()[\]]/g, '\\$&')
+    return nonPattern.replace(/[$^*+?()\[\]\\]/g, '\\$&')
 }
 
 export async function selectWorkspaceFolder(context: IActionContext, placeHolder: string, getSubPath?: (f: vscode.WorkspaceFolder) => string | undefined | Promise<string | undefined>): Promise<string> {

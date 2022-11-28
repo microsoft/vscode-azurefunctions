@@ -5,12 +5,11 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewNodejsModel, previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { previewNodejsModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
 import { isPythonV2Plus } from '../../utils/pythonUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
@@ -55,12 +54,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             languagePicks = languagePicks.filter(p => {
                 return p.data !== undefined && context.languageFilter?.test(p.data.language);
             });
-        }
-
-        if (!getWorkspaceSetting(pysteinModelSetting)) {
-            languagePicks = languagePicks.filter(p => {
-                return p.label !== pythonNewModelPreview;
-            })
         }
 
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };

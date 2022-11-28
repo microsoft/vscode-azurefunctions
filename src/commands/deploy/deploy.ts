@@ -15,6 +15,7 @@ import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResou
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
+import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
@@ -37,6 +38,14 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     addLocalFuncTelemetry(actionContext, deployPaths.workspaceFolder.uri.fsPath);
 
     const context: IDeployContext = Object.assign(actionContext, deployPaths, { defaultAppSetting: 'defaultFunctionAppToDeploy' });
+    if (treeUtils.isAzExtTreeItem(arg1)) {
+        if (!arg1.contextValue.match(ResolvedFunctionAppResource.pickSlotContextValue) &&
+            !arg1.contextValue.match(ResolvedFunctionAppResource.productionContextValue)) {
+            // if the user uses the deploy button, it's possible for the local project node to be passed in, so we should reset it to undefined
+            arg1 = undefined;
+        }
+    }
+
     const node: SlotTreeItem = await getDeployNode(context, ext.rgApi.tree, arg1, arg2, async () => ext.rgApi.pickAppResource(context, {
         filter: functionFilter,
         expectedChildContextValue: expectedContextValue

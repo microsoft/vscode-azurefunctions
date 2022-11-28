@@ -85,7 +85,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         context.telemetry.properties.projectLanguage = language;
 
         // Ensure all the providers are registered before
-        await registerProviders(context, subscription);
+        const registerProvidersTask = registerProviders(context, subscription);
 
         const wizardContext: IFunctionAppWizardContext = Object.assign(context, subscription.subscription, {
             newSiteKind: AppKind.functionapp,
@@ -149,6 +149,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const wizard: AzureWizard<IAppServiceWizardContext> = new AzureWizard(wizardContext, { promptSteps, executeSteps, title });
 
         await wizard.prompt();
+        // if the providers aren't registered yet, await it here because it is required by this point
+        await registerProvidersTask;
         if (!context.advancedCreation) {
             const newName: string | undefined = await wizardContext.relatedNameTask;
             if (!newName) {

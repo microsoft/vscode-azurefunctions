@@ -31,7 +31,6 @@ suite(`AzureFunctionsExtensionApi`, () => {
         await runWithInputs('api.createFunction', [language, functionName], registerOnActionStartHandler, async () => {
             await api.createFunction({
                 folderPath,
-                suppressCreateProjectPrompt: true,
                 suppressOpenFolder: true,
                 templateId: 'HttpTrigger',
                 languageFilter: /Python|C\#|^(Java|Type)Script$/i,
@@ -63,7 +62,6 @@ suite(`AzureFunctionsExtensionApi`, () => {
                 templateId: 'HttpTrigger',
                 languageFilter: /^(Java|Type)Script$/i,
                 functionSettings: { authLevel: 'anonymous' },
-                suppressCreateProjectPrompt: true,
                 suppressOpenFolder: true
             });
         });
