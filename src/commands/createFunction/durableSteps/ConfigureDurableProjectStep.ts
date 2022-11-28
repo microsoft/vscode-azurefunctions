@@ -74,7 +74,8 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
                 await this._installNodeDependencies(context);
                 break;
             case ProjectLanguage.Python:
-                await this._installPythonDependencies(context);
+                await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
                 break;
             case ProjectLanguage.PowerShell:
                 // Todo: Revisit when adding PowerShell implementation
@@ -92,19 +93,6 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
             ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
-    }
-
-    private async _installPythonDependencies(context: T): Promise<void> {
-        try {
-            await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
-        } catch (error) {
-            const pError: IParsedError = parseError(error);
-            const dfDepInstallFailed: string = localize('failedToAddDurablePythonDependency', 'Failed to add the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.pythonDfPackage);
-            ext.outputChannel.appendLog(pError.message);
-            ext.outputChannel.appendLog(dfDepInstallFailed);
-        }
-
-        await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
     }
 
     private async _installDotnetDependencies(context: T): Promise<void> {
