@@ -63,7 +63,7 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
     private async _installDurableDependencies(context: T): Promise<void> {
         switch (context.language) {
             case ProjectLanguage.Java:
-                // Todo: Add with future implementation
+                // Todo: Revisit when adding Java implementation
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:

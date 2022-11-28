@@ -111,7 +111,6 @@ export class FunctionSubWizard {
                 executeSteps.push(new ConfigureDurableProjectStep());
             }
 
-
             // To be removed in next PR
             if (context.newDurableStorageType || (!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
