@@ -41,7 +41,11 @@ export class NodeProgrammingModelProjectCreateStep extends JavaScriptProjectCrea
 
     protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
         const packageJson = super.getPackageJson(context)
-        packageJson.main = context.language === ProjectLanguage.TypeScript ? path.join('dist', 'src', 'functions', ' *.js') : path.join('src', 'functions', ' *.js')
+        packageJson.main =
+            context.language === ProjectLanguage.TypeScript ?
+                path.posix.join('dist', 'src', 'functions', ' *.js') :
+                path.posix.join('src', 'functions', ' *.js')
+
         return packageJson;
     }
 

@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { nodejsNewModelPreview, previewNodejsModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
+import { previewPythonModel, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { isNodeV4Plus } from '../../utils/pythonUtils';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
@@ -33,9 +33,8 @@ export class InitVSCodeLanguageStep extends AzureWizardPromptStep<IProjectWizard
             { label: ProjectLanguage.JavaScript, data: { language: ProjectLanguage.JavaScript } },
             { label: ProjectLanguage.PowerShell, data: { language: ProjectLanguage.PowerShell } },
             { label: ProjectLanguage.Python, data: { language: ProjectLanguage.Python } },
-            { label: pythonNewModelPreview, data: { language: ProjectLanguage.Python, model: previewPythonModel } },
+            { label: previewPythonModel.label, data: { language: ProjectLanguage.Python, model: previewPythonModel.modelVersion } },
             { label: ProjectLanguage.TypeScript, data: { language: ProjectLanguage.TypeScript } },
-            { label: nodejsNewModelPreview, data: { language: ProjectLanguage.TypeScript, model: previewNodejsModel } },
             { label: ProjectLanguage.Custom, data: { language: ProjectLanguage.Custom } }
         ];
 

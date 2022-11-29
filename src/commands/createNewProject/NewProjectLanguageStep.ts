@@ -78,10 +78,16 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
-                promptSteps.push(new NewProjectModelStep([previewNodejsModel]))
+                promptSteps.push(new NewProjectModelStep({
+                    modelVersion: previewNodejsModel,
+                    label: 'Node Programming Model (Preview)'
+                }));
                 break;
             case ProjectLanguage.TypeScript:
-                promptSteps.push(new NewProjectModelStep([previewNodejsModel]))
+                promptSteps.push(new NewProjectModelStep({
+                    modelVersion: previewNodejsModel,
+                    label: 'Node Programming Model (Preview)'
+                }))
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:

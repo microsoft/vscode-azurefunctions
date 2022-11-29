@@ -1040,6 +1040,12 @@
                         "type": "string",
                         "default": "src/functions",
                         "description": "%azureFunctions.functionSubpath%"
+                    },
+                    "azureFunctions.showNodeProgrammingModel": {
+                        "scope": "resource",
+                        "type": "boolean",
+                        "description": "%azureFunctions.showNodeProgrammingModel%",
+                        "default": false
                     }
                 }
             }

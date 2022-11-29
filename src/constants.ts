@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ProgrammingModel } from "./commands/createNewProject/NewProjectModelStep";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -21,6 +22,7 @@ export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
 export const functionSubpathSetting: string = 'functionSubpath';
+export const nodeProgrammingModelSetting: string = 'showNodeProgrammingModel';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -34,14 +36,6 @@ export enum ProjectLanguage {
     TypeScript = 'TypeScript',
     Custom = 'Custom'
 }
-
-/**
- * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
- * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
- * Any significantly changed new model should use an incremented number.
- */
-export const previewPythonModel: number = 2;
-export const previewNodejsModel: number = 4;
 
 export enum TemplateFilter {
     All = 'All',
@@ -110,6 +104,14 @@ export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
 export const nodejsNewModelPreview: string = localize('nodejsNewModelPreview', 'Node.js (Programming Model V4)')
+
+/**
+ * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
+ * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
+ * Any significantly changed new model should use an incremented number.
+ */
+export const previewPythonModel: ProgrammingModel = { modelVersion: 2, label: `${pythonNewModelPreview} ${previewDescription}` };
+export const previewNodejsModel: ProgrammingModel = { modelVersion: 4, label: `${nodejsNewModelPreview} ${previewDescription}` };
 
 
 export const webProvider: string = 'Microsoft.Web';

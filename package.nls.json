@@ -102,5 +102,6 @@
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
     "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.functionSubpath": "The default subpath to create new functions."
+    "azureFunctions.functionSubpath": "The default subpath to create new functions.",
+    "azureFunctions.showNodeProgrammingModel": "Enable Node.js (New Model Preview)"
 }

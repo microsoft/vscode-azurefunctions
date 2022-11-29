@@ -5,19 +5,24 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { ProjectLanguage } from '../../constants';
+import { nodeProgrammingModelSetting, ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { isNodeV4Plus } from '../../utils/pythonUtils';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { NodeProgrammingModelProjectCreateStep } from './ProjectCreateStep/NodeProgrammingModelProjectCreateStep';
 import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
 
+export type ProgrammingModel = {
+    modelVersion: number,
+    label: string
+}
 export class NewProjectModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
-    private _models: number[] = [];
+    private _models: ProgrammingModel[] = [];
 
-    public constructor(models: number | number[]) {
+    public constructor(models: ProgrammingModel | ProgrammingModel[]) {
         super();
         this._models = Array.isArray(models) ? models : [models];
     }
@@ -26,8 +31,8 @@ export class NewProjectModelStep extends AzureWizardPromptStep<IProjectWizardCon
         // Only display 'supported' languages that can be debugged in VS Code
         const modelsPick: IAzureQuickPickItem<number | undefined>[] = this._models.map(model => {
             return {
-                label: model.toString(),
-                data: model
+                label: model.label,
+                data: model.modelVersion
             }
         });
 
@@ -40,7 +45,7 @@ export class NewProjectModelStep extends AzureWizardPromptStep<IProjectWizardCon
     }
 
     public shouldPrompt(context: IProjectWizardContext): boolean {
-        return context.languageModel === undefined;
+        return context.languageModel === undefined && !!getWorkspaceSetting(nodeProgrammingModelSetting);
     }
 
     public async getSubWizard(context: IProjectWizardContext): Promise<IWizardOptions<IProjectWizardContext> | undefined> {
