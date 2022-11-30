@@ -19,7 +19,7 @@ import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNa
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
-import { ConfigureDurableProjectStep } from './durableSteps/ConfigureDurableProjectStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
 import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -108,7 +108,7 @@ export class FunctionSubWizard {
                     default:
                 }
 
-                executeSteps.push(new ConfigureDurableProjectStep());
+                executeSteps.push(new DurableProjectConfigureStep());
             }
 
             // To be removed in next PR

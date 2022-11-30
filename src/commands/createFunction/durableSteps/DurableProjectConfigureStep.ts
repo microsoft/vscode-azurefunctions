@@ -17,7 +17,7 @@ import { pythonUtils } from '../../../utils/pythonUtils';
 import { venvUtils } from '../../../utils/venvUtils';
 import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
-export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
+export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 225;
 
     public async execute(context: T, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
@@ -25,7 +25,7 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
         progress.report({ message: configuring });
 
         await this._configureHostAndLocalSettingsJson(context);
-        await this._installDurableDependencies(context);
+        await this._tryInstallDurableDependencies(context);
     }
 
     public shouldExecute(context: T): boolean {
@@ -45,6 +45,7 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
         switch (context.newDurableStorageType) {
             case DurableBackend.Storage:
                 hostJson.extensions.durableTask = durableUtils.getDefaultStorageTaskConfig();
+                // Omit setting azureWebJobsStorage since it should already be initialized during 'createNewProject'
                 break;
             case DurableBackend.Netherite:
                 hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
@@ -60,7 +61,7 @@ export class ConfigureDurableProjectStep<T extends IFunctionWizardContext> exten
         await AzExtFsExtra.writeJSON(hostJsonPath, hostJson);
     }
 
-    private async _installDurableDependencies(context: T): Promise<void> {
+    private async _tryInstallDurableDependencies(context: T): Promise<void> {
         switch (context.language) {
             case ProjectLanguage.Java:
                 // Todo: Revisit when adding Java implementation
