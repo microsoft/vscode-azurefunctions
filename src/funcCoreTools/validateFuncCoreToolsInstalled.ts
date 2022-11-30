@@ -51,9 +51,9 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 if (linuxDistroTag) {
                     message += ' ';
                     if (linuxDistroTag['PRETTY_NAME']) {
-                        message += localize('linuxDistributionInfoPretty', 'You are currently running: "{0}".', linuxDistroTag['PRETTY_NAME'])
+                        message += localize('linuxDistributionInfoPretty', 'We detected that you are currently running "{0}".', linuxDistroTag['PRETTY_NAME'])
                     } else if (linuxDistroTag['NAME'] && linuxDistroTag['VERSION']) {
-                        message += localize('linuxDistributionInfo', 'You are currently running: "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
+                        message += localize('linuxDistributionInfo', 'We detected that you are currently running "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
                     }
                 }
             }
