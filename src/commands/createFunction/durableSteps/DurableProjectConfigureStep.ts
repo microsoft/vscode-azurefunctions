@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizardExecuteStep, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from "path";
-import { Progress } from 'vscode';
+import { Progress, window } from 'vscode';
 import { ConnectionKey, DurableBackend, hostFileName, ProjectLanguage } from '../../../constants';
+import { viewOutput } from '../../../constants-nls';
 import { ext } from '../../../extensionVariables';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
@@ -34,9 +35,21 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
 
     private async _configureHostAndLocalSettingsJson(context: T): Promise<void> {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
+
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
-            const message: string = localize('failedToFindHost', 'Failed to find "{0}" in your project root.', hostFileName);
-            throw new Error(message);
+            const message: string = localize('durableHostConfigFailed', 'Unable to find and configure "{0}" in your project root. You may need to configure your durable function settings manually.', hostFileName);
+            ext.outputChannel.appendLog(message);
+
+            await callWithTelemetryAndErrorHandling('durableHostConfigFailed', async () => {
+                const notification: string = localize('failedToConfigureHost', 'Failed to configure your "{0}"', hostFileName);
+                void window.showInformationMessage(notification, viewOutput).then(result => {
+                    if (result === viewOutput) {
+                        ext.outputChannel.show();
+                    }
+                });
+            });
+
+            return;
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath) as IHostJsonV2;
