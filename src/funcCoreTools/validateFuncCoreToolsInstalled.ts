@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
+import * as os from "os";
 import { MessageItem } from 'vscode';
 import { funcVersionSetting, PackageManager } from '../constants';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -13,6 +14,7 @@ import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
+import { getLinuxDistroTag, LinuxDistroTag } from './getLinuxDistroTag';
 import { installFuncCoreTools } from './installFuncCoreTools';
 
 export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
@@ -44,9 +46,20 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 items.push(DialogResponses.learnMore);
             }
 
+            if (os.platform() === 'linux') {
+                const linuxDistroTag: LinuxDistroTag | undefined = await getLinuxDistroTag();
+                if (linuxDistroTag) {
+                    message += ' ';
+                    if (linuxDistroTag['PRETTY_NAME']) {
+                        message += localize('linuxDistributionInfoPretty', 'You are currently running: "{0}".', linuxDistroTag['PRETTY_NAME'])
+                    } else if (linuxDistroTag['NAME'] && linuxDistroTag['VERSION']) {
+                        message += localize('linuxDistributionInfo', 'You are currently running: "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
+                    }
+                }
+            }
+
             // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
             input = await innerContext.ui.showWarningMessage(message, { modal: true }, ...items);
-
             innerContext.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
