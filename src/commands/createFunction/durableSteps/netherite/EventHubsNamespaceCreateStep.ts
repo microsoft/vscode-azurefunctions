@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzExtLocation, LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -22,8 +23,9 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
         progress.report({ message: creating });
 
         const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
+        const location: AzExtLocation = await LocationListStep.getLocation(<T & ISubscriptionContext>context);
         const defaultParams: EHNamespace = {
-            location: nonNullValue(context.resourceGroup?.location),
+            location: nonNullProp(location, 'name'),
             sku: {
                 name: 'Standard',
                 capacity: 1
