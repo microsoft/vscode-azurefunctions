@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 
-const linuxDistroTagKeys: string[] = ['ID', 'NAME', 'PRETTY_NAME', 'VERSION'];
+const linuxDistroTagKeys = ['ID', 'NAME', 'PRETTY_NAME', 'VERSION'] as const;
 
 export type LinuxDistroTag = Partial<Record<typeof linuxDistroTagKeys[number], string>>;
 
@@ -23,7 +23,7 @@ export async function getLinuxDistroTag(): Promise<LinuxDistroTag | undefined> {
 
     for (const line of lines) {
         const [key, value] = line.split('=');
-        if (linuxDistroTagKeys.includes(key)) {
+        if (linuxDistroTagKeys.includes(key as typeof linuxDistroTagKeys[number])) {
             linuxDistroTag[key] = value.replace(/['"]+/g, '');
         }
     }
