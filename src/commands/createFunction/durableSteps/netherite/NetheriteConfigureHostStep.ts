@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ext } from '@microsoft/vscode-azext-azureappservice/out/src/extensionVariables';
 import { AzExtFsExtra, AzureWizardExecuteStep, callWithTelemetryAndErrorHandling, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { window } from 'vscode';
 import { hostFileName } from '../../../../constants';
 import { viewOutput } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
 import { IHostJsonV2, INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { netheriteUtils } from '../../../../utils/durableUtils';
