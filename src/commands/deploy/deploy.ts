@@ -5,23 +5,23 @@
 
 import { SiteConfigResource } from '@azure/arm-appservice';
 import { deploy as innerDeploy, getDeployFsPath, getDeployNode, IDeployContext, IDeployPaths, showDeployConfirmation } from '@microsoft/vscode-azext-azureappservice';
-import { DialogResponses, IActionContext, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
+import { DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { deploySubpathSetting, functionFilter, ProjectLanguage, remoteBuildSetting, ScmType } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { addLocalFuncTelemetry, getLocalFuncCoreToolsVersion } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
-import { FuncVersion, funcVersionLink, tryParseFuncVersion } from '../../FuncVersion';
+import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { dotnetUtils } from '../../utils/dotnetUtils';
 import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
-import { getWorkspaceSetting, updateGlobalSetting } from '../../vsCodeConfig/settings';
+import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
+import { showCoreToolsWarning } from './showCoreToolsWarning';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
@@ -63,34 +63,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    const showCoreToolsWarningKey: string = 'showCoreToolsWarning';
-    if (getWorkspaceSetting<boolean>(showCoreToolsWarningKey)) {
-        const coreToolsVersion = await getLocalFuncCoreToolsVersion(context, undefined)
-        if (coreToolsVersion !== null) {
-            const localVersion = nonNullValue(tryParseFuncVersion(coreToolsVersion), 'localCoreToolsVersion');
-            let result: vscode.MessageItem | undefined;
-
-            if (localVersion === FuncVersion.v2 || localVersion === FuncVersion.v3) {
-                result = await showCoreToolsEOLWarning(context, localVersion);
-                while (result === DialogResponses.learnMore) {
-                    await openUrl(funcVersionLink);
-                    result = await showCoreToolsEOLWarning(context, localVersion);
-                }
-                if (result === DialogResponses.dontWarnAgain) {
-                    await updateGlobalSetting(showCoreToolsWarningKey, false);
-                }
-            } else if (localVersion !== version) {
-                result = await showCoreToolsMismatchWarning(context, localVersion, version);
-                while (result === DialogResponses.learnMore) {
-                    await openUrl(funcVersionLink);
-                    result = await showCoreToolsMismatchWarning(context, localVersion, version);
-                }
-                if (result === DialogResponses.dontWarnAgain) {
-                    await updateGlobalSetting(showCoreToolsWarningKey, false);
-                }
-            }
-        }
-    }
+    await showCoreToolsWarning(context, version);
 
     const client = await node.site.createClient(actionContext);
     const siteConfig: SiteConfigResource = await client.getSiteConfig();
@@ -190,23 +163,4 @@ async function validateGlobSettings(context: IActionContext, fsPath: string): Pr
         const message: string = localize('globSettingRemoved', '"{0}" and "{1}" settings are no longer supported. Instead, place a ".funcignore" file at the root of your repo, using the same syntax as a ".gitignore" file.', includeKey, excludeKey);
         await context.ui.showWarningMessage(message, { stepName: 'globSettingRemoved' });
     }
-}
-
-async function showCoreToolsEOLWarning(context: IActionContext, localVersion: FuncVersion): Promise<vscode.MessageItem> {
-    const message = localize(
-        'outdatedFunctionRuntime',
-        'Your Azure Functions Core Tools Version ({0}) is past its end of life. Update to the latest version for the best experience.',
-        localVersion
-    );
-    return await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain)
-}
-
-async function showCoreToolsMismatchWarning(context: IActionContext, localVersion: FuncVersion, projectVersion: FuncVersion): Promise<vscode.MessageItem> {
-    const message = localize(
-        'mismatchedFunctionRuntime',
-        'Your Azure Functions Core Tools Version ({0}) does not match your Azure Functions runtime version ({1}). Update to the latest version for the best experience.',
-        localVersion,
-        projectVersion
-    );
-    return await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain)
 }
