@@ -8,11 +8,10 @@ import * as path from 'path';
 import { ProjectLanguage } from '../../../constants';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
-import { IPythonFunctionWizardContext } from './IPythonFunctionWizardContext';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { getScriptFileNameFromLanguage } from './ScriptFunctionCreateStep';
 
-export class NodeProgrammingModelFunctionCreateStep extends FunctionCreateStepBase<IPythonFunctionWizardContext> {
+export class NodeProgrammingModelFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
         const functionPath = path.join(context.projectPath, 'src', 'functions');
         await AzExtFsExtra.ensureDir(functionPath);

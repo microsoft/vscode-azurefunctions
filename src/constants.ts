@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ProgrammingModel } from "./commands/createNewProject/NewProjectModelStep";
 import { localize } from "./localize";
 
 export const extensionId: string = 'ms-azuretools.vscode-azurefunctions';
@@ -36,6 +35,13 @@ export enum ProjectLanguage {
     TypeScript = 'TypeScript',
     Custom = 'Custom'
 }
+
+/**
+ * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
+ * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
+ * Any significantly changed new model should use an incremented number.
+ */
+export const previewPythonModel: number = 2;
 
 export enum TemplateFilter {
     All = 'All',
@@ -103,15 +109,17 @@ export const contentShareKey: string = 'WEBSITE_CONTENTSHARE';
 export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
-export const nodejsNewModelPreview: string = localize('nodejsNewModelPreview', 'Node.js (Programming Model V4)')
 
 /**
- * The "original" (i.e. first) Python model is 1 (and assumed, if the number is omitted).
- * The new (i.e. second) Python model (i.e. with binding attributes, now in Preview) is 2.
+ * The "current" Node.js model is 3 (and assumed, if the number is omitted).
+ * The new Node.js model is 4.
  * Any significantly changed new model should use an incremented number.
  */
-export const previewPythonModel: ProgrammingModel = { modelVersion: 2, label: `${pythonNewModelPreview} ${previewDescription}` };
-export const previewNodejsModel: ProgrammingModel = { modelVersion: 4, label: `${nodejsNewModelPreview} ${previewDescription}` };
+export const nodejsNewModelVersion: number = 4;
+export const nodejsNewModelLabel: string = localize('nodejsNewModelPreview', 'Programming Model V4 (Preview)')
+
+export const nodejsNewModel: { model: number, label: string } = { model: nodejsNewModelVersion, label: nodejsNewModelLabel };
+export const nodejsDefaultModel: { model: undefined, label: string } = { model: undefined, label: localize('nodejsNewModelPreview', 'Programming Model V3 (Default)') }
 
 
 export const webProvider: string = 'Microsoft.Web';
@@ -119,4 +127,5 @@ export const functionFilter = {
     type: 'microsoft.web/sites',
     kind: 'functionapp',
 };
+
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;

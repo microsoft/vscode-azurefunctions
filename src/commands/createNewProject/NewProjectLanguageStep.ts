@@ -5,7 +5,7 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewNodejsModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
+import { nodejsDefaultModel, nodejsNewModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
@@ -18,10 +18,12 @@ import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps
 import { NewProjectModelStep } from './NewProjectModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
+import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
 import { PowerShellProjectCreateStep } from './ProjectCreateStep/PowerShellProjectCreateStep';
 import { PysteinProjectCreateStep } from './ProjectCreateStep/PysteinProjectCreateStep';
 import { PythonProjectCreateStep } from './ProjectCreateStep/PythonProjectCreateStep';
 import { ScriptProjectCreateStep } from './ProjectCreateStep/ScriptProjectCreateStep';
+import { TypeScriptProjectCreateStep } from './ProjectCreateStep/TypeScriptProjectCreateStep';
 
 export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
@@ -78,16 +80,12 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
-                promptSteps.push(new NewProjectModelStep({
-                    modelVersion: previewNodejsModel,
-                    label: 'Node Programming Model (Preview)'
-                }));
+                promptSteps.push(new NewProjectModelStep([nodejsDefaultModel, nodejsNewModel]));
+                executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
             case ProjectLanguage.TypeScript:
-                promptSteps.push(new NewProjectModelStep({
-                    modelVersion: previewNodejsModel,
-                    label: 'Node Programming Model (Preview)'
-                }))
+                promptSteps.push(new NewProjectModelStep([nodejsDefaultModel, nodejsNewModel]));
+                executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:

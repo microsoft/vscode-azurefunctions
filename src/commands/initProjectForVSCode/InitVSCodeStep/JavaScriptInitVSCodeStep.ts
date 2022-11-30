@@ -6,8 +6,9 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, nodejsNewModelVersion, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
+import { FuncVersion } from '../../../FuncVersion';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
@@ -15,6 +16,7 @@ import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
+const npmStartTaskLabel: string = convertToFunctionsTaskLabel('npm run start');
 
 export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     protected hasPackageJson: boolean;
@@ -29,10 +31,15 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         }
     }
 
-    protected getDebugConfiguration(): DebugConfiguration {
+    protected getDebugConfiguration(_version: FuncVersion, languageModel?: number): DebugConfiguration {
+        const debugConfig = { ...nodeDebugConfig };
+        if (languageModel === nodejsNewModelVersion)
+            debugConfig.preLaunchTask = npmStartTaskLabel;
+
         return nodeDebugConfig;
     }
 
+    // same but should probably be different
     protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         if (!this.hasPackageJson) {
             return super.getTasks(language);

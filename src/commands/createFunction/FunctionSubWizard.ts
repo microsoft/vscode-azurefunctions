@@ -70,30 +70,28 @@ export class FunctionSubWizard {
             addBindingSettingSteps(template.userPromptedSettings, promptSteps);
 
             const executeSteps: AzureWizardExecuteStep<IFunctionWizardContext>[] = [];
-            switch (context.language) {
-                case ProjectLanguage.Java:
-                    executeSteps.push(new JavaFunctionCreateStep());
-                    break;
-                case ProjectLanguage.CSharp:
-                case ProjectLanguage.FSharp:
-                    executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
-                    break;
-                case ProjectLanguage.JavaScript:
-                case ProjectLanguage.TypeScript:
-                    if (isNodeV4Plus(context.language, context.languageModel)) {
-                        executeSteps.push(new NodeProgrammingModelFunctionCreateStep());
-                    } else if (context.language === ProjectLanguage.TypeScript) {
+            if (isNodeV4Plus(context.language, context.languageModel)) {
+                executeSteps.push(new NodeProgrammingModelFunctionCreateStep());
+            } else {
+                switch (context.language) {
+                    case ProjectLanguage.Java:
+                        executeSteps.push(new JavaFunctionCreateStep());
+                        break;
+                    case ProjectLanguage.CSharp:
+                    case ProjectLanguage.FSharp:
+                        executeSteps.push(await DotnetFunctionCreateStep.createStep(context));
+                        break;
+                    case ProjectLanguage.TypeScript:
                         executeSteps.push(new TypeScriptFunctionCreateStep());
-                    }
-
-                    break;
-                default:
-                    if (isV2PythonModel) {
-                        executeSteps.push(new PythonFunctionCreateStep());
-                    } else {
-                        executeSteps.push(new ScriptFunctionCreateStep());
-                    }
-                    break;
+                        break;
+                    default:
+                        if (isV2PythonModel) {
+                            executeSteps.push(new PythonFunctionCreateStep());
+                        } else {
+                            executeSteps.push(new ScriptFunctionCreateStep());
+                        }
+                        break;
+                }
             }
 
             if ((!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getAzureWebJobsStorage(context, context.projectPath)) {

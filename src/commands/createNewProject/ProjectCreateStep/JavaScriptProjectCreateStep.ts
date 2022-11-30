@@ -6,12 +6,17 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
+import { functionSubpathSetting, nodejsNewModelVersion } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
+
+export const azureFunctionsDependency: string = '@azure/functions';
+export const azureFunctionsDependencyVersion: string = '^4.0.0-alpha.3';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = nodeGitignore;
@@ -41,14 +46,22 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     }
 
     protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
-        return {
+        const packageJson: { [key: string]: unknown } = {
             name: convertToValidPackageName(path.basename(context.projectPath)),
             version: '1.0.0',
             description: '',
             scripts: this.getPackageJsonScripts(context),
             dependencies: this.getPackageJsonDeps(context),
             devDependencies: this.getPackageJsonDevDeps(context)
+        };
+
+        if (context.languageModel === nodejsNewModelVersion) {
+            // default functionSubpath value is a string
+            const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
+            packageJson.main = path.posix.join(functionSubpath, '*.js');
         }
+
+        return packageJson;
     }
 
     protected getPackageJsonScripts(_context: IProjectWizardContext): { [key: string]: string } {
@@ -58,12 +71,22 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    protected getPackageJsonDeps(_context: IProjectWizardContext): { [key: string]: string } {
-        return {};
+    protected getPackageJsonDeps(context: IProjectWizardContext): { [key: string]: string } {
+        const deps: { [key: string]: string } = {};
+        if (context.languageModel === nodejsNewModelVersion)
+            deps[azureFunctionsDependency] = azureFunctionsDependencyVersion;
+
+        return deps;
     }
 
-    protected getPackageJsonDevDeps(_context: IProjectWizardContext): { [key: string]: string } {
-        return {};
+    protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {
+        const devDeps: { [key: string]: string } = {};
+        if (context.languageModel === nodejsNewModelVersion) {
+            devDeps['@types/node'] = '^18.0.0';
+            devDeps['func-cli-nodejs-v4'] = '4.0.4764'
+        }
+
+        return devDeps;
     }
 }
 

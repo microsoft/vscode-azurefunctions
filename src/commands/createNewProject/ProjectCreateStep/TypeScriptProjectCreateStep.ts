@@ -6,20 +6,15 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
+import { functionSubpathSetting, nodejsNewModelVersion, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
-export const typeScriptPackageJsonScripts: { [key: string]: string } = {
-    build: 'tsc',
-    watch: 'tsc -w',
-    prestart: 'npm run build',
-    start: 'func start',
-    test: 'echo \"No tests yet...\"'
-};
+
 export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
@@ -39,7 +34,28 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         }
     }
 
+    protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
+        const packageJson = super.getPackageJson(context);
+        if (context.languageModel === nodejsNewModelVersion) {
+            // default functionSubpath value is a string
+            const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
+
+            // this is set in the super class, but we want to override it
+            packageJson.main = path.posix.join('dist', functionSubpath, '*.js');
+        }
+
+        return packageJson;
+    }
+
     protected getPackageJsonScripts(_context: IProjectWizardContext): { [key: string]: string } {
+        const typeScriptPackageJsonScripts: { [key: string]: string } = {
+            build: 'tsc',
+            watch: 'tsc -w',
+            prestart: 'npm run build',
+            start: 'func start',
+            test: 'echo \"No tests yet...\"'
+        };
+
         return typeScriptPackageJsonScripts;
     }
 
@@ -67,10 +83,14 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                 throw new Error(localize('typeScriptNoV1', 'TypeScript projects are not supported on Azure Functions v1.'));
         }
 
-        return {
-            '@azure/functions': `^${funcTypesVersion}.0.0`,
-            '@types/node': `${nodeTypesVersion}.x`,
-            typescript: '^4.0.0',
-        };
+        const devDeps = super.getPackageJsonDevDeps(context);
+        if (context.languageModel !== nodejsNewModelVersion) {
+            // previous programming model requires @azure/functions as a dev dependency
+            devDeps['@azure/functions'] = `^${funcTypesVersion}.0.0`;
+            devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
+        }
+
+        devDeps['typescript'] = '^4.0.0';
+        return devDeps;
     }
 }

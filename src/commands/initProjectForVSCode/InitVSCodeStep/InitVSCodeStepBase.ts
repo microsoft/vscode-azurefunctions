@@ -39,7 +39,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const vscodePath: string = path.join(context.workspacePath, '.vscode');
         await AzExtFsExtra.ensureDir(vscodePath);
         await this.writeTasksJson(context, vscodePath, language);
-        await this.writeLaunchJson(context, context.workspaceFolder, vscodePath, version);
+        await this.writeLaunchJson(context, context.workspaceFolder, vscodePath, version, context.languageModel);
         await this.writeSettingsJson(context, vscodePath, language, context.languageModel, version);
         await this.writeExtensionsJson(context, vscodePath, language);
 
@@ -58,7 +58,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
 
     protected abstract executeCore(context: IProjectWizardContext): Promise<void>;
     protected abstract getTasks(language: ProjectLanguage): TaskDefinition[];
-    protected getDebugConfiguration?(version: FuncVersion): DebugConfiguration;
+    protected getDebugConfiguration?(version: FuncVersion, languageModel?: number): DebugConfiguration;
     protected getRecommendedExtensions?(language: ProjectLanguage): string[];
 
     protected setDeploySubpath(context: IProjectWizardContext, deploySubpath: string): string {
@@ -161,9 +161,9 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
     }
 
-    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
+    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion, languageModel?: number): Promise<void> {
         if (this.getDebugConfiguration) {
-            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version);
+            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version, languageModel);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
 
             // Use VS Code api to update config if folder is open and it's not a multi-root workspace (https://github.com/Microsoft/vscode-azurefunctions/issues/1235)
