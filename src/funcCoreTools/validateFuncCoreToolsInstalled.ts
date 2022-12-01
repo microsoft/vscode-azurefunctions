@@ -7,6 +7,7 @@ import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } fr
 import * as os from "os";
 import { MessageItem } from 'vscode';
 import { funcVersionSetting, PackageManager } from '../constants';
+import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
@@ -20,6 +21,7 @@ import { installFuncCoreTools } from './installFuncCoreTools';
 export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
+    let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will need to be installed manually. Try re-running the last command with "sudo" or click "Learn more" for more options.');
     const install: MessageItem = { title: localize('install', 'Install') };
 
     if (hasFuncCliSetting()) {
@@ -46,14 +48,22 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 items.push(DialogResponses.learnMore);
             }
 
-            if (os.platform() === 'linux' && !packageManagers.length) {
+            if (os.platform() === 'linux') {
                 const linuxDistroTag: LinuxDistroTag | undefined = await getLinuxDistroTag();
                 if (linuxDistroTag) {
-                    message += ' ';
+                    let linuxMessage: string = '';
                     if (linuxDistroTag['PRETTY_NAME']) {
-                        message += localize('linuxDistributionInfoPretty', 'We detected that you are currently running "{0}".', linuxDistroTag['PRETTY_NAME'])
+                        linuxMessage += localize('linuxDistributionInfoPretty', 'Note: You are currently running "{0}".', linuxDistroTag['PRETTY_NAME']);
                     } else if (linuxDistroTag['NAME'] && linuxDistroTag['VERSION']) {
-                        message += localize('linuxDistributionInfo', 'We detected that you are currently running "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
+                        linuxMessage += localize('linuxDistributionInfo', 'Note: You are currently running "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
+                    }
+
+                    if (linuxMessage) {
+                        if (!packageManagers.length) {
+                            message += ' ' + linuxMessage;
+                        } else {
+                            failedInstall += ' ' + linuxMessage;  // Can only fail to install if there's a package manager to try the installation with
+                        }
                     }
                 }
             }
@@ -74,7 +84,8 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        if (await context.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        ext.outputChannel.show();  // Make it easier for the user to find the last command in case they want to re-run with 'sudo'
+        if (await context.ui.showWarningMessage(failedInstall, DialogResponses.learnMore) === DialogResponses.learnMore) {
             await openUrl(getInstallUrl());
         }
     }
