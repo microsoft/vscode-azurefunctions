@@ -10,25 +10,21 @@ import { tryGetInstalledBrewPackageName } from './getBrewPackageName';
 
 export async function getFuncPackageManagers(isFuncInstalled: boolean): Promise<PackageManager[]> {
     const result: PackageManager[] = [];
-    switch (process.platform) {
-        case 'linux':
-            // https://github.com/Microsoft/vscode-azurefunctions/issues/311
-            break;
-        case 'darwin':
-            if (await hasBrew(isFuncInstalled)) {
-                result.push(PackageManager.brew);
-            }
-        // fall through to check npm on both mac and windows
-        default:
-            try {
-                isFuncInstalled ?
-                    await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', '-g', funcPackageName) :
-                    await cpUtils.executeCommand(undefined, undefined, 'npm', '--version');
-                result.push(PackageManager.npm);
-            } catch (error) {
-                // an error indicates no npm
-            }
+
+    if (process.platform === 'darwin' && await hasBrew(isFuncInstalled)) {
+        result.push(PackageManager.brew);
     }
+
+    // Always check for npm (mac, windows, linux)
+    try {
+        isFuncInstalled ?
+            await cpUtils.executeCommand(undefined, undefined, 'npm', 'ls', '-g', funcPackageName) :
+            await cpUtils.executeCommand(undefined, undefined, 'npm', '--version');
+        result.push(PackageManager.npm);
+    } catch (error) {
+        // an error indicates no npm
+    }
+
     return result;
 }
 

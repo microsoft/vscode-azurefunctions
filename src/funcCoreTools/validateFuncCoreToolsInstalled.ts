@@ -46,7 +46,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 items.push(DialogResponses.learnMore);
             }
 
-            if (os.platform() === 'linux') {
+            if (os.platform() === 'linux' && !packageManagers.length) {
                 const linuxDistroTag: LinuxDistroTag | undefined = await getLinuxDistroTag();
                 if (linuxDistroTag) {
                     message += ' ';
