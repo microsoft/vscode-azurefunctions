@@ -5,9 +5,10 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
+import { nodejsDefaultModel, nodejsNewModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { IProjectWizardContext } from '../createNewProject/IProjectWizardContext';
+import { ProgrammingModelStep } from '../createNewProject/ProgrammingModelStep';
 import { DotnetInitVSCodeStep } from './InitVSCodeStep/DotnetInitVSCodeStep';
 import { DotnetScriptInitVSCodeStep } from './InitVSCodeStep/DotnetScriptInitVSCodeStep';
 import { JavaScriptInitVSCodeStep } from './InitVSCodeStep/JavaScriptInitVSCodeStep';
@@ -61,9 +62,11 @@ export async function addInitVSCodeSteps(
 
     switch (context.language) {
         case ProjectLanguage.JavaScript:
+            promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
             executeSteps.push(new JavaScriptInitVSCodeStep());
             break;
         case ProjectLanguage.TypeScript:
+            promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
             executeSteps.push(new TypeScriptInitVSCodeStep());
             break;
         case ProjectLanguage.CSharp:

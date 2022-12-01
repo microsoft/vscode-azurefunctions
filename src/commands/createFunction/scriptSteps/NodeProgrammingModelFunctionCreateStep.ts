@@ -5,15 +5,17 @@
 
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { ProjectLanguage } from '../../../constants';
+import { functionSubpathSetting, ProjectLanguage } from '../../../constants';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
+import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 import { getScriptFileNameFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeProgrammingModelFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
-        const functionPath = path.join(context.projectPath, 'src', 'functions');
+        const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
+        const functionPath = path.join(context.projectPath, functionSubpath);
         await AzExtFsExtra.ensureDir(functionPath);
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
         await Promise.all(Object.keys(template.templateFiles).map(async f => {

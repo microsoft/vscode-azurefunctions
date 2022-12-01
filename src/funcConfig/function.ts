@@ -37,7 +37,6 @@ export class ParsedFunctionJson {
     public constructor(data: any) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (typeof data === 'object' && data !== null && (data.bindings === undefined || data.bindings instanceof Array)) {
-
             this.data = <IFunctionJson>data;
         } else {
             this.data = {};

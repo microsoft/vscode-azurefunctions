@@ -154,7 +154,7 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
                 return new ParsedFunctionJson(await AzExtFsExtra.readJSON(functionJsonPath));
             }));
 
-            // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.
+            // NOTE: Currently, Python V2+ and Node.js V4 requires storage to be configured, even for HTTP triggers.
             if (functions.some(f => !f.isHttpTrigger) || isPythonV2Plus(projectLanguage, projectLanguageModel) || isNodeV4Plus(projectLanguage, projectLanguageModel)) {
                 const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
                 const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {

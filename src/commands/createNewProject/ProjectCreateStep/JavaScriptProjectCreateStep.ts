@@ -20,7 +20,6 @@ export const azureFunctionsDependencyVersion: string = '^4.0.0-alpha.3';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = nodeGitignore;
-    protected isNodeProgrammingModel: boolean = false;
 
     constructor() {
         super();

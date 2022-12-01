@@ -161,9 +161,9 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         }
     }
 
-    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion, languageModel?: number): Promise<void> {
+    private async writeLaunchJson(context: IActionContext, folder: WorkspaceFolder | undefined, vscodePath: string, version: FuncVersion): Promise<void> {
         if (this.getDebugConfiguration) {
-            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version, languageModel);
+            const newDebugConfig: DebugConfiguration = this.getDebugConfiguration(version);
             const versionMismatchError: Error = new Error(localize('versionMismatchError', 'The version in your {0} must be "{1}" to work with Azure Functions.', launchFileName, launchVersion));
 
             // Use VS Code api to update config if folder is open and it's not a multi-root workspace (https://github.com/Microsoft/vscode-azurefunctions/issues/1235)

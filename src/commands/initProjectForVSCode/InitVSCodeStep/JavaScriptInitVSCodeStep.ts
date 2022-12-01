@@ -18,7 +18,7 @@ const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
 
 export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
-    protected hasPackageJson: boolean;
+    private hasPackageJson: boolean;
 
     protected async executeCore(context: IProjectWizardContext): Promise<void> {
         await super.executeCore(context);

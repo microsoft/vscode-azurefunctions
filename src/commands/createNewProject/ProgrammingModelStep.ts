@@ -11,7 +11,7 @@ import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
 
 type ProgrammingModel = { model: number | undefined, label: string };
-export class NewProjectModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
+export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardContext> {
     public hideStepCount: boolean = true;
     private _models: ProgrammingModel[] = [];
 

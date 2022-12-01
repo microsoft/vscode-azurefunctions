@@ -15,7 +15,7 @@ import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageSt
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
-import { NewProjectModelStep } from './NewProjectModelStep';
+import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -80,11 +80,11 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
-                promptSteps.push(new NewProjectModelStep([nodejsDefaultModel, nodejsNewModel]));
+                promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
                 executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
             case ProjectLanguage.TypeScript:
-                promptSteps.push(new NewProjectModelStep([nodejsDefaultModel, nodejsNewModel]));
+                promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
             case ProjectLanguage.CSharp:
