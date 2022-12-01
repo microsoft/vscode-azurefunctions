@@ -10,7 +10,6 @@ const linuxDistroTagKeys = ['ID', 'NAME', 'PRETTY_NAME', 'VERSION'] as const;
 export type LinuxDistroTag = Partial<Record<typeof linuxDistroTagKeys[number], string>>;
 
 // Majority of recent Linux distributions support the /etc/os-release file
-// https://gist.github.com/natefoo/814c5bf936922dad97ff
 export async function getLinuxDistroTag(): Promise<LinuxDistroTag | undefined> {
     const osReleasePath: string = '/etc/os-release';
     if (!await AzExtFsExtra.pathExists(osReleasePath)) {
