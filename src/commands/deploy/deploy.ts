@@ -63,7 +63,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
     }
 
-    await showCoreToolsWarning(context, version);
+    await showCoreToolsWarning(context, version, node.site.fullName);
 
     const client = await node.site.createClient(actionContext);
     const siteConfig: SiteConfigResource = await client.getSiteConfig();
