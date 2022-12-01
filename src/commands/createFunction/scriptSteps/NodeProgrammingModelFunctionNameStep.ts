@@ -15,9 +15,8 @@ import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
 export class NodeProgrammingModelFunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IScriptFunctionWizardContext): Promise<string | undefined> {
-        // need to check functions/src, but should have a setting to edit this (maybe subdeploy path?)
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
-        const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) ?? "";
+        const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
         return await this.getUniqueFsPath(
             path.join(context.projectPath, functionSubpath),
             template.defaultFunctionName,

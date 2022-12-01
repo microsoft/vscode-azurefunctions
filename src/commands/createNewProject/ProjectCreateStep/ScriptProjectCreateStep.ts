@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { gitignoreFileName, hostFileName, localSettingsFileName, workerRuntimeKey } from '../../../constants';
+import { gitignoreFileName, hostFileName, localSettingsFileName, nodejsNewModelVersion, workerRuntimeKey } from '../../../constants';
 import { IHostJsonV1, IHostJsonV2 } from '../../../funcConfig/host';
 import { ILocalSettingsJson } from '../../../funcConfig/local.settings';
 import { FuncVersion } from '../../../FuncVersion';
@@ -44,6 +44,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
+            // feature flag needs to be enabled to use multiple entry points
+            if (context.languageModel === nodejsNewModelVersion) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                this.localSettingsJson.Values!["AzureWebJobsFeatureFlags"] = "EnableWorkerIndexing";
+            }
+
             await AzExtFsExtra.writeJSON(localSettingsJsonPath, this.localSettingsJson);
         }
 
@@ -68,7 +74,7 @@ __azurite_db*__.json`));
         }
     }
 
-    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+    protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = {
             version: '2.0',
             logging: {
@@ -82,6 +88,8 @@ __azurite_db*__.json`));
         };
 
         await bundleFeedUtils.addDefaultBundle(context, hostJson);
+        if (context.languageModel === nodejsNewModelVersion)
+            bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[3.15.0, 4.0.0)");
 
         return hostJson;
     }

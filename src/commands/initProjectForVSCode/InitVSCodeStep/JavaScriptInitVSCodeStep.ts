@@ -16,7 +16,6 @@ import { ScriptInitVSCodeStep } from './ScriptInitVSCodeStep';
 
 const npmInstallTaskLabel: string = convertToFunctionsTaskLabel('npm install');
 const npmPruneTaskLabel: string = convertToFunctionsTaskLabel('npm prune');
-const npmStartTaskLabel: string = convertToFunctionsTaskLabel('npm run start');
 
 export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
     protected hasPackageJson: boolean;
@@ -31,24 +30,20 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         }
     }
 
-    protected getDebugConfiguration(_version: FuncVersion, languageModel?: number): DebugConfiguration {
-        const debugConfig = { ...nodeDebugConfig };
-        if (languageModel === nodejsNewModelVersion)
-            debugConfig.preLaunchTask = npmStartTaskLabel;
-
+    protected getDebugConfiguration(_version: FuncVersion): DebugConfiguration {
         return nodeDebugConfig;
     }
 
     // same but should probably be different
-    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage, languageModel?: number): TaskDefinition[] {
         if (!this.hasPackageJson) {
             return super.getTasks(language);
         } else {
             return [
                 {
-                    type: func,
+                    type: languageModel === nodejsNewModelVersion ? 'shell' : func,
                     label: hostStartTaskName,
-                    command: hostStartCommand,
+                    command: languageModel === nodejsNewModelVersion ? 'npm run start' : hostStartCommand,
                     problemMatcher: getFuncWatchProblemMatcher(language),
                     isBackground: true,
                     dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel
