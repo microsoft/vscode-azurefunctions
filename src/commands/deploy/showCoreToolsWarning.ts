@@ -10,7 +10,7 @@ import { FuncVersion, funcVersionLink, tryParseFuncVersion } from "../../FuncVer
 import { localize } from "../../localize";
 import { getWorkspaceSetting, updateGlobalSetting } from "../../vsCodeConfig/settings";
 
-export async function showCoreToolsWarning(context: IActionContext, projectVersion: FuncVersion, projectName: string): Promise<void> {
+export async function showCoreToolsWarning(context: IActionContext, runtimeVersion: FuncVersion, siteName: string): Promise<void> {
     const showCoreToolsWarningKey: string = 'showCoreToolsWarning';
     if (getWorkspaceSetting<boolean>(showCoreToolsWarningKey)) {
         const coreToolsVersion = await getLocalFuncCoreToolsVersion(context, undefined)
@@ -19,25 +19,25 @@ export async function showCoreToolsWarning(context: IActionContext, projectVersi
 
             if (localVersion === FuncVersion.v2 || localVersion === FuncVersion.v3) {
                 await showCoreToolsEOLWarning(context, localVersion);
-            } else if (localVersion !== projectVersion) {
-                await showCoreToolsMismatchWarning(context, localVersion, projectVersion, projectName);
+            } else if (localVersion !== runtimeVersion) {
+                await showCoreToolsMismatchWarning(context, localVersion, runtimeVersion, siteName);
             }
         }
     }
 }
 
 async function showCoreToolsWarningHelper(context: IActionContext, message: string): Promise<MessageItem> {
-    let result: MessageItem;
     const showCoreToolsWarningKey: string = 'showCoreToolsWarning';
-    result = await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
-    while (result === DialogResponses.learnMore) {
-        await openUrl(funcVersionLink);
+    let result: MessageItem;
+    do {
         result = await context.ui.showWarningMessage(message, DialogResponses.learnMore, DialogResponses.dontWarnAgain);
+        if (result === DialogResponses.learnMore) {
+            await openUrl(funcVersionLink);
+        } else if (result === DialogResponses.dontWarnAgain) {
+            await updateGlobalSetting(showCoreToolsWarningKey, false);
+        }
     }
-
-    if (result === DialogResponses.dontWarnAgain) {
-        await updateGlobalSetting(showCoreToolsWarningKey, false);
-    }
+    while (result === DialogResponses.learnMore);
     return result;
 }
 async function showCoreToolsEOLWarning(context: IActionContext, localVersion: FuncVersion): Promise<MessageItem> {
@@ -49,13 +49,13 @@ async function showCoreToolsEOLWarning(context: IActionContext, localVersion: Fu
     return await showCoreToolsWarningHelper(context, message);
 }
 
-async function showCoreToolsMismatchWarning(context: IActionContext, localVersion: FuncVersion, projectVersion: FuncVersion, projectName: string): Promise<MessageItem> {
+async function showCoreToolsMismatchWarning(context: IActionContext, localVersion: FuncVersion, runtimeVersion: FuncVersion, siteName: string): Promise<MessageItem> {
     const message = localize(
         'mismatchedFunctionRuntime',
-        'The local Azure Functions Core Tools Version ({0}) does not match the Azure Functions runtime version ({2}) of function app "{1}". Ensure that the versions match for the best experience.',
+        'The local Azure Functions Core Tools Version ({0}) does not match the Azure Functions runtime version ({1}) of function app "{2}". Ensure that the versions match for the best experience.',
         localVersion,
-        projectName,
-        projectVersion
+        runtimeVersion,
+        siteName
     );
     return await showCoreToolsWarningHelper(context, message);
 }
