@@ -3,13 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
+import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
+import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
+import { localize } from "../localize";
+import { cpUtils } from "./cpUtils";
 import { pythonUtils } from "./pythonUtils";
+import { venvUtils } from "./venvUtils";
 import { findFiles } from "./workspace";
 
 export namespace durableUtils {
@@ -126,6 +131,72 @@ export namespace durableUtils {
     async function pythonProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const requirementsPath: string = path.join(projectPath, requirementsFileName);
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
+    }
+
+    // !------ Try to Install Durable Dependencies ------
+    export async function tryInstallDurableDependencies(context: IFunctionWizardContext): Promise<void> {
+        switch (context.language) {
+            case ProjectLanguage.Java:
+                // Todo: Revisit when adding Java implementation
+                break;
+            case ProjectLanguage.CSharp:
+            case ProjectLanguage.FSharp:
+                await installDotnetDependencies(context);
+                break;
+            case ProjectLanguage.JavaScript:
+            case ProjectLanguage.TypeScript:
+                await installNodeDependencies(context);
+                break;
+            case ProjectLanguage.Python:
+                await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
+                break;
+            case ProjectLanguage.PowerShell:
+                // Todo: Revisit when adding PowerShell implementation
+                break;
+            default:
+        }
+    }
+
+    async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
+        const packageNames: string[] = [];
+        switch (context.newDurableStorageType) {
+            case DurableBackend.Netherite:
+                packageNames.push(durableUtils.dotnetDfNetheritePackage);
+                break;
+            case DurableBackend.SQL:
+                packageNames.push(durableUtils.dotnetDfSqlPackage);
+                break;
+            case DurableBackend.Storage:
+            default:
+        }
+
+        // Seems that the package arrives out-dated and needs to be updated
+        packageNames.push(durableUtils.dotnetDfBasePackage);
+
+        const failedPackages: string[] = [];
+        for (const packageName of packageNames) {
+            try {
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
+            } catch {
+                failedPackages.push(packageName);
+            }
+        }
+
+        if (failedPackages.length) {
+            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', failedPackages.join('", "')));
+        }
+    }
+
+    async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
+        try {
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', durableUtils.nodeDfPackage);
+        } catch (error) {
+            const pError: IParsedError = parseError(error);
+            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.nodeDfPackage);
+            ext.outputChannel.appendLog(pError.message);
+            ext.outputChannel.appendLog(dfDepInstallFailed);
+        }
     }
 
     export function getDefaultStorageTaskConfig(): IStorageTaskJson {
