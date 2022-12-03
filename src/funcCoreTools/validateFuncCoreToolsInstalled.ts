@@ -5,7 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as os from "os";
-import { MessageItem } from 'vscode';
+import { env, MessageItem } from 'vscode';
 import { funcVersionSetting, PackageManager } from '../constants';
 import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
@@ -16,12 +16,12 @@ import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
 import { getLinuxDistroTag, LinuxDistroTag } from './getLinuxDistroTag';
-import { installFuncCoreTools } from './installFuncCoreTools';
+import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';
 
 export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
-    let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will need to be installed manually. Try re-running the last command with "sudo" or click "Learn more" for more options.');
+    let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will have to be installed manually.');
     const install: MessageItem = { title: localize('install', 'Install') };
 
     if (hasFuncCliSetting()) {
@@ -62,7 +62,8 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                         if (!packageManagers.length) {
                             message += ' ' + linuxMessage;
                         } else {
-                            failedInstall += ' ' + linuxMessage;  // Can only fail to install if there's a package manager to try the installation with
+                            failedInstall += ' ' + localize('failedInstallOptions', 'Try re-running the last command with "sudo" or click "Learn more" for more options.');
+                            failedInstall += ' ' + linuxMessage;
                         }
                     }
                 }
@@ -84,9 +85,22 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        ext.outputChannel.show();  // Make it easier for the user to find the last command in case they want to re-run with 'sudo'
-        if (await context.ui.showWarningMessage(failedInstall, DialogResponses.learnMore) === DialogResponses.learnMore) {
+        ext.outputChannel.show();  // Make it easier for the user to view the outcome of the last install command
+
+        const buttons: MessageItem[] = [];
+        const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy command') };
+        if (os.platform() === 'linux' && lastCoreToolsInstallCommand) {
+            buttons.push(copyCommand);
+        }
+
+        buttons.push(DialogResponses.learnMore);
+        const result = await context.ui.showWarningMessage(failedInstall, ...buttons);
+
+        if (result === DialogResponses.learnMore) {
             await openUrl(getInstallUrl());
+        } else if (result === copyCommand) {
+            await env.clipboard.writeText(lastCoreToolsInstallCommand);
+            ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard: "{0}"', lastCoreToolsInstallCommand));
         }
     }
 
