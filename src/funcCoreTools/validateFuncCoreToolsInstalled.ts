@@ -85,8 +85,6 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        ext.outputChannel.show();  // Make it easier for the user to view the outcome of the last install command
-
         const buttons: MessageItem[] = [];
         const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy command') };
         if (os.platform() === 'linux' && lastCoreToolsInstallCommand) {
