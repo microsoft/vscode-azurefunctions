@@ -62,7 +62,8 @@ export namespace durableUtils {
         }
     }
 
-    // !------ Verify Durable Storage/Dependencies ------
+    // #region Verify Durable Dependencies
+
     // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
     export async function verifyHasDurableStorage(language: string | undefined, projectPath: string): Promise<boolean> {
         switch (language) {
@@ -133,7 +134,10 @@ export namespace durableUtils {
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
 
-    // !------ Try to Install Durable Dependencies ------
+    // #endregion Verify Durable Dependencies
+
+    // #region Install Durable Dependencies
+
     export async function tryInstallDurableDependencies(context: IFunctionWizardContext): Promise<void> {
         switch (context.language) {
             case ProjectLanguage.Java:
@@ -198,6 +202,8 @@ export namespace durableUtils {
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
     }
+
+    // #endregion Install Durable Dependencies
 
     export function getDefaultStorageTaskConfig(): IStorageTaskJson {
         return {
