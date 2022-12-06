@@ -58,6 +58,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         for (const server of sqlServers) {
             picks.push({
                 id: server.id,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 label: server.name!,
                 description: '',
                 data: server

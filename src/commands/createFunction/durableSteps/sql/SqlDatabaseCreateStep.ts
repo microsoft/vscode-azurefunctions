@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Database, SqlManagementClient } from '@azure/arm-sql';
-import { ext } from '@microsoft/vscode-azext-azureappservice/out/src/extensionVariables';
 import { ILocationWizardContext, LocationListStep, parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
 import { ConnectionType } from '../../../../constants';
+import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';

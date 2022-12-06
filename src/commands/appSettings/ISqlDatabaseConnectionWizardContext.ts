@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup } from "@azure/arm-resources/esm/models";
+import { ResourceManagementModels } from '@azure/arm-resources';
 import { Database, Server } from '@azure/arm-sql';
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ConnectionTypeValues } from "../../constants";
@@ -11,7 +11,7 @@ import { ConnectionTypeValues } from "../../constants";
 export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
 
-    resourceGroup?: ResourceGroup;
+    resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
     azureWebJobsStorageType?: ConnectionTypeValues;

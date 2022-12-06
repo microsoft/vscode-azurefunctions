@@ -25,7 +25,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
             const serverName: string = nonNullValue(context.sqlServer?.name);
 
             const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
-            const dbIterator = await client.databases.listByServer(rgName, serverName);
+            const dbIterator = client.databases.listByServer(rgName, serverName);
             this._databases = await uiUtils.listAllIterator(dbIterator);
         }
 
