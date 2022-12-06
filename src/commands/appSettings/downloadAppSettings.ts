@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from "@azure/arm-appservice";
+import type { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { functionFilter, localSettingsFileName } from "../../constants";
+import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
-import { localize, viewOutput } from "../../localize";
+import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
 import { decryptLocalSettings } from "./decryptLocalSettings";
 import { encryptLocalSettings } from "./encryptLocalSettings";

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { LocationListStep, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
+import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -16,7 +16,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
     public async prompt(context: T): Promise<void> {
         const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
 
-        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: 'Select an event hubs namespace.' };
+        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('eventHubsNamespacePlaceholder', 'Select an event hubs namespace.') };
         const picksTask: Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.namespaces.list()));
 
         const result: EHNamespace | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
@@ -26,7 +26,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
         if (context.eventHubsNamespace) {
             context.valuesToMask.push(nonNullProp(context.eventHubsNamespace, 'name'));
-            return;
+            return undefined;
         }
 
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionContext>[] = [];
@@ -35,7 +35,6 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         promptSteps.push(new EventHubsNamespaceNameStep());
         executeSteps.push(new EventHubsNamespaceCreateStep());
 
-        LocationListStep.addStep(context, promptSteps);
         promptSteps.push(new ResourceGroupListStep());
 
         return { promptSteps, executeSteps };
@@ -56,7 +55,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         for (const namespace of eventHubNamespaces) {
             picks.push({
                 id: namespace.id,
-                label: namespace.name!,
+                label: nonNullProp(namespace, 'name'),
                 description: '',
                 data: namespace
             });

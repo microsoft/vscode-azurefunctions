@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventHubManagementClient } from '@azure/arm-eventhub';
-import { delay } from '@azure/ms-rest-js';
+import type { EventHubManagementClient } from '@azure/arm-eventhub';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
+import { inputBoxDebounce } from '../../../../utils/debounce';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
 
@@ -30,17 +31,20 @@ export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardCont
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 6, 50)) {
-            return invalidLength('6', '50');
+            return getInvalidLengthMessage(6, 50);
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
         }
-        await delay(500);
 
-        const isNameAvailable: boolean = !!(await this._client.namespaces.checkNameAvailability({ name })).nameAvailable;
+        const isNameAvailable: boolean = await inputBoxDebounce<boolean>('eventHubNamespaceName', this._isNameAvailable.bind(this), name);
         if (!isNameAvailable) {
             return localize('eventHubNamespaceExists', 'The event hub namespace you entered already exists. Please enter a unique name.');
         }
         return undefined;
+    }
+
+    private async _isNameAvailable(name: string): Promise<boolean> {
+        return !!(await this._client.namespaces.checkNameAvailability({ name })).nameAvailable;
     }
 }

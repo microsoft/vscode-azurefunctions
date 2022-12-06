@@ -3,15 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
+import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
-import { emptyWorkspace, localize } from "../localize";
-import { findFiles, getWorkspaceRootPath } from "./workspace";
+import { localize } from "../localize";
+import { cpUtils } from "./cpUtils";
+import { pythonUtils } from "./pythonUtils";
+import { venvUtils } from "./venvUtils";
+import { findFiles } from "./workspace";
 
 export namespace durableUtils {
     export const dotnetDfSqlPackage: string = 'Microsoft.DurableTask.SqlServer.AzureFunctions';
@@ -32,36 +36,15 @@ export namespace durableUtils {
         return durableOrchestrator.test(templateId) || durableEntity.test(templateId);
     }
 
-    export async function promptForStorageType(context: IFunctionWizardContext): Promise<DurableBackendValues> {
-        const durableStorageOptions: string[] = [
-            'Durable Functions Orchestration using Storage',
-            'Durable Functions Orchestration using Netherite',
-            'Durable Functions Orchestration using SQL'
-        ];
-
-        const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
-        const picks: IAzureQuickPickItem<DurableBackendValues>[] = [
-            { label: durableStorageOptions[0], data: DurableBackend.Storage },
-            { label: durableStorageOptions[1], data: DurableBackend.Netherite },
-            { label: durableStorageOptions[2], data: DurableBackend.SQL }
-        ];
-        return (await context.ui.showQuickPick(picks, { placeHolder })).data;
-    }
-
-    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath?: string): Promise<DurableBackendValues | undefined> {
-        projectPath ??= getWorkspaceRootPath();
-        if (!projectPath) {
-            return;
-        }
-
+    export async function getStorageTypeFromWorkspace(language: string | undefined, projectPath: string): Promise<DurableBackendValues | undefined> {
         const hasDurableStorage: boolean = await verifyHasDurableStorage(language, projectPath);
         if (!hasDurableStorage) {
-            return;
+            return undefined;
         }
 
         const hostJsonPath = path.join(projectPath, hostFileName);
-        if (!AzExtFsExtra.pathExists(hostJsonPath)) {
-            return;
+        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
+            return undefined;
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
@@ -77,17 +60,12 @@ export namespace durableUtils {
                 // New DF's will use the more specific type 'DurableBackend.Storage', but legacy implementations may return this value as 'undefined'
                 return DurableBackend.Storage;
         }
-    };
+    }
 
+    // #region Verify Durable Dependencies
 
-    // !------ Verify Durable Storage/Dependencies ------
-    // Use workspace dependencies as an indicator to check whether this project already has durable storage setup
-    export async function verifyHasDurableStorage(language: string | undefined, projectPath?: string): Promise<boolean> {
-        projectPath ??= getWorkspaceRootPath();
-        if (!projectPath) {
-            return false;
-        }
-
+    // Use workspace dependencies as an indicator to check whether the project already has durable storage setup
+    export async function verifyHasDurableStorage(language: string | undefined, projectPath: string): Promise<boolean> {
         switch (language) {
             case ProjectLanguage.Java:
                 // ???
@@ -110,31 +88,35 @@ export namespace durableUtils {
 
     async function nodeProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const packagePath: string = path.join(projectPath, 'package.json');
-        if (!AzExtFsExtra.pathExists(packagePath)) {
+        if (!await AzExtFsExtra.pathExists(packagePath)) {
             return false;
         }
 
-        const packageJson: Record<string, any> = await AzExtFsExtra.readJSON(packagePath);
-        const dependencies = packageJson.dependencies || {};
+        const packageJson: Record<string, unknown> = await AzExtFsExtra.readJSON(packagePath);
+        const dependencies = packageJson?.dependencies as {} || {};
         return !!dependencies[nodeDfPackage];
     }
 
     async function dotnetProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const csProjPaths: Uri[] = await findFiles(projectPath, '*.csproj');
-        if (!csProjPaths?.[0]?.path) {
+        if (!(csProjPaths?.[0]?.path && await AzExtFsExtra.pathExists(csProjPaths[0].path))) {
             return false;
         }
 
         const csProjContents: string = await AzExtFsExtra.readFile(csProjPaths[0].path);
 
         return new Promise((resolve) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(csProjContents, { explicitArray: false }, (err: any, result: any): void => {
                 if (result && !err) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
 
                     for (const packageRef of packageReferences) {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         if (packageRef['$'] && packageRef['$']['Include']) {
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                             if (packageRef['$']['Include'] === dotnetDfBasePackage) {
                                 resolve(true);
                                 return;
@@ -148,21 +130,80 @@ export namespace durableUtils {
     }
 
     async function pythonProjectHasDurableDependency(projectPath: string): Promise<boolean> {
-        const requirementsPath: string = path.join(projectPath, 'requirements.txt');
-        if (!AzExtFsExtra.pathExists(requirementsPath)) {
-            return false;
+        const requirementsPath: string = path.join(projectPath, requirementsFileName);
+        return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
+    }
+
+    // #endregion Verify Durable Dependencies
+
+    // #region Install Durable Dependencies
+
+    export async function tryInstallDurableDependencies(context: IFunctionWizardContext): Promise<void> {
+        switch (context.language) {
+            case ProjectLanguage.Java:
+                // Todo: Revisit when adding Java implementation
+                break;
+            case ProjectLanguage.CSharp:
+            case ProjectLanguage.FSharp:
+                await installDotnetDependencies(context);
+                break;
+            case ProjectLanguage.JavaScript:
+            case ProjectLanguage.TypeScript:
+                await installNodeDependencies(context);
+                break;
+            case ProjectLanguage.Python:
+                await pythonUtils.addDependencyToRequirements(durableUtils.pythonDfPackage, context.projectPath);
+                await venvUtils.runPipInstallCommandIfPossible(context.projectPath);
+                break;
+            case ProjectLanguage.PowerShell:
+                // Todo: Revisit when adding PowerShell implementation
+                break;
+            default:
+        }
+    }
+
+    async function installDotnetDependencies(context: IFunctionWizardContext): Promise<void> {
+        const packageNames: string[] = [];
+        switch (context.newDurableStorageType) {
+            case DurableBackend.Netherite:
+                packageNames.push(durableUtils.dotnetDfNetheritePackage);
+                break;
+            case DurableBackend.SQL:
+                packageNames.push(durableUtils.dotnetDfSqlPackage);
+                break;
+            case DurableBackend.Storage:
+            default:
         }
 
-        const contents: string = await AzExtFsExtra.readFile(requirementsPath);
-        const lines: string[] = contents.split('\n');
-        for (let line of lines) {
-            line = line.trim();
-            if (line === pythonDfPackage) {
-                return true;
+        // Seems that the package arrives out-dated and needs to be updated
+        packageNames.push(durableUtils.dotnetDfBasePackage);
+
+        const failedPackages: string[] = [];
+        for (const packageName of packageNames) {
+            try {
+                await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'dotnet', 'add', 'package', packageName);
+            } catch {
+                failedPackages.push(packageName);
             }
         }
-        return false;
+
+        if (failedPackages.length) {
+            ext.outputChannel.appendLog(localize('durableDependencyInstallFailed', 'WARNING: Failed to install and update Durable Functions NuGet packages to the root .csproj project file. You may need to install the following packages manually: "{0}".', failedPackages.join('", "')));
+        }
     }
+
+    async function installNodeDependencies(context: IFunctionWizardContext): Promise<void> {
+        try {
+            await cpUtils.executeCommand(ext.outputChannel, context.projectPath, 'npm', 'install', durableUtils.nodeDfPackage);
+        } catch (error) {
+            const pError: IParsedError = parseError(error);
+            const dfDepInstallFailed: string = localize('failedToAddDurableNodeDependency', 'Failed to add or install the "{0}" dependency. Please inspect and verify if it needs to be added manually.', durableUtils.nodeDfPackage);
+            ext.outputChannel.appendLog(pError.message);
+            ext.outputChannel.appendLog(dfDepInstallFailed);
+        }
+    }
+
+    // #endregion Install Durable Dependencies
 
     export function getDefaultStorageTaskConfig(): IStorageTaskJson {
         return {
@@ -177,15 +218,10 @@ export namespace durableUtils {
 export namespace netheriteUtils {
     export const defaultNetheriteHubName: string = 'HelloNetheriteHub';  // Arbitrary placeholder for running in emulator mode until an Azure connection is setup
 
-    export async function getEventHubName(projectPath?: string): Promise<string | undefined> {
-        projectPath ??= getWorkspaceRootPath();
-        if (!projectPath) {
-            throw new Error(emptyWorkspace);
-        }
-
+    export async function getEventHubName(projectPath: string): Promise<string | undefined> {
         const hostJsonPath = path.join(projectPath, hostFileName);
-        if (!AzExtFsExtra.pathExists(hostJsonPath)) {
-            return;
+        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
+            return undefined;
         }
 
         const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
@@ -195,9 +231,9 @@ export namespace netheriteUtils {
 
     // Todo: Uncomment out in future PR
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
+    //     projectPath ??= await getRootWorkspacePath();
     //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
+    //         throw new NoWorkspaceError();
     //     }
 
     //     const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
@@ -249,9 +285,9 @@ export namespace netheriteUtils {
 export namespace sqlUtils {
     // Todo: Uncomment out in future PR
     // export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-    //     projectPath ??= getWorkspaceRootPath();
+    //     projectPath ??= await getRootWorkspacePath();
     //     if (!projectPath) {
-    //         throw new Error(emptyWorkspace);
+    //         throw new NoWorkspaceError();
     //     }
 
     //     const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);

@@ -9,15 +9,18 @@ import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from '
 import { getEventHubsConnectionString } from '../../utils/azure';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
+// Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
 
-    public constructor(private _setConnectionForDeploy?: boolean) {
+    public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();
     }
 
     public async execute(context: T): Promise<void> {
         let value: string;
+
+        // 'NonAzure' will represent 'Emulator' in this flow
         if (context.eventHubConnectionType === ConnectionType.NonAzure) {
             const currentConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
             if (currentConnection && localEventHubsEmulatorConnectionRegExp.test(currentConnection)) {
@@ -29,7 +32,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
         }
 
         if (this._setConnectionForDeploy) {
-            context.eventHubConnectionForDeploy = value;
+            context.eventHubRemoteConnection = value;
         } else {
             await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHub, value, MismatchBehavior.Overwrite);
         }

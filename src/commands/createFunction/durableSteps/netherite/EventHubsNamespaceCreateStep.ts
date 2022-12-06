@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
-import { ext } from '@microsoft/vscode-azext-azureappservice/out/src/extensionVariables';
-import { ILocationWizardContext, LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import type { EHNamespace, EventHubManagementClient } from '@azure/arm-eventhub';
+import { AzExtLocation, LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
+import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
@@ -23,8 +23,9 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
         progress.report({ message: creating });
 
         const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
+        const location: AzExtLocation = await LocationListStep.getLocation(<T & ISubscriptionContext>context);
         const defaultParams: EHNamespace = {
-            location: (await LocationListStep.getLocation(<ILocationWizardContext>context)).name,
+            location: nonNullProp(location, 'name'),
             sku: {
                 name: 'Standard',
                 capacity: 1
@@ -34,6 +35,6 @@ export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardCo
     }
 
     public shouldExecute(context: T): boolean {
-        return !context.eventHubsNamespace && !!context.resourceGroup && !!context.newEventHubsNamespaceName && LocationListStep.hasLocation(<ILocationWizardContext>context);
+        return !context.eventHubsNamespace;
     }
 }

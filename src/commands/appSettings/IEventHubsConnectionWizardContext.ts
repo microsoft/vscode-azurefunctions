@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EHNamespace } from "@azure/arm-eventhub";
-import { ResourceGroup } from "@azure/arm-resources/esm/models";
+import type { EHNamespace } from "@azure/arm-eventhub";
+import type { ResourceManagementModels } from "@azure/arm-resources";
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ConnectionTypeValues } from "../../constants";
 
 export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
 
-    resourceGroup?: ResourceGroup;
+    resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
     azureWebJobsStorageType?: ConnectionTypeValues;
@@ -22,5 +22,5 @@ export interface IEventHubsConnectionWizardContext extends IActionContext, Parti
     eventHubsNamespace?: EHNamespace;
     newEventHubName?: string;
 
-    eventHubConnectionForDeploy?: string;
+    eventHubRemoteConnection?: string;
 }
