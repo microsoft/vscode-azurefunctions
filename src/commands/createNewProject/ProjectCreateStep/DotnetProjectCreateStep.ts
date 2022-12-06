@@ -5,8 +5,8 @@
 
 import { AzExtFsExtra, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
-import { azureWebJobsStorageKey, MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
+import { ConnectionKey, gitignoreFileName, hostFileName, localSettingsFileName, ProjectLanguage } from '../../../constants';
+import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../../FuncVersion';
 import { localize } from "../../../localize";
 import { executeDotnetTemplateCommand, validateDotnetInstalled } from '../../../templates/dotnet/executeDotnetTemplateCommand';
@@ -47,7 +47,7 @@ export class DotnetProjectCreateStep extends ProjectCreateStepBase {
 
         await executeDotnetTemplateCommand(context, version, projTemplateKey, context.projectPath, 'create', ...args);
 
-        await setLocalAppSetting(context, context.projectPath, azureWebJobsStorageKey, '', MismatchBehavior.Overwrite);
+        await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, '', MismatchBehavior.Overwrite);
     }
 
     private async confirmOverwriteExisting(context: IProjectWizardContext, projName: string): Promise<void> {

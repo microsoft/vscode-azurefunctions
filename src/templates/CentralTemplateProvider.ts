@@ -11,7 +11,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
-import { isPythonV2Plus } from '../utils/pythonUtils';
+import { pythonUtils } from '../utils/pythonUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -60,7 +60,7 @@ export class CentralTemplateProvider implements Disposable {
                 providers.push(new JavaTemplateProvider(version, projectPath, language, projectTemplateKey));
                 break;
             default:
-                if (isPythonV2Plus(language, languageModel)) {
+                if (pythonUtils.isV2Plus(language, languageModel)) {
                     providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
                 } else {
                     providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));

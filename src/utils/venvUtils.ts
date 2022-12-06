@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IParsedError, parseError } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { pythonVenvSetting } from "../constants";
+import { pythonVenvSetting, requirementsFileName } from "../constants";
 import { ext } from '../extensionVariables';
+import { localize } from '../localize';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { cpUtils } from './cpUtils';
 
@@ -16,6 +17,27 @@ export namespace venvUtils {
         bash,
         cmd,
         powerShell
+    }
+
+    export async function runPipInstallCommandIfPossible(projectPath: string, venvName?: string): Promise<void> {
+        venvName ??= getWorkspaceSetting(pythonVenvSetting) || '.venv';
+
+        const venvPath: string = path.join(projectPath, <string>venvName);
+        if (!await AzExtFsExtra.pathExists(venvPath)) {
+            return;
+        }
+
+        const requirementsPath: string = path.join(projectPath, requirementsFileName);
+        if (await AzExtFsExtra.pathExists(requirementsPath)) {
+            try {
+                // Attempt to install packages so that users get Intellisense right away
+                await runCommandInVenv(`pip install -r ${requirementsFileName}`, <string>venvName, projectPath);
+            } catch (error) {
+                const pError: IParsedError = parseError(error);
+                ext.outputChannel.appendLog(pError.message);
+                ext.outputChannel.appendLog(localize('pipInstallFailure', 'WARNING: Failed to install packages in your virtual environment. Run "pip install" manually instead.'));
+            }
+        }
     }
 
     export function convertToVenvCommand(command: string, folderPath: string): string {

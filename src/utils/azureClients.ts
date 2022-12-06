@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
-import { WebSiteManagementClient } from '@azure/arm-appservice';
-import { CosmosDBManagementClient } from '@azure/arm-cosmosdb';
-import { EventHubManagementClient } from '@azure/arm-eventhub';
-import { ServiceBusManagementClient } from '@azure/arm-servicebus';
-import { StorageManagementClient } from '@azure/arm-storage';
+import type { ApplicationInsightsManagementClient } from '@azure/arm-appinsights';
+import type { WebSiteManagementClient } from '@azure/arm-appservice';
+import type { CosmosDBManagementClient } from '@azure/arm-cosmosdb';
+import type { EventHubManagementClient } from '@azure/arm-eventhub';
+import type { ServiceBusManagementClient } from '@azure/arm-servicebus';
+import type { SqlManagementClient } from '@azure/arm-sql';
+import type { StorageManagementClient } from '@azure/arm-storage';
 import { AzExtClientContext, createAzureClient } from '@microsoft/vscode-azext-azureutils';
 
 // Lazy-load @azure packages to improve startup performance.
@@ -28,6 +29,10 @@ export async function createEventHubClient(context: AzExtClientContext): Promise
 
 export async function createServiceBusClient(context: AzExtClientContext): Promise<ServiceBusManagementClient> {
     return createAzureClient(context, (await import('@azure/arm-servicebus')).ServiceBusManagementClient);
+}
+
+export async function createSqlClient(context: AzExtClientContext): Promise<SqlManagementClient> {
+    return createAzureClient(context, (await import('@azure/arm-sql')).SqlManagementClient);
 }
 
 export async function createWebSiteClient(context: AzExtClientContext): Promise<WebSiteManagementClient> {

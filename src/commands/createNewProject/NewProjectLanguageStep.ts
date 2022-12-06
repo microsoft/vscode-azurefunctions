@@ -5,11 +5,12 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { previewPythonModel, ProjectLanguage, pysteinModelSetting } from '../../constants';
+import { pythonNewModelPreview } from '../../constants-nls';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { pythonUtils } from '../../utils/pythonUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
@@ -98,7 +99,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
                 break;
             case ProjectLanguage.Python:
                 executeSteps.push(
-                    isPythonV2Plus(context.language, context.languageModel)
+                    pythonUtils.isV2Plus(context.language, context.languageModel)
                         ? new PysteinProjectCreateStep()
                         : new PythonProjectCreateStep());
                 break;
@@ -122,7 +123,7 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
 
         // Languages except Python v2+ and Java support creating a function after creating a project
         // Java needs to fix this issue first: https://github.com/Microsoft/vscode-azurefunctions/issues/81
-        if (!isPythonV2Plus(context.language, context.languageModel)) {
+        if (!pythonUtils.isV2Plus(context.language, context.languageModel)) {
             promptSteps.push(await FunctionListStep.create(context, {
                 isProjectWizard: true,
                 templateId: this._templateId,

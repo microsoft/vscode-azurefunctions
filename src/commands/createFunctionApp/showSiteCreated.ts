@@ -6,7 +6,7 @@
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
-import { viewOutput } from '../../constants';
+import { viewOutput } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 

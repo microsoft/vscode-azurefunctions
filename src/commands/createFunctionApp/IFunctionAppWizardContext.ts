@@ -5,6 +5,7 @@
 
 import { IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { ExecuteActivityContext, ICreateChildImplContext } from '@microsoft/vscode-azext-utils';
+import { DurableBackendValues } from '../../constants';
 import { FuncVersion } from '../../FuncVersion';
 import { AppStackMajorVersion, AppStackMinorVersion } from './stacks/models/AppStackModel';
 import { FunctionAppRuntimes, FunctionAppStack } from './stacks/models/FunctionAppStackModel';
@@ -20,4 +21,11 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
+
+    durableStorageType?: DurableBackendValues;
+
+    // Detected local connection string
+    hasAzureStorageConnection?: boolean;
+    hasEventHubsConnection?: boolean;
+    hasSqlDbConnection?: boolean;
 }

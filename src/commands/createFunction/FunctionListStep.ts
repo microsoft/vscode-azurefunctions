@@ -10,9 +10,11 @@ import { ext } from '../../extensionVariables';
 import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
+import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { pythonUtils } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
@@ -56,15 +58,20 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     }
 
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
-        const isV2PythonModel = isPythonV2Plus(context.language, context.languageModel);
+        const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
 
         if (isV2PythonModel) {
             return {
                 // TODO: Title?
-                promptSteps: [ new PythonLocationStep(this._functionSettings) ]
+                promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
-            return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+            const needsStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
+            if (needsStorageSetup) {
+                return { promptSteps: [new DurableStorageTypePromptStep()] };
+            } else {
+                return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+            }
         }
     }
 
@@ -118,6 +125,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
+            .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
 
@@ -136,7 +144,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !pythonUtils.isV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),
@@ -181,6 +189,25 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
 
     const options: IAzureQuickPickOptions = { suppressPersistence: true, placeHolder: localize('selectFilter', 'Select a template filter') };
     return (await context.ui.showQuickPick(picks, options)).data;
+}
+
+// Identify and filter out Durable Function templates requiring a pre-existing storage setup
+function doesTemplateRequireExistingStorageSetup(templateId: string, language?: string): boolean {
+    // Todo: Remove when Powershell and Java implementation is added
+    if (language === ProjectLanguage.PowerShell || language === ProjectLanguage.Java) {
+        return false;
+    }
+
+    const durableFunctions = /DurableFunctions/i;
+    const entity = /DurableFunctionsEntity/i;
+    const orchestrator = /Orchestrat/i;
+    const entityTrigger = /DurableFunctionsEntityHttpStart/i;  // filter out directly due to overlap with the base entity template pattern
+
+    if (entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId))) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 /**
