@@ -5,11 +5,12 @@
 
 import { AzExtFsExtra, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { functionSubpathSetting, ProjectLanguage } from '../../../constants';
+import { functionSubpathSetting } from '../../../constants';
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
@@ -18,7 +19,7 @@ export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunc
         await AzExtFsExtra.ensureDir(functionPath);
 
         const functionName = nonNullProp(context, 'functionName');
-        const fileExt = `${context.language === ProjectLanguage.TypeScript ? '.ts' : '.js'}`;
+        const fileExt = getFileExtensionFromLanguage(context.language);
         const fileName = `${functionName}${fileExt}`;
 
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');

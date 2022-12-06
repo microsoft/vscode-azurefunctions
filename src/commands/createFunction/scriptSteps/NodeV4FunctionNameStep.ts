@@ -5,13 +5,14 @@
 
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { functionSubpathSetting, ProjectLanguage } from '../../../constants';
+import { functionSubpathSetting } from '../../../constants';
 import { localize } from "../../../localize";
 import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTemplates';
 import { nonNullProp } from '../../../utils/nonNull';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
+import { getFileExtensionFromLanguage } from './ScriptFunctionCreateStep';
 
 export class NodeV4FunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IScriptFunctionWizardContext): Promise<string | undefined> {
@@ -20,12 +21,12 @@ export class NodeV4FunctionNameStep extends FunctionNameStepBase<IScriptFunction
         return await this.getUniqueFsPath(
             path.join(context.projectPath, functionSubpath),
             template.defaultFunctionName,
-            context.language === ProjectLanguage.TypeScript ? '.ts' : '.js');
+            getFileExtensionFromLanguage(context.language));
     }
 
     protected async validateFunctionNameCore(context: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
         const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
-        name = `${name}${context.language === ProjectLanguage.TypeScript ? '.ts' : '.js'}`;
+        name = `${name}${getFileExtensionFromLanguage(context.language)}`;
 
         if (await AzExtFsExtra.pathExists(path.join(context.projectPath, functionSubpath, name))) {
             return localize('existingFileError', 'A file with the name "{0}" already exists.', name);
