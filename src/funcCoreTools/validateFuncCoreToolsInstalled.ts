@@ -52,10 +52,10 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 const linuxDistroTag: LinuxDistroTag | undefined = await getLinuxDistroTag();
                 if (linuxDistroTag) {
                     let linuxMessage: string = '';
-                    if (linuxDistroTag['PRETTY_NAME']) {
-                        linuxMessage += localize('linuxDistributionInfoPretty', 'Note: You are currently running "{0}".', linuxDistroTag['PRETTY_NAME']);
-                    } else if (linuxDistroTag['NAME'] && linuxDistroTag['VERSION']) {
-                        linuxMessage += localize('linuxDistributionInfo', 'Note: You are currently running "{0} {1}".', linuxDistroTag['NAME'], linuxDistroTag['VERSION']);
+                    if (linuxDistroTag.PRETTY_NAME) {
+                        linuxMessage += localize('linuxDistributionInfoPretty', 'Note: You are currently running "{0}".', linuxDistroTag.PRETTY_NAME);
+                    } else if (linuxDistroTag.NAME && linuxDistroTag.VERSION) {
+                        linuxMessage += localize('linuxDistributionInfo', 'Note: You are currently running "{0} {1}".', linuxDistroTag.NAME, linuxDistroTag.VERSION);
                     }
 
                     if (linuxMessage) {
