@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions } from '@microsoft/vscode-azext-utils';
-import { leanrMoreQp } from './constants';
+import { learnMoreQp } from './constants';
 import { localize } from './localize';
 import { openUrl } from './utils/openUrl';
 
@@ -29,7 +29,7 @@ export async function promptForFuncVersion(context: IActionContext, message?: st
 
     picks = picks.filter(p => osSupportsVersion(p.data));
 
-    picks.push(leanrMoreQp);
+    picks.push(learnMoreQp);
 
     const options: IAzureQuickPickOptions = { placeHolder: message || localize('selectVersion', 'Select a version'), stepName: 'funcVersion', suppressPersistence: true };
     // eslint-disable-next-line no-constant-condition

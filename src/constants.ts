@@ -132,4 +132,4 @@ export const functionFilter = {
 };
 
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
-export const leanrMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };
+export const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };

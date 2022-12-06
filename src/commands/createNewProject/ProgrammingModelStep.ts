@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, nonNullValue, openUrl } from '@microsoft/vscode-azext-utils';
-import { leanrMoreQp, nodeProgrammingModelSetting } from '../../constants';
+import { learnMoreQp, nodeProgrammingModelSetting } from '../../constants';
 import { localize } from '../../localize';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { IProjectWizardContext } from './IProjectWizardContext';
@@ -30,7 +30,7 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
         });
 
         if (this._learnMoreLink) {
-            modelsPick.push(leanrMoreQp);
+            modelsPick.push(learnMoreQp);
         }
 
         const options: IAzureQuickPickOptions = {
@@ -42,11 +42,11 @@ export class ProgrammingModelStep extends AzureWizardPromptStep<IProjectWizardCo
         let result: IAzureQuickPickItem<number | undefined>;
         do {
             result = (await context.ui.showQuickPick(modelsPick, options));
-            if (result === leanrMoreQp) {
+            if (result === learnMoreQp) {
                 await openUrl(nonNullValue(this._learnMoreLink));
             }
         }
-        while (result === leanrMoreQp);
+        while (result === learnMoreQp);
 
         context.languageModel = result.data;
     }
