@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementModels } from '@azure/arm-resources';
-import { Database, Server } from '@azure/arm-sql';
+import type { ResourceManagementModels } from '@azure/arm-resources';
+import type { Database, Server } from '@azure/arm-sql';
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ConnectionTypeValues } from "../../constants";
 

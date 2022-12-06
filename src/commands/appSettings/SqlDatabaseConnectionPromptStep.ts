@@ -74,7 +74,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
         if (context.sqlDbConnectionType === ConnectionType.None) {
-            return;
+            return undefined;
         }
 
         if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
