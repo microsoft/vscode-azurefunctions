@@ -87,7 +87,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     if (input === install && !installed) {
         const buttons: MessageItem[] = [];
         const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy command') };
-        if (os.platform() === 'linux' && lastCoreToolsInstallCommand) {
+        if (os.platform() === 'linux' && lastCoreToolsInstallCommand.length) {
             buttons.push(copyCommand);
         }
 
@@ -97,8 +97,9 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
         if (result === DialogResponses.learnMore) {
             await openUrl(getInstallUrl());
         } else if (result === copyCommand) {
-            await env.clipboard.writeText(lastCoreToolsInstallCommand);
-            ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard: "{0}"', lastCoreToolsInstallCommand));
+            const lastInstallCommand: string = lastCoreToolsInstallCommand.join(' ');
+            await env.clipboard.writeText(lastInstallCommand);
+            ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard: "{0}"', lastInstallCommand));
         }
     }
 
