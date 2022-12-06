@@ -6,11 +6,12 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { functionSubpathSetting, nodejsNewModelVersion } from '../../../constants';
+import { functionSubpathSetting } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../localize';
 import { cpUtils } from '../../../utils/cpUtils';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
@@ -54,7 +55,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
             devDependencies: this.getPackageJsonDevDeps(context)
         };
 
-        if (context.languageModel === nodejsNewModelVersion) {
+        if (isNodeV4Plus(context)) {
             // default functionSubpath value is a string
             const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
             packageJson.main = path.posix.join(functionSubpath, '*.js');
@@ -72,7 +73,7 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
     protected getPackageJsonDeps(context: IProjectWizardContext): { [key: string]: string } {
         const deps: { [key: string]: string } = {};
-        if (context.languageModel === nodejsNewModelVersion)
+        if (isNodeV4Plus(context))
             deps[azureFunctionsDependency] = azureFunctionsDependencyVersion;
 
         return deps;
@@ -80,9 +81,8 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
     protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {
         const devDeps: { [key: string]: string } = {};
-        if (context.languageModel === nodejsNewModelVersion) {
+        if (isNodeV4Plus(context)) {
             devDeps['@types/node'] = '^18.0.0';
-            devDeps['func-cli-nodejs-v4'] = '4.0.4764'
         }
 
         return devDeps;

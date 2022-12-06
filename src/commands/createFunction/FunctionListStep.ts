@@ -11,7 +11,7 @@ import { FuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { nonNullProp } from '../../utils/nonNull';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
@@ -61,7 +61,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         if (isV2PythonModel) {
             return {
                 // TODO: Title?
-                promptSteps: [ new PythonLocationStep(this._functionSettings) ]
+                promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
             return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
@@ -136,7 +136,10 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 data: <IFunctionTemplate | TemplatePromptResult><unknown>undefined,
                 onPicked: () => { /* do nothing */ }
             })
-        } else if (language === ProjectLanguage.CSharp || language === ProjectLanguage.Java || (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) || language === ProjectLanguage.TypeScript) {
+        } else if (language === ProjectLanguage.CSharp ||
+            language === ProjectLanguage.Java ||
+            (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||
+            (language === ProjectLanguage.TypeScript) && !isNodeV4Plus(context)) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),

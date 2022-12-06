@@ -215,7 +215,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
                         userPromptedSettings.push(setting);
                     }
                 }
-            } else if (rawTemplate.id.endsWith('-4.x')) {
+                // triggerType property is the replacement for the function.json info
+            } else if ((rawTemplate.metadata.triggerType)) {
                 // bindings are now in the function file rather than having a binding.json file so retrieve it from the ~4 JavaScript binding.jsons
                 const bindingTemplate: IBindingTemplate | undefined = bindingTemplates.find(b => b.type.toLowerCase() === rawTemplate.metadata?.triggerType?.toLowerCase());
                 if (bindingTemplate) {
@@ -241,7 +242,8 @@ export function parseScriptTemplate(rawTemplate: IRawTemplate, resources: IResou
         templateFiles: rawTemplate.files || {},
         categories: rawTemplate.metadata.category || [],
         categoryStyle: rawTemplate.metadata.categoryStyle,
-        isDynamicConcurrent: (rawTemplate.id.includes('ServiceBusQueueTrigger') || rawTemplate.id.includes('BlobTrigger') || rawTemplate.id.includes('QueueTrigger')) ? true : false
+        isDynamicConcurrent: (rawTemplate.id.includes('ServiceBusQueueTrigger') || rawTemplate.id.includes('BlobTrigger') || rawTemplate.id.includes('QueueTrigger')) ? true : false,
+        triggerType: rawTemplate.metadata.triggerType
     };
 }
 

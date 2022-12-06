@@ -115,11 +115,14 @@ export const pythonNewModelPreview: string = localize('pythonNewModelPreview', '
  * The new Node.js model is 4.
  * Any significantly changed new model should use an incremented number.
  */
-export const nodejsNewModelVersion: number = 4;
-export const nodejsNewModelLabel: string = localize('nodejsNewModelPreview', 'Programming Model V4 (Preview)')
+export const nodeV4ModelVersion: number = 4;
+export const nodeV4ModelLabel: string = localize('modelV4', 'Model V4 (Preview)')
 
-export const nodejsNewModel: { model: number, label: string } = { model: nodejsNewModelVersion, label: nodejsNewModelLabel };
-export const nodejsDefaultModel: { model: undefined, label: string } = { model: undefined, label: localize('nodejsNewModelPreview', 'Programming Model V3 (Default)') }
+export const nodeV4Model: { modelVersion: number, label: string } = { modelVersion: nodeV4ModelVersion, label: nodeV4ModelLabel };
+export const nodeDefaultModel: { modelVersion: undefined, label: string } = { modelVersion: undefined, label: localize('modelV3', 'Model V3') }
+
+export const nodeModels = [nodeDefaultModel, nodeV4Model];
+export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
 
 
 export const webProvider: string = 'Microsoft.Web';
@@ -129,3 +132,4 @@ export const functionFilter = {
 };
 
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
+export const leanrMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };

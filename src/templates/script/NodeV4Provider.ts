@@ -12,7 +12,7 @@ import { TemplateProviderBase, TemplateType } from '../TemplateProviderBase';
 import { getScriptResourcesLanguage } from './getScriptResourcesLanguage';
 import { parseScriptTemplates } from './parseScriptTemplates';
 
-export class NodeProgrammingModelProvider extends TemplateProviderBase {
+export class NodeV4Provider extends TemplateProviderBase {
     public templateType: TemplateType = TemplateType.Script;
 
     protected get backupSubpath(): string {
@@ -57,7 +57,7 @@ export class NodeProgrammingModelProvider extends TemplateProviderBase {
     public includeTemplate(template: IFunctionTemplate | IBindingTemplate): boolean {
         return this.isFunctionTemplate(template)
             && template.language === this.language
-            && template.id.endsWith('-4.x');
+            && !!template.triggerType
     }
 
     protected async parseTemplates(rootPath: string): Promise<ITemplates> {

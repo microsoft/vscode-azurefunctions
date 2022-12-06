@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, nodejsNewModelVersion, ProjectLanguage } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { FuncVersion } from '../../../FuncVersion';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
@@ -34,16 +34,15 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         return nodeDebugConfig;
     }
 
-    // same but should probably be different
-    protected getTasks(language: ProjectLanguage, languageModel?: number): TaskDefinition[] {
+    protected getTasks(language: ProjectLanguage): TaskDefinition[] {
         if (!this.hasPackageJson) {
             return super.getTasks(language);
         } else {
             return [
                 {
-                    type: languageModel === nodejsNewModelVersion ? 'shell' : func,
+                    type: func,
                     label: hostStartTaskName,
-                    command: languageModel === nodejsNewModelVersion ? 'npm run start' : hostStartCommand,
+                    command: hostStartCommand,
                     problemMatcher: getFuncWatchProblemMatcher(language),
                     isBackground: true,
                     dependsOn: this.useFuncExtensionsInstall ? [extInstallTaskName, npmInstallTaskLabel] : npmInstallTaskLabel

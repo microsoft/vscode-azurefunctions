@@ -5,11 +5,11 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { nodejsDefaultModel, nodejsNewModel, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
+import { nodeLearnMoreLink, nodeModels, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
+import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
@@ -80,11 +80,17 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
-                promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
             case ProjectLanguage.TypeScript:
-                promptSteps.push(new ProgrammingModelStep([nodejsDefaultModel, nodejsNewModel]));
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
             case ProjectLanguage.CSharp:

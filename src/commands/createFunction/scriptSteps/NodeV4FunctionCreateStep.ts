@@ -10,29 +10,30 @@ import { IScriptFunctionTemplate } from '../../../templates/script/parseScriptTe
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionCreateStepBase } from '../FunctionCreateStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
-import { getScriptFileNameFromLanguage } from './ScriptFunctionCreateStep';
 
-export class NodeProgrammingModelFunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
+export class NodeV4FunctionCreateStep extends FunctionCreateStepBase<IScriptFunctionWizardContext> {
     public async executeCore(context: IScriptFunctionWizardContext): Promise<string> {
         const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
         const functionPath = path.join(context.projectPath, functionSubpath);
         await AzExtFsExtra.ensureDir(functionPath);
+
+        const functionName = nonNullProp(context, 'functionName');
+        const fileExt = `${context.language === ProjectLanguage.TypeScript ? '.ts' : '.js'}`;
+        const fileName = `${functionName}${fileExt}`;
+
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
         await Promise.all(Object.keys(template.templateFiles).map(async f => {
-            const filename = f.replace(/%functionName%/g, nonNullProp(context, 'functionName'));
             let contents = template.templateFiles[f];
-            contents = contents.replace(/%functionName%/g, nonNullProp(context, 'functionName'));
+            contents = contents.replace(/%functionName%/g, functionName);
 
             for (const setting of template.userPromptedSettings) {
                 // the setting name keys are lowercased
                 contents = contents.replace(new RegExp(`%${setting.name}%`, 'g'), context[setting.name.toLowerCase()]);
             }
 
-            await AzExtFsExtra.writeFile(path.join(functionPath, filename), contents);
+            await AzExtFsExtra.writeFile(path.join(functionPath, fileName), contents);
         }));
 
-        const language: ProjectLanguage = nonNullProp(context, 'language');
-        const fileName = getScriptFileNameFromLanguage(language) as string;
         return path.join(functionPath, fileName);
     }
 }

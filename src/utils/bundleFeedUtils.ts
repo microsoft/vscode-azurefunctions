@@ -102,9 +102,8 @@ export namespace bundleFeedUtils {
     }
 
     export function overwriteExtensionBundleVersion(hostJson: IHostJsonV2, expectedRange: string, newRange: string): void {
-        if (hostJson.extensionBundle) {
-            if (hostJson.extensionBundle.version === expectedRange)
-                hostJson.extensionBundle.version = newRange;
+        if (hostJson.extensionBundle && hostJson.extensionBundle.version === expectedRange) {
+            hostJson.extensionBundle.version = newRange;
         }
     }
 }

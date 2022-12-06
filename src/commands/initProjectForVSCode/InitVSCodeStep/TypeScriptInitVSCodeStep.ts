@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TaskDefinition } from 'vscode';
-import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, nodejsNewModelVersion, ProjectLanguage } from '../../../constants';
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from '../../../constants';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { JavaScriptInitVSCodeStep } from "./JavaScriptInitVSCodeStep";
@@ -16,12 +16,12 @@ const npmBuildTaskLabel: string = convertToFunctionsTaskLabel('npm build');
 export class TypeScriptInitVSCodeStep extends JavaScriptInitVSCodeStep {
     public readonly preDeployTask: string = npmPruneTaskLabel;
 
-    public getTasks(language: ProjectLanguage, languageModel?: number): TaskDefinition[] {
+    public getTasks(language: ProjectLanguage): TaskDefinition[] {
         return [
             {
-                type: languageModel === nodejsNewModelVersion ? 'shell' : func,
+                type: func,
                 label: hostStartTaskName,
-                command: languageModel === nodejsNewModelVersion ? 'npm run start' : hostStartCommand,
+                command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,
                 dependsOn: npmBuildTaskLabel

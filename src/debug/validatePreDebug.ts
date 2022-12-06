@@ -19,7 +19,7 @@ import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreT
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
-import { isNodeV4Plus, isPythonV2Plus } from '../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
 
@@ -155,12 +155,16 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
             }));
 
             // NOTE: Currently, Python V2+ and Node.js V4 requires storage to be configured, even for HTTP triggers.
-            if (functions.some(f => !f.isHttpTrigger) || isPythonV2Plus(projectLanguage, projectLanguageModel) || isNodeV4Plus(projectLanguage, projectLanguageModel)) {
+            if (functions.some(f => !f.isHttpTrigger) ||
+                isPythonV2Plus(projectLanguage, projectLanguageModel) ||
+                isNodeV4Plus({ language: projectLanguage, languageModel: projectLanguageModel })) {
+
                 const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
                 const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
                     promptSteps: [new AzureWebJobsStoragePromptStep(true /* suppressSkipForNow */)],
                     executeSteps: [new AzureWebJobsStorageExecuteStep()]
                 });
+
                 await wizard.prompt();
                 await wizard.execute();
             }

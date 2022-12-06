@@ -99,7 +99,7 @@ export class PowerShellProjectCreateStep extends ScriptProjectCreateStep {
         }
     }
 
-    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+    protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = await super.getHostContent(context);
         hostJson.managedDependency = { enabled: true };
         return hostJson;

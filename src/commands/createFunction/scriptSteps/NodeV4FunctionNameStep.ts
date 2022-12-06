@@ -13,7 +13,7 @@ import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { FunctionNameStepBase } from '../FunctionNameStepBase';
 import { IScriptFunctionWizardContext } from './IScriptFunctionWizardContext';
 
-export class NodeProgrammingModelFunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
+export class NodeV4FunctionNameStep extends FunctionNameStepBase<IScriptFunctionWizardContext> {
     protected async getUniqueFunctionName(context: IScriptFunctionWizardContext): Promise<string | undefined> {
         const template: IScriptFunctionTemplate = nonNullProp(context, 'functionTemplate');
         const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
@@ -24,8 +24,11 @@ export class NodeProgrammingModelFunctionNameStep extends FunctionNameStepBase<I
     }
 
     protected async validateFunctionNameCore(context: IScriptFunctionWizardContext, name: string): Promise<string | undefined> {
-        if (await AzExtFsExtra.pathExists(path.join(context.projectPath, name))) {
-            return localize('existingFolderError', 'A folder with the name "{0}" already exists.', name);
+        const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting, context.projectPath) as string;
+        name = `${name}${context.language === ProjectLanguage.TypeScript ? '.ts' : '.js'}`;
+
+        if (await AzExtFsExtra.pathExists(path.join(context.projectPath, functionSubpath, name))) {
+            return localize('existingFileError', 'A file with the name "{0}" already exists.', name);
         } else {
             return undefined;
         }

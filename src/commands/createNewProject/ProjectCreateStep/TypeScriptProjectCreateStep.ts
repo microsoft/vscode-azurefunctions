@@ -6,10 +6,11 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { functionSubpathSetting, nodejsNewModelVersion, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
+import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
 import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
@@ -36,7 +37,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
 
     protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
         const packageJson = super.getPackageJson(context);
-        if (context.languageModel === nodejsNewModelVersion) {
+        if (isNodeV4Plus(context)) {
             // default functionSubpath value is a string
             const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
 
@@ -84,7 +85,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         }
 
         const devDeps = super.getPackageJsonDevDeps(context);
-        if (context.languageModel !== nodejsNewModelVersion) {
+        if (!isNodeV4Plus(context)) {
             // previous programming model requires @azure/functions as a dev dependency
             devDeps['@azure/functions'] = `^${funcTypesVersion}.0.0`;
             devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
