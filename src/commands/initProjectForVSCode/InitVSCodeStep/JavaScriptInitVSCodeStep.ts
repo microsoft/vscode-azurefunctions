@@ -8,7 +8,6 @@ import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
 import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
-import { FuncVersion } from '../../../FuncVersion';
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
 import { IProjectWizardContext } from "../../createNewProject/IProjectWizardContext";
@@ -30,7 +29,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
         }
     }
 
-    protected getDebugConfiguration(_version: FuncVersion): DebugConfiguration {
+    protected getDebugConfiguration(): DebugConfiguration {
         return nodeDebugConfig;
     }
 
