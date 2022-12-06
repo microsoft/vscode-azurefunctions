@@ -7,7 +7,8 @@ import { Database, SqlManagementClient } from '@azure/arm-sql';
 import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
@@ -42,7 +43,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 6, 50)) {
-            return invalidLength('6', '50');
+            return getInvalidLengthMessage(6, 50);
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;

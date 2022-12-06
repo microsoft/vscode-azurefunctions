@@ -5,7 +5,8 @@
 
 import { AzureWizardPromptStep } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../constants';
-import { invalidLength, localize } from '../../localize';
+import { getInvalidLengthMessage } from '../../constants-nls';
+import { localize } from '../../localize';
 import { validateUtils } from '../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
@@ -26,7 +27,7 @@ export class SqlDatabaseConnectionCustomPromptStep<T extends ISqlDatabaseConnect
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name)) {
-            return invalidLength();
+            return getInvalidLengthMessage();
         }
 
         return undefined;

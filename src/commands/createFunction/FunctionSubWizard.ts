@@ -21,6 +21,7 @@ import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNa
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
 import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
 import { SqlDatabaseListStep } from './durableSteps/sql/SqlDatabaseListStep';
@@ -93,17 +94,23 @@ export class FunctionSubWizard {
                     break;
             }
 
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Netherite:
-                    promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
-                    executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
-                    break;
-                case DurableBackend.SQL:
-                    promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
-                    executeSteps.push(new SqlDatabaseConnectionExecuteStep());
-                    break;
-                case DurableBackend.Storage:
-                default:
+            if (context.newDurableStorageType) {
+                // To be removed in next PR
+                switch (context.newDurableStorageType) {
+                    case DurableBackend.Netherite:
+                        promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
+                        executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
+                        break;
+                    case DurableBackend.SQL:
+                        promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
+                        executeSteps.push(new SqlDatabaseConnectionExecuteStep());
+                        break;
+                    case DurableBackend.Storage:
+                        break;
+                    default:
+                }
+
+                executeSteps.push(new DurableProjectConfigureStep());
             }
 
             // To be removed in next PR

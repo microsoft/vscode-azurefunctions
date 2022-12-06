@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { invalidLength, localize } from '../../../../localize';
+import { getInvalidLengthMessage } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
 
@@ -32,7 +33,7 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
         password = password ? password.trim() : '';
 
         if (!validateUtils.isValidLength(password, 8, 128)) {
-            return invalidLength('8', '128');
+            return getInvalidLengthMessage(8, 128);
         }
         if (!validateUtils.meetsBasePasswordStrength(password)) {
             return localize('invalidPasswordStrength', 'Your password must contain three of the following - uppercase, lowercase, numbers, and symbols.');

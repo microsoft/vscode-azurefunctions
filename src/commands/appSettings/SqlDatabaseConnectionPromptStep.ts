@@ -6,11 +6,12 @@
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
 import { ConnectionKey, ConnectionType } from '../../constants';
+import { skipForNow } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
 import { getLocalConnectionString } from '../../funcConfig/local.settings';
-import { localize, skipForNow } from '../../localize';
+import { localize } from '../../localize';
 import { SqlServerListStep } from '../createFunction/durableSteps/sql/SqlServerListStep';
-import { IConnectionPromptOptions } from './IConnectionPrompOptions';
+import { IConnectionPromptOptions } from './IConnectionPromptOptions';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 import { SqlDatabaseConnectionCustomPromptStep } from './SqlDatabaseConnectionCustomPromptStep';
 

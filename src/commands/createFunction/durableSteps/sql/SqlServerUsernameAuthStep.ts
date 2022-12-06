@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
 
@@ -26,7 +27,7 @@ export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardCon
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name)) {
-            return invalidLength();
+            return getInvalidLengthMessage();
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;

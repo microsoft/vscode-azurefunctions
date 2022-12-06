@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { SqlManagementClient } from '@azure/arm-sql';
-import { delay } from '@azure/ms-rest-js';
 import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { invalidLength, invalidLowerCaseAlphanumericWithHyphens, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
+import { inputBoxDebounce } from '../../../../utils/debounce';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
 
@@ -31,18 +32,21 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 1, 63)) {
-            return invalidLength('1', '63');
+            return getInvalidLengthMessage(1, 63);
         }
         if (!validateUtils.isLowerCaseAlphanumericWithHypens(name)) {
             return invalidLowerCaseAlphanumericWithHyphens;
         }
-        delay(500);
 
-        const isNameAvailable: boolean | undefined = (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
+        const isNameAvailable: boolean | undefined = await inputBoxDebounce<boolean>('sqlServerName', this._isNameAvailable.bind(this), name);
         if (!isNameAvailable) {
             return localize('sqlServerExists', 'The SQL server "{0}" already exists. Please enter a unique name.', name);
         }
 
         return undefined;
+    }
+
+    private async _isNameAvailable(name: string): Promise<boolean | undefined> {
+        return (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
     }
 }
