@@ -13,7 +13,7 @@ import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerCreateStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 200;
+    public priority: number = 205;
 
     public async execute(context: T & ISubscriptionContext, progress: Progress<{ message?: string; increment?: number }>): Promise<void> {
         const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);

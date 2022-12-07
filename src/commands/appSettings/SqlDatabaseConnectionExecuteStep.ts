@@ -11,7 +11,7 @@ import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWiz
 
 // Todo in next PRs: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
-    public priority: number = 240;
+    public priority: number = 250;
 
     public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();

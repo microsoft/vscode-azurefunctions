@@ -120,7 +120,7 @@ export async function getSqlDatabaseConnectionString(context: ISqlDatabaseConnec
         password = (await context.ui.showInputBox({
             prompt: localize('sqlPasswordPrompt', 'Please enter your SQL server\'s admin password.'),
             password: true
-        })).trim() ?? 'null';
+        })).trim();
     }
 
     return {
