@@ -1128,7 +1128,7 @@
         "@azure/storage-blob": "^12.5.0",
         "@microsoft/vscode-azext-azureappservice": "^0.7.4",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
-        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-0.3.15.tgz",
+        "@microsoft/vscode-azext-utils": "^0.3.17",
         "escape-string-regexp": "^4.0.0",
         "extract-zip": "^2.0.1",
         "fs-extra": "^4.0.2",
