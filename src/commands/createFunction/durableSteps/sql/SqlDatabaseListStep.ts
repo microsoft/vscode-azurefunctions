@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Database, Server, SqlManagementClient } from '@azure/arm-sql';
-import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
@@ -21,10 +20,10 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
         }
 
         const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
-        const rgName: string = parseAzureResourceId(nonNullValue(context.sqlServer.id)).resourceGroup;
-        const serverName: string = nonNullValue(context.sqlServer.name);
+        const rgName: string = getResourceGroupFromId(nonNullValue(context.sqlServer?.id));
+        const serverName: string = nonNullProp(context.sqlServer, 'name');
 
-        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: 'Select a SQL database.' };
+        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('selectSqlDatabase', 'Select a SQL database.') };
         const picksTask: Promise<IAzureQuickPickItem<Database | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.databases.listByServer(rgName, serverName)));
 
         const result: Database | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
@@ -46,7 +45,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.sqlDatabase && context.sqlDbConnectionType === ConnectionType.Azure;
+        return !context.sqlDatabase;
     }
 
     private async _getQuickPicks(dbTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Database | undefined>[]> {

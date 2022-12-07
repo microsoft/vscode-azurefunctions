@@ -79,7 +79,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
 
         if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
             // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
-            return { promptSteps: [new SqlDatabaseConnectionCustomPromptStep()] }
+            return { promptSteps: [new SqlDatabaseConnectionCustomPromptStep()] };
         }
 
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];

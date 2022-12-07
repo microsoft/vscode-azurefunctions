@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Database, SqlManagementClient } from '@azure/arm-sql';
-import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../constants';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
@@ -21,8 +20,8 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
         // If we have a sql server already, then we should check to make sure we don't have a name duplicate down the line
         // If we don't have a sql server yet, then that means we can just take any name that meets basic validation requirements
         if (context.sqlServer) {
-            const rgName: string = parseAzureResourceId(nonNullValue(context.sqlServer.id)).resourceGroup;
-            const serverName: string = nonNullValue(context.sqlServer?.name);
+            const rgName: string = getResourceGroupFromId(nonNullValue(context.sqlServer?.id));
+            const serverName: string = nonNullProp(context.sqlServer, 'name');
 
             const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
             const dbIterator = client.databases.listByServer(rgName, serverName);
@@ -36,7 +35,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newSqlDatabaseName && context.sqlDbConnectionType === ConnectionType.Azure;
+        return !context.newSqlDatabaseName;
     }
 
     private _validateInput(name: string | undefined): string | undefined {

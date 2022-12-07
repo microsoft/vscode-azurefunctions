@@ -9,6 +9,7 @@ import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.set
 import { getSqlDatabaseConnectionString } from '../../utils/azure';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
+// Todo in next PRs: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 240;
 

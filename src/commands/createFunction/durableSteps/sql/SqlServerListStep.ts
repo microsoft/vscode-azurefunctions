@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Server, SqlManagementClient } from '@azure/arm-sql';
-import { LocationListStep, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
@@ -19,7 +19,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
     public async prompt(context: T): Promise<void> {
         const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
 
-        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: 'Select a SQL server.' };
+        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('selectSqlServer', 'Select a SQL server.') };
         const picksTask: Promise<IAzureQuickPickItem<Server | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.servers.list()));
 
         const result: Server | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
@@ -37,7 +37,6 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
             executeSteps.push(new SqlServerCreateStep());
         }
 
-        LocationListStep.addStep(context, promptSteps);
         promptSteps.push(new ResourceGroupListStep());
 
         return { promptSteps, executeSteps };

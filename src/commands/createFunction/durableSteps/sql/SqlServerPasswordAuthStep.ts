@@ -25,7 +25,7 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newSqlAdminPassword && !!context.newSqlAdminUsername;
+        return !context.newSqlAdminPassword;
     }
 
     private _validateInput(context: T, password: string | undefined): string | undefined {
