@@ -40,7 +40,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
 
         const isNameAvailable: boolean | undefined = await inputBoxDebounce<boolean>('sqlServerName', this._isNameAvailable.bind(this), name);
         if (!isNameAvailable) {
-            return localize('sqlServerExists', 'The SQL server "{0}" already exists. Please enter a unique name.', name);
+            return localize('sqlServerExists', 'A SQL server with the name "{0}" already exists.', name);
         }
 
         return undefined;

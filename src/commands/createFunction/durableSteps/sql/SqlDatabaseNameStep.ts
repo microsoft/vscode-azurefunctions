@@ -52,7 +52,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
             return db.name === name;
         });
         if (dbExists) {
-            return localize('sqlDatabaseExists', 'The SQL database "{0}" already exists. Please enter a unique name.', name);
+            return localize('sqlDatabaseExists', 'A SQL database with the name "{0}" already exists.', name);
         }
 
         return undefined;
