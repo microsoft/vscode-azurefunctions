@@ -21,12 +21,6 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public async prompt(context: T): Promise<void> {
-        if (this._options?.preSelectedConnectionType) {
-            context.sqlDbConnectionType = this._options.preSelectedConnectionType;
-            context.telemetry.properties.sqlDbConnectionType = this._options.preSelectedConnectionType;
-            return;
-        }
-
         const connectAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Azure SQL Database') };
         const connectNonAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Non-Azure SQL Database') };
         const useExistingConnectionButton: MessageItem = { title: localize('useExistingConnection', 'Use Existing Connection') };
@@ -60,7 +54,9 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public shouldPrompt(context: T): boolean {
-        if (context.azureWebJobsStorageType) {
+        if (this._options?.preSelectedConnectionType) {
+            context.sqlDbConnectionType = this._options.preSelectedConnectionType;
+        } else if (context.azureWebJobsStorageType) {
             context.sqlDbConnectionType = context.azureWebJobsStorageType;
         }
 

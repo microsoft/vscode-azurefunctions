@@ -16,7 +16,7 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
 
     public async prompt(context: T): Promise<void> {
         context.newSqlAdminPassword = (await context.ui.showInputBox({
-            prompt: localize('sqlServerPasswordPrompt', 'Enter an admin password for the SQL server.'),
+            prompt: localize('sqlServerPasswordPrompt', 'Provide an admin password for the SQL server.'),
             password: true,
             validateInput: (value: string | undefined) => this._validateInput(context, value)
         })).trim();

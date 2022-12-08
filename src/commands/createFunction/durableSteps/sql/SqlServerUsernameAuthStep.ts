@@ -12,7 +12,7 @@ import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDa
 export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         context.newSqlAdminUsername = (await context.ui.showInputBox({
-            prompt: localize('sqlServerUsernamePrompt', 'Enter an admin username for the new SQL server.'),
+            prompt: localize('sqlServerUsernamePrompt', 'Provide an admin username for the SQL server.'),
             validateInput: (value: string | undefined) => this._validateInput(value)
         })).trim();
 

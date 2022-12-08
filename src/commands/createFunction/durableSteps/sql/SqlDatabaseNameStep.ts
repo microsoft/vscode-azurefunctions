@@ -29,7 +29,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
         }
 
         context.newSqlDatabaseName = (await context.ui.showInputBox({
-            prompt: localize('sqlDatabaseNamePrompt', 'Enter a name the new SQL database.'),
+            prompt: localize('sqlDatabaseNamePrompt', 'Provide a SQL database name.'),
             validateInput: (value: string | undefined) => this._validateInput(value)
         })).trim();
     }

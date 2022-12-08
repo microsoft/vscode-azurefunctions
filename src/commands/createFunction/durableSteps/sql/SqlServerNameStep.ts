@@ -19,7 +19,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
         this._client = await createSqlClient(<T & ISubscriptionContext>context);
 
         context.newSqlServerName = (await context.ui.showInputBox({
-            prompt: localize('sqlServerNamePrompt', 'Enter a name the new SQL server.'),
+            prompt: localize('sqlServerNamePrompt', 'Provide a SQL server name.'),
             validateInput: async (value: string | undefined) => await this._validateInput(value)
         })).trim();
     }
