@@ -139,7 +139,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         } else if (language === ProjectLanguage.CSharp ||
             language === ProjectLanguage.Java ||
             (language === ProjectLanguage.Python && !isPythonV2Plus(language, languageModel)) ||
-            (language === ProjectLanguage.TypeScript) && !isNodeV4Plus(context)) {
+            (language === ProjectLanguage.TypeScript && !isNodeV4Plus(context))) {
             // NOTE: Only show this if we actually found other templates
             picks.push({
                 label: localize('openAPI', 'HTTP trigger(s) from OpenAPI V2/V3 Specification (Preview)'),

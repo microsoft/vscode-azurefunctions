@@ -73,19 +73,11 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
     protected getPackageJsonDeps(context: IProjectWizardContext): { [key: string]: string } {
         const deps: { [key: string]: string } = {};
-        if (isNodeV4Plus(context))
-            deps[azureFunctionsDependency] = azureFunctionsDependencyVersion;
-
-        return deps;
-    }
-
-    protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {
-        const devDeps: { [key: string]: string } = {};
         if (isNodeV4Plus(context)) {
-            devDeps['@types/node'] = '^18.0.0';
+            deps[azureFunctionsDependency] = azureFunctionsDependencyVersion;
         }
 
-        return devDeps;
+        return deps;
     }
 }
 

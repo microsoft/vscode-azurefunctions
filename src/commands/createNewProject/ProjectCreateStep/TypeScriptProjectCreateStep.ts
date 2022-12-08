@@ -70,7 +70,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         switch (context.version) {
             case FuncVersion.v4:
                 funcTypesVersion = '3';
-                nodeTypesVersion = '16';
+                nodeTypesVersion = isNodeV4Plus(context) ? '18' : '16';
                 break;
             case FuncVersion.v3:
                 funcTypesVersion = '2';
@@ -84,13 +84,13 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                 throw new Error(localize('typeScriptNoV1', 'TypeScript projects are not supported on Azure Functions v1.'));
         }
 
-        const devDeps = super.getPackageJsonDevDeps(context);
+        const devDeps = {};
         if (!isNodeV4Plus(context)) {
             // previous programming model requires @azure/functions as a dev dependency
             devDeps['@azure/functions'] = `^${funcTypesVersion}.0.0`;
-            devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
         }
 
+        devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
         devDeps['typescript'] = '^4.0.0';
         return devDeps;
     }
