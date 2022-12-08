@@ -20,7 +20,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
 
         context.newSqlServerName = (await context.ui.showInputBox({
             prompt: localize('sqlServerNamePrompt', 'Provide a SQL server name.'),
-            validateInput: async (value: string | undefined) => await this._validateInput(value)
+            validateInput: async (value: string | undefined) => await this.validateInput(value)
         })).trim();
     }
 
@@ -28,7 +28,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
         return !context.newSqlServerName;
     }
 
-    private async _validateInput(name: string | undefined): Promise<string | undefined> {
+    private async validateInput(name: string | undefined): Promise<string | undefined> {
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 1, 63)) {
@@ -38,7 +38,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
             return invalidLowerCaseAlphanumericWithHyphens;
         }
 
-        const isNameAvailable: boolean | undefined = await inputBoxDebounce<boolean>('sqlServerName', this._isNameAvailable.bind(this), name);
+        const isNameAvailable: boolean | undefined = await inputBoxDebounce<boolean>('sqlServerName', this.isNameAvailable.bind(this), name);
         if (!isNameAvailable) {
             return localize('sqlServerExists', 'A SQL server with the name "{0}" already exists.', name);
         }
@@ -46,7 +46,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
         return undefined;
     }
 
-    private async _isNameAvailable(name: string): Promise<boolean | undefined> {
+    private async isNameAvailable(name: string): Promise<boolean | undefined> {
         return (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
     }
 }

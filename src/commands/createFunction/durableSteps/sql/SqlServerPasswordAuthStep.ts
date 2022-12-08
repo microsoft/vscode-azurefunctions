@@ -18,7 +18,7 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
         context.newSqlAdminPassword = (await context.ui.showInputBox({
             prompt: localize('sqlServerPasswordPrompt', 'Provide an admin password for the SQL server.'),
             password: true,
-            validateInput: (value: string | undefined) => this._validateInput(context, value)
+            validateInput: (value: string | undefined) => this.validateInput(context, value)
         })).trim();
 
         context.valuesToMask.push(nonNullProp(context, 'newSqlAdminPassword'));
@@ -28,7 +28,7 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
         return !context.newSqlAdminPassword;
     }
 
-    private _validateInput(context: T, password: string | undefined): string | undefined {
+    private validateInput(context: T, password: string | undefined): string | undefined {
         const login: string = nonNullProp(context, 'newSqlAdminUsername');
         password = password ? password.trim() : '';
 

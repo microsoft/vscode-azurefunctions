@@ -20,7 +20,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
 
         const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('selectSqlServer', 'Select a SQL server.') };
-        const picksTask: Promise<IAzureQuickPickItem<Server | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.servers.list()));
+        const picksTask: Promise<IAzureQuickPickItem<Server | undefined>[]> = this.getQuickPicks(uiUtils.listAllIterator(client.servers.list()));
 
         const result: Server | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
         context.sqlServer = result;
@@ -46,7 +46,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         return !context.sqlServer;
     }
 
-    private async _getQuickPicks(serverTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Server | undefined>[]> {
+    private async getQuickPicks(serverTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Server | undefined>[]> {
         const picks: IAzureQuickPickItem<Server | undefined>[] = [{
             label: localize('newSqlServer', '$(plus) Create new SQL server'),
             description: '',
