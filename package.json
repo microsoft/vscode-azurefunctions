@@ -474,7 +474,7 @@
                 {
                     "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == azFuncSlots",
-                    "group": "2@1"
+                    "group": "6@1"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
