@@ -95,8 +95,6 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
     return installed;
 }
 
-
-
 export async function funcToolsInstalled(context: IActionContext, workspacePath: string | undefined): Promise<boolean> {
     try {
         const funcCliPath = await getFuncCliPath(context, workspacePath);
