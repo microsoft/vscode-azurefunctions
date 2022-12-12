@@ -49,9 +49,7 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
             }
 
             if (os.platform() === 'linux') {
-                const hasPackageManager: boolean = !!packageManagers.length;
-                const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(hasPackageManager);
-
+                const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(!!packageManagers.length /* hasPackageManager */);
                 if (linuxErrorMessages.noPackageManager) {
                     message += ' ' + linuxErrorMessages.noPackageManager;
                 }
