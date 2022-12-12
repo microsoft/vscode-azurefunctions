@@ -13,9 +13,9 @@ import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { generateLinuxErrorMessages, ILinuxErrorMessages } from './generateLinuxErrorMessages';
 import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
-import { getLinuxDistroTag, LinuxDistroTag } from './getLinuxDistroTag';
 import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';
 
 export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
@@ -49,23 +49,14 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
             }
 
             if (os.platform() === 'linux') {
-                const linuxDistroTag: LinuxDistroTag | undefined = await getLinuxDistroTag();
-                if (linuxDistroTag) {
-                    let linuxMessage: string = '';
-                    if (linuxDistroTag.PRETTY_NAME) {
-                        linuxMessage += localize('linuxDistributionInfoPretty', 'Note: You are currently running "{0}".', linuxDistroTag.PRETTY_NAME);
-                    } else if (linuxDistroTag.NAME && linuxDistroTag.VERSION) {
-                        linuxMessage += localize('linuxDistributionInfo', 'Note: You are currently running "{0} {1}".', linuxDistroTag.NAME, linuxDistroTag.VERSION);
-                    }
+                const hasPackageManager: boolean = !!packageManagers.length;
+                const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(hasPackageManager);
 
-                    if (linuxMessage) {
-                        if (!packageManagers.length) {
-                            message += ' ' + linuxMessage;
-                        } else {
-                            failedInstall += ' ' + localize('failedInstallOptions', 'Try re-running the last command with "sudo" or click "Learn more" for more options.');
-                            failedInstall += ' ' + linuxMessage;
-                        }
-                    }
+                if (linuxErrorMessages.noPackageManager) {
+                    message += ' ' + linuxErrorMessages.noPackageManager;
+                }
+                if (linuxErrorMessages.failedInstall) {
+                    failedInstall += ' ' + linuxErrorMessages.failedInstall;
                 }
             }
 
@@ -105,6 +96,8 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 
     return installed;
 }
+
+
 
 export async function funcToolsInstalled(context: IActionContext, workspacePath: string | undefined): Promise<boolean> {
     try {
