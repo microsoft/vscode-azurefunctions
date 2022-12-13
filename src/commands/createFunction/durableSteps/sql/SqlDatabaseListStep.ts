@@ -55,8 +55,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
         for (const db of dbs) {
             picks.push({
                 id: db.id,
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                label: db.name!,
+                label: nonNullProp(db, 'name'),
                 description: '',
                 data: db
             });
