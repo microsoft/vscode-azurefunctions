@@ -10,7 +10,7 @@ import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { inputBoxDebounce } from '../../../../utils/debounce';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private _client: SqlManagementClient;

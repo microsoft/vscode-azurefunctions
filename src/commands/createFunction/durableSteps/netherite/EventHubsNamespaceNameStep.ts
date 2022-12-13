@@ -10,7 +10,7 @@ import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { inputBoxDebounce } from '../../../../utils/debounce';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private _client: EventHubManagementClient;

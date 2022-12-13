@@ -13,9 +13,9 @@ import { ext } from "../../extensionVariables";
 import { getLocalSettingsJson, ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { decryptLocalSettings } from "./decryptLocalSettings";
-import { encryptLocalSettings } from "./encryptLocalSettings";
-import { getLocalSettingsFile } from "./getLocalSettingsFile";
+import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
+import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
+import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
 export async function downloadAppSettings(context: IActionContext, node?: AppSettingsTreeItem): Promise<void> {
     if (!node) {

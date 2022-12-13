@@ -11,7 +11,7 @@ import { ext } from '../../../../extensionVariables';
 import { IHostJsonV2, INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
 import { netheriteUtils } from '../../../../utils/durableUtils';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 245;

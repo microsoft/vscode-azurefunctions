@@ -5,13 +5,13 @@
 
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
-import { ConnectionKey, ConnectionType } from '../../constants';
-import { skipForNow } from '../../constants-nls';
-import { ext } from '../../extensionVariables';
-import { getLocalConnectionString } from '../../funcConfig/local.settings';
-import { localize } from '../../localize';
-import { SqlServerListStep } from '../createFunction/durableSteps/sql/SqlServerListStep';
-import { IConnectionPromptOptions } from './IConnectionPromptOptions';
+import { ConnectionKey, ConnectionType } from '../../../../constants';
+import { skipForNow } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
+import { getLocalConnectionString } from '../../../../funcConfig/local.settings';
+import { localize } from '../../../../localize';
+import { SqlServerListStep } from '../../../createFunction/durableSteps/sql/SqlServerListStep';
+import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 import { SqlDatabaseConnectionCustomPromptStep } from './SqlDatabaseConnectionCustomPromptStep';
 
@@ -54,8 +54,8 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public shouldPrompt(context: T): boolean {
-        if (this._options?.preSelectedConnectionType) {
-            context.sqlDbConnectionType = this._options.preSelectedConnectionType;
+        if (this._options?.preselectedConnectionType) {
+            context.sqlDbConnectionType = this._options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType) {
             context.sqlDbConnectionType = context.azureWebJobsStorageType;
         }
@@ -73,19 +73,19 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
             return undefined;
         }
 
-        if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
-            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
-            return { promptSteps: [new SqlDatabaseConnectionCustomPromptStep()] };
-        }
-
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
 
-        const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-        if (subscriptionPromptStep) {
-            promptSteps.push(subscriptionPromptStep);
-        }
+        if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
+            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
+            promptSteps.push(new SqlDatabaseConnectionCustomPromptStep());
+        } else {
+            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
+            if (subscriptionPromptStep) {
+                promptSteps.push(subscriptionPromptStep);
+            }
 
-        promptSteps.push(new SqlServerListStep());
+            promptSteps.push(new SqlServerListStep());
+        }
 
         return { promptSteps };
     }

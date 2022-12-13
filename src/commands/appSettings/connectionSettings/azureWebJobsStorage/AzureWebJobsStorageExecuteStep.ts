@@ -5,9 +5,9 @@
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../constants';
-import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { getStorageConnectionString } from '../../utils/azure';
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
+import { MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
+import { getStorageConnectionString } from '../../../../utils/azure';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 // Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy

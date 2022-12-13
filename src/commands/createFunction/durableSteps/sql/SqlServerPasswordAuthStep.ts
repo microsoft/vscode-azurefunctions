@@ -7,7 +7,7 @@ import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-util
 import { getInvalidLengthMessage } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public constructor() {

@@ -10,7 +10,7 @@ import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../.
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 
 export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {

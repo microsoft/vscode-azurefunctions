@@ -6,7 +6,7 @@
 import type { EHNamespace } from "@azure/arm-eventhub";
 import type { ResourceManagementModels } from "@azure/arm-resources";
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../constants";
+import { ConnectionTypeValues } from "../../../../constants";
 
 export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;

@@ -9,8 +9,8 @@ import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azure
 import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { IEventHubsConnectionWizardContext } from '../commands/appSettings/IEventHubsConnectionWizardContext';
-import { ISqlDatabaseConnectionWizardContext } from '../commands/appSettings/ISqlDatabaseConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../commands/appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { ext } from '../extensionVariables';

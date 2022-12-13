@@ -6,7 +6,7 @@
 import type { ResourceManagementModels } from '@azure/arm-resources';
 import type { Database, Server } from '@azure/arm-sql';
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../constants";
+import { ConnectionTypeValues } from "../../../../constants";
 
 export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
@@ -25,6 +25,6 @@ export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Par
     sqlServer?: Server;
     sqlDatabase?: Database;
 
-    nonAzureSqlConnection?: string;
+    customSqlConnection?: string;
     sqlDbRemoteConnection?: string;
 }

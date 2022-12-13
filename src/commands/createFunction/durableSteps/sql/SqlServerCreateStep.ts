@@ -10,7 +10,7 @@ import { Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerCreateStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 205;

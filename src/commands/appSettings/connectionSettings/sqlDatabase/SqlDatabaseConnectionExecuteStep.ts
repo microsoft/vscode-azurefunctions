@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType } from '../../constants';
-import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { getSqlDatabaseConnectionString } from '../../utils/azure';
+import { ConnectionKey, ConnectionType } from '../../../../constants';
+import { MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
+import { getSqlDatabaseConnectionString } from '../../../../utils/azure';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
 // Todo in next PRs: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
@@ -24,7 +24,7 @@ export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWi
             value = (await getSqlDatabaseConnectionString(context)).connectionString;
         } else {
             // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
-            value = nonNullProp(context, 'nonAzureSqlConnection');
+            value = nonNullProp(context, 'customSqlConnection');
         }
 
         if (this._setConnectionForDeploy) {

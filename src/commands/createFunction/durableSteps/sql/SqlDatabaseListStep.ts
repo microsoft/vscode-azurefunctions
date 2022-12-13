@@ -8,7 +8,7 @@ import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureut
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { SqlDatabaseCreateStep } from './SqlDatabaseCreateStep';
 import { SqlDatabaseNameStep } from './SqlDatabaseNameStep';
 
