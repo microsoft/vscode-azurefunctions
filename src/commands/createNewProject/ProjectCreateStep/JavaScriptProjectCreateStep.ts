@@ -79,6 +79,10 @@ export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
 
         return deps;
     }
+
+    protected getPackageJsonDevDeps(_context: IProjectWizardContext): { [key: string]: string } {
+        return {};
+    }
 }
 
 /**
