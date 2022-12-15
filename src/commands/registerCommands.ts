@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AppSettingsTreeItem, AppSettingTreeItem, registerSiteCommand } from '@microsoft/vscode-azext-azureappservice';
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, registerCommand, registerCommandWithTreeNodeUnwrapping, unwrapArgs } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { installOrUpdateFuncCoreTools } from '../funcCoreTools/installOrUpdateFuncCoreTools';
 import { uninstallFuncCoreTools } from '../funcCoreTools/uninstallFuncCoreTools';
@@ -98,7 +98,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureFunctions.toggleAppSettingVisibility', async (context: IActionContext, node: AppSettingTreeItem) => { await node.toggleValueVisibility(context); }, 250);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.uninstallFuncCoreTools', uninstallFuncCoreTools);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewCommitInGitHub', viewCommitInGitHub);
-    registerSiteCommand('azureFunctions.viewDeploymentLogs', viewDeploymentLogs);
+    registerSiteCommand('azureFunctions.viewDeploymentLogs', unwrapArgs(viewDeploymentLogs));
     registerCommandWithTreeNodeUnwrapping('azureFunctions.viewProperties', viewProperties);
     registerCommandWithTreeNodeUnwrapping('azureFunctions.showOutputChannel', () => { ext.outputChannel.show(); });
 }
