@@ -8,9 +8,9 @@ import { AzExtFsExtra, AzureWizard, IActionContext, parseError } from "@microsof
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/AzureWebJobsStorageExecuteStep";
-import { AzureWebJobsStoragePromptStep } from "../commands/appSettings/AzureWebJobsStoragePromptStep";
-import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/IAzureWebJobsStorageWizardContext";
+import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStorageExecuteStep";
+import { AzureWebJobsStoragePromptStep } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStoragePromptStep';
+import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/connectionSettings/azureWebJobsStorage/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { ConnectionKey, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";

@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault } from '../../constants';
-import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { getEventHubsConnectionString } from '../../utils/azure';
+import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault } from '../../../../constants';
+import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
+import { getEventHubsConnectionString } from '../../../../utils/azure';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 // Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy

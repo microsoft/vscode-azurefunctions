@@ -11,7 +11,7 @@ import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private _eventHubs: Eventhub[] = [];

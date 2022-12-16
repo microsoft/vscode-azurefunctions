@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConnectionTypeValues } from "../../constants";
+import { ConnectionTypeValues } from "../../../constants";
 
 export interface IConnectionPromptOptions {
-    preSelectedConnectionType?: ConnectionTypeValues;
+    preselectedConnectionType?: ConnectionTypeValues;
     suppressSkipForNow?: boolean;
 }
 

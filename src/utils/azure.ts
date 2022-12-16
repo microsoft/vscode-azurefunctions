@@ -9,7 +9,8 @@ import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azure
 import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { isArray } from 'util';
-import { IEventHubsConnectionWizardContext } from '../commands/appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../commands/appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { ext } from '../extensionVariables';
@@ -105,29 +106,28 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
     };
 }
 
-// Todo: Uncomment out in future PR
-// export async function getSqlDatabaseConnectionString(context: ISqlDatabaseConnectionWizardContext): Promise<IResourceResult> {
-//     const serverName: string = nonNullValue(context.sqlServer?.name);
-//     const dbName: string = nonNullValue(context.sqlDatabase?.name);
-//     const username: string | undefined = context.sqlServer?.administratorLogin;
+export async function getSqlDatabaseConnectionString(context: ISqlDatabaseConnectionWizardContext): Promise<IResourceResult> {
+    const serverName: string = nonNullValue(context.sqlServer?.name);
+    const dbName: string = nonNullValue(context.sqlDatabase?.name);
+    const username: string | undefined = context.sqlServer?.administratorLogin;
 
-//     if (!username) {
-//         throw new Error(localize('unableToDetermineSqlConnection', 'We were unable to locate the admin user for this SQL server, please add these credentials to your resource to proceed.'));
-//     }
+    if (!username) {
+        throw new Error(localize('unableToDetermineSqlConnection', 'Unable to locate SQL server\'s admin user. Add these credentials to your resource to proceed.'));
+    }
 
-//     let password: string | undefined = context.newSqlAdminPassword;  // password is never returned back to us on the sqlServer object
-//     if (!password) {
-//         password = (await context.ui.showInputBox({
-//             prompt: localize('sqlPasswordPrompt', 'Please enter your SQL server\'s admin password.'),
-//             password: true
-//         })).trim() ?? 'null';
-//     }
+    let password: string | undefined = context.newSqlAdminPassword;  // password is never returned back to us on the sqlServer object
+    if (!password) {
+        password = (await context.ui.showInputBox({
+            prompt: localize('sqlPasswordPrompt', 'Please enter your SQL server\'s admin password.'),
+            password: true
+        })).trim();
+    }
 
-//     return {
-//         name: dbName,
-//         connectionString: `Server=${serverName}.database.windows.net,1433;Database=${dbName};User=${username};Password=${password}`
-//     };
-// }
+    return {
+        name: dbName,
+        connectionString: `Server=${serverName}.database.windows.net,1433;Database=${dbName};User=${username};Password=${password}`
+    };
+}
 
 export async function registerProviders(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<void> {
     const providerContext: IAppServiceWizardContext = Object.assign(context, subscription.subscription, {

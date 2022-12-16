@@ -8,7 +8,7 @@ import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureuti
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { EventHubsNamespaceCreateStep } from './EventHubsNamespaceCreateStep';
 import { EventHubsNamespaceNameStep } from './EventHubsNamespaceNameStep';
 
@@ -23,7 +23,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         context.eventHubsNamespace = result;
     }
 
-    public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+    public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionContext> | undefined> {
         if (context.eventHubsNamespace) {
             context.valuesToMask.push(nonNullProp(context.eventHubsNamespace, 'name'));
             return undefined;

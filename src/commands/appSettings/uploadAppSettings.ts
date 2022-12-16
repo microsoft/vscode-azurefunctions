@@ -13,9 +13,9 @@ import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { decryptLocalSettings } from "./decryptLocalSettings";
-import { encryptLocalSettings } from "./encryptLocalSettings";
-import { getLocalSettingsFile } from "./getLocalSettingsFile";
+import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
+import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
+import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;

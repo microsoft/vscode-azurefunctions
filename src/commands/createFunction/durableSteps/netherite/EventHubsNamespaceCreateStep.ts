@@ -10,7 +10,7 @@ import { Progress } from 'vscode';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class EventHubsNamespaceCreateStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 200;
