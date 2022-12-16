@@ -6,22 +6,17 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { Progress } from 'vscode';
-import { tsConfigFileName, tsDefaultOutDir } from '../../../constants';
+import { functionSubpathSetting, tsConfigFileName, tsDefaultOutDir } from '../../../constants';
 import { FuncVersion } from '../../../FuncVersion';
 import { localize } from '../../../localize';
 import { confirmOverwriteFile } from '../../../utils/fs';
+import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
+import { getWorkspaceSetting } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { JavaScriptProjectCreateStep } from './JavaScriptProjectCreateStep';
 
-export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
-    protected packageJsonScripts: { [key: string]: string } = {
-        build: 'tsc',
-        watch: 'tsc -w',
-        prestart: 'npm run build',
-        start: 'func start',
-        test: 'echo \"No tests yet...\"'
-    };
 
+export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
     public async executeCore(context: IProjectWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         await super.executeCore(context, progress);
 
@@ -40,6 +35,31 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         }
     }
 
+    protected getPackageJson(context: IProjectWizardContext): { [key: string]: unknown } {
+        const packageJson = super.getPackageJson(context);
+        if (isNodeV4Plus(context)) {
+            // default functionSubpath value is a string
+            const functionSubpath: string = getWorkspaceSetting(functionSubpathSetting) as string;
+
+            // this is set in the super class, but we want to override it
+            packageJson.main = path.posix.join('dist', functionSubpath, '*.js');
+        }
+
+        return packageJson;
+    }
+
+    protected getPackageJsonScripts(_context: IProjectWizardContext): { [key: string]: string } {
+        const typeScriptPackageJsonScripts: { [key: string]: string } = {
+            build: 'tsc',
+            watch: 'tsc -w',
+            prestart: 'npm run build',
+            start: 'func start',
+            test: 'echo \"No tests yet...\"'
+        };
+
+        return typeScriptPackageJsonScripts;
+    }
+
     protected getPackageJsonDevDeps(context: IProjectWizardContext): { [key: string]: string } {
         // NOTE: Types package matches node worker version, not func host version
         // See version matrix here: https://www.npmjs.com/package/@azure/functions
@@ -50,7 +70,7 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
         switch (context.version) {
             case FuncVersion.v4:
                 funcTypesVersion = '3';
-                nodeTypesVersion = '16';
+                nodeTypesVersion = isNodeV4Plus(context) ? '18' : '16';
                 break;
             case FuncVersion.v3:
                 funcTypesVersion = '2';
@@ -64,10 +84,14 @@ export class TypeScriptProjectCreateStep extends JavaScriptProjectCreateStep {
                 throw new Error(localize('typeScriptNoV1', 'TypeScript projects are not supported on Azure Functions v1.'));
         }
 
-        return {
-            '@azure/functions': `^${funcTypesVersion}.0.0`,
-            '@types/node': `${nodeTypesVersion}.x`,
-            typescript: '^4.0.0',
-        };
+        const devDeps = {};
+        if (!isNodeV4Plus(context)) {
+            // previous programming model requires @azure/functions as a dev dependency
+            devDeps['@azure/functions'] = `^${funcTypesVersion}.0.0`;
+        }
+
+        devDeps['@types/node'] = `^${nodeTypesVersion}.x`;
+        devDeps['typescript'] = '^4.0.0';
+        return devDeps;
     }
 }

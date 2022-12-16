@@ -11,7 +11,7 @@ import { FuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { delay } from '../utils/delay';
 import { nonNullValue } from '../utils/nonNull';
-import { isPythonV2Plus } from '../utils/pythonUtils';
+import { isNodeV4Plus, isPythonV2Plus } from '../utils/programmingModelUtils';
 import { requestUtils } from '../utils/requestUtils';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
 import { DotnetTemplateProvider } from './dotnet/DotnetTemplateProvider';
@@ -22,6 +22,7 @@ import { ITemplates } from './ITemplates';
 import { getJavaVerifiedTemplateIds } from './java/getJavaVerifiedTemplateIds';
 import { JavaTemplateProvider } from './java/JavaTemplateProvider';
 import { getScriptVerifiedTemplateIds } from './script/getScriptVerifiedTemplateIds';
+import { NodeV4Provider } from './script/NodeV4Provider';
 import { IScriptFunctionTemplate } from './script/parseScriptTemplates';
 import { PysteinTemplateProvider } from './script/PysteinTemplateProvider';
 import { ScriptBundleTemplateProvider } from './script/ScriptBundleTemplateProvider';
@@ -62,6 +63,8 @@ export class CentralTemplateProvider implements Disposable {
             default:
                 if (isPythonV2Plus(language, languageModel)) {
                     providers.push(new PysteinTemplateProvider(version, projectPath, language, projectTemplateKey));
+                } else if (isNodeV4Plus({ language, languageModel })) {
+                    providers.push(new NodeV4Provider(version, projectPath, language, projectTemplateKey))
                 } else {
                     providers.push(new ScriptTemplateProvider(version, projectPath, language, projectTemplateKey));
                     if (version !== FuncVersion.v1) {

@@ -101,5 +101,7 @@
     "azureFunctions.validateFuncCoreTools": "Validate the Azure Functions Core Tools is installed before debugging.",
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
-    "azureFunctions.viewProperties": "View Properties"
+    "azureFunctions.viewProperties": "View Properties",
+    "azureFunctions.functionSubpath": "The default subpath to create new functions. Currently, this only applies to Node.js programming model v4+.",
+    "azureFunctions.showNodeProgrammingModel": "Enable preview Node.js programming model"
 }

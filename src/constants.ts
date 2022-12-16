@@ -20,6 +20,8 @@ export const hiddenStacksSetting: string = 'showHiddenStacks';
 export const projectTemplateKeySetting: string = 'projectTemplateKey';
 export const remoteBuildSetting: string = 'scmDoBuildDuringDeployment';
 export const javaBuildTool: string = 'javaBuildTool';
+export const functionSubpathSetting: string = 'functionSubpath';
+export const nodeProgrammingModelSetting: string = 'showNodeProgrammingModel';
 
 export enum ProjectLanguage {
     CSharp = 'C#',
@@ -108,10 +110,26 @@ export const viewOutput: string = localize('viewOutput', 'View Output');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
 
+/**
+ * The "current" Node.js model is 3 (and assumed, if the number is omitted).
+ * The new Node.js model is 4.
+ * Any significantly changed new model should use an incremented number.
+ */
+export const nodeV4ModelVersion: number = 4;
+export const nodeV4ModelLabel: string = localize('modelV4', 'Model V4 (Preview)')
+
+export const nodeV4Model: { modelVersion: number, label: string } = { modelVersion: nodeV4ModelVersion, label: nodeV4ModelLabel };
+export const nodeDefaultModel: { modelVersion: undefined, label: string } = { modelVersion: undefined, label: localize('modelV3', 'Model V3') }
+
+export const nodeModels = [nodeDefaultModel, nodeV4Model];
+export const nodeLearnMoreLink = 'https://aka.ms/AzFuncNodeV4';
+
 
 export const webProvider: string = 'Microsoft.Web';
 export const functionFilter = {
     type: 'microsoft.web/sites',
     kind: 'functionapp',
 };
+
 export const sqlBindingTemplateRegex: RegExp = /Sql.*Binding/i;
+export const learnMoreQp = { label: localize('learnMore', '$(link-external) Learn more...'), description: '', data: undefined };
