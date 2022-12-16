@@ -11,6 +11,7 @@ import { AzureWizard, AzureWizardExecuteStep, IActionContext, IAzureQuickPickIte
 import { isArray } from 'util';
 import { IEventHubsConnectionWizardContext } from '../commands/appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 import { ISqlDatabaseConnectionWizardContext } from '../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
+import { createAndGetAuthRuleName } from '../commands/createFunction/durableSteps/netherite/createAndGetAuthRuleName';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
 import { ext } from '../extensionVariables';
@@ -72,30 +73,31 @@ export async function getStorageConnectionString(context: IStorageAccountWizardC
 
 export async function getEventHubsConnectionString(context: IEventHubsConnectionWizardContext & ISubscriptionContext): Promise<IResourceResult> {
     const client: EventHubManagementClient = await createEventHubClient(context);
-    const resourceGroupName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
+    const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
     const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
 
-    const authRulesIterable = client.namespaces.listAuthorizationRules(resourceGroupName, namespaceName);
+    const authRulesIterable = client.namespaces.listAuthorizationRules(rgName, namespaceName);
     const authRules: AuthorizationRule[] = await uiUtils.listAllIterator(authRulesIterable);
+    const manageAccessRules: AuthorizationRule[] = authRules.filter(authRule => authRule.rights?.includes('Manage'));
 
-    let authRule: string;
-    if (!authRules.length) {
-        throw new Error(localize('noAuthRules', 'Unable to locate a shared access policy for your event hub namespace.'));
-    } else if (authRules.length === 1) {
-        authRule = nonNullProp(authRules[0], 'name');
+    let authRuleName: string;
+    if (!manageAccessRules.length) {
+        authRuleName = await createAndGetAuthRuleName(context);
+    } else if (manageAccessRules.length === 1) {
+        authRuleName = nonNullProp(authRules[0], 'name');
     } else {
         const rootKeyName: string = 'RootManageSharedAccessKey';
         const placeHolder: string = localize('chooseSharedAccessPolicy', 'Choose a shared access policy.');
 
-        authRule = (await context.ui.showQuickPick(authRules.map(authRule => {
-            return { label: nonNullProp(authRule, 'name'), description: authRule.name === rootKeyName ? localize('default', '(Default)') : '' };
+        authRuleName = (await context.ui.showQuickPick(manageAccessRules.map(authRule => {
+            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? localize('default', '(default)') : '' };
         }), { placeHolder })).label;
     }
 
-    const accessKeys: AccessKeys = await client.namespaces.listKeys(resourceGroupName, namespaceName, authRule);
+    const accessKeys: AccessKeys = await client.namespaces.listKeys(rgName, namespaceName, authRuleName);
     if (!accessKeys.primaryConnectionString && !accessKeys.secondaryConnectionString) {
         const learnMoreLink: string = 'https://aka.ms/event-hubs-connection-string';
-        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your namespace\'s shared access policy. Locate a valid access policy and add the connection string to "local.settings.json".');
+        const message: string = localize('missingEventHubsConnectionString', 'There are no connection strings available on your namespace\'s shared access policy. Locate a valid access policy and add the connection string to "{0}".', 'local.settings.json');
         void context.ui.showWarningMessage(message, { learnMoreLink });
         ext.outputChannel.appendLog(message);
     }
