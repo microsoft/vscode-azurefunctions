@@ -60,11 +60,11 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
                 switch (durableStorageType) {
                     case DurableBackend.Netherite:
                         context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                        await netheriteUtils.validateConnection(context);
+                        await netheriteUtils.validateConnection(context, projectPath);
                         break;
                     case DurableBackend.SQL:
                         context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await sqlUtils.validateConnection(context);
+                        await sqlUtils.validateConnection(context, projectPath);
                         break;
                     case DurableBackend.Storage:
                     default:

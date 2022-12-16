@@ -19,7 +19,6 @@ import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSte
 import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage, requirementsFileName } from "../constants";
-import { NoWorkspaceError } from "../errors";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { getLocalConnectionString } from "../funcConfig/local.settings";
@@ -241,12 +240,7 @@ export namespace netheriteUtils {
         return taskJson?.hubName;
     }
 
-    export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            throw new NoWorkspaceError();
-        }
-
+    export async function validateConnection(context: IActionContext, projectPath: string, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>): Promise<void> {
         const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
         const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
 
@@ -294,12 +288,7 @@ export namespace netheriteUtils {
 }
 
 export namespace sqlUtils {
-    export async function validateConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-        projectPath ??= await getRootWorkspacePath();
-        if (!projectPath) {
-            throw new NoWorkspaceError();
-        }
-
+    export async function validateConnection(context: IActionContext, projectPath: string, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
         const hasSqlDbConnection: boolean = !!sqlDbConnection;
 
