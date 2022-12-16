@@ -5,12 +5,13 @@
 
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
-import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp } from '../../constants';
-import { ext } from '../../extensionVariables';
-import { getLocalConnectionString } from '../../funcConfig/local.settings';
-import { localize, skipForNow, useEmulator } from '../../localize';
-import { EventHubsNamespaceListStep } from '../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
-import { IConnectionPromptOptions } from './IConnectionPrompOptions';
+import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp } from '../../../../constants';
+import { skipForNow, useEmulator } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
+import { getLocalConnectionString } from '../../../../funcConfig/local.settings';
+import { localize } from '../../../../localize';
+import { EventHubsNamespaceListStep } from '../../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
+import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
@@ -35,6 +36,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         if (result === connectEventNamespaceButton) {
             context.eventHubConnectionType = ConnectionType.Azure;
         } else if (result === useEmulatorButton) {
+            // 'NonAzure' will represent 'Emulator' in this flow
             context.eventHubConnectionType = ConnectionType.NonAzure;
         } else {
             context.eventHubConnectionType = ConnectionType.None;
@@ -44,8 +46,8 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
     }
 
     public shouldPrompt(context: T): boolean {
-        if (this._options?.preSelectedConnectionType) {
-            context.eventHubConnectionType = this._options.preSelectedConnectionType;
+        if (this._options?.preselectedConnectionType) {
+            context.eventHubConnectionType = this._options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType) {
             context.eventHubConnectionType = context.azureWebJobsStorageType;
         }
@@ -64,7 +66,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
             const eventHubConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
             if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
                 context.eventHubConnectionType = ConnectionType.None;
-                return;
+                return undefined;
             }
 
             const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];

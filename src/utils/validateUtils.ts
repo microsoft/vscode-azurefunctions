@@ -18,21 +18,11 @@ export namespace validateUtils {
     }
 
     export function isAlphanumericWithHypens(value: string): boolean {
-        const regExp = /^[a-zA-z0-9]([-a-zA-z0-9]*[a-zA-z0-9])?$/;
-        if (regExp.test(value)) {
-            return true;
-        } else {
-            return false;
-        }
+        return /^[a-zA-z0-9]([-a-zA-z0-9]*[a-zA-z0-9])?$/.test(value);
     }
 
     export function isLowerCaseAlphanumericWithHypens(value: string): boolean {
-        const regExp = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-        if (regExp.test(value)) {
-            return true;
-        } else {
-            return false;
-        }
+        return /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value);
     }
 
     export function meetsBasePasswordStrength(password: string): boolean {

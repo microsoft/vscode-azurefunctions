@@ -11,16 +11,17 @@ import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { pythonUtils } from '../../utils/pythonUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
-import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
-import { EventHubsConnectionExecuteStep } from '../appSettings/EventHubsConnectionExecuteStep';
-import { EventHubsConnectionPromptStep } from '../appSettings/EventHubsConnectionPromptStep';
-import { SqlDatabaseConnectionExecuteStep } from '../appSettings/SqlDatabaseConnectionExecuteStep';
-import { SqlDatabaseConnectionPromptStep } from '../appSettings/SqlDatabaseConnectionPromptStep';
+import { AzureWebJobsStorageExecuteStep } from '../appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStorageExecuteStep';
+import { AzureWebJobsStoragePromptStep } from '../appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStoragePromptStep';
+import { EventHubsConnectionExecuteStep } from '../appSettings/connectionSettings/eventHubs/EventHubsConnectionExecuteStep';
+import { EventHubsConnectionPromptStep } from '../appSettings/connectionSettings/eventHubs/EventHubsConnectionPromptStep';
+import { SqlDatabaseConnectionExecuteStep } from '../appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionExecuteStep';
+import { SqlDatabaseConnectionPromptStep } from '../appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionPromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
 import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
 import { SqlDatabaseListStep } from './durableSteps/sql/SqlDatabaseListStep';
@@ -93,20 +94,27 @@ export class FunctionSubWizard {
                     break;
             }
 
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Netherite:
-                    promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
-                    executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
-                    break;
-                case DurableBackend.SQL:
-                    promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
-                    executeSteps.push(new SqlDatabaseConnectionExecuteStep());
-                    break;
-                case DurableBackend.Storage:
-                default:
+            if (context.newDurableStorageType) {
+                // Todo: To be removed in next PR
+                switch (context.newDurableStorageType) {
+                    case DurableBackend.Netherite:
+                        promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
+                        executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
+                        break;
+                    case DurableBackend.SQL:
+                        promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
+                        executeSteps.push(new SqlDatabaseConnectionExecuteStep());
+                        break;
+                    case DurableBackend.Storage:
+                        break;
+                    default:
+                }
+
+                executeSteps.push(new DurableProjectConfigureStep());
             }
 
-            if (context.newDurableStorageType || !template.isHttpTrigger && !template.isSqlBindingTemplate && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
+            // To be removed in next PR
+            if (context.newDurableStorageType || (!template.isHttpTrigger && !template.isSqlBindingTemplate) && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
                 promptSteps.push(new AzureWebJobsStoragePromptStep());
                 executeSteps.push(new AzureWebJobsStorageExecuteStep());
             }

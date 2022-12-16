@@ -5,20 +5,23 @@
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../constants';
-import { MismatchBehavior, setLocalAppSetting } from '../../funcConfig/local.settings';
-import { getStorageConnectionString } from '../../utils/azure';
+import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
+import { MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
+import { getStorageConnectionString } from '../../../../utils/azure';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
+// Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
 export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
     public priority: number = 230;
 
-    public constructor(private _setConnectionForDeploy?: boolean) {
+    public constructor(private readonly _setConnectionForDeploy?: boolean) {
         super();
     }
 
     public async execute(context: T): Promise<void> {
         let value: string;
+
+        // 'NonAzure' will represent 'Emulator' in this flow
         if (context.azureWebJobsStorageType === ConnectionType.NonAzure) {
             value = localStorageEmulatorConnectionString;
         } else {
@@ -26,7 +29,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
         }
 
         if (this._setConnectionForDeploy) {
-            context.azureWebJobsConnectionForDeploy = value;
+            context.azureWebJobsRemoteConnection = value;
         } else {
             await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, value, MismatchBehavior.Overwrite);
         }

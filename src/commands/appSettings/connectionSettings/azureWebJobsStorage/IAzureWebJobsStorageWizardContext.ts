@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StorageAccount } from "@azure/arm-storage";
+import type { StorageAccount } from "@azure/arm-storage";
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../constants";
+import { ConnectionTypeValues } from "../../../../constants";
 
 export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
@@ -14,5 +14,5 @@ export interface IAzureWebJobsStorageWizardContext extends IActionContext, Parti
     newStorageAccountName?: string;
 
     azureWebJobsStorageType?: ConnectionTypeValues;
-    azureWebJobsConnectionForDeploy?: string;
+    azureWebJobsRemoteConnection?: string;
 }

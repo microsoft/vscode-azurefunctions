@@ -15,7 +15,7 @@ export class InputRevalidationStep<T extends IActionContext> extends AzureWizard
         await context.ui.showInputBox({
             prompt: localize('verifyPreviousInput', 'Please confirm by re-entering the previous value.'),
             password: !!this._isPassword,
-            validateInput: (value: string | undefined) => this._validateInput(context, value)
+            validateInput: (value: string | undefined) => this.validateInput(context, value)
         });
     }
 
@@ -23,8 +23,8 @@ export class InputRevalidationStep<T extends IActionContext> extends AzureWizard
         return true;
     }
 
-    private _validateInput(context: T, value: string | undefined): string | undefined {
-        const valueMismatch: string = localize('valueMismatch', 'The new value does not match the original.');
+    private validateInput(context: T, value: string | undefined): string | undefined {
+        const valueMismatch: string = localize('valueMismatch', 'The entered value does not match the original.');
         return (context[this._key] === value?.trim()) ? undefined : valueMismatch;
     }
 }

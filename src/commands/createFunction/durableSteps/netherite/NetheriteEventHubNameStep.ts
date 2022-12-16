@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
-import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import type { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
-import { invalidLength, invalidLowerCaseAlphanumericWithHyphens, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { IEventHubsConnectionWizardContext } from '../../../appSettings/IEventHubsConnectionWizardContext';
-
+import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private _eventHubs: Eventhub[] = [];
@@ -20,10 +20,10 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
         // Prep to check name availability, else it must be new and we can skip the name availability check
         if (context.eventHubsNamespace) {
             const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
-            const rgName: string = parseAzureResourceId(nonNullValue(context.eventHubsNamespace.id)).resourceGroup;
+            const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace.id));
             const ehNamespaceName: string = nonNullValue(context.eventHubsNamespace.name);
 
-            const eventHubIterator = await client.eventHubs.listByNamespace(rgName, ehNamespaceName);
+            const eventHubIterator = client.eventHubs.listByNamespace(rgName, ehNamespaceName);
             this._eventHubs = await uiUtils.listAllIterator(eventHubIterator);
         }
 
@@ -43,7 +43,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 1, 256)) {
-            return invalidLength('1', '256');
+            return getInvalidLengthMessage(1, 256);
         }
         if (!validateUtils.isLowerCaseAlphanumericWithHypens(name)) {
             return invalidLowerCaseAlphanumericWithHyphens;
@@ -51,7 +51,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
 
         const isNameAvailable: boolean = !this._eventHubs.some(eh => eh.name === name);
         if (!isNameAvailable) {
-            return localize('eventHubExists', 'The event hub you entered already exists. Please enter a unique name.');
+            return localize('eventHubExists', 'An event hub with the name "{0}" already exists.', name);
         }
 
         return undefined;

@@ -5,10 +5,10 @@
 
 import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { localize } from '../../localize';
+import { localize } from '../../../../localize';
+import { getLocalSettingsFile } from '../../localSettings/getLocalSettingsFile';
 import { AzureWebJobsStorageExecuteStep } from './AzureWebJobsStorageExecuteStep';
 import { AzureWebJobsStoragePromptStep } from './AzureWebJobsStoragePromptStep';
-import { getLocalSettingsFile } from './getLocalSettingsFile';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export async function setAzureWebJobsStorage(context: IActionContext): Promise<void> {

@@ -6,11 +6,13 @@
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
-import { ConnectionType, ConnectionTypeValues } from '../../constants';
-import { ext } from '../../extensionVariables';
-import { localize, skipForNow, useEmulator } from '../../localize';
+import { ConnectionType, ConnectionTypeValues } from '../../../../constants';
+import { skipForNow, useEmulator } from '../../../../constants-nls';
+import { ext } from '../../../../extensionVariables';
+import { localize } from '../../../../localize';
+import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
-import { IConnectionPromptOptions } from './IConnectionPrompOptions';
+
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
     public constructor(private readonly _options?: IConnectionPromptOptions) {
         super();
@@ -33,6 +35,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         if (result === connectStorageButton) {
             context.azureWebJobsStorageType = ConnectionType.Azure;
         } else if (result === useEmulatorButton) {
+            // 'NonAzure' will represent 'Emulator' in this flow
             context.azureWebJobsStorageType = ConnectionType.NonAzure;
         } else {
             context.azureWebJobsStorageType = ConnectionType.None;
@@ -42,8 +45,8 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public shouldPrompt(context: T & { eventHubConnectionType?: ConnectionTypeValues, sqlDbConnectionType?: ConnectionTypeValues }): boolean {
-        if (this._options?.preSelectedConnectionType) {
-            context.azureWebJobsStorageType = this._options.preSelectedConnectionType;
+        if (this._options?.preselectedConnectionType) {
+            context.azureWebJobsStorageType = this._options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
             context.azureWebJobsStorageType = ConnectionType.Azure;  // Only should prompt if no storage account was selected
         } else if (context.eventHubConnectionType) {

@@ -3,18 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from "@azure/arm-appservice";
+import type { StringDictionary } from "@azure/arm-appservice";
 import { AppSettingsTreeItem, confirmOverwriteSettings, IAppSettingsClient } from "@microsoft/vscode-azext-azureappservice";
 import { AzExtFsExtra, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ConnectionKey, functionFilter, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
+import { viewOutput } from "../../constants-nls";
 import { ext } from "../../extensionVariables";
 import { ILocalSettingsJson } from "../../funcConfig/local.settings";
-import { localize, viewOutput } from "../../localize";
+import { localize } from "../../localize";
 import * as api from '../../vscode-azurefunctions.api';
-import { decryptLocalSettings } from "./decryptLocalSettings";
-import { encryptLocalSettings } from "./encryptLocalSettings";
-import { getLocalSettingsFile } from "./getLocalSettingsFile";
+import { decryptLocalSettings } from "./localSettings/decryptLocalSettings";
+import { encryptLocalSettings } from "./localSettings/encryptLocalSettings";
+import { getLocalSettingsFile } from "./localSettings/getLocalSettingsFile";
 
 export async function uploadAppSettings(context: IActionContext, node?: AppSettingsTreeItem, workspaceFolder?: vscode.WorkspaceFolder, exclude?: (RegExp | string)[]): Promise<void> {
     context.telemetry.eventVersion = 2;
