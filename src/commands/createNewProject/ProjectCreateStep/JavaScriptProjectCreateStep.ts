@@ -17,7 +17,7 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ScriptProjectCreateStep } from './ScriptProjectCreateStep';
 
 export const azureFunctionsDependency: string = '@azure/functions';
-export const azureFunctionsDependencyVersion: string = '^4.0.0-alpha.3';
+export const azureFunctionsDependencyVersion: string = '^4.0.0-alpha.6';
 
 export class JavaScriptProjectCreateStep extends ScriptProjectCreateStep {
     protected gitignore: string = nodeGitignore;
