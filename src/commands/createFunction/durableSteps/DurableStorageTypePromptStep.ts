@@ -18,19 +18,18 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
     }
 
     public async prompt(context: T): Promise<void> {
-        const getDurableStorageLabel = (storageType: string): string => localize(`durable${storageType}Orchestration`, 'Durable Functions Orchestration using {0}', storageType);
         const durableStorageLabels: string[] = [
-            getDurableStorageLabel('Storage'),
-            getDurableStorageLabel('Netherite'),
-            getDurableStorageLabel('SQL')
+            'Azure Storage',
+            'Netherite',
+            'MSSQL'
         ];
         const durableStorageInfo: string = localize('durableStorageInfo', '$(link-external)  Learn more about the tradeoffs between storage providers');
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackendValues | undefined>[] = [
-            { label: durableStorageLabels[0], description: localize('default', '(Default)'), data: DurableBackend.Storage },
-            { label: durableStorageLabels[1], data: DurableBackend.Netherite },
-            { label: durableStorageLabels[2], data: DurableBackend.SQL },
+            { label: durableStorageLabels[0], description: localize('default', '(default)'), data: DurableBackend.Storage, suppressPersistence: true },
+            { label: durableStorageLabels[1], data: DurableBackend.Netherite, suppressPersistence: true },
+            { label: durableStorageLabels[2], data: DurableBackend.SQL, suppressPersistence: true },
             { label: durableStorageInfo, data: undefined, suppressPersistence: true }
         ];
 
