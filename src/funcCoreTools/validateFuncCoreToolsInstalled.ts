@@ -4,20 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, DialogResponses, IActionContext } from '@microsoft/vscode-azext-utils';
-import { MessageItem } from 'vscode';
+import * as os from "os";
+import { env, MessageItem } from 'vscode';
 import { funcVersionSetting, PackageManager } from '../constants';
+import { ext } from '../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from '../localize';
 import { cpUtils } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { getWorkspaceSetting } from '../vsCodeConfig/settings';
+import { generateLinuxErrorMessages, ILinuxErrorMessages } from './generateLinuxErrorMessages';
 import { getFuncCliPath, hasFuncCliSetting } from './getFuncCliPath';
 import { getFuncPackageManagers } from './getFuncPackageManagers';
-import { installFuncCoreTools } from './installFuncCoreTools';
+import { installFuncCoreTools, lastCoreToolsInstallCommand } from './installFuncCoreTools';
 
 export async function validateFuncCoreToolsInstalled(context: IActionContext, message: string, workspacePath: string): Promise<boolean> {
     let input: MessageItem | undefined;
     let installed: boolean = false;
+    let failedInstall: string = localize('failedInstallFuncTools', 'Core Tools installation has failed and will have to be installed manually.');
     const install: MessageItem = { title: localize('install', 'Install') };
 
     if (hasFuncCliSetting()) {
@@ -44,9 +48,18 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
                 items.push(DialogResponses.learnMore);
             }
 
+            if (os.platform() === 'linux') {
+                const linuxErrorMessages: ILinuxErrorMessages = await generateLinuxErrorMessages(!!packageManagers.length /* hasPackageManager */);
+                if (linuxErrorMessages.noPackageManager) {
+                    message += ' ' + linuxErrorMessages.noPackageManager;
+                }
+                if (linuxErrorMessages.failedInstall) {
+                    failedInstall += ' ' + linuxErrorMessages.failedInstall;
+                }
+            }
+
             // See issue: https://github.com/Microsoft/vscode-azurefunctions/issues/535
             input = await innerContext.ui.showWarningMessage(message, { modal: true }, ...items);
-
             innerContext.telemetry.properties.dialogResult = input.title;
 
             if (input === install) {
@@ -61,8 +74,21 @@ export async function validateFuncCoreToolsInstalled(context: IActionContext, me
 
     // validate that Func Tools was installed only if user confirmed
     if (input === install && !installed) {
-        if (await context.ui.showWarningMessage(localize('failedInstallFuncTools', 'The Azure Functions Core Tools installation has failed and will have to be installed manually.'), DialogResponses.learnMore) === DialogResponses.learnMore) {
+        const buttons: MessageItem[] = [];
+        const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy command') };
+        if (os.platform() === 'linux' && lastCoreToolsInstallCommand.length) {
+            buttons.push(copyCommand);
+        }
+
+        buttons.push(DialogResponses.learnMore);
+        const result = await context.ui.showWarningMessage(failedInstall, ...buttons);
+
+        if (result === DialogResponses.learnMore) {
             await openUrl(getInstallUrl());
+        } else if (result === copyCommand) {
+            const lastInstallCommand: string = lastCoreToolsInstallCommand.join(' ');
+            await env.clipboard.writeText(lastInstallCommand);
+            ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard: "{0}"', lastInstallCommand));
         }
     }
 
