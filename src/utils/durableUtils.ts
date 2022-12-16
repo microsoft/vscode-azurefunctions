@@ -320,7 +320,3 @@ export namespace sqlUtils {
         };
     }
 }
-function getRootWorkspacePath(): string | PromiseLike<string | undefined> | undefined {
-    throw new Error("Function not implemented.");
-}
-
