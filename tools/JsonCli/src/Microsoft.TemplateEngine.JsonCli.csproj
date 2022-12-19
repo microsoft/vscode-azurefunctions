@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.DotNet.Cli.CommandLine" Version="1.0.0-preview.19208.1" />
         <PackageReference Include="Microsoft.TemplateEngine.Cli" Version="5.0.0-preview.6.20304.1" />
         <PackageReference Include="Microsoft.TemplateEngine.Orchestrator.RunnableProjects" Version="5.0.0-preview.6.20304.1" />
     </ItemGroup>
