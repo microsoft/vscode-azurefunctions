@@ -33,11 +33,9 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         if (context.sqlServer) {
             context.valuesToMask.push(nonNullProp(context.sqlServer, 'name'));
         } else {
-            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword', true /* isPassword */));
+            promptSteps.push(new ResourceGroupListStep(), new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword', true /* isPassword */));
             executeSteps.push(new SqlServerCreateStep());
         }
-
-        promptSteps.push(new ResourceGroupListStep());
 
         return { promptSteps, executeSteps };
     }

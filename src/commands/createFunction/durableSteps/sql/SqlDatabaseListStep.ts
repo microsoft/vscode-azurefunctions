@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Database, Server, SqlManagementClient } from '@azure/arm-sql';
-import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
@@ -37,7 +37,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
         if (context.sqlDatabase) {
             context.valuesToMask.push(nonNullProp(context.sqlDatabase, 'name'));
         } else {
-            promptSteps.push(new SqlDatabaseNameStep());
+            promptSteps.push(new ResourceGroupListStep(), new SqlDatabaseNameStep());
             executeSteps.push(new SqlDatabaseCreateStep());
         }
 
