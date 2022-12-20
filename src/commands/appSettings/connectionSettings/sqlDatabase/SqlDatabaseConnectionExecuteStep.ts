@@ -35,6 +35,6 @@ export class SqlDatabaseConnectionExecuteStep<T extends ISqlDatabaseConnectionWi
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.sqlDbConnectionType && context.sqlDbConnectionType !== ConnectionType.None;
+        return !!context.sqlDbConnectionType;
     }
 }

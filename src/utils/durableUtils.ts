@@ -240,7 +240,7 @@ export namespace netheriteUtils {
         return taskJson?.hubName;
     }
 
-    export async function validateConnection(context: IActionContext, projectPath: string, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>): Promise<void> {
+    export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
         const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
 
@@ -254,7 +254,7 @@ export namespace netheriteUtils {
         if (hasEventHubsConnection && hasValidEventHubName && options?.setConnectionForDeploy) {
             Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
         } else {
-            promptSteps.push(new EventHubsConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType, suppressSkipForNow: true }));
+            promptSteps.push(new EventHubsConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }));
             executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
         }
 
@@ -288,7 +288,7 @@ export namespace netheriteUtils {
 }
 
 export namespace sqlUtils {
-    export async function validateConnection(context: IActionContext, projectPath: string, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>): Promise<void> {
+    export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
         const hasSqlDbConnection: boolean = !!sqlDbConnection;
 
@@ -301,7 +301,7 @@ export namespace sqlUtils {
 
         const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
         const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps: [new SqlDatabaseConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType, suppressSkipForNow: true }), new SqlDatabaseListStep()],
+            promptSteps: [new SqlDatabaseConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }), new SqlDatabaseListStep()],
             executeSteps: [new SqlDatabaseConnectionExecuteStep(options?.setConnectionForDeploy)]
         });
         await wizard.prompt();

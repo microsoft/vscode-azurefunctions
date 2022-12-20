@@ -7,7 +7,7 @@ import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, 
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
 import { ConnectionType, ConnectionTypeValues } from '../../../../constants';
-import { skipForNow, useEmulator } from '../../../../constants-nls';
+import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
 import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
@@ -21,24 +21,17 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     public async prompt(context: T): Promise<void> {
         const connectStorageButton: MessageItem = { title: localize('connectStorageAccount', 'Connect Storage Account') };
         const useEmulatorButton: MessageItem = { title: useEmulator };
-        const skipForNowButton: MessageItem = { title: skipForNow };
 
         const message: string = localize('connectAzureWebJobsStorage', 'In order to proceed, you must connect a storage account for internal use by the Azure Functions runtime.');
 
         const buttons: MessageItem[] = [connectStorageButton, useEmulatorButton];
 
-        if (!this._options?.suppressSkipForNow) {
-            buttons.push(skipForNowButton);
-        }
-
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectStorageButton) {
             context.azureWebJobsStorageType = ConnectionType.Azure;
-        } else if (result === useEmulatorButton) {
+        } else {
             // 'NonAzure' will represent 'Emulator' in this flow
             context.azureWebJobsStorageType = ConnectionType.NonAzure;
-        } else {
-            context.azureWebJobsStorageType = ConnectionType.None;
         }
 
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
@@ -51,7 +44,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
             context.azureWebJobsStorageType = ConnectionType.Azure;  // Only should prompt if no storage account was selected
         } else if (context.eventHubConnectionType) {
             context.azureWebJobsStorageType = context.eventHubConnectionType;
-        } else if (context.sqlDbConnectionType === ConnectionType.Azure || context.sqlDbConnectionType === ConnectionType.None) {
+        } else if (context.sqlDbConnectionType === ConnectionType.Azure) {
             context.azureWebJobsStorageType = context.sqlDbConnectionType;
         }
 
@@ -64,31 +57,31 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
-        if (context.azureWebJobsStorageType === ConnectionType.Azure) {
-            const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
-
-            const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
-            if (subscriptionPromptStep) {
-                promptSteps.push(subscriptionPromptStep);
-            }
-
-            promptSteps.push(new StorageAccountListStep(
-                { // INewStorageAccountDefaults
-                    kind: StorageAccountKind.Storage,
-                    performance: StorageAccountPerformance.Standard,
-                    replication: StorageAccountReplication.LRS
-                },
-                { // IStorageAccountFilters
-                    kind: [StorageAccountKind.BlobStorage],
-                    performance: [StorageAccountPerformance.Premium],
-                    replication: [StorageAccountReplication.ZRS],
-                    learnMoreLink: 'https://aka.ms/Cfqnrc'
-                }
-            ));
-
-            return { promptSteps };
-        } else {
+        if (context.azureWebJobsStorageType !== ConnectionType.Azure) {
             return undefined;
         }
+
+        const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
+
+        const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);
+        if (subscriptionPromptStep) {
+            promptSteps.push(subscriptionPromptStep);
+        }
+
+        promptSteps.push(new StorageAccountListStep(
+            { // INewStorageAccountDefaults
+                kind: StorageAccountKind.Storage,
+                performance: StorageAccountPerformance.Standard,
+                replication: StorageAccountReplication.LRS
+            },
+            { // IStorageAccountFilters
+                kind: [StorageAccountKind.BlobStorage],
+                performance: [StorageAccountPerformance.Premium],
+                replication: [StorageAccountReplication.ZRS],
+                learnMoreLink: 'https://aka.ms/Cfqnrc'
+            }
+        ));
+
+        return { promptSteps };
     }
 }

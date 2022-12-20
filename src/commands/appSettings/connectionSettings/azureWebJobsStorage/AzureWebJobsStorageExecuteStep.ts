@@ -36,6 +36,6 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.azureWebJobsStorageType && context.azureWebJobsStorageType !== ConnectionType.None;
+        return !!context.azureWebJobsStorageType;
     }
 }

@@ -98,10 +98,6 @@ export enum ConnectionType {
      * Represents any local or remote connection that is not hosted through Azure (including emulators)
      */
     NonAzure = 'NonAzure',
-    /**
-     * Represents deferring connection setup until later (the 'skipForNow' scenario)
-     */
-    None = 'skipForNow'
 }
 
 export enum DurableBackend {

@@ -174,7 +174,7 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
     if (functions.some(f => !f.isHttpTrigger) || pythonUtils.isV2Plus(projectLanguage, projectLanguageModel) || requiresDurableStorage) {
         const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
         const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps: [new AzureWebJobsStoragePromptStep({ suppressSkipForNow: true })],
+            promptSteps: [new AzureWebJobsStoragePromptStep()],
             executeSteps: [new AzureWebJobsStorageExecuteStep()]
         });
         await wizard.prompt();

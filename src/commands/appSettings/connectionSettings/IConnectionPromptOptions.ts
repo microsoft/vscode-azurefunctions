@@ -7,7 +7,6 @@ import { ConnectionTypeValues } from "../../../constants";
 
 export interface IConnectionPromptOptions {
     preselectedConnectionType?: ConnectionTypeValues;
-    suppressSkipForNow?: boolean;
 }
 
 export interface IValidateConnectionOptions extends IConnectionPromptOptions {

@@ -6,7 +6,6 @@
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
 import { ConnectionKey, ConnectionType } from '../../../../constants';
-import { skipForNow } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { getLocalConnectionString } from '../../../../funcConfig/local.settings';
 import { localize } from '../../../../localize';
@@ -24,16 +23,13 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         const connectAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Azure SQL Database') };
         const connectNonAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Non-Azure SQL Database') };
         const useExistingConnectionButton: MessageItem = { title: localize('useExistingConnection', 'Use Existing Connection') };
-        const skipForNowButton: MessageItem = { title: skipForNow };
 
         const message: string = localize('selectSqlDatabaseConnection', 'In order to proceed, you must connect a SQL database for internal use by the Azure Functions runtime.');
 
         const buttons: MessageItem[] = [connectAzureDatabase, connectNonAzureDatabase];
 
-        if (!this._options?.suppressSkipForNow) {
-            buttons.push(skipForNowButton);
-        } else if (this._options?.suppressSkipForNow && !context.sqlDbRemoteConnection) {
-            // On debug, give user the option to run from an existing local connection string
+        // When running from debug, give user the option to run from an existing local connection string
+        if (!context.sqlDbRemoteConnection) {
             const existingConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, context.projectPath);
             if (existingConnection) {
                 buttons.push(useExistingConnectionButton);
@@ -43,11 +39,9 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectAzureDatabase) {
             context.sqlDbConnectionType = ConnectionType.Azure;
-        } else if (result === connectNonAzureDatabase) {
+        } else {
             // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
             context.sqlDbConnectionType = ConnectionType.NonAzure;
-        } else {
-            context.sqlDbConnectionType = ConnectionType.None;
         }
 
         context.telemetry.properties.sqlDbConnectionType = context.sqlDbConnectionType;
@@ -69,10 +63,6 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
-        if (context.sqlDbConnectionType === ConnectionType.None) {
-            return undefined;
-        }
-
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
 
         if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
