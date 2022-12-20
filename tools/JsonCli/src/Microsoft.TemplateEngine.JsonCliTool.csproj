@@ -9,9 +9,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.DotNet.Cli.CommandLine" Version="1.0.0-preview.19208.1" />
         <PackageReference Include="Microsoft.TemplateEngine.Cli" Version="5.0.0-preview.6.20304.1" />
         <PackageReference Include="Microsoft.TemplateEngine.Orchestrator.RunnableProjects" Version="5.0.0-preview.6.20304.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MicroBuild.Core" Version="0.3.0" PrivateAssets="all" />
+        <PackageReference Include="MicroBuild.Core.Sentinel" Version="1.0.0" PrivateAssets="all" />
+        <PackageReference Include="MicroBuild.Plugins.Signing" Version="1.1.307" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>
