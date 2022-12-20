@@ -8,10 +8,11 @@ import { AzExtFsExtra, IActionContext, parseError } from "@microsoft/vscode-azex
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
+import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { ConnectionKey, DurableBackend, DurableBackendValues, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting, validateStorageConnection } from "../funcConfig/local.settings";
+import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
