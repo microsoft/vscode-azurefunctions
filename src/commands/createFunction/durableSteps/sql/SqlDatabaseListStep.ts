@@ -6,6 +6,7 @@
 import type { Database, Server, SqlManagementClient } from '@azure/arm-sql';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
@@ -26,6 +27,10 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+        if (context.sqlDbConnectionType !== ConnectionType.Azure) {
+            return undefined;
+        }
+
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T & ISubscriptionContext>[] = [];
 
@@ -41,7 +46,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
 
     public shouldPrompt(context: T): boolean {
         // We need a sql server to list out its databases.  If we don't have a sql server built yet, that means we can skip the listing and go straight to naming
-        return !context.sqlDatabase && !!context.sqlServer;
+        return !context.sqlDatabase && !!context.sqlServer && context.sqlDbConnectionType !== ConnectionType.NonAzure;
     }
 
     private async getQuickPicks(dbTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Database | undefined>[]> {

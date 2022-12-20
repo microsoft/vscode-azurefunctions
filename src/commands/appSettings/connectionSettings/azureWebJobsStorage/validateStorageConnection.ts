@@ -14,7 +14,7 @@ import { IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardC
 // Supports validation on both 'debug' and 'deploy'
 export async function validateStorageConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
     const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
-    if (!!currentStorageConnection) {
+    if (currentStorageConnection) {
         if (options?.setConnectionForDeploy) {
             Object.assign(context, { azureWebJobsRemoteConnection: currentStorageConnection });
         }

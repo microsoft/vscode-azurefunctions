@@ -294,12 +294,10 @@ export namespace sqlUtils {
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
 
-        if (!!sqlDbConnection && !options?.setConnectionForDeploy) {
-            // Found a valid connection in debug mode, no need to proceed further
-            return;
-        } else if (!!sqlDbConnection && options?.setConnectionForDeploy) {
-            // Found a valid connection in deploy mode
-            Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+        if (sqlDbConnection) {
+            if (options?.setConnectionForDeploy) {
+                Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+            }
             return;
         }
 
