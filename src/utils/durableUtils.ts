@@ -238,6 +238,7 @@ export namespace netheriteUtils {
         return taskJson?.hubName;
     }
 
+    // Supports validation on both 'debug' and 'deploy'
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
         const eventHubName: string | undefined = await getEventHubName(projectPath);
@@ -289,6 +290,7 @@ export namespace netheriteUtils {
 }
 
 export namespace sqlUtils {
+    // Supports validation on both 'debug' and 'deploy'
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
 

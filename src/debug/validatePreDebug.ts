@@ -4,17 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import { AzExtFsExtra, AzureWizard, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { AzureWebJobsStorageExecuteStep } from "../commands/appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStorageExecuteStep";
-import { AzureWebJobsStoragePromptStep } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/AzureWebJobsStoragePromptStep';
-import { IAzureWebJobsStorageWizardContext } from "../commands/appSettings/connectionSettings/azureWebJobsStorage/IAzureWebJobsStorageWizardContext";
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { ConnectionKey, DurableBackend, DurableBackendValues, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
-import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
+import { getLocalConnectionString, MismatchBehavior, setLocalAppSetting, validateStorageConnection } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
@@ -164,11 +161,6 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
         return;
     }
 
-    const azureWebJobsStorage: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
-    if (!!azureWebJobsStorage && !requiresDurableStorage) {
-        return;
-    }
-
     const functionFolders: string[] = await getFunctionFolders(context, projectPath);
     const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
         const functionJsonPath: string = path.join(projectPath, ff, functionJsonFileName);
@@ -177,13 +169,7 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
 
     // NOTE: Currently, Python V2+ requires storage to be configured, even for HTTP triggers.
     if (functions.some(f => !f.isHttpTrigger) || pythonUtils.isV2Plus(projectLanguage, projectLanguageModel) || requiresDurableStorage) {
-        const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
-        const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps: [new AzureWebJobsStoragePromptStep()],
-            executeSteps: [new AzureWebJobsStorageExecuteStep()]
-        });
-        await wizard.prompt();
-        await wizard.execute();
+        await validateStorageConnection(context, projectPath);
     }
 }
 
