@@ -6,6 +6,7 @@
 import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { funcVersionSetting, ProjectLanguage, projectLanguageSetting, projectOpenBehaviorSetting, projectTemplateKeySetting } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { tryGetLocalFuncVersion } from '../../funcCoreTools/tryGetLocalFuncVersion';
 import { latestGAVersion, tryParseFuncVersion } from '../../FuncVersion';
@@ -70,6 +71,7 @@ export async function createNewProjectInternal(context: IActionContext, options:
     await wizard.prompt();
     await wizard.execute();
 
+    await ext.rgApi.workspaceResourceTree.refresh(context);
     // don't wait
     void window.showInformationMessage(localize('finishedCreating', 'Finished creating project.'));
 }
