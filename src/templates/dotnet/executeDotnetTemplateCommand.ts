@@ -5,9 +5,9 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { coerce as semVerCoerce, SemVer } from 'semver';
-import { ext } from "../../extensionVariables";
+import { SemVer, coerce as semVerCoerce } from 'semver';
 import { FuncVersion } from '../../FuncVersion';
+import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 
@@ -61,7 +61,7 @@ async function getFramework(context: IActionContext, workingDirectory: string | 
         }
 
         // Prioritize "LTS", then "Current", then "Preview"
-        const netVersions: string[] = ['7.0', '6.0', '5.0', '3.1'];
+        const netVersions: string[] = ['6.0', '7.0', '5.0'];
         const semVersions: SemVer[] = netVersions.map(v => semVerCoerce(v) as SemVer);
 
         let pickedVersion: SemVer | undefined;
