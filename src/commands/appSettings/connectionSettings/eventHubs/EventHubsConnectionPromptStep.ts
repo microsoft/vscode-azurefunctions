@@ -27,6 +27,11 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
 
         const buttons: MessageItem[] = [connectEventNamespaceButton, useEmulatorButton];
 
+        const eventHubConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+        if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
+            return undefined;
+        }
+
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectEventNamespaceButton) {
             context.eventHubConnectionType = ConnectionType.Azure;

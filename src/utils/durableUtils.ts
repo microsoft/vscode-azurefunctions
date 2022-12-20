@@ -18,7 +18,7 @@ import { NetheriteConfigureHostStep } from "../commands/createFunction/durableSt
 import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
 import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage, requirementsFileName } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { getLocalConnectionString } from "../funcConfig/local.settings";
@@ -227,8 +227,6 @@ export namespace durableUtils {
 
 
 export namespace netheriteUtils {
-    export const defaultNetheriteHubName: string = 'HelloNetheriteHub';  // Arbitrary placeholder for running in emulator mode until an Azure connection is setup
-
     export async function getEventHubName(projectPath: string): Promise<string | undefined> {
         const hostJsonPath = path.join(projectPath, hostFileName);
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
@@ -242,23 +240,26 @@ export namespace netheriteUtils {
 
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
-        const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
-
         const eventHubName: string | undefined = await getEventHubName(projectPath);
-        const hasValidEventHubName: boolean = !!eventHubName && eventHubName !== netheriteUtils.defaultNetheriteHubName;
+
+        // Found a valid connection in debug mode, no need to proceed further
+        if (!!eventHubsConnection && !!eventHubName && !options?.setConnectionForDeploy) {
+            return;
+        }
 
         const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
         const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
-        if (hasEventHubsConnection && hasValidEventHubName && options?.setConnectionForDeploy) {
+        if (!!eventHubsConnection && !!eventHubName && options?.setConnectionForDeploy) {
+            // Found a valid connection in deploy mode
             Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
         } else {
             promptSteps.push(new EventHubsConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }));
             executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
         }
 
-        if (!hasValidEventHubName) {
+        if (!eventHubName) {
             promptSteps.push(new NetheriteEventHubNameStep());
         }
 
@@ -275,7 +276,7 @@ export namespace netheriteUtils {
 
     export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
         return {
-            hubName: hubName || defaultNetheriteHubName,
+            hubName: hubName || '',
             useGracefulShutdown: true,
             storageProvider: {
                 type: DurableBackend.Netherite,
@@ -290,13 +291,14 @@ export namespace netheriteUtils {
 export namespace sqlUtils {
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
-        const hasSqlDbConnection: boolean = !!sqlDbConnection;
 
-        if (hasSqlDbConnection) {
-            if (options?.setConnectionForDeploy) {
-                Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
-                return;
-            }
+        if (!!sqlDbConnection && !options?.setConnectionForDeploy) {
+            // Found a valid connection in debug mode, no need to proceed further
+            return;
+        } else if (!!sqlDbConnection && options?.setConnectionForDeploy) {
+            // Found a valid connection in deploy mode
+            Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+            return;
         }
 
         const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });

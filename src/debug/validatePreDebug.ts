@@ -164,6 +164,11 @@ async function validateAzureWebJobsStorage(context: IActionContext, projectLangu
         return;
     }
 
+    const azureWebJobsStorage: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
+    if (!!azureWebJobsStorage && !requiresDurableStorage) {
+        return;
+    }
+
     const functionFolders: string[] = await getFunctionFolders(context, projectPath);
     const functions: ParsedFunctionJson[] = await Promise.all(functionFolders.map(async ff => {
         const functionJsonPath: string = path.join(projectPath, ff, functionJsonFileName);
