@@ -23,7 +23,7 @@ export async function findFiles(base: vscode.WorkspaceFolder | string, pattern: 
     const posixBase = path.posix.normalize(typeof base === 'string' ? base : base.uri.fsPath).replace(/\\/g, '/');
     const escapedBase = escapeCharacters(posixBase)
     const fullPattern = path.posix.join(escapedBase, pattern);
-    return (await globby(fullPattern)).map(s => vscode.Uri.file(s));
+    return (await globby(fullPattern, { ignore: ['**/node_modules/**'] })).map(s => vscode.Uri.file(s));
 }
 
 function escapeCharacters(nonPattern: string): string {
