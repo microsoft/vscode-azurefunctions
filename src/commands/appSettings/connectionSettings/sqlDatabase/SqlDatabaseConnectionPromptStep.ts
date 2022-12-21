@@ -5,9 +5,8 @@
 
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
-import { ConnectionKey, ConnectionType } from '../../../../constants';
+import { ConnectionType } from '../../../../constants';
 import { ext } from '../../../../extensionVariables';
-import { getLocalConnectionString } from '../../../../funcConfig/local.settings';
 import { localize } from '../../../../localize';
 import { SqlServerListStep } from '../../../createFunction/durableSteps/sql/SqlServerListStep';
 import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
@@ -22,19 +21,10 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     public async prompt(context: T): Promise<void> {
         const connectAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Azure SQL Database') };
         const connectNonAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Non-Azure SQL Database') };
-        const useExistingConnectionButton: MessageItem = { title: localize('useExistingConnection', 'Use Existing Connection') };
 
         const message: string = localize('selectSqlDatabaseConnection', 'In order to proceed, you must connect a SQL database for internal use by the Azure Functions runtime.');
 
         const buttons: MessageItem[] = [connectAzureDatabase, connectNonAzureDatabase];
-
-        // When running from debug, give user the option to run from an existing local connection string
-        if (!context.sqlDbRemoteConnection) {
-            const existingConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, context.projectPath);
-            if (existingConnection) {
-                buttons.push(useExistingConnectionButton);
-            }
-        }
 
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectAzureDatabase) {
