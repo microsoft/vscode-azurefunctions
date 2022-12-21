@@ -37,7 +37,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
         if (context.sqlDatabase) {
             context.valuesToMask.push(nonNullProp(context.sqlDatabase, 'name'));
         } else {
-            promptSteps.push(new ResourceGroupListStep(), new SqlDatabaseNameStep());
+            promptSteps.push(new SqlDatabaseNameStep(), new ResourceGroupListStep());
             executeSteps.push(new SqlDatabaseCreateStep());
         }
 
