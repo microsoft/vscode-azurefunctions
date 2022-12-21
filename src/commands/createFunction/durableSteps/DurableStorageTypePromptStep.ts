@@ -27,7 +27,7 @@ export class DurableStorageTypePromptStep<T extends IFunctionWizardContext> exte
 
         const placeHolder: string = localize('chooseDurableStorageType', 'Choose a durable storage type.');
         const picks: IAzureQuickPickItem<DurableBackendValues | undefined>[] = [
-            { label: durableStorageLabels[0], description: localize('default', '(default)'), data: DurableBackend.Storage, suppressPersistence: true },
+            { label: durableStorageLabels[0], description: localize('default', '(Default)'), data: DurableBackend.Storage, suppressPersistence: true },
             { label: durableStorageLabels[1], data: DurableBackend.Netherite, suppressPersistence: true },
             { label: durableStorageLabels[2], data: DurableBackend.SQL, suppressPersistence: true },
             { label: durableStorageInfo, data: undefined, suppressPersistence: true }

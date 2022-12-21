@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
+import { AuthorizationRule, EventHubManagementClient, KnownAccessRights } from '@azure/arm-eventhub';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { Progress } from 'vscode';
@@ -20,7 +20,7 @@ export class EventHubsNamespaceAuthRuleCreateStep<T extends IEventHubsConnection
         const rgName: string = getResourceGroupFromId(nonNullValue(context.eventHubsNamespace?.id));
         const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
         const authRuleName: string = nonNullProp(context, 'newAuthRuleName');
-        const defaultParams: AuthorizationRule = { rights: ['Manage', 'Send', 'Listen'] };
+        const defaultParams: AuthorizationRule = { rights: [KnownAccessRights.Manage, KnownAccessRights.Send, KnownAccessRights.Listen] };
 
         const creating: string = localize('creatingAuthRule', 'Creating new access policy "{0}"...', authRuleName);
         ext.outputChannel.appendLog(creating);

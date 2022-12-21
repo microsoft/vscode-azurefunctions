@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AccessKeys, AuthorizationRule, EventHubManagementClient } from '@azure/arm-eventhub';
+import { AccessKeys, AuthorizationRule, EventHubManagementClient, KnownAccessRights } from '@azure/arm-eventhub';
 import type { StorageAccount, StorageAccountListKeysResult, StorageManagementClient } from '@azure/arm-storage';
 import { AppKind, IAppServiceWizardContext } from '@microsoft/vscode-azext-azureappservice';
 import { getResourceGroupFromId, IStorageAccountWizardContext, uiUtils, VerifyProvidersStep } from '@microsoft/vscode-azext-azureutils';
@@ -78,7 +78,7 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
 
     const authRulesIterable = client.namespaces.listAuthorizationRules(rgName, namespaceName);
     const authRules: AuthorizationRule[] = await uiUtils.listAllIterator(authRulesIterable);
-    const manageAccessRules: AuthorizationRule[] = authRules.filter(authRule => authRule.rights?.includes('Manage'));
+    const manageAccessRules: AuthorizationRule[] = authRules.filter(authRule => authRule.rights?.includes(KnownAccessRights.Manage));
 
     let authRuleName: string;
     if (!manageAccessRules.length) {
@@ -90,7 +90,7 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
         const placeHolder: string = localize('chooseSharedAccessPolicy', 'Choose a shared access policy.');
 
         authRuleName = (await context.ui.showQuickPick(manageAccessRules.map(authRule => {
-            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? localize('default', '(default)') : '' };
+            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? localize('default', '(Default)') : '' };
         }), { placeHolder })).label;
     }
 
