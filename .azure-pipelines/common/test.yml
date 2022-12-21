@@ -46,3 +46,4 @@ steps:
     testResultsFiles: '*-results.xml'
     testRunTitle: '$(Agent.OS)'
   condition: succeededOrFailed()
+  
