@@ -69,3 +69,12 @@ In order to work on this tool, make sure to install the [VS Code Debugger for C#
 ### Publish
 
 In order to update the dll's shipped with the extension, you need to [run a build](https://devdiv.visualstudio.com/DefaultCollection/DevDiv/_build?definitionId=13600) with `SignType` set to `Real` and download those bits into the `resources/dotnetJsonCli` folder as appropriate.
+
+With new Secure Supply Chain Analysis, you will need to publish the any new dependencies to the [Azure Artifact feed]
+(https://devdiv.visualstudio.com/DefaultCollection/DevDiv/_artifacts/feed/vscode-azurefunctions-jsonclitool).
+
+The easiest way to do this is by `Searching Upstream Sources` through the feed portal. If the package can't be found (private packages), then you can upload the nuget package locally by running the following command from the src folder of this repo:
+
+```bash
+dotnet restore
+dotnet nuget push --source "vscode-azurefunctions-jsonclitool" --api-key az "C:\Users\_username_\.nuget\packages\_packagename_\_version_\_packagename_.nupkg"  --interactive
