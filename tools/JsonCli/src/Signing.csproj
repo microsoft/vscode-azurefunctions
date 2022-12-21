@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFrameworks>netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
+        <TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
         <!-- Since this project is just for signing, we don't want to actually build anything -->
         <DefaultItemExcludes>$(DefaultItemExcludes);**/*.cs</DefaultItemExcludes>
     </PropertyGroup>
@@ -11,7 +11,7 @@
     <ItemGroup>
         <PackageReference Include="MicroBuild.Core" Version="0.3.0" PrivateAssets="all" />
         <PackageReference Include="MicroBuild.Core.Sentinel" Version="1.0.0" PrivateAssets="all" />
-        <PackageReference Include="MicroBuild.Plugins.Signing" Version="1.1.307" PrivateAssets="all" />
+        <PackageReference Include="MicroBuild.Plugins.Signing" Version="1.1.741" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

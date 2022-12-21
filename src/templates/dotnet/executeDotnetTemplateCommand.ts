@@ -5,9 +5,9 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { coerce as semVerCoerce, SemVer } from 'semver';
-import { ext } from "../../extensionVariables";
+import { SemVer, coerce as semVerCoerce } from 'semver';
 import { FuncVersion } from '../../FuncVersion';
+import { ext } from "../../extensionVariables";
 import { localize } from '../../localize';
 import { cpUtils } from "../../utils/cpUtils";
 

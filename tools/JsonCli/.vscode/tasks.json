@@ -12,38 +12,6 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish (2.0)",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "publish",
-                "--configuration",
-                "Release",
-                "--framework",
-                "netcoreapp2.0",
-                "--output",
-                "${workspaceFolder}/../../resources/dotnetJsonCli/netcoreapp2.0/",
-                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "publish (3.0)",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "publish",
-                "--configuration",
-                "Release",
-                "--framework",
-                "netcoreapp3.0",
-                "--output",
-                "${workspaceFolder}/../../resources/dotnetJsonCli/netcoreapp3.0/",
-                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
             "label": "publish (5.0)",
             "command": "dotnet",
             "type": "process",
@@ -71,6 +39,22 @@
                 "net6.0",
                 "--output",
                 "${workspaceFolder}/../../resources/dotnetJsonCli/net6.0/",
+                "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish (7.0)",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "--configuration",
+                "Release",
+                "--framework",
+                "net7.0",
+                "--output",
+                "${workspaceFolder}/../../resources/dotnetJsonCli/net7.0/",
                 "${workspaceFolder}/src/Microsoft.TemplateEngine.JsonCli.csproj"
             ],
             "problemMatcher": "$msCompile"
