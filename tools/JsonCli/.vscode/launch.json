@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "program": "${workspaceFolder}/src/bin/Debug/net7.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
                 "--templateDir",
                 "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",
@@ -23,7 +23,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "program": "${workspaceFolder}/src/bin/Debug/net7.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
                 "--templateDir",
                 "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",
@@ -45,7 +45,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/bin/Debug/netcoreapp3.0/Microsoft.TemplateEngine.JsonCli.dll",
+            "program": "${workspaceFolder}/src/bin/Debug/net7.0/Microsoft.TemplateEngine.JsonCli.dll",
             "args": [
                 "--templateDir",
                 "${workspaceFolder}/../../resources/backupTemplates/dotnet/~3/netcoreapp3.1/",

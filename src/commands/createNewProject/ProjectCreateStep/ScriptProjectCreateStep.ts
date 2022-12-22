@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as os from 'os';
 import * as path from 'path';
 import { Progress } from 'vscode';
@@ -14,6 +14,7 @@ import { FuncVersion } from '../../../FuncVersion';
 import { bundleFeedUtils } from '../../../utils/bundleFeedUtils';
 import { confirmOverwriteFile } from "../../../utils/fs";
 import { nonNullProp } from '../../../utils/nonNull';
+import { isNodeV4Plus } from '../../../utils/programmingModelUtils';
 import { getRootFunctionsWorkerRuntime } from '../../../vsCodeConfig/settings';
 import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
@@ -44,6 +45,12 @@ export class ScriptProjectCreateStep extends ProjectCreateStepBase {
                 this.localSettingsJson.Values![workerRuntimeKey] = functionsWorkerRuntime;
             }
 
+            // feature flag needs to be enabled to use multiple entry points
+            if (isNodeV4Plus(context)) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                this.localSettingsJson.Values!["AzureWebJobsFeatureFlags"] = "EnableWorkerIndexing";
+            }
+
             await AzExtFsExtra.writeJSON(localSettingsJsonPath, this.localSettingsJson);
         }
 
@@ -68,7 +75,7 @@ __azurite_db*__.json`));
         }
     }
 
-    protected async getHostContent(context: IActionContext): Promise<IHostJsonV2> {
+    protected async getHostContent(context: IProjectWizardContext): Promise<IHostJsonV2> {
         const hostJson: IHostJsonV2 = {
             version: '2.0',
             logging: {
@@ -82,6 +89,9 @@ __azurite_db*__.json`));
         };
 
         await bundleFeedUtils.addDefaultBundle(context, hostJson);
+        if (isNodeV4Plus(context)) {
+            bundleFeedUtils.overwriteExtensionBundleVersion(hostJson, "[3.*, 4.0.0)", "[3.15.0, 4.0.0)");
+        }
 
         return hostJson;
     }

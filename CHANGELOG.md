@@ -1,10 +1,39 @@
 # Change Log
 
+## 1.9.0 - 2022-11-16
+
+### Added
+
+- Create Function button in Workspace view [#3350](https://github.com/microsoft/vscode-azurefunctions/issues/3350)
+- Warning when a stack has an upcoming end of life [#3353](https://github.com/microsoft/vscode-azurefunctions/issues/3353)
+- Updated host.json template to enable dynamic concurrency [#3248](https://github.com/microsoft/vscode-azurefunctions/issues/3248)
+
+### Changed
+
+- Always on = on when creating an Azure Function App on an App Service plan [#3037](https://github.com/microsoft/vscode-azurefunctions/issues/3037)
+- Automatically run `npm install` after initializing a TypeScript or JavaScript Project [#3034](https://github.com/microsoft/vscode-azurefunctions/issues/3034)
+
+### Fixed
+
+- [Bugs Fixed](https://github.com/microsoft/vscode-azurefunctions/issues?q=is%3Aissue+milestone%3A1.9.0+)
+
+## 1.8.3 - 2022-10-25
+
+### Changed
+
+- Revert addition of PyStein "feature flag" setting. [#3386](https://github.com/microsoft/vscode-azurefunctions/pull/3386)
+
+## 1.8.2 - 2022-10-18
+
+### Fixed
+
+- Deployment failures initialized from "Deploy..." button on Workspace ribbon [#3369](https://github.com/microsoft/vscode-azurefunctions/issues/3369)
+
 ## 1.8.1 - 2022-09-26
 
 ### Fixed
 
-- Log Analytic workspace resource provider not being registered blocked creation
+- Log Analytic workspace resource provider not being registered blocked creation [#3352](https://github.com/microsoft/vscode-azurefunctions/issues/3352)
 
 ## 1.8.0 - 2022-09-20
 

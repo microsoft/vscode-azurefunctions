@@ -38,6 +38,12 @@ export function getScriptVerifiedTemplateIds(version: string): (string | RegExp)
 
         // These languages are only supported in v2+ - same functions as JavaScript, with a few minor exceptions that aren't worth distinguishing here
         // NOTE: The Python Preview IDs are only temporary.
-        return verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript|TypeScript|Python|PowerShell|Custom|Python-Preview|Python-Preview-Append)$`, 'i'));
+        // NOTE: The Node Programming Model IDs include -4.x as a suffix
+        const regExps = verifiedTemplateIds.map(t => new RegExp(`^${t}-(JavaScript(-4.x)?|TypeScript(-4.x)?|Python|PowerShell|Custom|Python-Preview|Python-Preview-Append)$`, 'i'));
+
+        // The Entity templates aren't supported in PowerShell at all, and the DurableFunctionsEntityHttpStart template is not yet supported in Python.
+        // As a result, we need to manually create their respective regular expressions to account for these edge cases
+        const entityRegExps = [new RegExp(`^DurableFunctionsEntity-(JavaScript|TypeScript|Python|Custom)$`, 'i'), new RegExp(`^DurableFunctionsEntityHttpStart-(JavaScript|TypeScript|Custom)$`, 'i')];
+        return regExps.concat(entityRegExps);
     }
 }

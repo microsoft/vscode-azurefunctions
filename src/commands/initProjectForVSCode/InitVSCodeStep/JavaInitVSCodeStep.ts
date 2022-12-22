@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition, window } from 'vscode';
-import { buildGradleFileName, func, hostStartCommand, javaBuildTool, JavaBuildTool, pomXmlFileName, ProjectLanguage } from '../../../constants';
+import { buildGradleFileName, func, hostStartCommand, hostStartTaskName, javaBuildTool, JavaBuildTool, pomXmlFileName, ProjectLanguage } from '../../../constants';
 import { javaDebugConfig } from '../../../debug/JavaDebugProvider';
 import { localize } from "../../../localize";
 import { mavenUtils } from '../../../utils/mavenUtils';
@@ -42,6 +42,7 @@ export class JavaInitVSCodeStep extends InitVSCodeStepBase {
         return [
             {
                 type: func,
+                label: hostStartTaskName,
                 command: hostStartCommand,
                 problemMatcher: getFuncWatchProblemMatcher(language),
                 isBackground: true,

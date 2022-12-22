@@ -48,6 +48,8 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         const data: string = await context.ui.showInputBox({ prompt, value, stepName: 'requestBody' });
         try {
             functionInput = <{}>JSON.parse(data);
+            // stringify JSON object to match the format in the portal
+            functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
         } catch {
             functionInput = data;
         }

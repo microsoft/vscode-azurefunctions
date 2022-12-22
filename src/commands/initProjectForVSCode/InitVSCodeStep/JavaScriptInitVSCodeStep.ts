@@ -6,7 +6,7 @@
 import { AzExtFsExtra } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { DebugConfiguration, TaskDefinition } from "vscode";
-import { extInstallTaskName, func, hostStartCommand, ProjectLanguage } from "../../../constants";
+import { extInstallTaskName, func, hostStartCommand, hostStartTaskName, ProjectLanguage } from "../../../constants";
 import { nodeDebugConfig } from "../../../debug/NodeDebugProvider";
 import { getFuncWatchProblemMatcher } from '../../../vsCodeConfig/settings';
 import { convertToFunctionsTaskLabel } from '../../../vsCodeConfig/tasks';
@@ -40,6 +40,7 @@ export class JavaScriptInitVSCodeStep extends ScriptInitVSCodeStep {
             return [
                 {
                     type: func,
+                    label: hostStartTaskName,
                     command: hostStartCommand,
                     problemMatcher: getFuncWatchProblemMatcher(language),
                     isBackground: true,

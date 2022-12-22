@@ -72,11 +72,6 @@ export interface ICreateFunctionOptions {
     }
 
     /**
-     * If set to true, it will automatically create a new project without prompting (if there's not already a project). Defaults to false
-     */
-    suppressCreateProjectPrompt?: boolean;
-
-    /**
      * If set to true, it will not try to open the folder after create finishes. Defaults to false
      */
     suppressOpenFolder?: boolean;

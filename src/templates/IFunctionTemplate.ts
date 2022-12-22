@@ -24,4 +24,6 @@ export interface IFunctionTemplate {
     categories: TemplateCategory[];
     categoryStyle?: string;
     isDynamicConcurrent: boolean;
+    // a defined triggerType means that the template is from the new programming model
+    triggerType?: string;
 }

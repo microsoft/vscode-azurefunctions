@@ -5,17 +5,17 @@
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { QuickPickOptions } from 'vscode';
-import { previewPythonModel, ProjectLanguage, pysteinModelSetting, pythonNewModelPreview } from '../../constants';
+import { nodeLearnMoreLink, nodeModels, previewPythonModel, ProjectLanguage, pythonNewModelPreview } from '../../constants';
 import { localize } from '../../localize';
 import { nonNullProp } from '../../utils/nonNull';
 import { openUrl } from '../../utils/openUrl';
-import { isPythonV2Plus } from '../../utils/pythonUtils';
-import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { isPythonV2Plus } from '../../utils/programmingModelUtils';
 import { FunctionListStep } from '../createFunction/FunctionListStep';
 import { addInitVSCodeSteps } from '../initProjectForVSCode/InitVSCodeLanguageStep';
 import { DotnetRuntimeStep } from './dotnetSteps/DotnetRuntimeStep';
 import { IProjectWizardContext } from './IProjectWizardContext';
 import { addJavaCreateProjectSteps } from './javaSteps/addJavaCreateProjectSteps';
+import { ProgrammingModelStep } from './ProgrammingModelStep';
 import { CustomProjectCreateStep } from './ProjectCreateStep/CustomProjectCreateStep';
 import { DotnetProjectCreateStep } from './ProjectCreateStep/DotnetProjectCreateStep';
 import { JavaScriptProjectCreateStep } from './ProjectCreateStep/JavaScriptProjectCreateStep';
@@ -58,12 +58,6 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
             });
         }
 
-        if (!getWorkspaceSetting(pysteinModelSetting)) {
-            languagePicks = languagePicks.filter(p => {
-                return p.label !== pythonNewModelPreview;
-            })
-        }
-
         const options: QuickPickOptions = { placeHolder: localize('selectLanguage', 'Select a language') };
         const result = (await context.ui.showQuickPick(languagePicks, options)).data;
         if (result === undefined) {
@@ -86,9 +80,17 @@ export class NewProjectLanguageStep extends AzureWizardPromptStep<IProjectWizard
         const promptSteps: AzureWizardPromptStep<IProjectWizardContext>[] = [];
         switch (language) {
             case ProjectLanguage.JavaScript:
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new JavaScriptProjectCreateStep());
                 break;
             case ProjectLanguage.TypeScript:
+                promptSteps.push(new ProgrammingModelStep({
+                    models: nodeModels,
+                    learnMoreLink: nodeLearnMoreLink
+                }));
                 executeSteps.push(new TypeScriptProjectCreateStep());
                 break;
             case ProjectLanguage.CSharp:
