@@ -36,6 +36,7 @@
     "azureFunctions.endOfLifeWarning": "Show a warning when creating Function Apps with stacks within 6 months of their end of life.",
     "azureFunctions.executeFunction": "Execute Function Now...",
     "azureFunctions.funcCliPath": "The path to the 'func' executable to use for debug and deploy tasks. For example, set it to 'node_modules/.bin/func' if using the func cli installed as a local npm package.",
+    "azureFunctions.functionSubpath": "The default subpath to create new functions. Currently, this only applies to Node.js programming model v4+.",
     "azureFunctions.initProjectForVSCode": "Initialize Project for Use with VS Code...",
     "azureFunctions.installOrUpdateFuncCoreTools": "Install or Update Azure Functions Core Tools",
     "azureFunctions.javaBuildTool": "Build tool for Java Functions project",
@@ -77,6 +78,7 @@
     "azureFunctions.showExtensionsCsprojWarning": "Show a warning when an Azure Functions project was detected that has mismatched \"extensions.csproj\" configuration.",
     "azureFunctions.showHiddenStacks": "Show hidden runtime stacks when creating a Function App in Azure. WARNING: These stacks may be in preview or may not be available in all regions.",
     "azureFunctions.showMultiCoreToolsWarning": "Show a warning if multiple installs of Azure Functions Core Tools are detected.",
+    "azureFunctions.showNodeProgrammingModel": "Enable preview Node.js programming model",
     "azureFunctions.showProjectWarning": "Show a warning when an Azure Functions project was detected that has not been initialized for use in VS Code.",
     "azureFunctions.showPysteinModel": "Enable Python (New Model Preview)",
     "azureFunctions.showPythonVenvWarning": "Show a warning when an Azure Functions Python project was detected that does not have a virtual environment.",
@@ -102,7 +104,5 @@
     "azureFunctions.validateFuncCoreTools": "Validate the Azure Functions Core Tools is installed before debugging.",
     "azureFunctions.viewCommitInGitHub": "View Commit in GitHub",
     "azureFunctions.viewDeploymentLogs": "View Deployment Logs",
-    "azureFunctions.viewProperties": "View Properties",
-    "azureFunctions.functionSubpath": "The default subpath to create new functions. Currently, this only applies to Node.js programming model v4+.",
-    "azureFunctions.showNodeProgrammingModel": "Enable preview Node.js programming model"
+    "azureFunctions.viewProperties": "View Properties"
 }
