@@ -14,6 +14,7 @@ import { ISqlDatabaseConnectionWizardContext } from '../commands/appSettings/con
 import { createAndGetAuthRuleName } from '../commands/createFunction/durableSteps/netherite/createAndGetAuthRuleName';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { webProvider } from '../constants';
+import { defaultDescription } from '../constants-nls';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
 import { ICreateFunctionAppContext, SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
@@ -90,7 +91,7 @@ export async function getEventHubsConnectionString(context: IEventHubsConnection
         const placeHolder: string = localize('chooseSharedAccessPolicy', 'Choose a shared access policy.');
 
         authRuleName = (await context.ui.showQuickPick(manageAccessRules.map(authRule => {
-            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? localize('default', '(Default)') : '' };
+            return { label: nonNullProp(authRule, 'name'), suppressPersistence: true, description: authRule.name === rootKeyName ? defaultDescription : '' };
         }), { placeHolder })).label;
     }
 
