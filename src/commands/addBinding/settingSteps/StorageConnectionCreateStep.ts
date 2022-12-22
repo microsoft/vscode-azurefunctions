@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { getStorageConnectionString } from '../../../utils/azure';
+import { getStorageConnectionString } from '../../appSettings/connectionSettings/getLocalConnectionSetting';
 import { IBindingWizardContext } from '../IBindingWizardContext';
 import { AzureConnectionCreateStepBase, IConnection } from './AzureConnectionCreateStepBase';
 
