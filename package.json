@@ -107,7 +107,15 @@
                     "type": "microsoft.web/sites",
                     "detail": "%azureFunctions.createFunctionAppDetail%"
                 }
-            ]
+            ],
+            "activation": {
+                "onFetch": [
+                    "microsoft.web/sites"
+                ],
+                "onResolve": [
+                    "microsoft.web/sites"
+                ]
+            }
         },
         "commands": [
             {
