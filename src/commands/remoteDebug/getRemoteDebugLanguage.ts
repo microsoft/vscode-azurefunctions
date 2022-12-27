@@ -12,12 +12,14 @@ export function getRemoteDebugLanguage(siteConfig: SiteConfig, appServicePlan?: 
     //   If the Function App is running on Linux consumption plan remote debugging is not supported
     //   If the Function App is running on a Linux App Service plan, it will contain Docker registry information, e.g. "DOCKER|repo.azurecr.io/image:tag"
     //      or it will contain language information, e.g. "Node|14"
-    const isNotConsumption: boolean = appServicePlan?.toLowerCase() !== 'y';
-    if (isNotConsumption) {
-        if (siteConfig.linuxFxVersion && (siteConfig.linuxFxVersion.startsWith('DOCKER|mcr.microsoft.com/azure-functions/node') || siteConfig.linuxFxVersion.toLowerCase().startsWith('node|'))) {
-            return RemoteDebugLanguage.Node;
+    if (appServicePlan) {
+        if (/^[^yY]$/.test(appServicePlan)) {
+            if (siteConfig.linuxFxVersion && (siteConfig.linuxFxVersion.startsWith('DOCKER|mcr.microsoft.com/azure-functions/node') || siteConfig.linuxFxVersion.toLowerCase().startsWith('node|'))) {
+                return RemoteDebugLanguage.Node;
+            }
         }
     }
+
 
     throw new Error('Azure Remote Debugging is currently only supported for Node.js Function Apps running on Linux App Service plans. Consumption plans are not supported.');
 }
