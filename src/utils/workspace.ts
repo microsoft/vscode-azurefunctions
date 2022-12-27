@@ -16,8 +16,8 @@ export function isMultiRootWorkspace(): boolean {
 }
 
 /*
- * Use sparingly and prefer storing and passing 'projectPaths' instead. Over-reliance on this function may result
- * in excessive prompting when a user employs a multi-root workspace.
+ * Use sparingly. Prefer storing and passing 'projectPaths' instead.
+ * Over-reliance on this function may result in excessive prompting when a user employs a multi-root workspace.
  */
 export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
     if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
