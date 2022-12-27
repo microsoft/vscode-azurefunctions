@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { IActionContext, IAzureQuickPickItem, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as globby from 'globby';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -13,6 +13,33 @@ import * as fsUtils from './fs';
 export function isMultiRootWorkspace(): boolean {
     return !!vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
         && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name; // multi-root workspaces always have something like "(Workspace)" appended to their name
+}
+
+/*
+ * Use sparingly and prefer storing and passing 'projectPaths' instead. Over-reliance on this function may result
+ * in excessive prompting when a user employs a multi-root workspace.
+ */
+export async function getRootWorkspaceFolder(): Promise<vscode.WorkspaceFolder | undefined> {
+    if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+        return undefined;
+    } else if (vscode.workspace.workspaceFolders.length === 1) {
+        return vscode.workspace.workspaceFolders[0];
+    } else {
+        const placeHolder: string = localize('selectRootWorkspace', 'Select the folder containing your function project');
+        const folder = await vscode.window.showWorkspaceFolderPick({ placeHolder });
+        if (!folder) {
+            throw new UserCancelledError('selectRootWorkspace');
+        }
+        return folder;
+    }
+}
+
+/*
+ * Use sparingly and prefer storing and passing 'projectPaths' instead. Over-reliance on this function may result
+ * in excessive prompting when a user employs a multi-root workspace.
+ */
+export async function getRootWorkspacePath(): Promise<string | undefined> {
+    return (await getRootWorkspaceFolder())?.uri.fsPath;
 }
 
 /**
