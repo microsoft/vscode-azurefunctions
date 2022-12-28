@@ -48,8 +48,6 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         const data: string = await context.ui.showInputBox({ prompt, value, stepName: 'requestBody' });
         try {
             functionInput = <{}>JSON.parse(data);
-            // stringify JSON object to match the format in the portal
-            functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
         } catch {
             functionInput = data;
         }
@@ -79,6 +77,11 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
             if (!client && parseError(error).errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
+            } else if (parseError(error).message === 'Unexpected status code: 400') {
+                // stringify JSON object to match the format in the portal
+                functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
+                body = { input: functionInput };
+                responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body })).bodyAsText;
             } else {
                 context.telemetry.maskEntireErrorMessage = true; // since the response is directly related to the code the user authored themselves
                 throw error;
