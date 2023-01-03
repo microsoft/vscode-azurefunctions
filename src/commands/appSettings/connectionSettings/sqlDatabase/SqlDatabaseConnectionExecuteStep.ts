@@ -6,7 +6,7 @@
 import { AzureWizardExecuteStep, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionType } from '../../../../constants';
 import { MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
-import { getSqlDatabaseConnectionString } from '../../../../utils/azure';
+import { getSqlDatabaseConnectionString } from '../getLocalConnectionSetting';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 
 // Todo in next PRs: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
