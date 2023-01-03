@@ -8,14 +8,12 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { functionFilter } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../localize';
-import { ResolvedFunctionAppResource } from '../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../tree/SlotTreeItem';
 
 export async function startFunctionApp(context: IActionContext, node?: SlotTreeItem): Promise<void> {
     if (!node) {
         node = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            filter: functionFilter
         });
     }
 

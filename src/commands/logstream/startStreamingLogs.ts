@@ -12,7 +12,6 @@ import { functionFilter } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../localize';
 import { RemoteFunctionTreeItem } from '../../tree/remoteProject/RemoteFunctionTreeItem';
-import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { isSlotTreeItem, SlotTreeItem } from '../../tree/SlotTreeItem';
 import { createAppInsightsClient } from '../../utils/azureClients';
 import { nonNullProp } from '../../utils/nonNull';
@@ -22,8 +21,7 @@ import { enableFileLogging } from './enableFileLogging';
 export async function startStreamingLogs(context: IActionContext, treeItem?: SlotTreeItem | RemoteFunctionTreeItem): Promise<void> {
     if (!treeItem) {
         treeItem = await ext.rgApi.pickAppResource<SlotTreeItem>(context, {
-            filter: functionFilter,
-            expectedChildContextValue: new RegExp(ResolvedFunctionAppResource.productionContextValue)
+            filter: functionFilter
         });
     }
 
