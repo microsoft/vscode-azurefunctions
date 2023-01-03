@@ -74,10 +74,11 @@ export async function executeFunction(context: IActionContext, node?: FunctionTr
         try {
             responseText = (await requestUtils.sendRequestWithExtTimeout(context, { method: 'POST', ...triggerRequest, headers, body })).bodyAsText;
         } catch (error) {
-            if (!client && parseError(error).errorType === 'ECONNREFUSED') {
+            const errorType = parseError(error).errorType;
+            if (!client && errorType === 'ECONNREFUSED') {
                 context.errorHandling.suppressReportIssue = true;
                 throw new Error(localize('failedToConnect', 'Failed to connect. Make sure your project is [running locally](https://aka.ms/AA76v2d).'));
-            } else if (parseError(error).errorType === '400') {
+            } else if (errorType === '400') {
                 // stringify JSON object to match the format in the portal
                 functionInput = <{}>JSON.stringify(functionInput, undefined, 2);
                 body = { input: functionInput };
