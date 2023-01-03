@@ -5,9 +5,9 @@
 
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
-import { workspace, WorkspaceFolder } from "vscode";
+import { WorkspaceFolder } from "vscode";
 import { localSettingsFileName } from "../../constants";
-import { selectWorkspaceFile } from "../../utils/workspace";
+import { getRootWorkspaceFolder, selectWorkspaceFile } from "../../utils/workspace";
 import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
 
 /**
@@ -15,7 +15,7 @@ import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
  * Otherwise, prompt
  */
 export async function getLocalSettingsFile(context: IActionContext, message: string, workspaceFolder?: WorkspaceFolder): Promise<string> {
-    workspaceFolder ||= workspace.workspaceFolders?.[0];
+    workspaceFolder ||= await getRootWorkspaceFolder();
     if (workspaceFolder) {
         const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspaceFolder);
         if (projectPath) {
