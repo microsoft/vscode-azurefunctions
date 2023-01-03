@@ -87,6 +87,7 @@ export const extInstallTaskName: string = `${func}: ${extInstallCommand}`;
 
 export const hostStartCommand: string = 'host start';
 export const hostStartTaskName: string = `${func}: ${hostStartCommand}`;
+export const hostStartTaskNameRegExp = new RegExp(hostStartTaskName, 'i');
 
 export const packCommand: string = 'pack';
 export const buildNativeDeps: string = '--build-native-deps';
