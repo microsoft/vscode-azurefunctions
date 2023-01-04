@@ -673,6 +673,10 @@
                 {
                     "command": "azureFunctions.createNewProject",
                     "when": "!virtualWorkspace"
+                },
+                {
+                    "command": "azureFunctions.createFunction",
+                    "when": "!virtualWorkspace"
                 }
             ],
             "editor/context": [
