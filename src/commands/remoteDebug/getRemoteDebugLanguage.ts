@@ -14,7 +14,7 @@ export function getRemoteDebugLanguage(siteConfig: SiteConfig, appServicePlan?: 
     //      or it will contain language information, e.g. "Node|14"
     const isNotConsumption: boolean = appServicePlan?.toLowerCase() !== 'y';
     if (isNotConsumption) {
-        if (siteConfig.linuxFxVersion && (/^(DOCKER\|(mcr\.microsoft\.com)\/(azure-functions)\/(node)|Node\|)/i).test(siteConfig.linuxFxVersion)) {
+        if (siteConfig.linuxFxVersion && (/(DOCKER\|mcr\.microsoft\.com\/azure-functions\/node)|(Node\|)/i).test(siteConfig.linuxFxVersion)) {
             return RemoteDebugLanguage.Node;
         }
     }
