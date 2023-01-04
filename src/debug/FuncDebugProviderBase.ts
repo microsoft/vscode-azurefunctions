@@ -6,7 +6,7 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { CancellationToken, DebugConfiguration, DebugConfigurationProvider, WorkspaceFolder } from 'vscode';
 import { isFunctionProject } from '../commands/createNewProject/verifyIsProject';
-import { hostStartTaskName } from '../constants';
+import { hostStartTaskNameRegExp } from '../constants';
 import { IPreDebugValidateResult, preDebugValidate } from './validatePreDebug';
 
 export abstract class FuncDebugProviderBase implements DebugConfigurationProvider {
@@ -46,7 +46,7 @@ export abstract class FuncDebugProviderBase implements DebugConfigurationProvide
             context.telemetry.suppressIfSuccessful = true;
 
             this._debugPorts.set(folder, <number | undefined>debugConfiguration.port);
-            if (debugConfiguration.preLaunchTask === hostStartTaskName) {
+            if (hostStartTaskNameRegExp.test(debugConfiguration.preLaunchTask)) {
                 context.telemetry.properties.isActivationEvent = 'false';
                 context.telemetry.suppressIfSuccessful = false;
 

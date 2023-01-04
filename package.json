@@ -1069,7 +1069,7 @@
     "devDependencies": {
         "@azure/arm-resources": "^3.0.0",
         "@microsoft/eslint-config-azuretools": "^0.1.0",
-        "@microsoft/vscode-azext-dev": "^0.1.4",
+        "@microsoft/vscode-azext-dev": "^0.1.5",
         "@types/fs-extra": "^8.1.0",
         "@types/gulp": "^4.0.10",
         "@types/gulp-filter": "^3.0.33",
@@ -1097,7 +1097,7 @@
         "mocha-multi-reporters": "^1.5.1",
         "request": "^2.88.2",
         "ts-node": "^7.0.1",
-        "typescript": "^4.3.5",
+        "typescript": "^4.9.4",
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^2.11.0",
