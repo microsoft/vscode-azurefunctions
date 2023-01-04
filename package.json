@@ -372,12 +372,12 @@
             "view/title": [
                 {
                     "command": "azureFunctions.createFunction",
-                    "when": "view == azureWorkspace",
+                    "when": "view == azureWorkspace && !virtualWorkspace",
                     "group": "navigation@1"
                 },
                 {
                     "submenu": "azureWorkspaceDeploy",
-                    "when": "view == azureWorkspace",
+                    "when": "view == azureWorkspace && !virtualWorkspace",
                     "group": "navigation@2"
                 }
             ],
@@ -399,12 +399,12 @@
                 },
                 {
                     "command": "azureFunctions.deploy",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFuncProductionSlot/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncProductionSlot/ && !virtualWorkspace",
                     "group": "2@1"
                 },
                 {
                     "command": "azureFunctions.deploySlot",
-                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azFuncSlot(?!s)/ && !virtualWorkspace",
                     "group": "2@1"
                 },
                 {
@@ -669,6 +669,10 @@
                 {
                     "command": "azureFunctions.viewProperties",
                     "when": "never"
+                },
+                {
+                    "command": "azureFunctions.createNewProject",
+                    "when": "!virtualWorkspace"
                 }
             ],
             "editor/context": [
