@@ -119,6 +119,11 @@
         },
         "commands": [
             {
+                "command": "azureFunctions.refresh",
+                "title": "Refresh",
+                "category": "Azure Functions"
+            },
+            {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
                 "category": "Azure Functions"
@@ -477,7 +482,12 @@
                     "group": "6@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
+                    "when": "view == azureResourceGroups && viewItem =~ /FunctionApp/ && viewItem =~ /azureResource/",
+                    "group": "9@3"
+                },
+                {
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc(Production|)Slot(?!s).*slot/",
                     "group": "6@2"
                 },
@@ -487,12 +497,12 @@
                     "group": "1@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem == azFuncSlots",
                     "group": "6@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc.*Functions;/i",
                     "group": "1@1"
                 },
@@ -557,7 +567,7 @@
                     "group": "1@3"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /applicationSettings.*azFunc/",
                     "group": "2@1"
                 },
@@ -592,7 +602,7 @@
                     "group": "1@2"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc.*(deployments(C|Unc)onnected)/",
                     "group": "2@1"
                 },
@@ -617,17 +627,17 @@
                     "group": "1@4"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc.*siteFiles/",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc.*logFiles/",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureFunctions.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azFunc.*folder/",
                     "group": "1@1"
                 }
