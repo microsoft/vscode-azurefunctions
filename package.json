@@ -1101,12 +1101,13 @@
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0",
         "vsce": "^2.11.0",
+        "vscode-azurekudu": "^0.2.0",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
     },
     "dependencies": {
         "@azure/arm-appinsights": "^4.0.0",
-        "@azure/arm-appservice": "^11.0.0",
+        "@azure/arm-appservice": "^13.0.3",
         "@azure/arm-cosmosdb": "^15.0.0",
         "@azure/arm-eventhub": "^5.0.0",
         "@azure/arm-servicebus": "^5.0.0",
