@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { window, workspace, WorkspaceFolder } from 'vscode';
+import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
+import { WorkspaceFolder } from 'vscode';
 import { ProjectLanguage, projectTemplateKeySetting } from '../../constants';
 import { addLocalFuncTelemetry } from '../../funcCoreTools/getLocalFuncCoreToolsVersion';
 import { FuncVersion } from '../../FuncVersion';
-import { localize } from '../../localize';
 import { LocalProjectTreeItem } from '../../tree/localProject/LocalProjectTreeItem';
-import { getContainingWorkspace } from '../../utils/workspace';
+import { getContainingWorkspace, getRootWorkspaceFolder } from '../../utils/workspace';
 import * as api from '../../vscode-azurefunctions.api';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
@@ -50,7 +49,7 @@ export async function createFunctionInternal(context: IActionContext, options: a
     let workspacePath: string | undefined = options.folderPath;
 
     if (workspacePath === undefined) {
-        workspaceFolder = await getWorkspaceFolder();
+        workspaceFolder = await getRootWorkspaceFolder();
         workspacePath = workspaceFolder?.uri.fsPath;
     } else {
         workspaceFolder = getContainingWorkspace(workspacePath);
@@ -75,22 +74,4 @@ export async function createFunctionInternal(context: IActionContext, options: a
     });
     await wizard.prompt();
     await wizard.execute();
-}
-
-async function getWorkspaceFolder(): Promise<WorkspaceFolder | undefined> {
-    let folder: WorkspaceFolder | undefined;
-
-    if (!workspace.workspaceFolders || workspace.workspaceFolders.length === 0) {
-        folder = undefined;
-    } else if (workspace.workspaceFolders.length === 1) {
-        folder = workspace.workspaceFolders[0];
-    } else {
-        const placeHolder: string = localize('selectProjectFolder', 'Select the folder containing your function project');
-        folder = await window.showWorkspaceFolderPick({ placeHolder });
-        if (!folder) {
-            throw new UserCancelledError('selectProjectFolder');
-        }
-    }
-
-    return folder;
 }

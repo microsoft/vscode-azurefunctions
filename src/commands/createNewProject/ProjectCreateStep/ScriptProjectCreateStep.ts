@@ -20,7 +20,7 @@ import { IProjectWizardContext } from '../IProjectWizardContext';
 import { ProjectCreateStepBase } from './ProjectCreateStepBase';
 
 export class ScriptProjectCreateStep extends ProjectCreateStepBase {
-    protected funcignore: string[] = ['.git*', '.vscode', 'local.settings.json', 'test'];
+    protected funcignore: string[] = ['__blobstorage__', '__queuestorage__', '__azurite_db*__.json', '.git*', '.vscode', 'local.settings.json', 'test'];
     protected gitignore: string = '';
     protected localSettingsJson: ILocalSettingsJson = {
         IsEncrypted: false,
