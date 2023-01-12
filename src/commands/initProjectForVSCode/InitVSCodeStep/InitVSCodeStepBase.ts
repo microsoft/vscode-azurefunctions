@@ -133,7 +133,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const matchingTaskLabels: string[] = [];
         for (const existingTask of existingTasks) {
             const existingLabel = this.getTaskLabel(existingTask);
-            if (existingLabel && newTasks.some(newTask => existingLabel === this.getTaskLabel(newTask))) {
+            if (existingLabel && newTasks.some(newTask => existingLabel === this.getTaskLabel(newTask) && existingTask.type !== 'func')) {
                 matchingTaskLabels.push(existingLabel);
             } else {
                 nonMatchingTasks.push(existingTask);
