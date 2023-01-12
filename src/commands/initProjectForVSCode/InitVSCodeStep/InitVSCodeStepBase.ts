@@ -133,7 +133,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         const matchingTaskLabels: string[] = [];
         for (const existingTask of existingTasks) {
             const existingLabel = this.getTaskLabel(existingTask);
-            if (existingLabel && newTasks.some(newTask => existingLabel === this.getTaskLabel(newTask) && existingTask.type !== 'func')) {
+            if (existingLabel && newTasks.some(newTask => existingLabel === this.getTaskLabel(newTask) && existingTask.type === newTask.type)) {
                 matchingTaskLabels.push(existingLabel);
             } else {
                 nonMatchingTasks.push(existingTask);
@@ -152,7 +152,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
     private getTaskLabel(task: ITask): string | undefined {
         switch (task.type) {
             case func:
-                return `${task.type}: ${task.command}`;
+                if (!task.label) {
+                    return task.type
+                }
+            // eslint-disable-next-line no-fallthrough
             case 'shell':
             case 'process':
                 return task.label;
