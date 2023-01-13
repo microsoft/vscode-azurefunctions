@@ -21,7 +21,7 @@ import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWiza
 import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
-import { getLocalConnectionString } from "../funcConfig/local.settings";
+import { getLocalSettingsConnectionString } from "../funcConfig/local.settings";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { pythonUtils } from "./pythonUtils";
@@ -240,7 +240,7 @@ export namespace netheriteUtils {
 
     // Supports validation on both 'debug' and 'deploy'
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
-        const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, projectPath);
+        const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, projectPath);
         const eventHubName: string | undefined = await getEventHubName(projectPath);
 
         // Found a valid connection in debug mode, no need to proceed further
@@ -292,7 +292,7 @@ export namespace netheriteUtils {
 export namespace sqlUtils {
     // Supports validation on both 'debug' and 'deploy'
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
-        const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL, projectPath);
+        const sqlDbConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.SQL, projectPath);
 
         if (sqlDbConnection) {
             if (options?.setConnectionForDeploy) {

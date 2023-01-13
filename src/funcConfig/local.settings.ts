@@ -17,7 +17,7 @@ export interface ILocalSettingsJson {
     ConnectionStrings?: { [key: string]: string };
 }
 
-export async function getLocalConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
+export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[connectionKey]) {
         return process.env[connectionKey];

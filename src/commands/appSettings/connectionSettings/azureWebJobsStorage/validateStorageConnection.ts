@@ -5,7 +5,7 @@
 
 import { AzureWizard, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ConnectionKey } from "../../../../constants";
-import { getLocalConnectionString } from "../../../../funcConfig/local.settings";
+import { getLocalSettingsConnectionString } from "../../../../funcConfig/local.settings";
 import { IValidateConnectionOptions } from "../IConnectionPromptOptions";
 import { AzureWebJobsStorageExecuteStep } from "./AzureWebJobsStorageExecuteStep";
 import { AzureWebJobsStoragePromptStep } from "./AzureWebJobsStoragePromptStep";
@@ -13,7 +13,7 @@ import { IAzureWebJobsStorageWizardContext } from "./IAzureWebJobsStorageWizardC
 
 // Supports validation on both 'debug' and 'deploy'
 export async function validateStorageConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
-    const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
+    const currentStorageConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath);
     if (currentStorageConnection) {
         if (options?.setConnectionForDeploy) {
             Object.assign(context, { azureWebJobsRemoteConnection: currentStorageConnection });

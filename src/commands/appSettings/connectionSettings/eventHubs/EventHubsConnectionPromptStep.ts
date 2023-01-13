@@ -8,7 +8,7 @@ import { MessageItem } from 'vscode';
 import { ConnectionKey, ConnectionType, localEventHubsEmulatorConnectionRegExp } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
-import { getLocalConnectionString } from '../../../../funcConfig/local.settings';
+import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
 import { localize } from '../../../../localize';
 import { EventHubsNamespaceListStep } from '../../../createFunction/durableSteps/netherite/EventHubsNamespaceListStep';
 import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
@@ -27,7 +27,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
 
         const buttons: MessageItem[] = [connectEventNamespaceButton, useEmulatorButton];
 
-        const eventHubConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, context.projectPath);
         if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
             return undefined;
         }
@@ -63,7 +63,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         }
 
         // If the user wants to connect through Azure (usually during debug) but an Azure connection is already in the local settings, just use that instead
-        const eventHubConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, context.projectPath);
         if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
             return undefined;
         }
