@@ -158,7 +158,7 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
 }
 
 async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
-    if (!(canValidateAzureWebJobStorageOnDebug(projectLanguage) || requiresDurableStorage)) {
+    if (!canValidateAzureWebJobStorageOnDebug(projectLanguage) && !requiresDurableStorage) {
         return;
     }
 
