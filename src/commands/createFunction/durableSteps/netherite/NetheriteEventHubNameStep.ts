@@ -36,7 +36,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newEventHubName && context.eventHubConnectionType === ConnectionType.Azure;
+        return !context.newEventHubName && context.eventHubsConnectionType === ConnectionType.Azure;
     }
 
     private _validateInput(name: string | undefined): string | undefined {

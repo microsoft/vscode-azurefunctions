@@ -19,7 +19,7 @@ export class SqlDatabaseConnectionCustomPromptStep<T extends ISqlDatabaseConnect
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.customSqlConnection && context.sqlDbConnectionType === ConnectionType.NonAzure;
+        return !context.customSqlConnection && context.sqlDbConnectionType === ConnectionType.Custom;
     }
 
     private validateInput(name: string | undefined): string | undefined {

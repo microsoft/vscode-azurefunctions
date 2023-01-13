@@ -46,7 +46,7 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
 
     public shouldPrompt(context: T): boolean {
         // We need a sql server to list out its databases.  If we don't have a sql server built yet, that means we can skip the listing and go straight to naming
-        return !context.sqlDatabase && !!context.sqlServer && context.sqlDbConnectionType !== ConnectionType.NonAzure;
+        return !context.sqlDatabase && !!context.sqlServer;
     }
 
     private async getQuickPicks(dbTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Database | undefined>[]> {

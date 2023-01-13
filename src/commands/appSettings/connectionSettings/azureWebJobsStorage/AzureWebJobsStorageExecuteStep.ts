@@ -21,8 +21,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
     public async execute(context: T): Promise<void> {
         let value: string;
 
-        // 'NonAzure' will represent 'Emulator' in this flow
-        if (context.azureWebJobsStorageType === ConnectionType.NonAzure) {
+        if (context.azureWebJobsStorageType === ConnectionType.Emulator) {
             value = localStorageEmulatorConnectionString;
         } else {
             value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;

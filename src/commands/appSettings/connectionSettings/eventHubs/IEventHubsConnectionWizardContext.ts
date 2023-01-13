@@ -6,7 +6,7 @@
 import type { EHNamespace } from "@azure/arm-eventhub";
 import type { ResourceManagementModels } from "@azure/arm-resources";
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../../../constants";
+import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
 
 export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
@@ -14,8 +14,8 @@ export interface IEventHubsConnectionWizardContext extends IActionContext, Parti
     resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: ConnectionTypeValues;
-    eventHubConnectionType?: ConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionTypeValues;
+    eventHubsConnectionType?: EventHubsConnectionTypeValues;
 
     // Netherite
     newEventHubsNamespaceName?: string;

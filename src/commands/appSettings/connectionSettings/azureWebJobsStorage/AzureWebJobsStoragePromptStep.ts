@@ -6,7 +6,7 @@
 import { StorageAccountKind, StorageAccountListStep, StorageAccountPerformance, StorageAccountReplication } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionActionContext, IWizardOptions } from '@microsoft/vscode-azext-utils';
 import { MessageItem } from 'vscode';
-import { ConnectionType, ConnectionTypeValues } from '../../../../constants';
+import { ConnectionType, EventHubsConnectionTypeValues, SqlDbConnectionTypeValues } from '../../../../constants';
 import { useEmulator } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { localize } from '../../../../localize';
@@ -30,21 +30,22 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         if (result === connectStorageButton) {
             context.azureWebJobsStorageType = ConnectionType.Azure;
         } else {
-            // 'NonAzure' will represent 'Emulator' in this flow
-            context.azureWebJobsStorageType = ConnectionType.NonAzure;
+            context.azureWebJobsStorageType = ConnectionType.Emulator;
         }
 
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
     }
 
-    public shouldPrompt(context: T & { eventHubConnectionType?: ConnectionTypeValues, sqlDbConnectionType?: ConnectionTypeValues }): boolean {
-        if (this._options?.preselectedConnectionType) {
+    public shouldPrompt(context: T & { eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): boolean {
+        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
             context.azureWebJobsStorageType = this._options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
-            context.azureWebJobsStorageType = ConnectionType.Azure;  // Only should prompt if no storage account was selected
-        } else if (context.eventHubConnectionType) {
-            context.azureWebJobsStorageType = context.eventHubConnectionType;
+            // Only should prompt if no storage account was selected
+            context.azureWebJobsStorageType = ConnectionType.Azure;
+        } else if (context.eventHubsConnectionType) {
+            context.azureWebJobsStorageType = context.eventHubsConnectionType;
         } else if (context.sqlDbConnectionType === ConnectionType.Azure) {
+            // No official support for an `Emulator` scenario yet
             context.azureWebJobsStorageType = context.sqlDbConnectionType;
         }
 

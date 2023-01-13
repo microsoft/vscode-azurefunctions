@@ -20,8 +20,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
     public async execute(context: T): Promise<void> {
         let value: string;
 
-        // 'NonAzure' will represent 'Emulator' in this flow
-        if (context.eventHubConnectionType === ConnectionType.NonAzure) {
+        if (context.eventHubsConnectionType === ConnectionType.Emulator) {
             const currentConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub, context.projectPath);
             if (currentConnection && localEventHubsEmulatorConnectionRegExp.test(currentConnection)) {
                 return;
@@ -39,6 +38,6 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
     }
 
     public shouldExecute(context: T): boolean {
-        return !!context.eventHubConnectionType;
+        return !!context.eventHubsConnectionType;
     }
 }

@@ -6,7 +6,7 @@
 import type { ResourceManagementModels } from '@azure/arm-resources';
 import type { Database, Server } from '@azure/arm-sql';
 import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../../../constants";
+import { SqlDbConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
 
 export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
     projectPath: string;
@@ -14,8 +14,8 @@ export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Par
     resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: ConnectionTypeValues;
-    sqlDbConnectionType?: ConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionTypeValues;
+    sqlDbConnectionType?: SqlDbConnectionTypeValues;
 
     // SQL
     newSqlServerName?: string;

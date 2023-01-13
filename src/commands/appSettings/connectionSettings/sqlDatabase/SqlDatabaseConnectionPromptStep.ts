@@ -19,28 +19,27 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public async prompt(context: T): Promise<void> {
-        const connectAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Azure SQL Database') };
-        const connectNonAzureDatabase: MessageItem = { title: localize('connectSqlDatabase', 'Connect Non-Azure SQL Database') };
+        const connectAzureDatabase: MessageItem = { title: localize('connectAzureSqlDatabase', 'Connect Azure SQL Database') };
+        const connectCustomDatabase: MessageItem = { title: localize('connectCustomSqlDatabase', 'Connect Custom SQL Database') };
 
         const message: string = localize('selectSqlDatabaseConnection', 'In order to proceed, you must connect a SQL database for internal use by the Azure Functions runtime.');
 
-        const buttons: MessageItem[] = [connectAzureDatabase, connectNonAzureDatabase];
+        const buttons: MessageItem[] = [connectAzureDatabase, connectCustomDatabase];
 
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectAzureDatabase) {
             context.sqlDbConnectionType = ConnectionType.Azure;
         } else {
-            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
-            context.sqlDbConnectionType = ConnectionType.NonAzure;
+            context.sqlDbConnectionType = ConnectionType.Custom;
         }
 
         context.telemetry.properties.sqlDbConnectionType = context.sqlDbConnectionType;
     }
 
     public shouldPrompt(context: T): boolean {
-        if (this._options?.preselectedConnectionType) {
+        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Custom) {
             context.sqlDbConnectionType = this._options.preselectedConnectionType;
-        } else if (context.azureWebJobsStorageType) {
+        } else if (context.azureWebJobsStorageType === ConnectionType.Azure) {
             context.sqlDbConnectionType = context.azureWebJobsStorageType;
         }
 
@@ -55,8 +54,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionActionContext>[] = [];
 
-        if (context.sqlDbConnectionType === ConnectionType.NonAzure) {
-            // 'NonAzure' represents any local or remote custom SQL connection that is not hosted through Azure
+        if (context.sqlDbConnectionType === ConnectionType.Custom) {
             promptSteps.push(new SqlDatabaseConnectionCustomPromptStep());
         } else {
             const subscriptionPromptStep: AzureWizardPromptStep<ISubscriptionActionContext> | undefined = await ext.azureAccountTreeItem.getSubscriptionPromptStep(context);

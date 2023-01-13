@@ -34,32 +34,31 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
 
         const result: MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
         if (result === connectEventNamespaceButton) {
-            context.eventHubConnectionType = ConnectionType.Azure;
+            context.eventHubsConnectionType = ConnectionType.Azure;
         } else {
-            // 'NonAzure' will represent 'Emulator' in this flow
-            context.eventHubConnectionType = ConnectionType.NonAzure;
+            context.eventHubsConnectionType = ConnectionType.Emulator;
         }
 
-        context.telemetry.properties.eventHubConnectionType = context.eventHubConnectionType;
+        context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
     }
 
     public shouldPrompt(context: T): boolean {
-        if (this._options?.preselectedConnectionType) {
-            context.eventHubConnectionType = this._options.preselectedConnectionType;
+        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
+            context.eventHubsConnectionType = this._options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType) {
-            context.eventHubConnectionType = context.azureWebJobsStorageType;
+            context.eventHubsConnectionType = context.azureWebJobsStorageType;
         }
 
         // Even if we skip the prompting, we should still record the flow in telemetry
-        if (context.eventHubConnectionType) {
-            context.telemetry.properties.eventHubConnectionType = context.eventHubConnectionType;
+        if (context.eventHubsConnectionType) {
+            context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
         }
 
-        return !context.eventHubConnectionType;
+        return !context.eventHubsConnectionType;
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T & ISubscriptionActionContext> | undefined> {
-        if (context.eventHubConnectionType !== ConnectionType.Azure) {
+        if (context.eventHubsConnectionType !== ConnectionType.Azure) {
             return undefined;
         }
 
