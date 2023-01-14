@@ -21,7 +21,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
         let value: string;
 
         if (context.eventHubsConnectionType === ConnectionType.Emulator) {
-            const currentConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+            const currentConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, context.projectPath);
             if (currentConnection && localEventHubsEmulatorConnectionRegExp.test(currentConnection)) {
                 return;
             }
@@ -33,7 +33,7 @@ export class EventHubsConnectionExecuteStep<T extends IEventHubsConnectionWizard
         if (this._setConnectionForDeploy) {
             context.eventHubRemoteConnection = value;
         } else {
-            await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHub, value, MismatchBehavior.Overwrite);
+            await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, value, MismatchBehavior.Overwrite);
         }
     }
 

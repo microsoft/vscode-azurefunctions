@@ -60,9 +60,9 @@ export async function uploadAppSettingsInternal(context: IActionContext, client:
             delete localSettings.Values?.[ConnectionKey.Storage];
             excludedAppSettings.push(ConnectionKey.Storage);
         }
-        if (localEventHubsEmulatorConnectionRegExp.test(localSettings.Values[ConnectionKey.EventHub])) {
-            delete localSettings.Values?.[ConnectionKey.EventHub];
-            excludedAppSettings.push(ConnectionKey.EventHub);
+        if (localEventHubsEmulatorConnectionRegExp.test(localSettings.Values[ConnectionKey.EventHubs])) {
+            delete localSettings.Values?.[ConnectionKey.EventHubs];
+            excludedAppSettings.push(ConnectionKey.EventHubs);
         }
 
         if (exclude) {

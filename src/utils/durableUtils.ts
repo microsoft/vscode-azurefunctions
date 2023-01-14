@@ -240,7 +240,7 @@ export namespace netheriteUtils {
 
     // Supports validation on both 'debug' and 'deploy'
     export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
-        const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, projectPath);
+        const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, projectPath);
         const eventHubName: string | undefined = await getEventHubName(projectPath);
 
         if (!!eventHubsConnection && !!eventHubName) {
@@ -283,7 +283,7 @@ export namespace netheriteUtils {
                 type: DurableBackend.Netherite,
                 partitionCount: 12,
                 StorageConnectionName: ConnectionKey.Storage,
-                EventHubsConnectionName: ConnectionKey.EventHub,
+                EventHubsConnectionName: ConnectionKey.EventHubs,
             }
         };
     }

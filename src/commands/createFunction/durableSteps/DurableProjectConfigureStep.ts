@@ -59,7 +59,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 break;
             case DurableBackend.Netherite:
                 hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
-                await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHub, '', MismatchBehavior.Overwrite);
+                await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, '', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
                 hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();

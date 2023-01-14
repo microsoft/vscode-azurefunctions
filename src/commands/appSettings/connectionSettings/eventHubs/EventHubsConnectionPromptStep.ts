@@ -27,7 +27,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
 
         const buttons: MessageItem[] = [connectEventNamespaceButton, useEmulatorButton];
 
-        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, context.projectPath);
         if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
             return undefined;
         }
@@ -63,7 +63,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         }
 
         // If the user wants to connect through Azure (usually during debug) but an Azure connection is already in the local settings, just use that instead
-        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, context.projectPath);
+        const eventHubConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, context.projectPath);
         if (!!eventHubConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubConnection)) {
             return undefined;
         }
