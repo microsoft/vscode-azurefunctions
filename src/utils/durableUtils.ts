@@ -243,8 +243,11 @@ export namespace netheriteUtils {
         const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHub, projectPath);
         const eventHubName: string | undefined = await getEventHubName(projectPath);
 
-        // Found a valid connection in debug mode, no need to proceed further
-        if (!!eventHubsConnection && !!eventHubName && !options?.setConnectionForDeploy) {
+        if (!!eventHubsConnection && !!eventHubName) {
+            if (options?.setConnectionForDeploy) {
+                // Found a valid connection in deploy mode
+                Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
+            }
             return;
         }
 
@@ -252,10 +255,7 @@ export namespace netheriteUtils {
         const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
-        if (!!eventHubsConnection && !!eventHubName && options?.setConnectionForDeploy) {
-            // Found a valid connection in deploy mode
-            Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
-        } else {
+        if (!eventHubsConnection) {
             promptSteps.push(new EventHubsConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }));
             executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
         }
