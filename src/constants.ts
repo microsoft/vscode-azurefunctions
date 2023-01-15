@@ -91,7 +91,7 @@ export enum ConnectionKey {
 
 export enum ConnectionType {
     /**
-     * Represents the connection to any local or remote resource that is hosted through Azure
+     * Represents the connection to any resource that is hosted through Azure
      */
     Azure = "Azure",
     /**
@@ -99,7 +99,7 @@ export enum ConnectionType {
      */
     Emulator = 'Emulator',
     /**
-     * Represents the manual connection to any resource that the user provides
+     * Represents the connection to any resource that the user provides through a direct connection string
      */
     Custom = 'Custom',
 }
