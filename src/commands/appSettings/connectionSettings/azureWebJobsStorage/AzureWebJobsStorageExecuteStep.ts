@@ -4,19 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
-import { MismatchBehavior, setLocalAppSetting } from '../../../../funcConfig/local.settings';
+import { ConnectionKey, ConnectionKeyValues, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
 import { getStorageConnectionString } from '../../../../utils/azure';
+import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
-// Todo in next PR: Refactor and inherit use from SetConnectionSettingBaseStep & remove _setConnectionForDeploy
-export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardExecuteStep<T> {
+export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizardContext> extends SetConnectionSettingBaseStep<T> {
     public priority: number = 230;
-
-    public constructor(private readonly _setConnectionForDeploy?: boolean) {
-        super();
-    }
+    public debugDeploySetting: ConnectionKeyValues = ConnectionKey.Storage;
 
     public async execute(context: T): Promise<void> {
         let value: string;
@@ -27,11 +22,7 @@ export class AzureWebJobsStorageExecuteStep<T extends IAzureWebJobsStorageWizard
             value = (await getStorageConnectionString(<IStorageAccountWizardContext>context)).connectionString;
         }
 
-        if (this._setConnectionForDeploy) {
-            context.azureWebJobsRemoteConnection = value;
-        } else {
-            await setLocalAppSetting(context, context.projectPath, ConnectionKey.Storage, value, MismatchBehavior.Overwrite);
-        }
+        await this.setConnectionSetting(context, value);
     }
 
     public shouldExecute(context: T): boolean {

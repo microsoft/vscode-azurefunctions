@@ -42,7 +42,7 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
     }
 
-    public shouldPrompt(context: T): boolean {
+    public async configureBeforePrompt(context: T): Promise<void> {
         if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
             context.eventHubsConnectionType = this._options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType) {
@@ -53,7 +53,9 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
         if (context.eventHubsConnectionType) {
             context.telemetry.properties.eventHubConnectionType = context.eventHubsConnectionType;
         }
+    }
 
+    public shouldPrompt(context: T): boolean {
         return !context.eventHubsConnectionType;
     }
 

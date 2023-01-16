@@ -9,6 +9,3 @@ export interface IConnectionPromptOptions {
     preselectedConnectionType?: StorageConnectionTypeValues | EventHubsConnectionTypeValues | SqlDbConnectionTypeValues;
 }
 
-export interface IValidateConnectionOptions extends IConnectionPromptOptions {
-    setConnectionForDeploy?: boolean;
-}

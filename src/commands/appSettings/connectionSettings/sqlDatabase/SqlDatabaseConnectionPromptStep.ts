@@ -36,7 +36,7 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         context.telemetry.properties.sqlDbConnectionType = context.sqlDbConnectionType;
     }
 
-    public shouldPrompt(context: T): boolean {
+    public async configureBeforePrompt(context: T): Promise<void> {
         if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Custom) {
             context.sqlDbConnectionType = this._options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType === ConnectionType.Azure) {
@@ -47,7 +47,9 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
         if (context.sqlDbConnectionType) {
             context.telemetry.properties.sqlDbConnectionType = context.sqlDbConnectionType;
         }
+    }
 
+    public shouldPrompt(context: T): boolean {
         return !context.sqlDbConnectionType;
     }
 

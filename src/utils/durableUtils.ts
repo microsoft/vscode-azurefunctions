@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
 import { EventHubsConnectionExecuteStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionExecuteStep";
 import { EventHubsConnectionPromptStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionPromptStep";
 import { IEventHubsConnectionWizardContext } from "../commands/appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
-import { IValidateConnectionOptions } from "../commands/appSettings/connectionSettings/IConnectionPromptOptions";
+import { IConnectionPromptOptions } from "../commands/appSettings/connectionSettings/IConnectionPromptOptions";
+import { ISetConnectionSettingContext } from "../commands/appSettings/connectionSettings/ISetConnectionSettingContext";
 import { ISqlDatabaseConnectionWizardContext } from "../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
 import { SqlDatabaseConnectionExecuteStep } from "../commands/appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionExecuteStep";
 import { SqlDatabaseConnectionPromptStep } from "../commands/appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionPromptStep";
@@ -18,7 +19,7 @@ import { NetheriteConfigureHostStep } from "../commands/createFunction/durableSt
 import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
 import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
+import { CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { getLocalSettingsConnectionString } from "../funcConfig/local.settings";
@@ -239,16 +240,22 @@ export namespace netheriteUtils {
     }
 
     // Supports validation on both 'debug' and 'deploy'
-    export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
+    export async function validateConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
         const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, projectPath);
         const eventHubName: string | undefined = await getEventHubName(projectPath);
 
         if (!!eventHubsConnection && !!eventHubName) {
-            if (options?.setConnectionForDeploy) {
-                // Found a valid connection in deploy mode
-                Object.assign(context, { eventHubConnectionForDeploy: eventHubsConnection });
+            if (context.action === CodeAction.Deploy) {
+                if (!localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection)) {
+                    // Found a valid connection in deploy mode. Set it and skip the wizard.
+                    context[ConnectionKey.EventHubs] = eventHubsConnection;
+                    return;
+                }
+                // Found an invalid connection for deploy mode, we need to proceed with acquiring a connection through the wizard...
+            } else {
+                // Found a valid connection in debug mode.  Skip the wizard.
+                return;
             }
-            return;
         }
 
         const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
@@ -256,8 +263,8 @@ export namespace netheriteUtils {
         const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
 
         if (!eventHubsConnection) {
-            promptSteps.push(new EventHubsConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }));
-            executeSteps.push(new EventHubsConnectionExecuteStep(options?.setConnectionForDeploy));
+            promptSteps.push(new EventHubsConnectionPromptStep(options));
+            executeSteps.push(new EventHubsConnectionExecuteStep());
         }
 
         if (!eventHubName) {
@@ -291,20 +298,22 @@ export namespace netheriteUtils {
 
 export namespace sqlUtils {
     // Supports validation on both 'debug' and 'deploy'
-    export async function validateConnection(context: IActionContext, projectPath: string, options?: IValidateConnectionOptions): Promise<void> {
+    export async function validateConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
         const sqlDbConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.SQL, projectPath);
 
         if (sqlDbConnection) {
-            if (options?.setConnectionForDeploy) {
-                Object.assign(context, { sqlDbConnectionForDeploy: sqlDbConnection });
+            if (context.action === CodeAction.Deploy) {
+                // Found a valid connection in deploy mode. Set it for deploy.
+                context[ConnectionKey.SQL] = sqlDbConnection;
             }
+            // Found a valid connection in debug or deploy mode. Skip the wizard.
             return;
         }
 
         const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
         const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps: [new SqlDatabaseConnectionPromptStep({ preselectedConnectionType: options?.preselectedConnectionType }), new SqlDatabaseListStep()],
-            executeSteps: [new SqlDatabaseConnectionExecuteStep(options?.setConnectionForDeploy)]
+            promptSteps: [new SqlDatabaseConnectionPromptStep(options), new SqlDatabaseListStep()],
+            executeSteps: [new SqlDatabaseConnectionExecuteStep()]
         });
         await wizard.prompt();
         await wizard.execute();

@@ -36,7 +36,7 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
         context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
     }
 
-    public shouldPrompt(context: T & { eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): boolean {
+    public async configureBeforePrompt(context: T & { eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): Promise<void> {
         if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
             context.azureWebJobsStorageType = this._options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
@@ -49,11 +49,13 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
             context.azureWebJobsStorageType = context.sqlDbConnectionType;
         }
 
-        // Even if we skip the prompting, we should still record the flow in telemetry
+        // Even if we end up skipping the prompt, we should still record the flow in telemetry
         if (context.azureWebJobsStorageType) {
             context.telemetry.properties.azureWebJobsStorageType = context.azureWebJobsStorageType;
         }
+    }
 
+    public shouldPrompt(context: T): boolean {
         return !context.azureWebJobsStorageType;
     }
 

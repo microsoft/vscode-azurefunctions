@@ -4,15 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { StorageAccount } from "@azure/arm-storage";
-import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { StorageConnectionTypeValues } from "../../../../constants";
+import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IAzureWebJobsStorageWizardContext extends IActionContext, Partial<ISubscriptionContext> {
-    projectPath: string;
-
+export interface IAzureWebJobsStorageWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
     storageAccount?: StorageAccount;
     newStorageAccountName?: string;
 
     azureWebJobsStorageType?: StorageConnectionTypeValues;
-    azureWebJobsRemoteConnection?: string;
 }

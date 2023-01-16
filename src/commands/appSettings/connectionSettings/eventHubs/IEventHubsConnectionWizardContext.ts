@@ -5,12 +5,11 @@
 
 import type { EHNamespace } from "@azure/arm-eventhub";
 import type { ResourceManagementModels } from "@azure/arm-resources";
-import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
+import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
-    projectPath: string;
-
+export interface IEventHubsConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
     resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
@@ -21,6 +20,4 @@ export interface IEventHubsConnectionWizardContext extends IActionContext, Parti
     newEventHubsNamespaceName?: string;
     eventHubsNamespace?: EHNamespace;
     newEventHubName?: string;
-
-    eventHubRemoteConnection?: string;
 }

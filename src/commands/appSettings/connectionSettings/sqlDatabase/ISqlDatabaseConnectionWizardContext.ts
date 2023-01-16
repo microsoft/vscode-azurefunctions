@@ -5,12 +5,11 @@
 
 import type { ResourceManagementModels } from '@azure/arm-resources';
 import type { Database, Server } from '@azure/arm-sql';
-import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { SqlDbConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
+import { ISetConnectionSettingContext } from '../ISetConnectionSettingContext';
 
-export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
-    projectPath: string;
-
+export interface ISqlDatabaseConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
     resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
@@ -26,5 +25,4 @@ export interface ISqlDatabaseConnectionWizardContext extends IActionContext, Par
     sqlDatabase?: Database;
 
     customSqlConnection?: string;
-    sqlDbRemoteConnection?: string;
 }

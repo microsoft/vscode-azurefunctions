@@ -9,8 +9,9 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
+import { ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
-import { ConnectionKey, DurableBackend, DurableBackendValues, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
+import { CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
 import { getLocalSettingsConnectionString, MismatchBehavior, setLocalAppSetting } from "../funcConfig/local.settings";
 import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreToolsVersion';
@@ -27,7 +28,12 @@ export interface IPreDebugValidateResult {
     shouldContinue: boolean;
 }
 
-export async function preDebugValidate(context: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
+export interface IDebugContext extends Omit<ISetConnectionSettingContext, 'projectPath'> {
+    projectPath?: string;
+}
+
+export async function preDebugValidate(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
+    const context: IDebugContext = Object.assign(actionContext, { action: CodeAction.Debug });
     const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
     let shouldContinue: boolean;
     context.telemetry.properties.debugType = debugConfig.type;
@@ -39,12 +45,12 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
 
         if (shouldContinue) {
             context.telemetry.properties.lastValidateStep = 'getProjectRoot';
-            const projectPath: string | undefined = await tryGetFunctionProjectRoot(context, workspace);
+            context.projectPath = await tryGetFunctionProjectRoot(context, workspace);
 
-            if (projectPath) {
-                const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, projectPath);
-                const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, projectPath);
-                const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, projectPath);
+            if (context.projectPath) {
+                const projectLanguage: string | undefined = getWorkspaceSetting(projectLanguageSetting, context.projectPath);
+                const projectLanguageModel: number | undefined = getWorkspaceSetting(projectLanguageModelSetting, context.projectPath);
+                const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(projectLanguage, context.projectPath);
 
                 context.telemetry.properties.projectLanguage = projectLanguage;
                 context.telemetry.properties.projectLanguageModel = projectLanguageModel?.toString();
@@ -53,26 +59,26 @@ export async function preDebugValidate(context: IActionContext, debugConfig: vsc
                 shouldContinue = await validateFunctionVersion(context, projectLanguage, projectLanguageModel, workspace.uri.fsPath);
 
                 context.telemetry.properties.lastValidateStep = 'workerRuntime';
-                await validateWorkerRuntime(context, projectLanguage, projectPath);
+                await validateWorkerRuntime(context, projectLanguage, context.projectPath);
 
                 switch (durableStorageType) {
                     case DurableBackend.Netherite:
                         context.telemetry.properties.lastValidateStep = 'netheriteConnection';
-                        await netheriteUtils.validateConnection(context, projectPath);
+                        await netheriteUtils.validateConnection(context, context.projectPath);
                         break;
                     case DurableBackend.SQL:
                         context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await sqlUtils.validateConnection(context, projectPath);
+                        await sqlUtils.validateConnection(context, context.projectPath);
                         break;
                     case DurableBackend.Storage:
                     default:
                 }
 
                 context.telemetry.properties.lastValidateStep = 'azureWebJobsStorage';
-                await validateAzureWebJobsStorage(context, projectLanguage, projectLanguageModel, projectPath, !!durableStorageType);
+                await validateAzureWebJobsStorage(context, projectLanguage, projectLanguageModel, context.projectPath, !!durableStorageType);
 
                 context.telemetry.properties.lastValidateStep = 'emulatorRunning';
-                shouldContinue = await validateEmulatorIsRunning(context, projectPath);
+                shouldContinue = await validateEmulatorIsRunning(context, context.projectPath);
             }
         }
     } catch (error) {
@@ -157,7 +163,7 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
     }
 }
 
-async function validateAzureWebJobsStorage(context: IActionContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
+async function validateAzureWebJobsStorage(context: IDebugContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
     if (!canValidateAzureWebJobStorageOnDebug(projectLanguage) && !requiresDurableStorage) {
         return;
     }
