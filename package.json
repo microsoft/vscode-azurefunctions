@@ -86,7 +86,7 @@
     "capabilities": {
         "virtualWorkspaces": {
             "supported": "limited",
-            "description": "In virtual workspaces, creating a new function project, deploying, and debugging is not supported."
+            "description": "In virtual workspaces, creating a new function project, deploying, and debugging are not supported."
         }
     },
     "contributes": {
