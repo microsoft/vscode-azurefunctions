@@ -153,7 +153,7 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         switch (task.type) {
             case func:
                 if (!task.label) {
-                    return task.type;
+                    return `${task.type}: ${task.command}`;
                 } else {
                     return task.label;
                 }
