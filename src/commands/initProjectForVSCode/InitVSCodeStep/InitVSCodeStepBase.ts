@@ -153,9 +153,10 @@ export abstract class InitVSCodeStepBase extends AzureWizardExecuteStep<IProject
         switch (task.type) {
             case func:
                 if (!task.label) {
-                    return task.type
+                    return task.type;
+                } else {
+                    return task.label;
                 }
-            // eslint-disable-next-line no-fallthrough
             case 'shell':
             case 'process':
                 return task.label;
