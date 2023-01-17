@@ -83,6 +83,12 @@
         "workspaceContains:**/host.json"
     ],
     "main": "./main.js",
+    "capabilities": {
+        "virtualWorkspaces": {
+            "supported": "limited",
+            "description": "In virtual workspaces, creating a new function project, deploying, and debugging are not supported."
+        }
+    },
     "contributes": {
         "x-azResources": {
             "activation": {
@@ -106,7 +112,8 @@
             {
                 "command": "azureFunctions.addBinding",
                 "title": "%azureFunctions.addBinding%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.add",
@@ -116,7 +123,8 @@
             {
                 "command": "azureFunctions.appSettings.decrypt",
                 "title": "%azureFunctions.appSettings.decrypt%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.delete",
@@ -136,7 +144,8 @@
             {
                 "command": "azureFunctions.appSettings.encrypt",
                 "title": "%azureFunctions.appSettings.encrypt%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.appSettings.rename",
@@ -180,7 +189,8 @@
                 "icon": {
                     "light": "resources/light/AddFunction.svg",
                     "dark": "resources/dark/AddFunction.svg"
-                }
+                },
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.createFunctionApp",
@@ -200,7 +210,8 @@
                 "icon": {
                     "light": "resources/light/CreateNewProject.svg",
                     "dark": "resources/dark/CreateNewProject.svg"
-                }
+                },
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.createSlot",
@@ -226,12 +237,14 @@
                 "command": "azureFunctions.deploy",
                 "title": "%azureFunctions.deploy%",
                 "category": "Azure Functions",
-                "icon": "$(cloud-upload)"
+                "icon": "$(cloud-upload)",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.deploySlot",
                 "title": "%azureFunctions.deploySlot%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.disableFunction",
@@ -256,12 +269,14 @@
             {
                 "command": "azureFunctions.initProjectForVSCode",
                 "title": "%azureFunctions.initProjectForVSCode%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.installOrUpdateFuncCoreTools",
                 "title": "%azureFunctions.installOrUpdateFuncCoreTools%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.openInPortal",
@@ -301,12 +316,14 @@
             {
                 "command": "azureFunctions.startJavaRemoteDebug",
                 "title": "%azureFunctions.startJavaRemoteDebug%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.startRemoteDebug",
                 "title": "%azureFunctions.startRemoteDebug%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.startStreamingLogs",
@@ -337,7 +354,8 @@
             {
                 "command": "azureFunctions.uninstallFuncCoreTools",
                 "title": "%azureFunctions.uninstallFuncCoreTools%",
-                "category": "Azure Functions"
+                "category": "Azure Functions",
+                "enablement": "!virtualWorkspace"
             },
             {
                 "command": "azureFunctions.viewCommitInGitHub",
