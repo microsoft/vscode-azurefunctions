@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Database, Server, SqlManagementClient } from '@azure/arm-sql';
-import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { ConnectionType } from '../../../../constants';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
@@ -26,13 +27,17 @@ export class SqlDatabaseListStep<T extends ISqlDatabaseConnectionWizardContext> 
     }
 
     public async getSubWizard(context: T): Promise<IWizardOptions<T> | undefined> {
+        if (context.sqlDbConnectionType !== ConnectionType.Azure) {
+            return undefined;
+        }
+
         const promptSteps: AzureWizardPromptStep<T & ISubscriptionContext>[] = [];
         const executeSteps: AzureWizardExecuteStep<T & ISubscriptionContext>[] = [];
 
         if (context.sqlDatabase) {
             context.valuesToMask.push(nonNullProp(context.sqlDatabase, 'name'));
         } else {
-            promptSteps.push(new SqlDatabaseNameStep());
+            promptSteps.push(new SqlDatabaseNameStep(), new ResourceGroupListStep());
             executeSteps.push(new SqlDatabaseCreateStep());
         }
 

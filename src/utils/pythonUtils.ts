@@ -9,7 +9,6 @@ import { ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { localize } from "../localize";
 
-
 export namespace pythonUtils {
     export function isV2Plus(language: string | undefined, model: number | undefined): boolean {
         return language === ProjectLanguage.Python && model !== undefined && model > 1;

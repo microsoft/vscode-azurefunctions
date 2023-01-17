@@ -5,17 +5,16 @@
 
 import type { AuthorizationRule, EHNamespace } from "@azure/arm-eventhub";
 import type { ResourceManagementModels } from "@azure/arm-resources";
-import { IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { ConnectionTypeValues } from "../../../../constants";
+import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
+import { ISetConnectionSettingContext } from "../ISetConnectionSettingContext";
 
-export interface IEventHubsConnectionWizardContext extends IActionContext, Partial<ISubscriptionContext> {
-    projectPath: string;
-
+export interface IEventHubsConnectionWizardContext extends ISetConnectionSettingContext, Partial<ISubscriptionContext> {
     resourceGroup?: ResourceManagementModels.ResourceGroup;
 
     // Connection Types
-    azureWebJobsStorageType?: ConnectionTypeValues;
-    eventHubConnectionType?: ConnectionTypeValues;
+    azureWebJobsStorageType?: StorageConnectionTypeValues;
+    eventHubsConnectionType?: EventHubsConnectionTypeValues;
 
     // Netherite
     newEventHubsNamespaceName?: string;
@@ -23,6 +22,4 @@ export interface IEventHubsConnectionWizardContext extends IActionContext, Parti
     newAuthRuleName?: string;
     authRule?: AuthorizationRule;
     newEventHubName?: string;
-
-    eventHubRemoteConnection?: string;
 }

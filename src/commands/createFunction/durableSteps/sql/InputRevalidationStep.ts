@@ -14,7 +14,7 @@ export class InputRevalidationStep<T extends IActionContext> extends AzureWizard
     public async prompt(context: T): Promise<void> {
         await context.ui.showInputBox({
             prompt: localize('verifyPreviousInput', 'Please confirm by re-entering the previous value.'),
-            password: !!this._isPassword,
+            password: this._isPassword,
             validateInput: (value: string | undefined) => this.validateInput(context, value)
         });
     }

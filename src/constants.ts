@@ -85,23 +85,23 @@ export enum CodeAction {
 
 export enum ConnectionKey {
     Storage = 'AzureWebJobsStorage',
-    EventHub = 'EventHubsConnection',
+    EventHubs = 'EventHubsConnection',
     SQL = 'SQLDB_Connection'
 }
 
 export enum ConnectionType {
     /**
-     * Represents any local or remote connection that is hosted through Azure
+     * Represents the connection to any resource that is hosted through Azure
      */
     Azure = "Azure",
     /**
-     * Represents any local or remote connection that is not hosted through Azure (including emulators)
+     * Represents the connection to a local emulator resource
      */
-    NonAzure = 'NonAzure',
+    Emulator = 'Emulator',
     /**
-     * Represents deferring connection setup until later (the 'skipForNow' scenario)
+     * Represents the connection to any resource that the user provides through a direct connection string
      */
-    None = 'skipForNow'
+    Custom = 'Custom',
 }
 
 export enum DurableBackend {
@@ -110,9 +110,13 @@ export enum DurableBackend {
     SQL = "mssql"
 }
 
+export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
+export type StorageConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
+export type EventHubsConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
+export type SqlDbConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Emulator>;
+
 export type CodeActionValues = typeof CodeAction[keyof typeof CodeAction];
 export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
-export type ConnectionTypeValues = typeof ConnectionType[keyof typeof ConnectionType];
 export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];
 
 export const func: string = 'func';

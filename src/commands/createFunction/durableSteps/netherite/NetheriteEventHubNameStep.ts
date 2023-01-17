@@ -6,7 +6,6 @@
 import type { Eventhub, EventHubManagementClient } from '@azure/arm-eventhub';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../constants';
 import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createEventHubClient } from '../../../../utils/azureClients';
@@ -36,7 +35,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newEventHubName && context.eventHubConnectionType === ConnectionType.Azure;
+        return !context.newEventHubName;
     }
 
     private _validateInput(name: string | undefined): string | undefined {

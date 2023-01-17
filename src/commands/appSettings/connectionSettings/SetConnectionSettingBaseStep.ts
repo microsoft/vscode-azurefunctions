@@ -3,23 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
-// import { CodeAction, CodeActionValues, ConnectionKeyValues } from "../../constants";
-// import { MismatchBehavior, setLocalAppSetting } from "../../funcConfig/local.settings";
-// import { IFunctionWizardContext } from "../createFunction/IFunctionWizardContext";
+import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
+import { CodeAction, ConnectionKeyValues } from "../../../constants";
+import { MismatchBehavior, setLocalAppSetting } from "../../../funcConfig/local.settings";
+import { ISetConnectionSettingContext } from "./ISetConnectionSettingContext";
 
-// export interface IDebugOrDeployContext extends IFunctionWizardContext {
-//     action?: CodeActionValues;
-// }
+export abstract class SetConnectionSettingBaseStep<T extends ISetConnectionSettingContext> extends AzureWizardExecuteStep<T> {
+    public abstract readonly debugDeploySetting: ConnectionKeyValues;
 
-// export abstract class SetConnectionSettingBaseStep<T extends IDebugOrDeployContext> extends AzureWizardExecuteStep<T> {
-//     public abstract readonly debugDeploySetting: ConnectionKeyValues;
-
-//     protected setSetting(context: T, value: string): void {
-//         if (context.action === CodeAction.Deploy) {
-//             context[this.debugDeploySetting] = value;
-//         } else {
-//             setLocalAppSetting(context, context.projectPath, this.debugDeploySetting, value, MismatchBehavior.Overwrite);
-//         }
-//     }
-// }
+    protected async setConnectionSetting(context: T, value: string): Promise<void> {
+        if (context.action === CodeAction.Deploy) {
+            context[this.debugDeploySetting] = value;
+        } else {
+            await setLocalAppSetting(context, context.projectPath, this.debugDeploySetting, value, MismatchBehavior.Overwrite);
+        }
+    }
+}

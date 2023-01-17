@@ -17,7 +17,7 @@ export interface ILocalSettingsJson {
     ConnectionStrings?: { [key: string]: string };
 }
 
-export async function getLocalConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
+export async function getLocalSettingsConnectionString(context: IActionContext, connectionKey: ConnectionKeyValues, projectPath: string): Promise<string | undefined> {
     // func cli uses environment variable if it's defined on the machine, so no need to prompt
     if (process.env[connectionKey]) {
         return process.env[connectionKey];
@@ -26,30 +26,6 @@ export async function getLocalConnectionString(context: IActionContext, connecti
     const settings: ILocalSettingsJson = await getLocalSettingsJson(context, path.join(projectPath, localSettingsFileName));
     return settings.Values && settings.Values[connectionKey];
 }
-
-// export async function validateStorageConnection(context: IActionContext, options?: Omit<IValidateConnectionOptions, 'suppressSkipForNow'>, projectPath?: string): Promise<void> {
-//     projectPath ??= await getRootWorkspacePath();
-//     if (!projectPath) {
-//         throw new NoWorkspaceError();
-//     }
-
-//     const currentStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage, projectPath);
-//     const hasStorageConnection: boolean = !!currentStorageConnection && currentStorageConnection !== localStorageEmulatorConnectionString;
-//     if (hasStorageConnection) {
-//         if (options?.setConnectionForDeploy) {
-//             Object.assign(context, { azureWebJobsRemoteConnection: currentStorageConnection });
-//         }
-//         return;
-//     }
-
-//     const wizardContext: IAzureWebJobsStorageWizardContext = Object.assign(context, { projectPath });
-//     const wizard: AzureWizard<IAzureWebJobsStorageWizardContext> = new AzureWizard(wizardContext, {
-//         promptSteps: [new AzureWebJobsStoragePromptStep({ preSelectedConnectionType: options?.preSelectedConnectionType, suppressSkipForNow: true })],
-//         executeSteps: [new AzureWebJobsStorageExecuteStep(options?.setConnectionForDeploy)]
-//     });
-//     await wizard.prompt();
-//     await wizard.execute();
-// }
 
 export enum MismatchBehavior {
     /**
