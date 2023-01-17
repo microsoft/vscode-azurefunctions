@@ -5,7 +5,7 @@
 
 import { nonNullProp } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType } from '../../../../constants';
-import { getSqlDatabaseConnectionString } from '../../../../utils/azure';
+import { getSqlDatabaseConnectionString } from '../getLocalConnectionSetting';
 import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWizardContext';
 

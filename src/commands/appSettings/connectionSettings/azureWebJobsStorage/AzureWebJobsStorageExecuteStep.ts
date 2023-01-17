@@ -5,7 +5,7 @@
 
 import { IStorageAccountWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType, localStorageEmulatorConnectionString } from '../../../../constants';
-import { getStorageConnectionString } from '../../../../utils/azure';
+import { getStorageConnectionString } from '../getLocalConnectionSetting';
 import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 

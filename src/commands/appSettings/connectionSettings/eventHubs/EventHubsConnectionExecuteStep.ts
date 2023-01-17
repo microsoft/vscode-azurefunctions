@@ -6,7 +6,7 @@
 import { ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { ConnectionKey, ConnectionKeyValues, ConnectionType, localEventHubsEmulatorConnectionRegExp, localEventHubsEmulatorConnectionStringDefault } from '../../../../constants';
 import { getLocalSettingsConnectionString } from '../../../../funcConfig/local.settings';
-import { getEventHubsConnectionString } from '../../../../utils/azure';
+import { getEventHubsConnectionString } from '../getLocalConnectionSetting';
 import { SetConnectionSettingBaseStep } from '../SetConnectionSettingBaseStep';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 

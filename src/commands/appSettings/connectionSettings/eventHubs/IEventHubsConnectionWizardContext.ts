@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { EHNamespace } from "@azure/arm-eventhub";
+import type { AuthorizationRule, EHNamespace } from "@azure/arm-eventhub";
 import type { ResourceManagementModels } from "@azure/arm-resources";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { EventHubsConnectionTypeValues, StorageConnectionTypeValues } from "../../../../constants";
@@ -19,5 +19,7 @@ export interface IEventHubsConnectionWizardContext extends ISetConnectionSetting
     // Netherite
     newEventHubsNamespaceName?: string;
     eventHubsNamespace?: EHNamespace;
+    newAuthRuleName?: string;
+    authRule?: AuthorizationRule;
     newEventHubName?: string;
 }

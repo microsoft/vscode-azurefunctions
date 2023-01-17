@@ -1,6 +1,7 @@
 import { localize } from "./localize";
 
 export const viewOutput: string = localize('viewOutput', 'View Output');
+export const defaultDescription: string = localize('default', '(Default)');
 export const previewDescription: string = localize('preview', '(Preview)');
 export const pythonNewModelPreview: string = localize('pythonNewModelPreview', 'Python (Programming Model V2)');
 export const useEmulator: string = localize('useEmulator', 'Use Local Emulator');
