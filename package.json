@@ -1106,7 +1106,7 @@
         "@azure/arm-storage": "^17.0.0",
         "@azure/ms-rest-js": "^2.2.1",
         "@azure/storage-blob": "^12.5.0",
-        "@microsoft/vscode-azext-azureappservice": "file:../vscode-azuretools/appservice/microsoft-vscode-azext-azureappservice-0.8.0.tgz",
+        "@microsoft/vscode-azext-azureappservice": "^0.8.1",
         "@microsoft/vscode-azext-azureutils": "^0.3.7",
         "@microsoft/vscode-azext-utils": "^0.4.0",
         "escape-string-regexp": "^4.0.0",
