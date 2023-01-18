@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Database, SqlManagementClient } from '@azure/arm-sql';
-import { parseAzureResourceId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardPromptStep, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { ConnectionType } from '../../../../constants';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import type { Database, SqlManagementClient } from '@azure/arm-sql';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzureWizardPromptStep, ISubscriptionContext, nonNullProp, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
-
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     private _databases: Database[] = [];
@@ -20,29 +19,29 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
         // If we have a sql server already, then we should check to make sure we don't have a name duplicate down the line
         // If we don't have a sql server yet, then that means we can just take any name that meets basic validation requirements
         if (context.sqlServer) {
-            const rgName: string = parseAzureResourceId(nonNullValue(context.sqlServer.id)).resourceGroup;
-            const serverName: string = nonNullValue(context.sqlServer?.name);
+            const rgName: string = getResourceGroupFromId(nonNullValue(context.sqlServer?.id));
+            const serverName: string = nonNullProp(context.sqlServer, 'name');
 
             const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
-            const dbIterator = await client.databases.listByServer(rgName, serverName);
+            const dbIterator = client.databases.listByServer(rgName, serverName);
             this._databases = await uiUtils.listAllIterator(dbIterator);
         }
 
         context.newSqlDatabaseName = (await context.ui.showInputBox({
-            prompt: localize('sqlDatabaseNamePrompt', 'Enter a name the new SQL database.'),
-            validateInput: (value: string | undefined) => this._validateInput(value)
+            prompt: localize('sqlDatabaseNamePrompt', 'Provide a SQL database name.'),
+            validateInput: (value: string | undefined) => this.validateInput(value)
         })).trim();
     }
 
     public shouldPrompt(context: T): boolean {
-        return !context.newSqlDatabaseName && context.sqlDbConnectionType === ConnectionType.Azure;
+        return !context.newSqlDatabaseName;
     }
 
-    private _validateInput(name: string | undefined): string | undefined {
+    private validateInput(name: string | undefined): string | undefined {
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 6, 50)) {
-            return invalidLength('6', '50');
+            return getInvalidLengthMessage(6, 50);
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
@@ -52,7 +51,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
             return db.name === name;
         });
         if (dbExists) {
-            return localize('sqlDatabaseExists', 'The SQL database "{0}" already exists. Please enter a unique name.', name);
+            return localize('sqlDatabaseExists', 'A SQL database with the name "{0}" already exists.', name);
         }
 
         return undefined;

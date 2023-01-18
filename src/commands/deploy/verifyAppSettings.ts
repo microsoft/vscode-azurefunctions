@@ -13,6 +13,7 @@ import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
+import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 import { IFunctionDeployContext } from './IFunctionDeployContext';
 
 /**
@@ -36,7 +37,7 @@ export async function verifyAppSettings(context: IActionContext & Partial<IFunct
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
-        const updatedRemoteConnection = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
+        const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
         updateAppSettings ||= updatedRemoteConnection;
 
         if (updateAppSettings) {
@@ -47,28 +48,28 @@ export async function verifyAppSettings(context: IActionContext & Partial<IFunct
     }
 }
 
-export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<IFunctionDeployContext>, durableStorageType: DurableBackendValues | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: DurableBackendValues | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
     let didUpdate: boolean = false;
     switch (durableStorageType) {
         case DurableBackend.Netherite:
-            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHub, context.eventHubConnectionForDeploy);
+            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs]);
             didUpdate ||= updatedNetheriteConnection;
             break;
         case DurableBackend.SQL:
-            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context.sqlDbConnectionForDeploy);
+            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL]);
             didUpdate ||= updatedSqlDbConnection;
             break;
         case DurableBackend.Storage:
         default:
     }
 
-    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context.azureWebJobsConnectionForDeploy);
+    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context[ConnectionKey.Storage]);
     didUpdate ||= updatedStorageConnection;
 
     return didUpdate;
 }
 
-export function updateConnectionStringIfNeeded(context: IActionContext & Partial<IFunctionDeployContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKeyValues, newValue: string | undefined): boolean {
+export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKeyValues, newValue: string | undefined): boolean {
     if (newValue) {
         remoteProperties[propertyName] = newValue;
         context.telemetry.properties[`update${propertyName}`] = String(true);

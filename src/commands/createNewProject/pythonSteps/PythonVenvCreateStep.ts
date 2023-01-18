@@ -28,7 +28,7 @@ export class PythonVenvCreateStep extends AzureWizardExecuteStep<IPythonVenvWiza
         void getPythonVersion(pythonAlias).then(value => context.telemetry.properties.pythonVersion = value);
 
         await cpUtils.executeCommand(ext.outputChannel, context.projectPath, pythonAlias, '-m', 'venv', context.venvName);
-        venvUtils.runPipInstallCommandIfPossible(context.venvName, context.projectPath);
+        await venvUtils.runPipInstallCommandIfPossible(context.venvName, context.projectPath);
     }
 
     public shouldExecute(context: IPythonVenvWizardContext): boolean {

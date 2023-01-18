@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Server, SqlManagementClient } from '@azure/arm-sql';
-import { LocationListStep, ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import type { Server, SqlManagementClient } from '@azure/arm-sql';
+import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 import { InputRevalidationStep } from './InputRevalidationStep';
 import { SqlServerCreateStep } from './SqlServerCreateStep';
 import { SqlServerNameStep } from './SqlServerNameStep';
@@ -19,8 +19,8 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
     public async prompt(context: T): Promise<void> {
         const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
 
-        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: 'Select a SQL server.' };
-        const picksTask: Promise<IAzureQuickPickItem<Server | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.servers.list()));
+        const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('selectSqlServer', 'Select a SQL server.') };
+        const picksTask: Promise<IAzureQuickPickItem<Server | undefined>[]> = this.getQuickPicks(uiUtils.listAllIterator(client.servers.list()));
 
         const result: Server | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
         context.sqlServer = result;
@@ -33,12 +33,9 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         if (context.sqlServer) {
             context.valuesToMask.push(nonNullProp(context.sqlServer, 'name'));
         } else {
-            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword' /* key */, true /* isPassword */));
+            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword', true /* isPassword */), new ResourceGroupListStep());
             executeSteps.push(new SqlServerCreateStep());
         }
-
-        LocationListStep.addStep(context, promptSteps);
-        promptSteps.push(new ResourceGroupListStep());
 
         return { promptSteps, executeSteps };
     }
@@ -47,7 +44,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         return !context.sqlServer;
     }
 
-    private async _getQuickPicks(serverTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Server | undefined>[]> {
+    private async getQuickPicks(serverTask: Promise<Server[]>): Promise<IAzureQuickPickItem<Server | undefined>[]> {
         const picks: IAzureQuickPickItem<Server | undefined>[] = [{
             label: localize('newSqlServer', '$(plus) Create new SQL server'),
             description: '',
@@ -58,7 +55,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         for (const server of sqlServers) {
             picks.push({
                 id: server.id,
-                label: server.name!,
+                label: nonNullProp(server, 'name'),
                 description: '',
                 data: server
             });

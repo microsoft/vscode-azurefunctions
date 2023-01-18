@@ -4,26 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep, AzureWizardPromptStep, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { ConnectionKey, DurableBackend, ProjectLanguage } from '../../constants';
-import { canValidateAzureWebJobStorageOnDebug } from '../../debug/validatePreDebug';
-import { getLocalConnectionString } from '../../funcConfig/local.settings';
+import { ProjectLanguage } from '../../constants';
 import { localize } from '../../localize';
 import { IFunctionTemplate } from '../../templates/IFunctionTemplate';
 import { pythonUtils } from '../../utils/pythonUtils';
 import { addBindingSettingSteps } from '../addBinding/settingSteps/addBindingSettingSteps';
-import { AzureWebJobsStorageExecuteStep } from '../appSettings/AzureWebJobsStorageExecuteStep';
-import { AzureWebJobsStoragePromptStep } from '../appSettings/AzureWebJobsStoragePromptStep';
-import { EventHubsConnectionExecuteStep } from '../appSettings/EventHubsConnectionExecuteStep';
-import { EventHubsConnectionPromptStep } from '../appSettings/EventHubsConnectionPromptStep';
-import { SqlDatabaseConnectionExecuteStep } from '../appSettings/SqlDatabaseConnectionExecuteStep';
-import { SqlDatabaseConnectionPromptStep } from '../appSettings/SqlDatabaseConnectionPromptStep';
 import { JavaPackageNameStep } from '../createNewProject/javaSteps/JavaPackageNameStep';
 import { DotnetFunctionCreateStep } from './dotnetSteps/DotnetFunctionCreateStep';
 import { DotnetFunctionNameStep } from './dotnetSteps/DotnetFunctionNameStep';
 import { DotnetNamespaceStep } from './dotnetSteps/DotnetNamespaceStep';
-import { NetheriteConfigureHostStep } from './durableSteps/netherite/NetheriteConfigureHostStep';
-import { NetheriteEventHubNameStep } from './durableSteps/netherite/NetheriteEventHubNameStep';
-import { SqlDatabaseListStep } from './durableSteps/sql/SqlDatabaseListStep';
+import { DurableProjectConfigureStep } from './durableSteps/DurableProjectConfigureStep';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { JavaFunctionCreateStep } from './javaSteps/JavaFunctionCreateStep';
 import { JavaFunctionNameStep } from './javaSteps/JavaFunctionNameStep';
@@ -93,22 +83,8 @@ export class FunctionSubWizard {
                     break;
             }
 
-            switch (context.newDurableStorageType) {
-                case DurableBackend.Netherite:
-                    promptSteps.push(new EventHubsConnectionPromptStep(), new NetheriteEventHubNameStep());
-                    executeSteps.push(new EventHubsConnectionExecuteStep(), new NetheriteConfigureHostStep());
-                    break;
-                case DurableBackend.SQL:
-                    promptSteps.push(new SqlDatabaseConnectionPromptStep(), new SqlDatabaseListStep());
-                    executeSteps.push(new SqlDatabaseConnectionExecuteStep());
-                    break;
-                case DurableBackend.Storage:
-                default:
-            }
-
-            if (context.newDurableStorageType || !template.isHttpTrigger && !template.isSqlBindingTemplate && !canValidateAzureWebJobStorageOnDebug(context.language) && !await getLocalConnectionString(context, ConnectionKey.Storage, context.projectPath)) {
-                promptSteps.push(new AzureWebJobsStoragePromptStep());
-                executeSteps.push(new AzureWebJobsStorageExecuteStep());
+            if (context.newDurableStorageType) {
+                executeSteps.push(new DurableProjectConfigureStep());
             }
 
             const title: string = localize('createFunction', 'Create new {0}', template.name);

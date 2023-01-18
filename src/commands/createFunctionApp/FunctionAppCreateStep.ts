@@ -9,15 +9,14 @@ import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizardExecuteStep, parseError } from '@microsoft/vscode-azext-utils';
 import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
-import { ConnectionKey, contentConnectionStringKey, contentShareKey, DurableBackend, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
+import { ConnectionKey, contentConnectionStringKey, contentShareKey, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { getLocalConnectionString } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { getStorageConnectionString } from '../../utils/azure';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
+import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
@@ -80,6 +79,16 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             this.addCustomLocationProperties(site, context.customLocation);
         }
 
+        // Always on setting added for App Service plans excluding the free tier https://github.com/microsoft/vscode-azurefunctions/issues/3037
+        if (context.plan?.sku?.family) {
+            const isNotFree = context.plan.sku.family.toLowerCase() !== 'f';
+            const isNotElasticPremium = context.plan.sku.family.toLowerCase() !== 'ep';
+            const isNotConsumption: boolean = context.plan.sku.family.toLowerCase() !== 'y';
+            if (isNotFree && isNotElasticPremium && isNotConsumption) {
+                nonNullProp(site, 'siteConfig').alwaysOn = true;
+            }
+        }
+
         return site;
     }
 
@@ -96,13 +105,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         const newSiteConfig: SiteConfig = stackSettings.siteConfigPropertiesDictionary;
-
-        let storageConnectionString: string;
-        if (context.hasAzureStorageConnection) {
-            storageConnectionString = await getLocalConnectionString(context, ConnectionKey.Storage) || '';
-        } else {
-            storageConnectionString = (await getStorageConnectionString(context)).connectionString;
-        }
+        const storageConnectionString: string = (await getStorageConnectionString(context)).connectionString;
 
         const appSettings: NameValuePair[] = [
             {
@@ -122,22 +125,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
             appSettings.push({
                 name: 'AzureWebJobsDashboard',
                 value: storageConnectionString
-            });
-        }
-
-        if (context.hasEventHubsConnection) {
-            const eventHubsConnectionString: string = await getLocalConnectionString(context, ConnectionKey.EventHub) || '';
-            appSettings.push({
-                name: ConnectionKey.EventHub,
-                value: eventHubsConnectionString
-            });
-        }
-
-        if (context.hasSqlDbConnection) {
-            const sqlDbConnectionString: string = await getLocalConnectionString(context, ConnectionKey.SQL) || '';
-            appSettings.push({
-                name: ConnectionKey.SQL,
-                value: sqlDbConnectionString
             });
         }
 
@@ -174,10 +161,6 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         newSiteConfig.appSettings = appSettings;
-
-        if (context.durableStorageType === DurableBackend.Netherite) {
-            newSiteConfig.use32BitWorkerProcess = false;
-        }
 
         return newSiteConfig;
     }

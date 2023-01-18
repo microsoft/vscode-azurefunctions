@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { invalidAlphanumericWithHyphens, invalidLength, localize } from '../../../../localize';
+import { getInvalidLengthMessage, invalidAlphanumericWithHyphens } from '../../../../constants-nls';
+import { localize } from '../../../../localize';
 import { validateUtils } from '../../../../utils/validateUtils';
-import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/ISqlDatabaseConnectionWizardContext';
+import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
     public async prompt(context: T): Promise<void> {
         context.newSqlAdminUsername = (await context.ui.showInputBox({
-            prompt: localize('sqlServerUsernamePrompt', 'Enter an admin username for the new SQL server.'),
-            validateInput: (value: string | undefined) => this._validateInput(value)
+            prompt: localize('sqlServerUsernamePrompt', 'Provide an admin username for the SQL server.'),
+            validateInput: (value: string | undefined) => this.validateInput(value)
         })).trim();
 
         context.valuesToMask.push(nonNullProp(context, 'newSqlAdminUsername'));
@@ -22,11 +23,11 @@ export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardCon
         return !context.newSqlAdminUsername;
     }
 
-    private _validateInput(name: string | undefined): string | undefined {
+    private validateInput(name: string | undefined): string | undefined {
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name)) {
-            return invalidLength();
+            return getInvalidLengthMessage();
         }
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
