@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from '@azure/arm-appservice';
-import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import type { StringDictionary } from '@azure/arm-appservice';
+import type { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
