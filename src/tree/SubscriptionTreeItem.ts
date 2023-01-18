@@ -12,9 +12,10 @@ import { FunctionAppCreateStep } from '../commands/createFunctionApp/FunctionApp
 import { FunctionAppHostingPlanStep, setConsumptionPlanProperties } from '../commands/createFunctionApp/FunctionAppHostingPlanStep';
 import { IFunctionAppWizardContext } from '../commands/createFunctionApp/IFunctionAppWizardContext';
 import { FunctionAppStackStep } from '../commands/createFunctionApp/stacks/FunctionAppStackStep';
-import { ConnectionKey, DurableBackendValues, funcVersionSetting, localEventHubsEmulatorConnectionRegExp, localStorageEmulatorConnectionString, projectLanguageSetting } from '../constants';
+import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
+import { ConnectionKey, DurableBackendValues, funcVersionSetting, localStorageEmulatorConnectionString, projectLanguageSetting } from '../constants';
 import { ext } from '../extensionVariables';
-import { getLocalConnectionString } from '../funcConfig/local.settings';
+import { getLocalSettingsConnectionString } from '../funcConfig/local.settings';
 import { tryGetLocalFuncVersion } from '../funcCoreTools/tryGetLocalFuncVersion';
 import { FuncVersion, latestGAVersion, tryParseFuncVersion } from '../FuncVersion';
 import { localize } from "../localize";
@@ -23,6 +24,7 @@ import { registerProviders } from '../utils/azure';
 import { createWebSiteClient } from '../utils/azureClients';
 import { durableUtils } from '../utils/durableUtils';
 import { nonNullProp } from '../utils/nonNull';
+import { getRootWorkspaceFolder } from '../utils/workspace';
 import { getRootFunctionsWorkerRuntime, getWorkspaceSetting, getWorkspaceSettingFromAnyFolder } from '../vsCodeConfig/settings';
 import { isProjectCV, isRemoteProjectCV } from './projectContextValues';
 import { ResolvedFunctionAppResource } from './ResolvedFunctionAppResource';
@@ -31,6 +33,7 @@ import { SlotTreeItem } from './SlotTreeItem';
 export interface ICreateFunctionAppContext extends ICreateChildImplContext {
     newResourceGroupName?: string;
     workspaceFolder?: WorkspaceFolder;
+    projectPath?: string;
 }
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -81,24 +84,20 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public static async createChild(context: ICreateFunctionAppContext, subscription: SubscriptionTreeItem): Promise<SlotTreeItem> {
+        context.workspaceFolder ??= await getRootWorkspaceFolder();
+        const projectPath: string | undefined = context.workspaceFolder ? await tryGetFunctionProjectRoot(context, context.workspaceFolder) : undefined;
+        context.telemetry.properties.hasProjectPath = projectPath ? 'true' : 'false';
+
         const version: FuncVersion = await getDefaultFuncVersion(context);
         context.telemetry.properties.projectRuntime = version;
         const language: string | undefined = context.workspaceFolder ? getWorkspaceSetting(projectLanguageSetting, context.workspaceFolder) : getWorkspaceSettingFromAnyFolder(projectLanguageSetting);
         context.telemetry.properties.projectLanguage = language;
-        const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language);
+        const durableStorageType: DurableBackendValues | undefined = projectPath ? await durableUtils.getStorageTypeFromWorkspace(language, projectPath) : undefined;
         context.telemetry.properties.projectDurableStorageType = durableStorageType;
 
-        const azureStorageConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.Storage);
+        const azureStorageConnection: string | undefined = projectPath ? await getLocalSettingsConnectionString(context, ConnectionKey.Storage, projectPath) : undefined;
         const hasAzureStorageConnection: boolean = !!azureStorageConnection && azureStorageConnection !== localStorageEmulatorConnectionString;
         context.telemetry.properties.projectHasAzureStorageConnection = String(hasAzureStorageConnection);
-
-        const eventHubsConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.EventHub);
-        const hasEventHubsConnection: boolean = !!eventHubsConnection && !localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection);
-        context.telemetry.properties.projectHasEventHubsConnection = String(hasEventHubsConnection);
-
-        const sqlDbConnection: string | undefined = await getLocalConnectionString(context, ConnectionKey.SQL);
-        const hasSqlDbConnection: boolean = !!sqlDbConnection;
-        context.telemetry.properties.projectHasSqlDatabaseConnection = String(hasSqlDbConnection);
 
         // Ensure all the providers are registered before
         const registerProvidersTask = registerProviders(context, subscription);
@@ -108,10 +107,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             resourceGroupDeferLocationStep: true,
             version,
             language,
+            projectPath,
             durableStorageType,
             hasAzureStorageConnection,
-            hasEventHubsConnection,
-            hasSqlDbConnection,
             ...(await createActivityContext())
         });
 
@@ -136,7 +134,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             wizardContext.stackFilter = getRootFunctionsWorkerRuntime(language);
 
             if (durableStorageType) {
-                // User may have already created a Resource Group during 'Create Function' or 'Debug'
+                // User may have already created a Resource Group during debug
                 promptSteps.push(new ResourceGroupListStep());
             } else {
                 executeSteps.push(new ResourceGroupCreateStep());
@@ -145,7 +143,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             executeSteps.push(new AppServicePlanCreateStep());
 
             if (durableStorageType) {
-                // User may have already created a Storage Account during 'Create Function' or 'Debug'
+                // User may have already created a Storage Account during debug
                 promptSteps.push(new StorageAccountListStep(
                     { // INewStorageAccountDefaults
                         kind: StorageAccountKind.Storage,

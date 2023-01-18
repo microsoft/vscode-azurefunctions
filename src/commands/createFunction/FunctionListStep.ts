@@ -14,6 +14,7 @@ import { durableUtils } from '../../utils/durableUtils';
 import { nonNullProp } from '../../utils/nonNull';
 import { pythonUtils } from '../../utils/pythonUtils';
 import { getWorkspaceSetting, updateWorkspaceSetting } from '../../vsCodeConfig/settings';
+import { DurableStorageTypePromptStep } from './durableSteps/DurableStorageTypePromptStep';
 import { FunctionSubWizard } from './FunctionSubWizard';
 import { IFunctionWizardContext } from './IFunctionWizardContext';
 import { PythonLocationStep } from './scriptSteps/PythonLocationStep';
@@ -59,18 +60,18 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
     public async getSubWizard(context: IFunctionWizardContext): Promise<IWizardOptions<IFunctionWizardContext> | undefined> {
         const isV2PythonModel = pythonUtils.isV2Plus(context.language, context.languageModel);
 
-        const needsStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
-        if (needsStorageSetup) {
-            context.newDurableStorageType = await durableUtils.promptForStorageType(context);
-        }
-
         if (isV2PythonModel) {
             return {
                 // TODO: Title?
                 promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
-            return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+            const needsDurableStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
+            if (needsDurableStorageSetup) {
+                return { promptSteps: [new DurableStorageTypePromptStep()] };
+            } else {
+                return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
+            }
         }
     }
 

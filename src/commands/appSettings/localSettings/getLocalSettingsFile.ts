@@ -6,9 +6,9 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as path from 'path';
 import { workspace, WorkspaceFolder } from "vscode";
-import { localSettingsFileName } from "../../constants";
-import { selectWorkspaceFile } from "../../utils/workspace";
-import { tryGetFunctionProjectRoot } from "../createNewProject/verifyIsProject";
+import { localSettingsFileName } from "../../../constants";
+import { selectWorkspaceFile } from "../../../utils/workspace";
+import { tryGetFunctionProjectRoot } from "../../createNewProject/verifyIsProject";
 
 /**
  * If only one project is open and the default local settings file exists, return that.

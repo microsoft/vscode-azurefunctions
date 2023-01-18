@@ -11,13 +11,13 @@ import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { Progress } from 'vscode';
 import { ConnectionKey, contentConnectionStringKey, contentShareKey, DurableBackend, extensionVersionKey, ProjectLanguage, runFromPackageKey, webProvider } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { getLocalConnectionString } from '../../funcConfig/local.settings';
+import { getLocalSettingsConnectionString } from '../../funcConfig/local.settings';
 import { FuncVersion, getMajorVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
-import { getStorageConnectionString } from '../../utils/azure';
 import { createWebSiteClient } from '../../utils/azureClients';
 import { getRandomHexString } from '../../utils/fs';
 import { nonNullProp } from '../../utils/nonNull';
+import { getStorageConnectionString } from '../appSettings/connectionSettings/getLocalConnectionSetting';
 import { enableFileLogging } from '../logstream/enableFileLogging';
 import { FullFunctionAppStack, IFunctionAppWizardContext } from './IFunctionAppWizardContext';
 import { showSiteCreated } from './showSiteCreated';
@@ -99,7 +99,7 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
 
         let storageConnectionString: string;
         if (context.hasAzureStorageConnection) {
-            storageConnectionString = await getLocalConnectionString(context, ConnectionKey.Storage) || '';
+            storageConnectionString = context.projectPath ? (await getLocalSettingsConnectionString(context, ConnectionKey.Storage, context.projectPath) || '') : '';
         } else {
             storageConnectionString = (await getStorageConnectionString(context)).connectionString;
         }
@@ -126,15 +126,15 @@ export class FunctionAppCreateStep extends AzureWizardExecuteStep<IFunctionAppWi
         }
 
         if (context.hasEventHubsConnection) {
-            const eventHubsConnectionString: string = await getLocalConnectionString(context, ConnectionKey.EventHub) || '';
+            const eventHubsConnectionString: string = context.projectPath ? (await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, context.projectPath) || '') : '';
             appSettings.push({
-                name: ConnectionKey.EventHub,
+                name: ConnectionKey.EventHubs,
                 value: eventHubsConnectionString
             });
         }
 
         if (context.hasSqlDbConnection) {
-            const sqlDbConnectionString: string = await getLocalConnectionString(context, ConnectionKey.SQL) || '';
+            const sqlDbConnectionString: string = context.projectPath ? (await getLocalSettingsConnectionString(context, ConnectionKey.SQL, context.projectPath) || '') : '';
             appSettings.push({
                 name: ConnectionKey.SQL,
                 value: sqlDbConnectionString

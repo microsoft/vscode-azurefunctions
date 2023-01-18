@@ -21,6 +21,7 @@ export interface IFunctionAppWizardContext extends IAppServiceWizardContext, ICr
     language: string | undefined;
     stackFilter?: string;
     newSiteStack?: FullFunctionAppStack;
+    projectPath?: string;
 
     durableStorageType?: DurableBackendValues;
 

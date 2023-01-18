@@ -6,8 +6,9 @@
 import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
+import { viewOutput } from '../../constants-nls';
 import { ext } from '../../extensionVariables';
-import { localize, viewOutput } from '../../localize';
+import { localize } from '../../localize';
 
 export interface ISiteCreatedOptions extends IActionContext {
     showCreatedNotification?: boolean;
