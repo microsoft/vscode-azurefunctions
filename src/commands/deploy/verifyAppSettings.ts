@@ -14,14 +14,13 @@ import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
-import { IFunctionDeployContext } from './IFunctionDeployContext';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext & Partial<IFunctionDeployContext>, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans, durableStorageType: DurableBackendValues | undefined): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans, durableStorageType: DurableBackendValues | undefined): Promise<void> {
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
@@ -79,7 +78,7 @@ export function updateConnectionStringIfNeeded(context: IActionContext & Partial
     }
 }
 
-export async function verifyVersionAndLanguage(context: IActionContext & Partial<IFunctionDeployContext>, projectPath: string | undefined, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
+export async function verifyVersionAndLanguage(context: IActionContext, projectPath: string | undefined, siteName: string, localVersion: FuncVersion, localLanguage: ProjectLanguage, remoteProperties: { [propertyName: string]: string }): Promise<void> {
     const rawAzureVersion: string = remoteProperties[extensionVersionKey];
     const azureVersion: FuncVersion | undefined = tryParseFuncVersion(rawAzureVersion);
     const azureWorkerRuntime: string | undefined = remoteProperties[workerRuntimeKey];
@@ -117,7 +116,7 @@ export async function verifyVersionAndLanguage(context: IActionContext & Partial
  * Automatically set to 1 on windows plans because it has significant perf improvements
  * https://github.com/microsoft/vscode-azurefunctions/issues/1465
  */
-function verifyRunFromPackage(context: IActionContext & Partial<IFunctionDeployContext>, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
+function verifyRunFromPackage(context: IActionContext, site: ParsedSite, remoteProperties: { [propertyName: string]: string }): boolean {
     const shouldAddSetting: boolean = !remoteProperties[runFromPackageKey];
     if (shouldAddSetting) {
         remoteProperties[runFromPackageKey] = '1';
@@ -128,7 +127,7 @@ function verifyRunFromPackage(context: IActionContext & Partial<IFunctionDeployC
     return shouldAddSetting;
 }
 
-function verifyLinuxRemoteBuildSettings(context: IActionContext & Partial<IFunctionDeployContext>, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {
+function verifyLinuxRemoteBuildSettings(context: IActionContext, remoteProperties: { [propertyName: string]: string }, bools: VerifyAppSettingBooleans): boolean {
     let hasChanged: boolean = false;
 
     const keysToRemove: string[] = [];
