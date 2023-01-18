@@ -28,12 +28,12 @@ export interface IPreDebugValidateResult {
     shouldContinue: boolean;
 }
 
-export interface IDebugContext extends Omit<ISetConnectionSettingContext, 'projectPath'> {
+export interface IPreDebugContext extends Omit<ISetConnectionSettingContext, 'projectPath'> {
     projectPath?: string;
 }
 
 export async function preDebugValidate(actionContext: IActionContext, debugConfig: vscode.DebugConfiguration): Promise<IPreDebugValidateResult> {
-    const context: IDebugContext = Object.assign(actionContext, { action: CodeAction.Debug });
+    const context: IPreDebugContext = Object.assign(actionContext, { action: CodeAction.Debug });
     const workspace: vscode.WorkspaceFolder = getMatchingWorkspace(debugConfig);
     let shouldContinue: boolean;
     context.telemetry.properties.debugType = debugConfig.type;
@@ -163,7 +163,7 @@ async function validateWorkerRuntime(context: IActionContext, projectLanguage: s
     }
 }
 
-async function validateAzureWebJobsStorage(context: IDebugContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
+async function validateAzureWebJobsStorage(context: IPreDebugContext, projectLanguage: string | undefined, projectLanguageModel: number | undefined, projectPath: string, requiresDurableStorage: boolean): Promise<void> {
     if (!canValidateAzureWebJobStorageOnDebug(projectLanguage) && !requiresDurableStorage) {
         return;
     }
