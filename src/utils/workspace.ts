@@ -15,14 +15,6 @@ export function isMultiRootWorkspace(): boolean {
         && vscode.workspace.name !== vscode.workspace.workspaceFolders[0].name; // multi-root workspaces always have something like "(Workspace)" appended to their name
 }
 
-export function getWorkspaceRootPath(): string | undefined {
-    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        return vscode.workspace.workspaceFolders[0].uri.fsPath;
-    } else {
-        return;
-    }
-}
-
 /**
  * Alternative to `vscode.workspace.findFiles` which always returns an empty array if no workspace is open
  */

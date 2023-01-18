@@ -71,7 +71,7 @@ export async function verifyAndUpdateAppConnectionStrings(context: IActionContex
 export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKeyValues, newValue: string | undefined): boolean {
     if (newValue) {
         remoteProperties[propertyName] = newValue;
-        context.telemetry.properties[`update${propertyName}`] = String(true);
+        context.telemetry.properties[`update${propertyName}`] = 'true';
         return true;
     } else {
         return false;
