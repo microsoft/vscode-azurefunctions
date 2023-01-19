@@ -81,7 +81,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
-    const { shouldValidateStorage, shouldValidateNetherite, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.effectiveDeployFsPath);
+    const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.effectiveDeployFsPath);
 
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
@@ -96,7 +96,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     switch (durableStorageType) {
         case DurableBackend.Netherite:
-            if (shouldValidateNetherite) {
+            if (shouldValidateEventHubs) {
                 await netheriteUtils.validateConnection(context, context.effectiveDeployFsPath, { preselectedConnectionType: ConnectionType.Azure });
             }
             break;

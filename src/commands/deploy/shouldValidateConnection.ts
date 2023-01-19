@@ -9,7 +9,7 @@ import { netheriteUtils } from "../../utils/durableUtils";
 
 export interface IShouldValidateConnection {
     shouldValidateStorage: boolean;
-    shouldValidateNetherite: boolean;
+    shouldValidateEventHubs: boolean;
     shouldValidateSqlDb: boolean;
 }
 
@@ -31,7 +31,7 @@ export async function shouldValidateConnections(context: IActionContext, durable
             remoteStorageConnection !== localStorageConnection &&
             await promptShouldOverwrite(context, ConnectionKey.Storage));
 
-    const shouldValidateNetherite: boolean = durableStorageType === DurableBackend.Netherite &&
+    const shouldValidateEventHubs: boolean = durableStorageType === DurableBackend.Netherite &&
         !netheriteHubName ||
         (!remoteEventHubsConnection ||
             (!!localEventHubsConnection &&
@@ -45,7 +45,7 @@ export async function shouldValidateConnections(context: IActionContext, durable
                 remoteSqlDbConnection !== localSqlDbConnection &&
                 await promptShouldOverwrite(context, ConnectionKey.SQL)));
 
-    return { shouldValidateStorage, shouldValidateNetherite, shouldValidateSqlDb };
+    return { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb };
 }
 
 async function promptShouldOverwrite(context: IActionContext, key: ConnectionKeyValues): Promise<boolean> {

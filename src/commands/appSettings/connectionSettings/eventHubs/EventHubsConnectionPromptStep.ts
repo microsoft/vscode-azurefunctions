@@ -20,10 +20,10 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
     }
 
     public async prompt(context: T): Promise<void> {
-        const connectEventNamespaceButton: MessageItem = { title: localize('connectEventHubsNamespace', 'Connect Event Hub Namespace') };
+        const connectEventNamespaceButton: MessageItem = { title: localize('connectEventHubsNamespace', 'Connect Event Hubs Namespace') };
         const useEmulatorButton: MessageItem = { title: useEmulator };
 
-        const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hub namespace for internal use by the Azure Functions runtime.');
+        const message: string = localize('selectEventHubsNamespace', 'In order to proceed, you must connect an event hubs namespace for internal use by the Azure Functions runtime.');
 
         const buttons: MessageItem[] = [connectEventNamespaceButton, useEmulatorButton];
 
