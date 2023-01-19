@@ -56,10 +56,5 @@ async function promptShouldOverwrite(context: IActionContext, key: ConnectionKey
     const message: string = localize('overwriteRemoteConnection', 'We detected a different local connection setting for "{0}" than what was previously used. Would you like to overwrite your remote setting?', key);
 
     const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
-
-    if (result === overwriteButton) {
-        return true;
-    } else {
-        return false;
-    }
+    return result === overwriteButton;
 }
