@@ -52,12 +52,21 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
     private async getPicks(context: IProjectWizardContext): Promise<IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[]> {
         const runtimes = await getRuntimes(context);
         const picks: IAzureQuickPickItem<cliFeedUtils.IWorkerRuntime | undefined>[] = [];
-        for (const runtime of runtimes) {
+
+        if (!runtimes.length) {
             picks.push({
-                label: runtime.displayInfo.displayName,
-                description: runtime.displayInfo.description,
-                data: runtime
+                label: localize('noDotNetWorkersFound', 'No .NET worker runtimes found.'),
+                data: undefined,
+                suppressPersistence: true
             });
+        } else {
+            for (const runtime of runtimes) {
+                picks.push({
+                    label: runtime.displayInfo.displayName,
+                    description: runtime.displayInfo.description,
+                    data: runtime
+                });
+            }
         }
 
         picks.push({
@@ -73,10 +82,8 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
 async function getRuntimes(context: IProjectWizardContext): Promise<cliFeedUtils.IWorkerRuntime[]> {
     const funcRelease = await cliFeedUtils.getRelease(context, await cliFeedUtils.getLatestVersion(context, context.version));
     const showHiddenStacks = getWorkspaceSetting<boolean>(hiddenStacksSetting);
-    const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks);
-    if (runtimes.length === 0) {
-        throw new Error('Internal error: No .NET worker runtimes found.');
-    }
+    const deprecatedFrameworks = ['netcoreapp3.1'];
+    const runtimes = Object.values(funcRelease.workerRuntimes.dotnet).filter(r => !r.displayInfo.hidden || showHiddenStacks).filter(r => !deprecatedFrameworks.includes(r.targetFramework));
     return runtimes;
 }
 
