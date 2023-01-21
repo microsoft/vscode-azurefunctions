@@ -13,6 +13,12 @@ export interface IShouldValidateConnection {
     shouldValidateSqlDb: boolean;
 }
 
+/*
+ * In general, most of the logic here boils down to the following cases.
+ * Case 1: No remote connection exists for a required resource.  shouldValidate returns true.
+ * Case 2: A remote connection already exists, but there is also a valid local settings connection detected in 'local.settings.json' that could replace it.
+ * In this case, prompt the user to determine if they would like to overwrite.  If yes, shouldValidate returns true.
+ */
 export async function shouldValidateConnections(context: IActionContext, durableStorageType: DurableBackendValues | undefined, client: SiteClient, projectPath: string): Promise<IShouldValidateConnection> {
     const app: StringDictionary = await client.listApplicationSettings();
     const remoteStorageConnection: string | undefined = app?.properties?.[ConnectionKey.Storage];
