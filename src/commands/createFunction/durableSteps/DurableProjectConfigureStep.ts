@@ -22,7 +22,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         const configuring: string = localize('configuringDurableProject', 'Configuring durable project settings...');
         progress.report({ message: configuring });
 
-        await this._configureHostAndLocalSettingsJson(context);
+        await this.configureHostAndLocalSettingsJson(context);
         await durableUtils.tryInstallDurableDependencies(context);
     }
 
@@ -30,7 +30,7 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
         return !!context.newDurableStorageType;
     }
 
-    private async _configureHostAndLocalSettingsJson(context: T): Promise<void> {
+    private async configureHostAndLocalSettingsJson(context: T): Promise<void> {
         const hostJsonPath: string = path.join(context.projectPath, hostFileName);
 
         if (!await AzExtFsExtra.pathExists(hostJsonPath)) {

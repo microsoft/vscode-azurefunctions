@@ -28,7 +28,6 @@ export class SqlDatabaseConnectionCustomPromptStep<T extends ISqlDatabaseConnect
         if (!validateUtils.isValidLength(name)) {
             return getInvalidLengthMessage();
         }
-
         return undefined;
     }
 }

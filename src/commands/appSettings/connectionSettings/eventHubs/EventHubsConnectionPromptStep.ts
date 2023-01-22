@@ -15,7 +15,7 @@ import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
 import { IEventHubsConnectionWizardContext } from './IEventHubsConnectionWizardContext';
 
 export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    public constructor(private readonly _options?: IConnectionPromptOptions) {
+    public constructor(private readonly options?: IConnectionPromptOptions) {
         super();
     }
 
@@ -43,8 +43,8 @@ export class EventHubsConnectionPromptStep<T extends IEventHubsConnectionWizardC
     }
 
     public async configureBeforePrompt(context: T): Promise<void> {
-        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
-            context.eventHubsConnectionType = this._options.preselectedConnectionType;
+        if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Emulator) {
+            context.eventHubsConnectionType = this.options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType) {
             context.eventHubsConnectionType = context.azureWebJobsStorageType;
         }

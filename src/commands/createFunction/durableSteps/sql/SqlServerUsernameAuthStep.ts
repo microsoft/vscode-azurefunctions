@@ -32,7 +32,6 @@ export class SqlServerUsernameAuthStep<T extends ISqlDatabaseConnectionWizardCon
         if (!validateUtils.isAlphanumericWithHypens(name)) {
             return invalidAlphanumericWithHyphens;
         }
-
         return undefined;
     }
 }

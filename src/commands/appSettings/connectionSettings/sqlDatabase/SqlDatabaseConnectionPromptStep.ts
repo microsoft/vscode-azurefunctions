@@ -14,7 +14,7 @@ import { ISqlDatabaseConnectionWizardContext } from './ISqlDatabaseConnectionWiz
 import { SqlDatabaseConnectionCustomPromptStep } from './SqlDatabaseConnectionCustomPromptStep';
 
 export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    public constructor(private readonly _options?: IConnectionPromptOptions) {
+    public constructor(private readonly options?: IConnectionPromptOptions) {
         super();
     }
 
@@ -37,8 +37,8 @@ export class SqlDatabaseConnectionPromptStep<T extends ISqlDatabaseConnectionWiz
     }
 
     public async configureBeforePrompt(context: T): Promise<void> {
-        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Custom) {
-            context.sqlDbConnectionType = this._options.preselectedConnectionType;
+        if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Custom) {
+            context.sqlDbConnectionType = this.options.preselectedConnectionType;
         } else if (context.azureWebJobsStorageType === ConnectionType.Azure) {
             context.sqlDbConnectionType = context.azureWebJobsStorageType;
         }

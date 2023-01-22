@@ -8,7 +8,6 @@ import { AzureWizardPromptStep, ISubscriptionContext } from '@microsoft/vscode-a
 import { getInvalidLengthMessage, invalidLowerCaseAlphanumericWithHyphens } from '../../../../constants-nls';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
-import { inputBoxDebounce } from '../../../../utils/debounce';
 import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
@@ -20,7 +19,8 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
 
         context.newSqlServerName = (await context.ui.showInputBox({
             prompt: localize('sqlServerNamePrompt', 'Provide a SQL server name.'),
-            validateInput: async (value: string | undefined) => await this.validateInput(value)
+            validateInput: (value: string | undefined) => this.validateInput(value),
+            asyncValidationTask: (value: string) => this.isNameAvailable(value)
         })).trim();
     }
 
@@ -37,16 +37,16 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
         if (!validateUtils.isLowerCaseAlphanumericWithHypens(name)) {
             return invalidLowerCaseAlphanumericWithHyphens;
         }
-
-        const isNameAvailable: boolean | undefined = await inputBoxDebounce<boolean>('sqlServerName', this.isNameAvailable.bind(this), name);
-        if (!isNameAvailable) {
-            return localize('sqlServerExists', 'A SQL server with the name "{0}" already exists.', name);
-        }
-
         return undefined;
     }
 
-    private async isNameAvailable(name: string): Promise<boolean | undefined> {
-        return (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
+    private async isNameAvailable(name: string): Promise<string | undefined> {
+        name = name.trim();
+
+        const isAvailable = (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
+        if (!isAvailable) {
+            return localize('sqlServerExists', 'A SQL server with the name "{0}" already exists.', name);
+        }
+        return undefined;
     }
 }
