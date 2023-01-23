@@ -28,7 +28,7 @@ import { shouldValidateConnections } from './shouldValidateConnection';
 import { validateRemoteBuild } from './validateRemoteBuild';
 import { verifyAppSettings } from './verifyAppSettings';
 
-export interface IFuncDeployContext extends IDeployContext, ISetConnectionSettingContext { }
+export type IFuncDeployContext = IDeployContext & ISetConnectionSettingContext;
 
 export async function deployProductionSlot(context: IActionContext, target?: vscode.Uri | string | SlotTreeItem, functionAppId?: string | {}): Promise<void> {
     await deploy(context, target, functionAppId, new RegExp(ResolvedFunctionAppResource.productionContextValue));
@@ -58,7 +58,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         expectedChildContextValue: expectedContextValue
     }));
 
-    const { language, version } = await verifyInitForVSCode(context, context.projectPath);
+    const { language, version } = await verifyInitForVSCode(context, context.effectiveDeployFsPath);
 
     context.telemetry.properties.projectLanguage = language;
     context.telemetry.properties.projectRuntime = version;
