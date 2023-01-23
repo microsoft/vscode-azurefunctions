@@ -17,7 +17,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
 
         const quickPickOptions: IAzureQuickPickOptions = { placeHolder: localize('eventHubsNamespacePlaceholder', 'Select an event hubs namespace.') };
-        const picksTask: Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> = this._getQuickPicks(uiUtils.listAllIterator(client.namespaces.list()));
+        const picksTask: Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> = this.getQuickPicks(uiUtils.listAllIterator(client.namespaces.list()));
 
         const result: EHNamespace | undefined = (await context.ui.showQuickPick(picksTask, quickPickOptions)).data;
         context.eventHubsNamespace = result;
@@ -44,7 +44,7 @@ export class EventHubsNamespaceListStep<T extends IEventHubsConnectionWizardCont
         return !context.eventHubsNamespace;
     }
 
-    private async _getQuickPicks(namespaceTask: Promise<EHNamespace[]>): Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> {
+    private async getQuickPicks(namespaceTask: Promise<EHNamespace[]>): Promise<IAzureQuickPickItem<EHNamespace | undefined>[]> {
         const picks: IAzureQuickPickItem<EHNamespace | undefined>[] = [{
             label: localize('newEventHubsNamespace', '$(plus) Create event hubs namespace'),
             description: '',

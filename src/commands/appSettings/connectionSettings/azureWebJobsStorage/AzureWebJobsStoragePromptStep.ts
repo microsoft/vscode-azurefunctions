@@ -14,7 +14,7 @@ import { IConnectionPromptOptions } from '../IConnectionPromptOptions';
 import { IAzureWebJobsStorageWizardContext } from './IAzureWebJobsStorageWizardContext';
 
 export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardContext> extends AzureWizardPromptStep<T> {
-    public constructor(private readonly _options?: IConnectionPromptOptions) {
+    public constructor(private readonly options?: IConnectionPromptOptions) {
         super();
     }
 
@@ -37,8 +37,8 @@ export class AzureWebJobsStoragePromptStep<T extends IAzureWebJobsStorageWizardC
     }
 
     public async configureBeforePrompt(context: T & { eventHubsConnectionType?: EventHubsConnectionTypeValues, sqlDbConnectionType?: SqlDbConnectionTypeValues }): Promise<void> {
-        if (this._options?.preselectedConnectionType === ConnectionType.Azure || this._options?.preselectedConnectionType === ConnectionType.Emulator) {
-            context.azureWebJobsStorageType = this._options.preselectedConnectionType;
+        if (this.options?.preselectedConnectionType === ConnectionType.Azure || this.options?.preselectedConnectionType === ConnectionType.Emulator) {
+            context.azureWebJobsStorageType = this.options.preselectedConnectionType;
         } else if (!!context.storageAccount || !!context.newStorageAccountName) {
             // Only should prompt if no storage account was selected
             context.azureWebJobsStorageType = ConnectionType.Azure;

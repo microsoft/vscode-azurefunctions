@@ -13,7 +13,7 @@ import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    private _databases: Database[] = [];
+    private databases: Database[] = [];
 
     public async prompt(context: T): Promise<void> {
         // If we have a sql server already, then we should check to make sure we don't have a name duplicate down the line
@@ -24,7 +24,7 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
 
             const client: SqlManagementClient = await createSqlClient(<T & ISubscriptionContext>context);
             const dbIterator = client.databases.listByServer(rgName, serverName);
-            this._databases = await uiUtils.listAllIterator(dbIterator);
+            this.databases = await uiUtils.listAllIterator(dbIterator);
         }
 
         context.newSqlDatabaseName = (await context.ui.showInputBox({
@@ -47,13 +47,12 @@ export class SqlDatabaseNameStep<T extends ISqlDatabaseConnectionWizardContext> 
             return invalidAlphanumericWithHyphens;
         }
 
-        const dbExists: boolean = this._databases.some((db) => {
+        const dbExists: boolean = this.databases.some((db) => {
             return db.name === name;
         });
         if (dbExists) {
             return localize('sqlDatabaseExists', 'A SQL database with the name "{0}" already exists.', name);
         }
-
         return undefined;
     }
 }
