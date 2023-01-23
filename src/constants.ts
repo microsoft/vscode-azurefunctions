@@ -115,6 +115,7 @@ export type StorageConnectionTypeValues = Exclude<ConnectionTypeValues, Connecti
 export type EventHubsConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Custom>;
 export type SqlDbConnectionTypeValues = Exclude<ConnectionTypeValues, ConnectionType.Emulator>;
 
+export type JavaBuildToolValues = typeof JavaBuildTool[keyof typeof JavaBuildTool];
 export type CodeActionValues = typeof CodeAction[keyof typeof CodeAction];
 export type ConnectionKeyValues = typeof ConnectionKey[keyof typeof ConnectionKey];
 export type DurableBackendValues = typeof DurableBackend[keyof typeof DurableBackend];

@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
-import { Uri } from "vscode";
+import { env, MessageItem, Uri, window } from "vscode";
 import * as xml2js from "xml2js";
 import { EventHubsConnectionExecuteStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionExecuteStep";
 import { EventHubsConnectionPromptStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionPromptStep";
@@ -19,7 +19,7 @@ import { NetheriteConfigureHostStep } from "../commands/createFunction/durableSt
 import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
 import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage, requirementsFileName } from "../constants";
+import { buildGradleFileName, CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, JavaBuildTool, JavaBuildToolValues, localEventHubsEmulatorConnectionRegExp, pomXmlFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
 import { getLocalSettingsConnectionString } from "../funcConfig/local.settings";
@@ -35,10 +35,15 @@ export namespace durableUtils {
     export const dotnetDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
+    export const mavenDfPackage = {
+        groupId: 'com.microsoft',
+        artifactId: 'durabletask-azure-functions',
+        version: '1.0.0'  // Placeholder
+    };
 
     export function requiresDurableStorage(templateId: string, language?: string): boolean {
-        // Todo: Remove when Powershell and Java implementation is added
-        if (language === ProjectLanguage.PowerShell || language === ProjectLanguage.Java) {
+        // Todo: Remove when Powershell implementation is added
+        if (language === ProjectLanguage.PowerShell) {
             return false;
         }
 
@@ -80,7 +85,12 @@ export namespace durableUtils {
     export async function verifyHasDurableStorage(language: string | undefined, projectPath: string): Promise<boolean> {
         switch (language) {
             case ProjectLanguage.Java:
-                // ???
+                const javaBuildTool: JavaBuildToolValues | undefined = await getJavaBuildTool(projectPath);
+                if (javaBuildTool === JavaBuildTool.gradle) {
+                    await gradleProjectHasDurableDependency(projectPath);
+                } else if (javaBuildTool === JavaBuildTool.maven) {
+                    return await mavenProjectHasDurableDependency(projectPath);
+                }
                 return false;
             case ProjectLanguage.JavaScript:
             case ProjectLanguage.TypeScript:
@@ -124,19 +134,8 @@ export namespace durableUtils {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
-
-                    for (const packageRef of packageReferences) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                        if (packageRef['$'] && packageRef['$']['Include']) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-                            if (packageRef['$']['Include'] === dotnetDfBasePackage) {
-                                resolve(true);
-                                return;
-                            }
-                        }
-                    }
+                    resolve(packageReferences.some(p => p?.['$']?.['Include'] === dotnetDfBasePackage));
                 }
-                resolve(false);
             });
         });
     }
@@ -146,6 +145,27 @@ export namespace durableUtils {
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
 
+    async function gradleProjectHasDurableDependency(_projectPath: string): Promise<void> {
+        // gradle
+    }
+
+    async function mavenProjectHasDurableDependency(projectPath: string): Promise<boolean> {
+        const pomXmlPath: string = path.join(projectPath, pomXmlFileName);
+        const pomXmlContents: string = await AzExtFsExtra.readFile(pomXmlPath);
+
+        return new Promise((resolve) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            xml2js.parseString(pomXmlContents, { explicitArray: false }, (err: any, result: any): void => {
+                if (result && !err) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+                    let dependencies = result?.project?.dependencies?.dependency ?? [];
+                    // Todo: test when empty dependency xml
+                    resolve(dependencies.some(d => d.artifactId === mavenDfPackage.artifactId));
+                }
+            });
+        });
+    }
+
     // #endregion Verify Durable Dependencies
 
     // #region Install Durable Dependencies
@@ -153,7 +173,12 @@ export namespace durableUtils {
     export async function tryInstallDurableDependencies(context: IFunctionWizardContext): Promise<void> {
         switch (context.language) {
             case ProjectLanguage.Java:
-                // Todo: Revisit when adding Java implementation
+                const javaBuildTool: JavaBuildToolValues | undefined = await getJavaBuildTool(context.projectPath);
+                if (javaBuildTool === JavaBuildTool.gradle) {
+                    await installGradleDependencies(context.projectPath);
+                } else if (javaBuildTool === JavaBuildTool.maven) {
+                    await installMavenDependencies(context.projectPath);
+                }
                 break;
             case ProjectLanguage.CSharp:
             case ProjectLanguage.FSharp:
@@ -213,6 +238,50 @@ export namespace durableUtils {
             ext.outputChannel.appendLog(pError.message);
             ext.outputChannel.appendLog(dfDepInstallFailed);
         }
+    }
+
+    async function getJavaBuildTool(projectPath: string): Promise<JavaBuildToolValues | undefined> {
+        const hasGradleBuild: boolean = await AzExtFsExtra.pathExists(path.join(projectPath, buildGradleFileName));
+        const hasPomXml: boolean = await AzExtFsExtra.pathExists(path.join(projectPath, pomXmlFileName));
+        if (hasGradleBuild) {
+            return JavaBuildTool.gradle;
+        } else if (hasPomXml) {
+            return JavaBuildTool.maven;
+        } else {
+            return undefined;
+        }
+    }
+
+    async function installGradleDependencies(_projectPath: string): Promise<void> {
+        // Gradle
+    }
+
+    async function installMavenDependencies(_projectPath: string): Promise<void> {
+        /*
+         * Parsing and rebuilding the xml with xml2js doesn't preserve certain things like comments
+         * We can explore migrating to a different xml parser in the future for this
+         * In the mean time, expect that the user will have to add the dependency themselves
+         * (it's recommended to the user via the durable orchestration comments anyway)
+         *
+         * We will try to make it easier for the user by providing an option to copy the dependency
+         */
+        const renderOpts: xml2js.RenderOptions = {
+            pretty: true,
+            indent: '    ',
+            newline: '\n',
+        }
+        const builder = new xml2js.Builder({ renderOpts, headless: true });
+        const xml: string = builder.buildObject({ dependency: mavenDfPackage });
+        const xmlWithComment: string = `<!-- ${localize('upgradeVersion', 'Upgrade to latest version')} -->\n` + xml;
+
+        const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy dependency') };
+        const message: string = localize('installMavenDfDep', 'Add "{0}" dependency to "{1}"', `${mavenDfPackage.groupId}:${mavenDfPackage.artifactId}`, pomXmlFileName);
+        void window.showInformationMessage<MessageItem>(message, copyCommand).then(result => {
+            if (result === copyCommand) {
+                env.clipboard.writeText(xmlWithComment);
+                ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard:\n{0}', xmlWithComment));
+            }
+        });
     }
 
     // #endregion Install Durable Dependencies

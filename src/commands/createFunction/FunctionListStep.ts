@@ -193,8 +193,8 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
 
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup
 function doesTemplateRequireExistingStorageSetup(templateId: string, language?: string): boolean {
-    // Todo: Remove when Powershell and Java implementation is added
-    if (language === ProjectLanguage.PowerShell || language === ProjectLanguage.Java) {
+    // Todo: Remove when Powershell implementation is added
+    if (language === ProjectLanguage.PowerShell) {
         return false;
     }
 
