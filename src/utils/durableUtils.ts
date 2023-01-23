@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
+// eslint-disable-next-line @typescript-eslint/import/no-internal-modules
+import * as g2js from 'gradle-to-js/lib/parser';
 import * as path from "path";
 import { env, MessageItem, Uri, window } from "vscode";
 import * as xml2js from "xml2js";
@@ -134,6 +136,7 @@ export namespace durableUtils {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let packageReferences = result?.['Project']?.['ItemGroup']?.[0]?.PackageReference ?? [];
                     packageReferences = (packageReferences instanceof Array) ? packageReferences : [packageReferences];
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                     resolve(packageReferences.some(p => p?.['$']?.['Include'] === dotnetDfBasePackage));
                 }
             });
@@ -146,7 +149,6 @@ export namespace durableUtils {
     }
 
     async function gradleProjectHasDurableDependency(projectPath: string): Promise<boolean> {
-        const g2js = require('gradle-to-js/lib/parser');
         const gradleBuildPath: string = path.join(projectPath, buildGradleFileName);
         const dependencies = (await g2js.parseFile(gradleBuildPath)).dependencies;
         return dependencies.some(d => `${d.group}:${d.name}` === gradleDfPackage);
@@ -268,20 +270,17 @@ export namespace durableUtils {
          *
          * We will try to make it easier for the user by providing an option to copy the dependency.
          */
-        const renderOpts: xml2js.RenderOptions = {
-            pretty: true,
-            indent: '    ',
-            newline: '\n',
-        }
+        const renderOpts: xml2js.RenderOptions = { pretty: true, indent: '    ', newline: '\n' };
         const builder = new xml2js.Builder({ renderOpts, headless: true });
+
         const xml: string = builder.buildObject({ dependency: mavenDfPackage });
         const xmlWithComment: string = `<!-- ${localize('upgradeVersion', 'Upgrade to latest version')} -->\n` + xml;
 
         const copyCommand: MessageItem = { title: localize('copyCommand', 'Copy dependency') };
         const message: string = localize('installMavenDfDep', 'Add "{0}" dependency to "{1}"', `${mavenDfPackage.groupId}:${mavenDfPackage.artifactId}`, pomXmlFileName);
-        void window.showInformationMessage<MessageItem>(message, copyCommand).then(result => {
+        void window.showInformationMessage<MessageItem>(message, copyCommand).then(async (result) => {
             if (result === copyCommand) {
-                env.clipboard.writeText(xmlWithComment);
+                await env.clipboard.writeText(xmlWithComment);
                 ext.outputChannel.appendLog(localize('copiedClipboard', 'Copied to clipboard:\n{0}', xmlWithComment));
             }
         });
