@@ -35,6 +35,7 @@ export namespace durableUtils {
     export const dotnetDfBasePackage: string = 'Microsoft.Azure.WebJobs.Extensions.DurableTask';
     export const nodeDfPackage: string = 'durable-functions';
     export const pythonDfPackage: string = 'azure-functions-durable';
+    export const gradleDfPackage: string = 'com.microsoft:durabletask-azure-functions';
     export const mavenDfPackage = {
         groupId: 'com.microsoft',
         artifactId: 'durabletask-azure-functions',
@@ -87,7 +88,7 @@ export namespace durableUtils {
             case ProjectLanguage.Java:
                 const javaBuildTool: JavaBuildToolValues | undefined = await getJavaBuildTool(projectPath);
                 if (javaBuildTool === JavaBuildTool.gradle) {
-                    await gradleProjectHasDurableDependency(projectPath);
+                    return await gradleProjectHasDurableDependency(projectPath);
                 } else if (javaBuildTool === JavaBuildTool.maven) {
                     return await mavenProjectHasDurableDependency(projectPath);
                 }
@@ -126,7 +127,6 @@ export namespace durableUtils {
         }
 
         const csProjContents: string = await AzExtFsExtra.readFile(csProjPaths[0].path);
-
         return new Promise((resolve) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             xml2js.parseString(csProjContents, { explicitArray: false }, (err: any, result: any): void => {
@@ -145,8 +145,11 @@ export namespace durableUtils {
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
 
-    async function gradleProjectHasDurableDependency(_projectPath: string): Promise<void> {
-        // gradle
+    async function gradleProjectHasDurableDependency(projectPath: string): Promise<boolean> {
+        const g2js = require('gradle-to-js/lib/parser');
+        const gradleBuildPath: string = path.join(projectPath, buildGradleFileName);
+        const dependencies = (await g2js.parseFile(gradleBuildPath)).dependencies;
+        return dependencies.some(d => `${d.group}:${d.name}` === gradleDfPackage);
     }
 
     async function mavenProjectHasDurableDependency(projectPath: string): Promise<boolean> {
@@ -258,12 +261,12 @@ export namespace durableUtils {
 
     async function installMavenDependencies(_projectPath: string): Promise<void> {
         /*
-         * Parsing and rebuilding the xml with xml2js doesn't preserve certain things like comments
-         * We can explore migrating to a different xml parser in the future for this
+         * Parsing and rebuilding the xml with xml2js doesn't preserve certain things like comments.
+         * We can explore migrating to a different xml parser in the future for this.
          * In the mean time, expect that the user will have to add the dependency themselves
          * (it's recommended to the user via the durable orchestration comments anyway)
          *
-         * We will try to make it easier for the user by providing an option to copy the dependency
+         * We will try to make it easier for the user by providing an option to copy the dependency.
          */
         const renderOpts: xml2js.RenderOptions = {
             pretty: true,
