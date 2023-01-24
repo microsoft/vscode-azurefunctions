@@ -115,7 +115,7 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         void validateGlobSettings(context, context.effectiveDeployFsPath);
     }
 
-    if (language === ProjectLanguage.CSharp && !node.site.isLinux || durableStorageType) {
+    if (language === ProjectLanguage.CSharp && !node.site.isLinux || durableStorageType === DurableBackend.Netherite) {
         await updateWorkerProcessTo64BitIfRequired(context, siteConfig, node, language, durableStorageType);
     }
 
