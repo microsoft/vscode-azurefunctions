@@ -9,7 +9,6 @@ import { previewDescription } from "../../../constants-nls";
 import { localize } from "../../../localize";
 import { IJavaProjectWizardContext } from "./IJavaProjectWizardContext";
 
-
 export class JavaBuildToolStep extends AzureWizardPromptStep<IJavaProjectWizardContext> {
     public static async setDefaultBuildTool(context: IJavaProjectWizardContext): Promise<void> {
         context.buildTool = JavaBuildTool.maven;

@@ -3,23 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringDictionary } from '@azure/arm-appservice';
-import { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
+import type { StringDictionary } from '@azure/arm-appservice';
+import type { ParsedSite } from '@microsoft/vscode-azext-azureappservice';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
+import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, extensionVersionKey, ProjectLanguage, runFromPackageKey, workerRuntimeKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { FuncVersion, tryParseFuncVersion } from '../../FuncVersion';
 import { localize } from '../../localize';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { isKnownWorkerRuntime, promptToUpdateDotnetRuntime, tryGetFunctionsWorkerRuntimeForProject } from '../../vsCodeConfig/settings';
+import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
 
 /**
  * Just putting a few booleans in an object to avoid ordering mistakes if we passed them as individual params
  */
 type VerifyAppSettingBooleans = { doRemoteBuild: boolean | undefined; isConsumption: boolean };
 
-export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans): Promise<void> {
+export async function verifyAppSettings(context: IActionContext, node: SlotTreeItem, projectPath: string | undefined, version: FuncVersion, language: ProjectLanguage, bools: VerifyAppSettingBooleans, durableStorageType: DurableBackendValues | undefined): Promise<void> {
     const client = await node.site.createClient(context);
     const appSettings: StringDictionary = await client.listApplicationSettings();
     if (appSettings.properties) {
@@ -35,11 +36,45 @@ export async function verifyAppSettings(context: IActionContext, node: SlotTreeI
             updateAppSettings ||= verifyRunFromPackage(context, node.site, appSettings.properties);
         }
 
+        const updatedRemoteConnection: boolean = await verifyAndUpdateAppConnectionStrings(context, durableStorageType, appSettings.properties);
+        updateAppSettings ||= updatedRemoteConnection;
+
         if (updateAppSettings) {
             await client.updateApplicationSettings(appSettings);
             // if the user cancels the deployment, the app settings node doesn't reflect the updated settings
             await node.appSettingsTreeItem?.refresh(context);
         }
+    }
+}
+
+export async function verifyAndUpdateAppConnectionStrings(context: IActionContext & Partial<ISetConnectionSettingContext>, durableStorageType: DurableBackendValues | undefined, remoteProperties: { [propertyName: string]: string }): Promise<boolean> {
+    let didUpdate: boolean = false;
+    switch (durableStorageType) {
+        case DurableBackend.Netherite:
+            const updatedNetheriteConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.EventHubs, context[ConnectionKey.EventHubs]);
+            didUpdate ||= updatedNetheriteConnection;
+            break;
+        case DurableBackend.SQL:
+            const updatedSqlDbConnection: boolean = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.SQL, context[ConnectionKey.SQL]);
+            didUpdate ||= updatedSqlDbConnection;
+            break;
+        case DurableBackend.Storage:
+        default:
+    }
+
+    const updatedStorageConnection = updateConnectionStringIfNeeded(context, remoteProperties, ConnectionKey.Storage, context[ConnectionKey.Storage]);
+    didUpdate ||= updatedStorageConnection;
+
+    return didUpdate;
+}
+
+export function updateConnectionStringIfNeeded(context: IActionContext & Partial<ISetConnectionSettingContext>, remoteProperties: { [propertyName: string]: string }, propertyName: ConnectionKeyValues, newValue: string | undefined): boolean {
+    if (newValue) {
+        remoteProperties[propertyName] = newValue;
+        context.telemetry.properties[`update${propertyName}`] = 'true';
+        return true;
+    } else {
+        return false;
     }
 }
 

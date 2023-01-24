@@ -66,8 +66,8 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
-            const needsStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
-            if (needsStorageSetup) {
+            const needsDurableStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
+            if (needsDurableStorageSetup) {
                 return { promptSteps: [new DurableStorageTypePromptStep()] };
             } else {
                 return await FunctionSubWizard.createSubWizard(context, this._functionSettings);
