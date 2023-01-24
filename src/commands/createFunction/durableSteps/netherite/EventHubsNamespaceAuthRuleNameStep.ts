@@ -13,7 +13,7 @@ import { validateUtils } from "../../../../utils/validateUtils";
 import { IEventHubsConnectionWizardContext } from "../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
 
 export class EventHubsNamespaceAuthRuleNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    private _authRules: AuthorizationRule[];
+    private authRules: AuthorizationRule[];
 
     public async prompt(context: T): Promise<void> {
         const client: EventHubManagementClient = await createEventHubClient(<T & ISubscriptionContext>context);
@@ -21,11 +21,11 @@ export class EventHubsNamespaceAuthRuleNameStep<T extends IEventHubsConnectionWi
         const namespaceName: string = nonNullValue(context.eventHubsNamespace?.name);
 
         const authRulesIterator = client.namespaces.listAuthorizationRules(rgName, namespaceName);
-        this._authRules = await uiUtils.listAllIterator(authRulesIterator);
+        this.authRules = await uiUtils.listAllIterator(authRulesIterator);
 
         context.newAuthRuleName = (await context.ui.showInputBox({
             prompt: localize('authRuleNamePrompt', 'Provide an access policy name for the event hubs namespace.'),
-            validateInput: async (value: string | undefined) => this.validateInput(value)
+            validateInput: (value: string | undefined) => this.validateInput(value)
         })).trim();
     }
 
@@ -43,7 +43,7 @@ export class EventHubsNamespaceAuthRuleNameStep<T extends IEventHubsConnectionWi
             return localize('invalidAlphanumericOrHyphenWithSymbols', `A name must consist of alphanumeric characters, '.', '-', or '_'. It must start and end with an alphanumeric character.`);
         }
 
-        const isNameAvailable: boolean = !this._authRules.some(r => r.name === name);
+        const isNameAvailable: boolean = !this.authRules.some(r => r.name === name);
         if (!isNameAvailable) {
             return localize('authRuleExists', 'An access policy with the name "{0}" already exists.', name);
         }

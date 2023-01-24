@@ -13,7 +13,7 @@ import { validateUtils } from '../../../../utils/validateUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    private _eventHubs: Eventhub[] = [];
+    private eventHubs: Eventhub[] = [];
 
     public async prompt(context: T): Promise<void> {
         // Prep to check name availability, else it must be new and we can skip the name availability check
@@ -23,14 +23,12 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
             const ehNamespaceName: string = nonNullValue(context.eventHubsNamespace.name);
 
             const eventHubIterator = client.eventHubs.listByNamespace(rgName, ehNamespaceName);
-            this._eventHubs = await uiUtils.listAllIterator(eventHubIterator);
+            this.eventHubs = await uiUtils.listAllIterator(eventHubIterator);
         }
 
         context.newEventHubName = (await context.ui.showInputBox({
             prompt: localize('eventHubNamePrompt', 'Enter a name for the new event hub.'),
-            validateInput: (value: string | undefined) => {
-                return this._validateInput(value)
-            }
+            validateInput: (value: string | undefined) => this.validateInput(value)
         })).trim();
     }
 
@@ -38,7 +36,7 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
         return !context.newEventHubName;
     }
 
-    private _validateInput(name: string | undefined): string | undefined {
+    private validateInput(name: string | undefined): string | undefined {
         name = name ? name.trim() : '';
 
         if (!validateUtils.isValidLength(name, 1, 256)) {
@@ -48,11 +46,10 @@ export class NetheriteEventHubNameStep<T extends IEventHubsConnectionWizardConte
             return invalidLowerCaseAlphanumericWithHyphens;
         }
 
-        const isNameAvailable: boolean = !this._eventHubs.some(eh => eh.name === name);
+        const isNameAvailable: boolean = !this.eventHubs.some(eh => eh.name === name);
         if (!isNameAvailable) {
             return localize('eventHubExists', 'An event hub with the name "{0}" already exists.', name);
         }
-
         return undefined;
     }
 }

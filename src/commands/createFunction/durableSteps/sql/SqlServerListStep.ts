@@ -5,11 +5,10 @@
 
 import type { Server, SqlManagementClient } from '@azure/arm-sql';
 import { ResourceGroupListStep, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizardExecuteStep, AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzureWizardExecuteStep, AzureWizardPromptStep, ConfirmPreviousInputStep, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, IWizardOptions, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { localize } from '../../../../localize';
 import { createSqlClient } from '../../../../utils/azureClients';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
-import { InputRevalidationStep } from './InputRevalidationStep';
 import { SqlServerCreateStep } from './SqlServerCreateStep';
 import { SqlServerNameStep } from './SqlServerNameStep';
 import { SqlServerPasswordAuthStep } from './SqlServerPasswordAuthStep';
@@ -33,7 +32,7 @@ export class SqlServerListStep<T extends ISqlDatabaseConnectionWizardContext> ex
         if (context.sqlServer) {
             context.valuesToMask.push(nonNullProp(context.sqlServer, 'name'));
         } else {
-            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new InputRevalidationStep('newSqlAdminPassword', true /* isPassword */), new ResourceGroupListStep());
+            promptSteps.push(new SqlServerNameStep(), new SqlServerUsernameAuthStep(), new SqlServerPasswordAuthStep(), new ConfirmPreviousInputStep('newSqlAdminPassword', { isPassword: true }), new ResourceGroupListStep());
             executeSteps.push(new SqlServerCreateStep());
         }
 

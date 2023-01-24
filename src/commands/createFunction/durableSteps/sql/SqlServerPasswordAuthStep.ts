@@ -41,7 +41,6 @@ export class SqlServerPasswordAuthStep<T extends ISqlDatabaseConnectionWizardCon
         if (validateUtils.passwordOverlapsLogin(password, login)) {
             return localize('passwordOverlapsLogin', 'Your password cannot share 3 or more consecutive characters with your login.');
         }
-
         return undefined;
     }
 }
