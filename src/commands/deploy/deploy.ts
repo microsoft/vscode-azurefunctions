@@ -64,9 +64,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     context.telemetry.properties.projectRuntime = version;
     // TODO: telemetry for language model.
 
-    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
-    context.telemetry.properties.projectDurableStorageType = durableStorageType;
-
     if (language === ProjectLanguage.Python && !node.site.isLinux) {
         context.errorHandling.suppressReportIssue = true;
         throw new Error(localize('pythonNotAvailableOnWindows', 'Python projects are not supported on Windows Function Apps. Deploy to a Linux Function App instead.'));
@@ -82,7 +79,9 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
+    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
     const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.projectPath);
+    context.telemetry.properties.projectDurableStorageType = durableStorageType;
 
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
@@ -95,23 +94,14 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     }
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
-    switch (durableStorageType) {
-        case DurableBackend.Netherite:
-            if (shouldValidateEventHubs) {
-                await netheriteUtils.validateConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
-            }
-            break;
-        case DurableBackend.SQL:
-            if (shouldValidateSqlDb) {
-                await sqlUtils.validateConnection(context, context.projectPath);
-            }
-            break;
-        case DurableBackend.Storage:
-        default:
-    }
-
     if (shouldValidateStorage) {
         await validateStorageConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
+    }
+    if (shouldValidateEventHubs) {
+        await netheriteUtils.validateConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
+    }
+    if (shouldValidateSqlDb) {
+        await sqlUtils.validateConnection(context, context.projectPath);
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
