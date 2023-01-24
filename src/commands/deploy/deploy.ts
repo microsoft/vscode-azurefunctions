@@ -79,10 +79,6 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         context.deployMethod = 'zip';
     }
 
-    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
-    const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.projectPath);
-    context.telemetry.properties.projectDurableStorageType = durableStorageType;
-
     const doRemoteBuild: boolean | undefined = getWorkspaceSetting<boolean>(remoteBuildSetting, deployPaths.effectiveDeployFsPath);
     actionContext.telemetry.properties.scmDoBuildDuringDeployment = String(doRemoteBuild);
     if (doRemoteBuild) {
@@ -92,6 +88,11 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
     if (isZipDeploy && node.site.isLinux && isConsumption && !doRemoteBuild) {
         context.deployMethod = 'storage';
     }
+
+    const durableStorageType: DurableBackendValues | undefined = await durableUtils.getStorageTypeFromWorkspace(language, context.projectPath);
+    context.telemetry.properties.projectDurableStorageType = durableStorageType;
+
+    const { shouldValidateStorage, shouldValidateEventHubs, shouldValidateSqlDb } = await shouldValidateConnections(context, durableStorageType, client, context.projectPath);
 
     // Preliminary local validation done to ensure all required resources have been created and are available. Final deploy writes are made in 'verifyAppSettings'
     if (shouldValidateStorage) {
