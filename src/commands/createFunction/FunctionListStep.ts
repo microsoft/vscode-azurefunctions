@@ -66,7 +66,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
                 promptSteps: [new PythonLocationStep(this._functionSettings)]
             };
         } else {
-            const needsStorageSetup: boolean = !!context.functionTemplate && durableUtils.requiresDurableStorage(context.functionTemplate.id, context.language) && !context.hasDurableStorage;
+            const needsStorageSetup: boolean = !!context.functionTemplate && await durableUtils.requiresDurableStorage(context.functionTemplate.id, context.projectPath, context.language) && !context.hasDurableStorage;
             if (needsStorageSetup) {
                 return { promptSteps: [new DurableStorageTypePromptStep()] };
             } else {
@@ -125,7 +125,7 @@ export class FunctionListStep extends AzureWizardPromptStep<IFunctionWizardConte
         const templates: IFunctionTemplate[] = await templateProvider.getFunctionTemplates(context, context.projectPath, language, context.languageModel, version, templateFilter, context.projectTemplateKey);
         context.telemetry.measurements.templateCount = templates.length;
         const picks: IAzureQuickPickItem<IFunctionTemplate | TemplatePromptResult>[] = templates
-            .filter((t) => !(doesTemplateRequireExistingStorageSetup(t.id, language) && !context.hasDurableStorage))
+            .filter(async (t) => !(await doesTemplateRequireExistingStorageSetup(t.id, context.projectPath, language) && !context.hasDurableStorage))
             .sort((a, b) => sortTemplates(a, b, templateFilter))
             .map(t => { return { label: t.name, data: t }; });
 
@@ -192,9 +192,12 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
 }
 
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup
-function doesTemplateRequireExistingStorageSetup(templateId: string, language?: string): boolean {
-    // Todo: Remove when Powershell implementation is added
-    if (language === ProjectLanguage.PowerShell) {
+// Can remove the projectPath parameter once Gradle is implemented
+async function doesTemplateRequireExistingStorageSetup(templateId: string, projectPath: string, language?: string): Promise<boolean> {
+    const isGradle: boolean = (language === ProjectLanguage.Java) ? (await durableUtils.getJavaBuildTool(projectPath) === JavaBuildTool.gradle) : false;
+
+    // Todo: Remove when Powershell and Gradle implementation is implemented
+    if (language === ProjectLanguage.PowerShell || isGradle) {
         return false;
     }
 
@@ -203,11 +206,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
     const orchestrator = /Orchestrat/i;
     const entityTrigger = /DurableFunctionsEntityHttpStart/i;  // filter out directly due to overlap with the base entity template pattern
 
-    if (entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId))) {
-        return true;
-    } else {
-        return false;
-    }
+    return entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId));
 }
 
 /**

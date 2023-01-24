@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
-// eslint-disable-next-line @typescript-eslint/import/no-internal-modules
-import * as g2js from 'gradle-to-js/lib/parser';
 import * as path from "path";
 import { env, MessageItem, Uri, window } from "vscode";
 import * as xml2js from "xml2js";
@@ -44,9 +42,12 @@ export namespace durableUtils {
         version: '1.0.0'  // Placeholder
     };
 
-    export function requiresDurableStorage(templateId: string, language?: string): boolean {
-        // Todo: Remove when Powershell implementation is added
-        if (language === ProjectLanguage.PowerShell) {
+    // Can remove the projectPath parameter once Gradle is implemented
+    export async function requiresDurableStorage(templateId: string, projectPath: string, language?: string): Promise<boolean> {
+        const isGradle: boolean = (language === ProjectLanguage.Java) ? (await getJavaBuildTool(projectPath) === JavaBuildTool.gradle) : false;
+
+        // Todo: Remove when Powershell and Gradle implementation has been added
+        if (language === ProjectLanguage.PowerShell || isGradle) {
             return false;
         }
 
@@ -90,7 +91,7 @@ export namespace durableUtils {
             case ProjectLanguage.Java:
                 const javaBuildTool: JavaBuildToolValues | undefined = await getJavaBuildTool(projectPath);
                 if (javaBuildTool === JavaBuildTool.gradle) {
-                    return await gradleProjectHasDurableDependency(projectPath);
+                    // Todo: Gradle in 'preview', support to be implemented in the future...
                 } else if (javaBuildTool === JavaBuildTool.maven) {
                     return await mavenProjectHasDurableDependency(projectPath);
                 }
@@ -148,12 +149,6 @@ export namespace durableUtils {
         return await pythonUtils.hasDependencyInRequirements(pythonDfPackage, requirementsPath);
     }
 
-    async function gradleProjectHasDurableDependency(projectPath: string): Promise<boolean> {
-        const gradleBuildPath: string = path.join(projectPath, buildGradleFileName);
-        const dependencies = (await g2js.parseFile(gradleBuildPath)).dependencies;
-        return dependencies.some(d => `${d.group}:${d.name}` === gradleDfPackage);
-    }
-
     async function mavenProjectHasDurableDependency(projectPath: string): Promise<boolean> {
         const pomXmlPath: string = path.join(projectPath, pomXmlFileName);
         const pomXmlContents: string = await AzExtFsExtra.readFile(pomXmlPath);
@@ -164,8 +159,9 @@ export namespace durableUtils {
                 if (result && !err) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                     let dependencies = result?.project?.dependencies?.dependency ?? [];
-                    // Todo: test when empty dependency xml
-                    resolve(dependencies.some(d => d.artifactId === mavenDfPackage.artifactId));
+                    dependencies = (dependencies instanceof Array) ? dependencies : [dependencies];
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+                    resolve((dependencies as Array<any>).some(d => d.artifactId === mavenDfPackage.artifactId));
                 }
             });
         });
@@ -180,7 +176,7 @@ export namespace durableUtils {
             case ProjectLanguage.Java:
                 const javaBuildTool: JavaBuildToolValues | undefined = await getJavaBuildTool(context.projectPath);
                 if (javaBuildTool === JavaBuildTool.gradle) {
-                    await installGradleDependencies(context.projectPath);
+                    // Todo: Gradle in 'preview', support to be implemented in the future...
                 } else if (javaBuildTool === JavaBuildTool.maven) {
                     await installMavenDependencies(context.projectPath);
                 }
@@ -245,7 +241,7 @@ export namespace durableUtils {
         }
     }
 
-    async function getJavaBuildTool(projectPath: string): Promise<JavaBuildToolValues | undefined> {
+    export async function getJavaBuildTool(projectPath: string): Promise<JavaBuildToolValues | undefined> {
         const hasGradleBuild: boolean = await AzExtFsExtra.pathExists(path.join(projectPath, buildGradleFileName));
         const hasPomXml: boolean = await AzExtFsExtra.pathExists(path.join(projectPath, pomXmlFileName));
         if (hasGradleBuild) {
@@ -257,18 +253,14 @@ export namespace durableUtils {
         }
     }
 
-    async function installGradleDependencies(_projectPath: string): Promise<void> {
-        // Gradle
-    }
-
     async function installMavenDependencies(_projectPath: string): Promise<void> {
         /*
          * Parsing and rebuilding the xml with xml2js doesn't preserve certain things like comments.
          * We can explore migrating to a different xml parser in the future for this.
          * In the mean time, expect that the user will have to add the dependency themselves
-         * (it's recommended to the user via the durable orchestration comments anyway)
+         * (it's instructed to the user in the durable orchestration comments anyway)
          *
-         * We will try to make it easier for the user by providing an option to copy the dependency.
+         * We will try to make it easier for the user by providing an option to copy the dependency XML to the clipboard.
          */
         const renderOpts: xml2js.RenderOptions = { pretty: true, indent: '    ', newline: '\n' };
         const builder = new xml2js.Builder({ renderOpts, headless: true });
