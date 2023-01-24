@@ -2,7 +2,7 @@ import type { StringDictionary } from "@azure/arm-appservice";
 import type { SiteClient } from "@microsoft/vscode-azext-azureappservice";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, localEventHubsEmulatorConnectionRegExp, localStorageEmulatorConnectionString } from "../../constants";
+import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
 import { netheriteUtils } from "../../utils/durableUtils";
@@ -61,7 +61,7 @@ async function promptShouldOverwrite(context: IActionContext, key: ConnectionKey
     const skipButton: vscode.MessageItem = { title: localize('skip', 'Skip') };
     const buttons: vscode.MessageItem[] = [overwriteButton, skipButton];
 
-    const message: string = localize('overwriteRemoteConnection', 'The "{0}" setting in the "local.settings.json" does not match the remote application setting. Overwrite remote setting?', key);
+    const message: string = localize('overwriteRemoteConnection', 'The "{0}" setting in the "{1}" does not match the remote application setting. Overwrite remote setting?', key, localSettingsFileName);
 
     const result: vscode.MessageItem = await context.ui.showWarningMessage(message, { modal: true }, ...buttons);
     return result === overwriteButton;
