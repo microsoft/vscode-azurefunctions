@@ -35,7 +35,8 @@ export async function getSupportedPythonVersions(context: IActionContext, funcVe
         ['2.0.0', '3.6'],
         ['2.7.1846', '3.7'],
         ['3.0.2245', '3.8'],
-        ['3.0.3216', '3.9']
+        ['3.0.3216', '3.9'],
+        ['4.0.4915', '3.10']
     ];
 
     for (const [minFuncVersion, pyVersion] of versionInfo) {
