@@ -3,26 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, IParsedError, parseError } from "@microsoft/vscode-azext-utils";
 import * as path from "path";
 import { Uri } from "vscode";
 import * as xml2js from "xml2js";
-import { EventHubsConnectionExecuteStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionExecuteStep";
-import { EventHubsConnectionPromptStep } from "../commands/appSettings/connectionSettings/eventHubs/EventHubsConnectionPromptStep";
-import { IEventHubsConnectionWizardContext } from "../commands/appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext";
-import { IConnectionPromptOptions } from "../commands/appSettings/connectionSettings/IConnectionPromptOptions";
-import { ISetConnectionSettingContext } from "../commands/appSettings/connectionSettings/ISetConnectionSettingContext";
-import { ISqlDatabaseConnectionWizardContext } from "../commands/appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext";
-import { SqlDatabaseConnectionExecuteStep } from "../commands/appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionExecuteStep";
-import { SqlDatabaseConnectionPromptStep } from "../commands/appSettings/connectionSettings/sqlDatabase/SqlDatabaseConnectionPromptStep";
-import { NetheriteConfigureHostStep } from "../commands/createFunction/durableSteps/netherite/NetheriteConfigureHostStep";
-import { NetheriteEventHubNameStep } from "../commands/createFunction/durableSteps/netherite/NetheriteEventHubNameStep";
-import { SqlDatabaseListStep } from "../commands/createFunction/durableSteps/sql/SqlDatabaseListStep";
 import { IFunctionWizardContext } from "../commands/createFunction/IFunctionWizardContext";
-import { CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, localEventHubsEmulatorConnectionRegExp, ProjectLanguage, requirementsFileName } from "../constants";
+import { ConnectionKey, DurableBackend, DurableBackendValues, hostFileName, ProjectLanguage, requirementsFileName } from "../constants";
 import { ext } from "../extensionVariables";
 import { IHostJsonV2, INetheriteTaskJson, ISqlTaskJson, IStorageTaskJson } from "../funcConfig/host";
-import { getLocalSettingsConnectionString } from "../funcConfig/local.settings";
 import { localize } from "../localize";
 import { cpUtils } from "./cpUtils";
 import { pythonUtils } from "./pythonUtils";
@@ -217,69 +205,14 @@ export namespace durableUtils {
 
     // #endregion Install Durable Dependencies
 
+    // #region Durable Task Configs
+
     export function getDefaultStorageTaskConfig(): IStorageTaskJson {
         return {
             storageProvider: {
                 type: DurableBackend.Storage,
             }
         };
-    }
-}
-
-
-export namespace netheriteUtils {
-    export async function getEventHubName(projectPath: string): Promise<string | undefined> {
-        const hostJsonPath = path.join(projectPath, hostFileName);
-        if (!await AzExtFsExtra.pathExists(hostJsonPath)) {
-            return undefined;
-        }
-
-        const hostJson: IHostJsonV2 = await AzExtFsExtra.readJSON(hostJsonPath);
-        const taskJson: INetheriteTaskJson = hostJson.extensions?.durableTask as INetheriteTaskJson;
-        return taskJson?.hubName;
-    }
-
-    // Supports validation on both 'debug' and 'deploy'
-    export async function validateConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
-        const eventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, projectPath);
-        const eventHubName: string | undefined = await getEventHubName(projectPath);
-
-        if (!!eventHubsConnection && !!eventHubName) {
-            if (context.action === CodeAction.Deploy) {
-                if (!localEventHubsEmulatorConnectionRegExp.test(eventHubsConnection)) {
-                    // Found a valid connection in deploy mode. Set it and skip the wizard.
-                    context[ConnectionKey.EventHubs] = eventHubsConnection;
-                    return;
-                }
-                // Found an invalid connection for deploy mode, we need to proceed with acquiring a connection through the wizard...
-            } else {
-                // Found a valid connection in debug mode.  Skip the wizard.
-                return;
-            }
-        }
-
-        const wizardContext: IEventHubsConnectionWizardContext = Object.assign(context, { projectPath });
-        const promptSteps: AzureWizardPromptStep<IEventHubsConnectionWizardContext>[] = [];
-        const executeSteps: AzureWizardExecuteStep<IEventHubsConnectionWizardContext>[] = [];
-
-        if (!eventHubsConnection) {
-            promptSteps.push(new EventHubsConnectionPromptStep(options));
-            executeSteps.push(new EventHubsConnectionExecuteStep());
-        }
-
-        if (!eventHubName) {
-            promptSteps.push(new NetheriteEventHubNameStep());
-        }
-
-        executeSteps.push(new NetheriteConfigureHostStep());
-
-        const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps,
-            executeSteps
-        });
-
-        await wizard.prompt();
-        await wizard.execute();
     }
 
     export function getDefaultNetheriteTaskConfig(hubName?: string): INetheriteTaskJson {
@@ -294,30 +227,6 @@ export namespace netheriteUtils {
             }
         };
     }
-}
-
-export namespace sqlUtils {
-    // Supports validation on both 'debug' and 'deploy'
-    export async function validateConnection(context: Omit<ISetConnectionSettingContext, 'projectPath'>, projectPath: string, options?: IConnectionPromptOptions): Promise<void> {
-        const sqlDbConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.SQL, projectPath);
-
-        if (sqlDbConnection) {
-            if (context.action === CodeAction.Deploy) {
-                // Found a valid connection in deploy mode. Set it for deploy.
-                context[ConnectionKey.SQL] = sqlDbConnection;
-            }
-            // Found a valid connection in debug or deploy mode. Skip the wizard.
-            return;
-        }
-
-        const wizardContext: ISqlDatabaseConnectionWizardContext = Object.assign(context, { projectPath });
-        const wizard: AzureWizard<IEventHubsConnectionWizardContext> = new AzureWizard(wizardContext, {
-            promptSteps: [new SqlDatabaseConnectionPromptStep(options), new SqlDatabaseListStep()],
-            executeSteps: [new SqlDatabaseConnectionExecuteStep()]
-        });
-        await wizard.prompt();
-        await wizard.execute();
-    }
 
     export function getDefaultSqlTaskConfig(): ISqlTaskJson {
         return {
@@ -330,4 +239,6 @@ export namespace sqlUtils {
             }
         };
     }
+
+    // #endregion Durable Task Configs
 }

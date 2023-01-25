@@ -10,7 +10,7 @@ import { viewOutput } from '../../../../constants-nls';
 import { ext } from '../../../../extensionVariables';
 import { IHostJsonV2, INetheriteTaskJson } from '../../../../funcConfig/host';
 import { localize } from '../../../../localize';
-import { netheriteUtils } from '../../../../utils/durableUtils';
+import { durableUtils } from '../../../../utils/durableUtils';
 import { IEventHubsConnectionWizardContext } from '../../../appSettings/connectionSettings/eventHubs/IEventHubsConnectionWizardContext';
 
 export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -41,7 +41,7 @@ export class NetheriteConfigureHostStep<T extends IEventHubsConnectionWizardCont
         const existingHubName: string | undefined = durableTask?.hubName;
 
         hostJson.extensions ??= {};
-        hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig(
+        hostJson.extensions.durableTask = durableUtils.getDefaultNetheriteTaskConfig(
             nonNullValue(context.newEventHubName || existingHubName)
         );
 

@@ -9,7 +9,9 @@ import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { validateStorageConnection } from '../commands/appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
+import { validateEventHubsConnection } from '../commands/appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { ISetConnectionSettingContext } from '../commands/appSettings/connectionSettings/ISetConnectionSettingContext';
+import { validateSqlDbConnection } from '../commands/appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../commands/createNewProject/verifyIsProject';
 import { CodeAction, ConnectionKey, DurableBackend, DurableBackendValues, functionJsonFileName, localSettingsFileName, localStorageEmulatorConnectionString, ProjectLanguage, projectLanguageModelSetting, projectLanguageSetting, workerRuntimeKey } from "../constants";
 import { ParsedFunctionJson } from "../funcConfig/function";
@@ -18,7 +20,7 @@ import { getLocalFuncCoreToolsVersion } from '../funcCoreTools/getLocalFuncCoreT
 import { validateFuncCoreToolsInstalled } from '../funcCoreTools/validateFuncCoreToolsInstalled';
 import { localize } from '../localize';
 import { getFunctionFolders } from "../tree/localProject/LocalFunctionsTreeItem";
-import { durableUtils, netheriteUtils, sqlUtils } from '../utils/durableUtils';
+import { durableUtils } from '../utils/durableUtils';
 import { pythonUtils } from '../utils/pythonUtils';
 import { getDebugConfigs, isDebugConfigEqual } from '../vsCodeConfig/launch';
 import { getWorkspaceSetting, tryGetFunctionsWorkerRuntimeForProject } from "../vsCodeConfig/settings";
@@ -64,11 +66,11 @@ export async function preDebugValidate(actionContext: IActionContext, debugConfi
                 switch (durableStorageType) {
                     case DurableBackend.Netherite:
                         context.telemetry.properties.lastValidateStep = 'eventHubsConnection';
-                        await netheriteUtils.validateConnection(context, context.projectPath);
+                        await validateEventHubsConnection(context, context.projectPath);
                         break;
                     case DurableBackend.SQL:
                         context.telemetry.properties.lastValidateStep = 'sqlDbConnection';
-                        await sqlUtils.validateConnection(context, context.projectPath);
+                        await validateSqlDbConnection(context, context.projectPath);
                         break;
                     case DurableBackend.Storage:
                     default:

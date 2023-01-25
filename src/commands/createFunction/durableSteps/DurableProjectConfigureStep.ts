@@ -12,7 +12,7 @@ import { ext } from '../../../extensionVariables';
 import { IHostJsonV2 } from '../../../funcConfig/host';
 import { MismatchBehavior, setLocalAppSetting } from '../../../funcConfig/local.settings';
 import { localize } from '../../../localize';
-import { durableUtils, netheriteUtils, sqlUtils } from '../../../utils/durableUtils';
+import { durableUtils } from '../../../utils/durableUtils';
 import { IFunctionWizardContext } from '../IFunctionWizardContext';
 
 export class DurableProjectConfigureStep<T extends IFunctionWizardContext> extends AzureWizardExecuteStep<T> {
@@ -58,11 +58,11 @@ export class DurableProjectConfigureStep<T extends IFunctionWizardContext> exten
                 // Omit setting azureWebJobsStorage since it should already be initialized during 'createNewProject'
                 break;
             case DurableBackend.Netherite:
-                hostJson.extensions.durableTask = netheriteUtils.getDefaultNetheriteTaskConfig();
+                hostJson.extensions.durableTask = durableUtils.getDefaultNetheriteTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.EventHubs, '', MismatchBehavior.Overwrite);
                 break;
             case DurableBackend.SQL:
-                hostJson.extensions.durableTask = sqlUtils.getDefaultSqlTaskConfig();
+                hostJson.extensions.durableTask = durableUtils.getDefaultSqlTaskConfig();
                 await setLocalAppSetting(context, context.projectPath, ConnectionKey.SQL, '', MismatchBehavior.Overwrite);
                 break;
             default:

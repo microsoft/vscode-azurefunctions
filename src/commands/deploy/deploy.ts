@@ -14,13 +14,15 @@ import { localize } from '../../localize';
 import { ResolvedFunctionAppResource } from '../../tree/ResolvedFunctionAppResource';
 import { SlotTreeItem } from '../../tree/SlotTreeItem';
 import { dotnetUtils } from '../../utils/dotnetUtils';
-import { durableUtils, netheriteUtils, sqlUtils } from '../../utils/durableUtils';
+import { durableUtils } from '../../utils/durableUtils';
 import { isPathEqual } from '../../utils/fs';
 import { treeUtils } from '../../utils/treeUtils';
 import { getWorkspaceSetting } from '../../vsCodeConfig/settings';
 import { verifyInitForVSCode } from '../../vsCodeConfig/verifyInitForVSCode';
 import { validateStorageConnection } from '../appSettings/connectionSettings/azureWebJobsStorage/validateStorageConnection';
+import { validateEventHubsConnection } from '../appSettings/connectionSettings/eventHubs/validateEventHubsConnection';
 import { ISetConnectionSettingContext } from '../appSettings/connectionSettings/ISetConnectionSettingContext';
+import { validateSqlDbConnection } from '../appSettings/connectionSettings/sqlDatabase/validateSqlDbConnection';
 import { tryGetFunctionProjectRoot } from '../createNewProject/verifyIsProject';
 import { notifyDeployComplete } from './notifyDeployComplete';
 import { runPreDeployTask } from './runPreDeployTask';
@@ -99,10 +101,10 @@ async function deploy(actionContext: IActionContext, arg1: vscode.Uri | string |
         await validateStorageConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
     }
     if (shouldValidateEventHubs) {
-        await netheriteUtils.validateConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
+        await validateEventHubsConnection(context, context.projectPath, { preselectedConnectionType: ConnectionType.Azure });
     }
     if (shouldValidateSqlDb) {
-        await sqlUtils.validateConnection(context, context.projectPath);
+        await validateSqlDbConnection(context, context.projectPath);
     }
 
     if (getWorkspaceSetting<boolean>('showDeployConfirmation', context.workspaceFolder.uri.fsPath) && !context.isNewApp && isZipDeploy) {
