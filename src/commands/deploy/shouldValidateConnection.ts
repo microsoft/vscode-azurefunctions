@@ -31,7 +31,7 @@ export async function shouldValidateConnections(context: IActionContext, durable
     const localEventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, projectPath);
     const localSqlDbConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.SQL, projectPath);
 
-    const netheriteHubName: string | undefined = await getEventHubName(projectPath);
+    const eventHubName: string | undefined = await getEventHubName(projectPath);
 
     const shouldValidateStorage: boolean = !remoteStorageConnection ||
         (!!localStorageConnection &&
@@ -40,7 +40,7 @@ export async function shouldValidateConnections(context: IActionContext, durable
             await promptShouldOverwrite(context, ConnectionKey.Storage));
 
     const shouldValidateEventHubs: boolean = durableStorageType === DurableBackend.Netherite &&
-        !netheriteHubName ||
+        !eventHubName ||
         (!remoteEventHubsConnection ||
             (!!localEventHubsConnection &&
                 !localEventHubsEmulatorConnectionRegExp.test(localEventHubsConnection) &&
