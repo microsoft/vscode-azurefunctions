@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 import { ConnectionKey, ConnectionKeyValues, DurableBackend, DurableBackendValues, localEventHubsEmulatorConnectionRegExp, localSettingsFileName, localStorageEmulatorConnectionString } from "../../constants";
 import { getLocalSettingsConnectionString } from "../../funcConfig/local.settings";
 import { localize } from "../../localize";
-import { netheriteUtils } from "../../utils/durableUtils";
+import { getEventHubName } from "../appSettings/connectionSettings/eventHubs/validateEventHubsConnection";
 
 export interface IShouldValidateConnection {
     shouldValidateStorage: boolean;
@@ -31,7 +31,7 @@ export async function shouldValidateConnections(context: IActionContext, durable
     const localEventHubsConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.EventHubs, projectPath);
     const localSqlDbConnection: string | undefined = await getLocalSettingsConnectionString(context, ConnectionKey.SQL, projectPath);
 
-    const netheriteHubName: string | undefined = await netheriteUtils.getEventHubName(projectPath);
+    const netheriteHubName: string | undefined = await getEventHubName(projectPath);
 
     const shouldValidateStorage: boolean = !remoteStorageConnection ||
         (!!localStorageConnection &&
