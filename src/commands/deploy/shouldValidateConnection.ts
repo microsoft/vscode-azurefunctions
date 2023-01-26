@@ -40,12 +40,12 @@ export async function shouldValidateConnections(context: IActionContext, durable
             await promptShouldOverwrite(context, ConnectionKey.Storage));
 
     const shouldValidateEventHubs: boolean = durableStorageType === DurableBackend.Netherite &&
-        !eventHubName ||
-        (!remoteEventHubsConnection ||
-            (!!localEventHubsConnection &&
-                !localEventHubsEmulatorConnectionRegExp.test(localEventHubsConnection) &&
-                remoteEventHubsConnection !== localEventHubsConnection &&
-                await promptShouldOverwrite(context, ConnectionKey.EventHubs)));
+        (!eventHubName ||
+            (!remoteEventHubsConnection ||
+                (!!localEventHubsConnection &&
+                    !localEventHubsEmulatorConnectionRegExp.test(localEventHubsConnection) &&
+                    remoteEventHubsConnection !== localEventHubsConnection &&
+                    await promptShouldOverwrite(context, ConnectionKey.EventHubs))));
 
     const shouldValidateSqlDb: boolean = durableStorageType === DurableBackend.SQL &&
         (!remoteSqlDbConnection ||
