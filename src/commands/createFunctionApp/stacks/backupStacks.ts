@@ -271,59 +271,6 @@ export const backupStacks: string = `{
               ]
             },
             {
-              "displayText": ".NET Core 2",
-              "value": "dotnetcore2",
-              "minorVersions": [
-                {
-                  "displayText": ".NET Core 2.2",
-                  "value": "2.2",
-                  "stackSettings": {
-                    "windowsRuntimeSettings": {
-                      "runtimeVersion": "2.2",
-                      "appInsightsSettings": {
-                        "isSupported": true
-                      },
-                      "remoteDebuggingSupported": false,
-                      "gitHubActionSettings": {
-                        "isSupported": true,
-                        "supportedVersion": "2.2.207"
-                      },
-                      "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet"
-                      },
-                      "siteConfigPropertiesDictionary": {
-                        "use32BitWorkerProcess": true
-                      },
-                      "supportedFunctionsExtensionVersions": [
-                        "~2"
-                      ]
-                    },
-                    "linuxRuntimeSettings": {
-                      "runtimeVersion": "dotnet|2.2",
-                      "appInsightsSettings": {
-                        "isSupported": true
-                      },
-                      "remoteDebuggingSupported": false,
-                      "gitHubActionSettings": {
-                        "isSupported": true,
-                        "supportedVersion": "2.2.207"
-                      },
-                      "appSettingsDictionary": {
-                        "FUNCTIONS_WORKER_RUNTIME": "dotnet"
-                      },
-                      "siteConfigPropertiesDictionary": {
-                        "use32BitWorkerProcess": false,
-                        "linuxFxVersion": "dotnet|2.2"
-                      },
-                      "supportedFunctionsExtensionVersions": [
-                        "~2"
-                      ]
-                    }
-                  }
-                }
-              ]
-            },
-            {
               "displayText": ".NET Framework 4",
               "value": "dotnetframework4",
               "minorVersions": [

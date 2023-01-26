@@ -59,14 +59,14 @@ export class DotnetRuntimeStep extends AzureWizardPromptStep<IProjectWizardConte
                 data: undefined,
                 suppressPersistence: true
             });
-        } else {
-            for (const runtime of runtimes) {
-                picks.push({
-                    label: runtime.displayInfo.displayName,
-                    description: runtime.displayInfo.description,
-                    data: runtime
-                });
-            }
+        }
+
+        for (const runtime of runtimes) {
+            picks.push({
+                label: runtime.displayInfo.displayName,
+                description: runtime.displayInfo.description,
+                data: runtime
+            });
         }
 
         picks.push({

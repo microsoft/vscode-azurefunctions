@@ -134,7 +134,7 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
                 method: 'GET',
                 pathTemplate: '/providers/Microsoft.Web/functionappstacks',
                 queryParameters: {
-                    'api-version': '2020-10-01',
+                    'api-version': '2022-03-01',
                     removeDeprecatedStacks: String(!getWorkspaceSetting<boolean>('showDeprecatedStacks'))
                 }
             });
@@ -148,10 +148,26 @@ async function getStacks(context: IFunctionAppWizardContext & { _stacks?: Functi
 
         context._stacks = stacksArmResponse.value.map(d => d.properties);
 
+        removeDeprecatedStacks(context._stacks);
         removeHiddenStacksAndProperties(context._stacks);
     }
 
     return context._stacks;
+}
+
+// API is still showing certain deprecated stacks even when 'removeDeprecatedStacks' queryParameter is set to true.
+// We should filter them out manually just in case.
+function removeDeprecatedStacks(stacks: FunctionAppStack[]) {
+    if (getWorkspaceSetting<boolean>('showDeprecatedStacks')) {
+        return;
+    }
+
+    const deprecatedDotnetStacks: string[] = ['dotnetcore2', 'netcoreapp3.1'];
+    for (const stack of stacks) {
+        if (stack.value === 'dotnet') {
+            stack.majorVersions = stack.majorVersions.filter(mv => !deprecatedDotnetStacks.includes(mv.value));
+        }
+    }
 }
 
 
