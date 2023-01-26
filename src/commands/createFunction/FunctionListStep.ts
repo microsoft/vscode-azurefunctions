@@ -194,6 +194,7 @@ async function promptForTemplateFilter(context: IActionContext): Promise<Templat
     return (await context.ui.showQuickPick(picks, options)).data;
 }
 
+// Todo: https://github.com/microsoft/vscode-azurefunctions/issues/3529
 // Identify and filter out Durable Function templates requiring a pre-existing storage setup
 function doesTemplateRequireExistingStorageSetup(templateId: string, language?: string): boolean {
     // Todo: Remove when Powershell and Java implementation is added
@@ -206,12 +207,7 @@ function doesTemplateRequireExistingStorageSetup(templateId: string, language?: 
     const orchestrator = /Orchestrat/i;
     const entityTrigger = /DurableFunctionsEntityHttpStart/i;  // filter out directly due to overlap with the base entity template pattern
 
-    // Todo: mwf note to self - simplify this expression.  Add additional comment to function
-    if (entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId))) {
-        return true;
-    } else {
-        return false;
-    }
+    return entityTrigger.test(templateId) || (durableFunctions.test(templateId) && !orchestrator.test(templateId) && !entity.test(templateId));
 }
 
 /**
