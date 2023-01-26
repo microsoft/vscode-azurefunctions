@@ -32,7 +32,7 @@ export async function verifyExtensionBundle(context: IFunctionWizardContext | IB
         context.telemetry.properties.bundleResult = 'hasExtensionsConfig';
     } else {
         const hostFilePath: string = path.join(context.projectPath, hostFileName);
-        if (!await AzExtFsExtra.pathExists(hostFilePath)) {
+        if (!(await AzExtFsExtra.pathExists(hostFilePath))) {
             context.telemetry.properties.bundleResult = 'missingHostJson';
         } else {
             let hostJson: IHostJsonV2;
