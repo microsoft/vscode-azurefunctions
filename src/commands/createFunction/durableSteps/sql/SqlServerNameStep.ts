@@ -12,10 +12,10 @@ import { validateUtils } from '../../../../utils/validateUtils';
 import { ISqlDatabaseConnectionWizardContext } from '../../../appSettings/connectionSettings/sqlDatabase/ISqlDatabaseConnectionWizardContext';
 
 export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> extends AzureWizardPromptStep<T> {
-    private _client: SqlManagementClient;
+    private client: SqlManagementClient;
 
     public async prompt(context: T): Promise<void> {
-        this._client = await createSqlClient(<T & ISubscriptionContext>context);
+        this.client = await createSqlClient(<T & ISubscriptionContext>context);
 
         context.newSqlServerName = (await context.ui.showInputBox({
             prompt: localize('sqlServerNamePrompt', 'Provide a SQL server name.'),
@@ -43,7 +43,7 @@ export class SqlServerNameStep<T extends ISqlDatabaseConnectionWizardContext> ex
     private async isNameAvailable(name: string): Promise<string | undefined> {
         name = name.trim();
 
-        const isAvailable = (await this._client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
+        const isAvailable = (await this.client.servers.checkNameAvailability({ name, type: "Microsoft.Sql/servers" })).available;
         if (!isAvailable) {
             return localize('sqlServerExists', 'A SQL server with the name "{0}" already exists.', name);
         }
